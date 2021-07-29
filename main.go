@@ -31,7 +31,7 @@ func main() {
 				Name:  "build",
 				Usage: "Placeholder",
 				Action: func(c *cli.Context) error {
-					fmt.Println("Placeholder")
+					src.LoadConfig()
 					return nil
 				},
 			},
