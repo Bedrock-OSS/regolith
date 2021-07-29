@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bedrock-oss.github.com/regolith/src"
 	"fmt"
 	"github.com/urfave/cli/v2"
 	"os"
-	"runtime"
 )
 
 var (
@@ -15,19 +15,17 @@ var (
 )
 
 func main() {
+	src.CustomHelp()
 	err := (&cli.App{
 		Name:                 "Regolith",
 		Usage:                "A bedrock addon compiler pipeline",
 		EnableBashCompletion: true,
-		Version: fmt.Sprintf(
-			"%s\n   Date: %s\n   BuildSource: %s\n   Commit: %s\n   OS: %s\n   Arch: %s",
-			version,
-			date,
-			buildSource,
-			commit,
-			runtime.GOOS,
-			runtime.GOARCH,
-		),
+		Version:              version,
+		Metadata: map[string]interface{}{
+			"Commit":      commit,
+			"Date":        date,
+			"BuildSource": buildSource,
+		},
 		Commands: []*cli.Command{
 			{
 				Name:  "build",
