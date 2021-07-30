@@ -15,3 +15,18 @@ Bedrock Addons compiler pipeline.
 
 Run with `go run .\main.go`
 
+## Building as an .exe
+
+You can build either with GoReleaser, or natively 
+
+### Install GoReleaser
+
+`go install github.com/goreleaser/goreleaser@latest`
+
+### Build
+
+`./scripts/build-local.sh`
+
+### Or
+
+`go build`

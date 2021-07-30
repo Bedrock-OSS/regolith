@@ -1,0 +1,15 @@
+{
+    "compile_type": "unsafe",
+    "filters": [
+        {
+            "filter": "combine_models"
+        },
+        {
+            "filter": "https://raw.githubusercontent.com/SirLich/reticulator/master/reticulator.py"
+        },
+        {
+            "filter": "./filters/commandlang.js",
+            "language": "js"
+        }
+    ]
+}
