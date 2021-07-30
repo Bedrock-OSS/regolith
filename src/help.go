@@ -1,9 +1,10 @@
 package src
 
 import (
+	"io"
+
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
-	"io"
 )
 
 func CustomHelp() {
