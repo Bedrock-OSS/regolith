@@ -1,10 +1,11 @@
 package main
 
 import (
-	"bedrock-oss.github.com/regolith/src"
 	"fmt"
-	"github.com/urfave/cli/v2"
 	"os"
+
+	"bedrock-oss.github.com/regolith/src"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -40,6 +41,14 @@ func main() {
 				Usage: "Placeholder",
 				Action: func(c *cli.Context) error {
 					fmt.Println("Placeholder")
+					return nil
+				},
+			},
+			{
+				Name:  "childproc",
+				Usage: "Running a child-process!",
+				Action: func(c *cli.Context) error {
+					src.RunChildProc()
 					return nil
 				},
 			},
