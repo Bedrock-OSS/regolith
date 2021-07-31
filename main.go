@@ -29,10 +29,19 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
-				Name:  "build",
-				Usage: "Placeholder",
+				Name:  "run",
+				Usage: "Runs Regolith, and generates cooked RP and BP, which will be exported per the config.",
 				Action: func(c *cli.Context) error {
-					src.LoadConfig()
+					args := c.Args().Slice()
+					var profile string
+
+					if len(args) == 0 {
+						profile = "dev"
+					} else {
+						profile = args[0]
+					}
+
+					src.RunProfile(profile)
 					return nil
 				},
 			},
@@ -58,14 +67,6 @@ func main() {
 						Aliases: []string{"f"},
 						Usage:   "Force the operateion, overriding potential safeguards.",
 					},
-				},
-			},
-			{
-				Name:  "childproc",
-				Usage: "Running a child-process!",
-				Action: func(c *cli.Context) error {
-					src.RunChildProc()
-					return nil
 				},
 			},
 		},
