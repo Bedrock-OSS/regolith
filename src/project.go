@@ -19,9 +19,11 @@ type Profile struct {
 	Unsafe  bool     `json:"unsafe"`
 	Filters []Filter `json:"filters"`
 }
-
 type Filter struct {
-	Definition string `json:"definition"`
+	Name      string   `json:"name"`
+	Location  string   `json:"location"`
+	RunWith   string   `json:"run_with"`
+	Arguments []string `json:"arguments"`
 }
 
 func IsConfigExists() bool {
