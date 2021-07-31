@@ -48,8 +48,16 @@ func main() {
 				Name:  "init",
 				Usage: "Initialize a Regolith project in the current directory.",
 				Action: func(c *cli.Context) error {
-					src.InitializeRegolithProject()
+					src.InitializeRegolithProject(src.StringArrayContains(c.FlagNames(), "force"))
+
 					return nil
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "force",
+						Aliases: []string{"f"},
+						Usage:   "Force the operateion, overriding potential safeguards.",
+					},
 				},
 			},
 			{

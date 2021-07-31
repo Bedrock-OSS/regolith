@@ -45,17 +45,33 @@ func LoadConfig() Project {
 	return result
 }
 
-func InitializeRegolithProject() bool {
-	if IsConfigExists() {
+func InitializeRegolithProject(isForced bool) bool {
+
+	// Do not attempt to initialize if project is already initialized (can be forced)
+	if !isForced && IsConfigExists() {
 		log.Fatal(color.RedString("Could not initialize Regolith project. File %s already exists.", MANIFEST_NAME))
 		return false
 	} else {
 		log.Println(color.GreenString("Initializing Regolith project..."))
+
+		if isForced {
+			log.Println(color.YellowString("Warning: Initialization forced. Data may be lost."))
+		}
+
+		// Delete old configuration
+		err := os.Remove(MANIFEST_NAME)
+		if err != nil {
+			log.Fatal(color.RedString("Could not delete %s: ", MANIFEST_NAME), err)
+		}
+
+		// Create new configuration
 		file, err := os.Create(MANIFEST_NAME)
 		if err != nil {
-			log.Fatal(color.RedString("Could not create manifest.json: "), err)
+			log.Fatal(color.RedString("Could not create %s: ", MANIFEST_NAME), err)
 		}
 		defer file.Close()
+
+		// Write default configuration
 		file.WriteString("{\"profiles\":{\"default\":{\"unsafe\":false,\"filters\":[]}}}")
 		log.Println(color.GreenString("Regolith project initialized."))
 		return true

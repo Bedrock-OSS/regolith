@@ -1,15 +1,14 @@
 package src
 
 import (
-	"fmt"
 	"log"
+	"os"
 	"os/exec"
 )
 
 func RunChildProc() {
-	out, err := exec.Command("date").Output()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("The date is %s\n", out)
+	cmd := exec.Command("python", "./hello.py")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	log.Println(cmd.Run())
 }
