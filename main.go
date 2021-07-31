@@ -45,6 +45,14 @@ func main() {
 				},
 			},
 			{
+				Name:  "init",
+				Usage: "Initialize a Regolith project in the current directory.",
+				Action: func(c *cli.Context) error {
+					src.InitializeRegolithProject()
+					return nil
+				},
+			},
+			{
 				Name:  "childproc",
 				Usage: "Running a child-process!",
 				Action: func(c *cli.Context) error {
