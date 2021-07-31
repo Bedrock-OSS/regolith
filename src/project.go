@@ -35,12 +35,12 @@ func IsConfigExists() bool {
 func LoadConfig() Project {
 	file, err := ioutil.ReadFile(MANIFEST_NAME)
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't find manifest.json!"))
+		log.Fatal(color.RedString("Couldn't find %s! Consider running 'regolith init'", MANIFEST_NAME))
 	}
 	var result Project
 	err = json.Unmarshal(file, &result)
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't load manifest.json: "), err)
+		log.Fatal(color.RedString("Couldn't load %s: ", MANIFEST_NAME), err)
 	}
 	return result
 }
@@ -60,9 +60,6 @@ func InitializeRegolithProject(isForced bool) bool {
 
 		// Delete old configuration
 		err := os.Remove(MANIFEST_NAME)
-		if err != nil {
-			log.Fatal(color.RedString("Could not delete %s: ", MANIFEST_NAME), err)
-		}
 
 		// Create new configuration
 		file, err := os.Create(MANIFEST_NAME)
