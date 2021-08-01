@@ -1,6 +1,8 @@
 package src
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -36,7 +38,7 @@ func RunProfile(profileName string) {
 		ioutil.WriteFile(path.Join(".tmp", filterTmpName), datab, 777)
 		//prepend the file to the filter args
 		filter.Arguments = append([]string{filterTmpName}, filter.Arguments...)
-		RunChildProc(filter.RunWith, filter.Arguments, ".tmp")
+		RunSubProcess(filter.RunWith, filter.Arguments, ".tmp")
 		os.Remove(path.Join(".tmp", filterTmpName))
 	}
 	//copy contents of .tmp to build
@@ -49,12 +51,27 @@ func RunProfile(profileName string) {
 	os.RemoveAll(".tmp")
 }
 
-func RunChildProc(command string, args []string, workingDir string) string {
+func RunSubProcess(command string, args []string, workingDir string) {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = workingDir
-	out, err := cmd.Output()
+
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+
+	err := cmd.Start()
+
+	scanner := bufio.NewScanner(bytes.NewReader(buf.Bytes()))
+	scanner.Split(bufio.ScanWords)
+
+	for scanner.Scan() {
+		m := scanner.Text()
+		fmt.Println(m)
+	}
+
+	cmd.Wait()
+
 	if err != nil {
 		log.Fatal(err)
 	}
-	return string(out)
 }
