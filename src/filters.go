@@ -42,11 +42,9 @@ func RunProfile(profileName string) {
 
 	//copy contents of .tmp to build
 	log.Print(color.BlueString("copying .tmp to build"))
-	gorecurcopy.CopyDirectory(".tmp", "build")
+	os.Rename(".tmp", "build")
 	//Done!
 	log.Print(color.GreenString("Finished. built contents -> build."))
-	// Cleanup
-	os.RemoveAll(".tmp")
 }
 
 // Runs the filter by selecting the correct filter and running it
