@@ -16,6 +16,8 @@ var (
 )
 
 func main() {
+	//goland:noinspection GoBoolExpressions
+	src.InitLogging(buildSource == "DEV")
 	src.CustomHelp()
 	err := (&cli.App{
 		Name:                 "Regolith",
