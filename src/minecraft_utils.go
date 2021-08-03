@@ -15,7 +15,10 @@ type World struct {
 }
 
 func ListWorlds(mojangDir string) []World {
-	var result []World
+	var worlds = make(map[string]World)
+	var existingWorldNames = make(map[string]struct{}) // A set with duplicated world names
+	var exists = struct{}{}
+
 	worldsPath := path.Join(mojangDir, "minecraftWorlds")
 	files, err := ioutil.ReadDir(worldsPath)
 	if err != nil {
@@ -25,13 +28,29 @@ func ListWorlds(mojangDir string) []World {
 	for _, f := range files {
 		if f.IsDir() {
 			worldPath := path.Join(worldsPath, f.Name())
-			worldname, _ := ioutil.ReadFile(path.Join(worldPath, "levelname.txt"))
-			result = append(result, World{
+			worldname, err := ioutil.ReadFile(path.Join(worldPath, "levelname.txt"))
+			if err != nil {
+				Logger.Warnf("Unable to read levelname.txt from %q", worldPath)
+				continue
+			}
+			_, ok := existingWorldNames[string(worldname)]
+			existingWorldNames[string(worldname)] = exists
+			if ok { // The world with this name already exists
+				delete(worlds, string(worldname))
+				Logger.Warnf("Duplicated world name %q", worldname)
+				continue
+			}
+			worlds[string(worldname)] = World{
 				Name: string(worldname),
 				Id:   f.Name(),
 				Path: worldPath,
-			})
+			}
 		}
+	}
+	// Convert result to list
+	var result []World
+	for _, val := range worlds {
+		result = append(result, val)
 	}
 	return result
 }
