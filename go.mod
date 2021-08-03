@@ -7,7 +7,10 @@ require (
 	github.com/fatih/color v1.12.0
 	github.com/go-errors/errors v1.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.13 // indirect
-	github.com/plus3it/gorecurcopy v0.0.1
+	github.com/otiai10/copy v1.6.0
 	github.com/urfave/cli/v2 v2.3.0
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/zap v1.18.1
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 )
