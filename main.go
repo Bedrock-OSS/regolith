@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -18,6 +19,9 @@ var (
 func main() {
 	//goland:noinspection GoBoolExpressions
 	src.InitLogging(buildSource == "DEV")
+	src.Logger.Debug(src.FindMojangDir())
+	bytes, _ := json.MarshalIndent(src.ListWorlds(src.FindMojangDir()), "", "  ")
+	src.Logger.Debug(string(bytes))
 	src.CustomHelp()
 	err := (&cli.App{
 		Name:                 "Regolith",
