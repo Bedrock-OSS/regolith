@@ -9,6 +9,7 @@ import (
 )
 
 type World struct {
+	Id   string `json:"id"`
 	Name string `json:"name"`
 	Path string `json:"path"`
 }
@@ -27,6 +28,7 @@ func ListWorlds(mojangDir string) []World {
 			worldname, _ := ioutil.ReadFile(path.Join(worldPath, "levelname.txt"))
 			result = append(result, World{
 				Name: string(worldname),
+				Id:   f.Name(),
 				Path: worldPath,
 			})
 		}
