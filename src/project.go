@@ -9,7 +9,7 @@ import (
 	"github.com/fatih/color"
 )
 
-const MANIFEST_NAME = "regolith.json"
+const ManifestName = "regolith.json"
 
 type Project struct {
 	Profiles map[string]Profile `json:"profiles"`
@@ -27,7 +27,7 @@ type Filter struct {
 }
 
 func IsConfigExists() bool {
-	info, err := os.Stat(MANIFEST_NAME)
+	info, err := os.Stat(ManifestName)
 	if os.IsNotExist(err) {
 		return false
 	}
@@ -35,14 +35,14 @@ func IsConfigExists() bool {
 }
 
 func LoadConfig() Project {
-	file, err := ioutil.ReadFile(MANIFEST_NAME)
+	file, err := ioutil.ReadFile(ManifestName)
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't find %s! Consider running 'regolith init'", MANIFEST_NAME))
+		log.Fatal(color.RedString("Couldn't find %s! Consider running 'regolith init'", ManifestName))
 	}
 	var result Project
 	err = json.Unmarshal(file, &result)
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't load %s: ", MANIFEST_NAME), err)
+		log.Fatal(color.RedString("Couldn't load %s: ", ManifestName), err)
 	}
 	return result
 }
@@ -51,7 +51,7 @@ func InitializeRegolithProject(isForced bool) bool {
 
 	// Do not attempt to initialize if project is already initialized (can be forced)
 	if !isForced && IsConfigExists() {
-		log.Fatal(color.RedString("Could not initialize Regolith project. File %s already exists.", MANIFEST_NAME))
+		log.Fatal(color.RedString("Could not initialize Regolith project. File %s already exists.", ManifestName))
 		return false
 	} else {
 		log.Println(color.GreenString("Initializing Regolith project..."))
@@ -61,12 +61,12 @@ func InitializeRegolithProject(isForced bool) bool {
 		}
 
 		// Delete old configuration
-		err := os.Remove(MANIFEST_NAME)
+		err := os.Remove(ManifestName)
 
 		// Create new configuration
-		file, err := os.Create(MANIFEST_NAME)
+		file, err := os.Create(ManifestName)
 		if err != nil {
-			log.Fatal(color.RedString("Could not create %s: ", MANIFEST_NAME), err)
+			log.Fatal(color.RedString("Could not create %s: ", ManifestName), err)
 		}
 		defer file.Close()
 
