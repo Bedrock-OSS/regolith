@@ -71,7 +71,10 @@ func InitializeRegolithProject(isForced bool) bool {
 		defer file.Close()
 
 		// Write default configuration
-		file.WriteString("{\"profiles\":{\"default\":{\"unsafe\":false,\"filters\":[]}}}")
+		var jsonData interface{}
+		json.Unmarshal(json.RawMessage(`{"profiles":{"default":{"unsafe":false,"filters":[]}}}`), &jsonData)
+		jsonBytes, _ := json.MarshalIndent(jsonData, "", "\t")
+		file.Write(jsonBytes)
 		log.Println(color.GreenString("Regolith project initialized."))
 		return true
 	}
