@@ -1,5 +1,6 @@
 # regolith
-Bedrock Addons compiler pipeline. 
+
+Bedrock Addons compiler pipeline.
 
 ## Running
 
@@ -17,7 +18,7 @@ Run with `go run .\main.go`
 
 ## Building as an .exe
 
-You can build either with GoReleaser, or natively 
+You can build either with GoReleaser, or natively
 
 ### Install GoReleaser
 
