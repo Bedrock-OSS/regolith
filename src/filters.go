@@ -1,11 +1,10 @@
 package src
 
 import (
-	"bufio"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/plus3it/gorecurcopy"
@@ -17,6 +16,7 @@ func Setup() {
 	os.Mkdir("build", 777)
 	os.Mkdir(".tmp", 777)
 	os.RemoveAll(".tmp")
+	os.RemoveAll("build")
 
 	// Copy the contents of the `regolith` folder to `.tmp`
 	log.Print(color.BlueString("Copying project files to tempdir... "))
@@ -51,38 +51,28 @@ func RunProfile(profileName string) {
 
 // Runs the filter by selecting the correct filter and running it
 func RunFilter(filter Filter) {
+	absoluteWorkingDir, _ := filepath.Abs(".tmp")
 	switch filter.RunWith {
 	case "python":
-		RunPythonFilter(filter)
+		RunPythonFilter(filter, absoluteWorkingDir)
 	default:
 		log.Print(color.RedString("Filter type %s not supported", filter.RunWith))
 	}
 }
 
-func RunPythonFilter(filter Filter) {
+func RunPythonFilter(filter Filter, workingDir string) {
 	log.Print(color.CyanString("Running filter %s", filter.Name))
-	filter.Arguments = append([]string{filter.Location}, filter.Arguments...)
-	RunSubProcess(filter.RunWith, filter.Arguments, ".tmp")
+	absoluteLocation, _ := filepath.Abs(filter.Location)
+	RunSubProcess(filter.RunWith, append([]string{"-u", absoluteLocation}, filter.Arguments...), workingDir)
 }
 
 func RunSubProcess(command string, args []string, workingDir string) {
-	fmt.Print(command)
-	fmt.Print(args)
 	cmd := exec.Command(command, args...)
 	cmd.Dir = workingDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-	outputPipe, _ := cmd.StdoutPipe()
-
-	err := cmd.Start()
-
-	scanner := bufio.NewScanner(outputPipe)
-	go func() {
-		for scanner.Scan() {
-			fmt.Printf("\t > %s\n", scanner.Text())
-		}
-	}()
-
-	cmd.Wait()
+	err := cmd.Run()
 
 	if err != nil {
 		log.Fatal(err)
