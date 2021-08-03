@@ -69,7 +69,7 @@ func RunProfile(profileName string) {
 
 // Runs the filter by selecting the correct filter and running it
 func RunFilter(filter Filter) {
-	Logger.Info("Running filter '%s'", filter.Name)
+	Logger.Infof("Running filter '%s'", filter.Name)
 	start := time.Now()
 	absoluteWorkingDir, _ := filepath.Abs(".tmp")
 	switch filter.RunWith {
