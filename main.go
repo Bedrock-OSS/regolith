@@ -34,7 +34,8 @@ func main() {
 			"Date":        date,
 			"BuildSource": buildSource,
 		},
-		Writer: color2.Output,
+		Writer:    color2.Output,
+		ErrWriter: color2.Error,
 		Commands: []*cli.Command{
 			{
 				Name:  "run",
