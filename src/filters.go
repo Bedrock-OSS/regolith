@@ -19,14 +19,6 @@ func Setup() error {
 	if err != nil {
 		return err
 	}
-	err = os.RemoveAll("build")
-	if err != nil {
-		return err
-	}
-	err = os.Mkdir("build", 777)
-	if err != nil {
-		return err
-	}
 	err = os.Mkdir(".tmp", 777)
 	if err != nil {
 		return err
@@ -61,6 +53,7 @@ func RunProfile(profileName string) {
 	//copy contents of .tmp to build
 	Logger.Info("Moving files to target directory")
 	start := time.Now()
+	os.RemoveAll("build")
 	os.Rename(".tmp", "build")
 	Logger.Debug("Done in ", time.Since(start))
 	//Done!
