@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	color2 "github.com/fatih/color"
 	"os"
 
 	"bedrock-oss.github.com/regolith/src"
@@ -33,6 +34,7 @@ func main() {
 			"Date":        date,
 			"BuildSource": buildSource,
 		},
+		Writer: color2.Output,
 		Commands: []*cli.Command{
 			{
 				Name:  "run",
