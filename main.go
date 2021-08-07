@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
-	color2 "github.com/fatih/color"
 	"os"
+
+	color2 "github.com/fatih/color"
 
 	"bedrock-oss.github.com/regolith/src"
 	"github.com/urfave/cli/v2"
@@ -52,9 +52,9 @@ func main() {
 			},
 			{
 				Name:  "install",
-				Usage: "Placeholder",
+				Usage: "Installs dependencies into the .regolith folder.",
 				Action: func(c *cli.Context) error {
-					fmt.Println("Placeholder")
+					src.InstallDependencies()
 					return nil
 				},
 			},

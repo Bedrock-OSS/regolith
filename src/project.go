@@ -47,6 +47,32 @@ func LoadConfig() Project {
 	return result
 }
 
+func InstallDependencies() {
+	log.Println(color.GreenString("Installing dependencies..."))
+	log.Println(color.YellowString("Warning: This may take a while..."))
+
+	err := os.Mkdir(".regolith/cache", 777)
+	if err != nil {
+		log.Fatal(color.RedString("Could not create .regolith/cache: "), err)
+	}
+
+	dependencies := GatherDependencies()
+	for _, dependency := range dependencies {
+		err := InstallDependency(dependency)
+		if err != nil {
+			log.Fatal(color.RedString("Could not install dependency %s: ", dependency), err)
+		}
+	}
+
+	log.Println(color.GreenString("Dependencies installed."))
+}
+
+func InstallDependency(name string) error {
+	log.Println(color.GreenString("Installing dependency %s...", name))
+	// TODO!
+	return nil
+}
+
 func InitializeRegolithProject(isForced bool) bool {
 
 	// Do not attempt to initialize if project is already initialized (can be forced)
@@ -76,6 +102,13 @@ func InitializeRegolithProject(isForced bool) bool {
 		jsonBytes, _ := json.MarshalIndent(jsonData, "", "\t")
 		file.Write(jsonBytes)
 		log.Println(color.GreenString("Regolith project initialized."))
+
+		// Create .regolith folder
+		err = os.Mkdir(".regolith", 777)
+		if err != nil {
+			log.Fatal(color.RedString("Could not create .regolith folder: "), err)
+		}
+
 		return true
 	}
 }

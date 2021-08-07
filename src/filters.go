@@ -1,11 +1,12 @@
 package src
 
 import (
-	"go.uber.org/zap"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/fatih/color"
 	"github.com/otiai10/copy"
@@ -14,24 +15,41 @@ import (
 func Setup() error {
 	start := time.Now()
 	// Setup Directories
-	Logger.Debug("Cleaning .tmp and build folders")
-	err := os.RemoveAll(".tmp")
-	if err != nil {
-		return err
-	}
-	err = os.Mkdir(".tmp", 777)
+	Logger.Debug("Cleaning .regolith/tmp and build folders")
+	err := os.RemoveAll(".regolith/tmp")
 	if err != nil {
 		return err
 	}
 
-	// Copy the contents of the `regolith` folder to `.tmp`
-	Logger.Debug("Copying project files to .tmp")
-	err = copy.Copy("regolith", ".tmp", copy.Options{PreserveTimes: false, Sync: false})
+	err = os.Mkdir(".regolith/tmp", 777)
+	if err != nil {
+		return err
+	}
+
+	// Copy the contents of the `regolith` folder to `.regolith/tmp`
+	Logger.Debug("Copying project files to .regolith/tmp")
+	err = copy.Copy("regolith", ".regolith/tmp", copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
 		return err
 	}
 	Logger.Debug("Setup done in ", time.Since(start))
 	return nil
+}
+
+func GatherDependencies() []string {
+	project := LoadConfig()
+	var dependencies []string
+	for _, profile := range project.Profiles {
+		for _, filter := range profile.Filters {
+			dependencies = append(dependencies, GatherDependency(filter))
+		}
+	}
+	return dependencies
+}
+
+func GatherDependency(filter Filter) string {
+	Logger.Info("TODO")
+	return "TODO"
 }
 
 func RunProfile(profileName string) {
@@ -50,11 +68,11 @@ func RunProfile(profileName string) {
 		RunFilter(filter)
 	}
 
-	//copy contents of .tmp to build
+	//copy contents of .regolith/tmp to build
 	Logger.Info("Moving files to target directory")
 	start := time.Now()
 	os.RemoveAll("build")
-	os.Rename(".tmp", "build")
+	os.Rename(".regolith/tmp", "build")
 	Logger.Debug("Done in ", time.Since(start))
 	//Done!
 	Logger.Info(color.GreenString("Finished"))
@@ -64,7 +82,7 @@ func RunProfile(profileName string) {
 func RunFilter(filter Filter) {
 	Logger.Infof("Running filter '%s'", filter.Name)
 	start := time.Now()
-	absoluteWorkingDir, _ := filepath.Abs(".tmp")
+	absoluteWorkingDir, _ := filepath.Abs(".regolith/tmp")
 	switch filter.RunWith {
 	case "python":
 		RunPythonFilter(filter, absoluteWorkingDir)
