@@ -55,7 +55,8 @@ func RunProfile(profileName string) {
 
 	//now, we go through the filters!
 	for _, filter := range profile.Filters {
-		RunFilter(filter)
+		path, _ := filepath.Abs(".")
+		RunFilter(filter, path)
 	}
 
 	//copy contents of .regolith/tmp to build
@@ -69,40 +70,38 @@ func RunProfile(profileName string) {
 }
 
 // Runs the filter by selecting the correct filter type and running it
-func RunFilter(filter Filter) {
+func RunFilter(filter Filter, absoluteLocation string) {
 	Logger.Infof("Running filter '%s'", filter.Name)
 	start := time.Now()
 
-	// Run via online filter
 	if filter.Url != "" {
 		RunRemoteFilter(filter.Url, filter.Arguments)
-	}
-
-	// Run via standard filter
-	if filter.Filter != "" {
+	} else if filter.Filter != "" {
 		RunStandardFilter(filter, filter.Arguments)
+	} else {
+		switch filter.RunWith {
+		case "python":
+			RunPythonFilter(filter, absoluteLocation+filter.Location)
+		default:
+			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
+		}
+		Logger.Info("Executed in ", time.Since(start))
 	}
-
-	// Run based on run-target
-	switch filter.RunWith {
-	case "python":
-		RunPythonFilter(filter)
-	default:
-		Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
-	}
-	Logger.Info("Executed in ", time.Since(start))
 }
 
 func RunStandardFilter(filter Filter, arguments []string) {
-	url := "https://github.com/Bedrock-OSS/regolith-filters/" + filter.Filter
-	RunRemoteFilter(url, arguments)
+	Logger.Infof("RunStandardFilter '%s'", filter.Filter)
+	RunRemoteFilter(FilterNameToUrl(filter.Filter), arguments)
 }
 
 func LoadFiltersFromPath(path string) Profile {
+	path = path + "/filter.json"
 	file, err := ioutil.ReadFile(path)
+
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't find %s! Consider running 'regolith init'", ManifestName))
+		log.Fatal(color.RedString("Couldn't find %s! Consider running 'regolith install'", path), err)
 	}
+
 	var result Profile
 	err = json.Unmarshal(file, &result)
 	if err != nil {
@@ -112,17 +111,19 @@ func LoadFiltersFromPath(path string) Profile {
 }
 
 func RunRemoteFilter(url string, arguments []string) {
+	Logger.Infof("RunRemoteFilter '%s'", url)
 	if !IsRemoteFilterCached(url) {
 		Logger.Error("Filter is not downloaded! Please run 'regolith install'.")
 	}
 
-	for _, filter := range LoadFiltersFromPath(UrlToPath(url)).Filters {
-		RunFilter(filter)
+	path := UrlToPath(url)
+	absolutePath, _ := filepath.Abs(path)
+	for _, filter := range LoadFiltersFromPath(path).Filters {
+		RunFilter(filter, absolutePath)
 	}
 }
 
-func RunPythonFilter(filter Filter) {
-	absoluteLocation, _ := filepath.Abs(filter.Location)
+func RunPythonFilter(filter Filter, absoluteLocation string) {
 	RunSubProcess(filter.RunWith, append([]string{"-u", absoluteLocation}, filter.Arguments...))
 }
 

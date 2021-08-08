@@ -10,7 +10,11 @@ import (
 )
 
 func UrlToPath(url string) string {
-	return ".regolith/cache" + url
+	return ".regolith/cache/" + url
+}
+
+func FilterNameToUrl(name string) string {
+	return "github.com/Bedrock-OSS/regolith-filters//" + name
 }
 
 func IsRemoteFilterCached(url string) bool {
@@ -34,15 +38,16 @@ func GatherDependencies() []string {
 	var dependencies []string
 	for _, profile := range project.Profiles {
 		for _, filter := range profile.Filters {
-			dependencies = append(dependencies, GatherDependency(filter))
+			if filter.Url != "" {
+				dependencies = append(dependencies, filter.Url)
+			}
+
+			if filter.Filter != "" {
+				dependencies = append(dependencies, FilterNameToUrl(filter.Filter))
+			}
 		}
 	}
 	return dependencies
-}
-
-func GatherDependency(filter Filter) string {
-	Logger.Info("TODO")
-	return "TODO"
 }
 
 func InstallDependencies() {
@@ -65,8 +70,16 @@ func InstallDependencies() {
 	log.Println(color.GreenString("Dependencies installed."))
 }
 
-func InstallDependency(name string) error {
-	log.Println(color.GreenString("Installing dependency %s...", name))
-	// TODO!
+func InstallDependency(url string) error {
+	log.Println(color.GreenString("Installing dependency %s...", url))
+
+	// Install the url into the cache folder
+
+	err := getter.Get(UrlToPath(url), url)
+
+	if err != nil {
+		log.Fatal(color.RedString("Could not install dependency %s: ", url), err)
+	}
+
 	return nil
 }
