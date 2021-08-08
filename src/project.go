@@ -24,6 +24,8 @@ type Filter struct {
 	Location  string   `json:"location"`
 	RunWith   string   `json:"run_with"`
 	Arguments []string `json:"arguments"`
+	Url       string   `json:"url"`
+	Filter    string   `json:"filter"`
 }
 
 func IsConfigExists() bool {
@@ -45,32 +47,6 @@ func LoadConfig() Project {
 		log.Fatal(color.RedString("Couldn't load %s: ", ManifestName), err)
 	}
 	return result
-}
-
-func InstallDependencies() {
-	log.Println(color.GreenString("Installing dependencies..."))
-	log.Println(color.YellowString("Warning: This may take a while..."))
-
-	err := os.MkdirAll(".regolith/cache", 0777)
-	if err != nil {
-		log.Fatal(color.RedString("Could not create .regolith/cache: "), err)
-	}
-
-	dependencies := GatherDependencies()
-	for _, dependency := range dependencies {
-		err := InstallDependency(dependency)
-		if err != nil {
-			log.Fatal(color.RedString("Could not install dependency %s: ", dependency), err)
-		}
-	}
-
-	log.Println(color.GreenString("Dependencies installed."))
-}
-
-func InstallDependency(name string) error {
-	log.Println(color.GreenString("Installing dependency %s...", name))
-	// TODO!
-	return nil
 }
 
 func InitializeRegolithProject(isForced bool) bool {

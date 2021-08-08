@@ -1,0 +1,31 @@
+{
+    "profiles": {
+        "default": {
+            "unsafe": false,
+            "filters": [
+                {
+                    "run_with": "python",
+                    "location": "./delete_blocks.py",
+                    "name": "Delete Blocks"
+                },
+                {
+                    "url": "https://github.com/SirLich/echo-npc"
+                },
+                {
+                    "filter": "texture_list"
+                }
+            ]
+        }
+    }
+}
+
+
+{
+    "filters": [
+        {
+            "run_with": "python",
+            "location": "./texture_list.py",
+            "name": "Generate Texture List"
+        }
+    ]
+}
