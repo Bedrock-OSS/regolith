@@ -51,7 +51,7 @@ func InstallDependencies() {
 	log.Println(color.GreenString("Installing dependencies..."))
 	log.Println(color.YellowString("Warning: This may take a while..."))
 
-	err := os.Mkdir(".regolith/cache", 0777)
+	err := os.MkdirAll(".regolith/cache", 0777)
 	if err != nil {
 		log.Fatal(color.RedString("Could not create .regolith/cache: "), err)
 	}
