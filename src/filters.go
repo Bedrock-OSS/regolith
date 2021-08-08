@@ -15,7 +15,7 @@ import (
 func Setup() error {
 	start := time.Now()
 	// Setup Directories
-	Logger.Debug("Cleaning .regolith/tmp and build folders")
+	Logger.Debug("Cleaning .regolith/tmp")
 	err := os.RemoveAll(".regolith/tmp")
 	if err != nil {
 		return err
@@ -61,7 +61,10 @@ func RunProfile(profileName string) {
 		Logger.Info("Warning! Profile flagged as unsafe. Exercise caution!")
 	}
 
-	Setup()
+	err := Setup()
+	if err != nil {
+		Logger.Fatal("Unable to setup profile")
+	}
 
 	//now, we go through the filters!
 	for _, filter := range profile.Filters {

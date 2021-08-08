@@ -2,10 +2,11 @@ package src
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/fatih/color"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"time"
 )
 
 var Logger *zap.SugaredLogger
@@ -43,6 +44,7 @@ func InitLogging(dev bool) {
 				case zap.ErrorLevel:
 					result = fmt.Sprintf("[%s]", color.RedString(level.CapitalString()))
 				case zap.FatalLevel:
+					result = fmt.Sprintf("[%s]", color.RedString(level.CapitalString()))
 				case zap.PanicLevel:
 				case zap.DPanicLevel:
 					result = fmt.Sprintf("[%s]", color.New(color.FgRed, color.BgWhite).Sprint(level.CapitalString()))
