@@ -51,7 +51,7 @@ func InstallDependencies() {
 	log.Println(color.GreenString("Installing dependencies..."))
 	log.Println(color.YellowString("Warning: This may take a while..."))
 
-	err := os.Mkdir(".regolith/cache", 777)
+	err := os.Mkdir(".regolith/cache", 0777)
 	if err != nil {
 		log.Fatal(color.RedString("Could not create .regolith/cache: "), err)
 	}
@@ -104,7 +104,7 @@ func InitializeRegolithProject(isForced bool) bool {
 		log.Println(color.GreenString("Regolith project initialized."))
 
 		// Create .regolith folder
-		err = os.Mkdir(".regolith", 777)
+		err = os.Mkdir(".regolith", 0777)
 		if err != nil {
 			log.Fatal(color.RedString("Could not create .regolith folder: "), err)
 		}
