@@ -21,7 +21,7 @@ func Setup() error {
 		return err
 	}
 
-	err = os.Mkdir(".regolith/tmp", 777)
+	err = os.Mkdir(".regolith/tmp", 0777)
 	if err != nil {
 		return err
 	}
