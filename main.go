@@ -34,6 +34,14 @@ func main() {
 		ErrWriter: color2.Error,
 		Commands: []*cli.Command{
 			{
+				Name:  "test",
+				Usage: "Useful for quickly testing function execution",
+				Action: func(c *cli.Context) error {
+					src.DownloadFileTest()
+					return nil
+				},
+			},
+			{
 				Name:  "run",
 				Usage: "Runs Regolith, and generates cooked RP and BP, which will be exported per the config.",
 				Action: func(c *cli.Context) error {
@@ -63,7 +71,6 @@ func main() {
 				Usage: "Initialize a Regolith project in the current directory.",
 				Action: func(c *cli.Context) error {
 					src.InitializeRegolithProject(src.StringArrayContains(c.FlagNames(), "force"))
-
 					return nil
 				},
 				Flags: []cli.Flag{
