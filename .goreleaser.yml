@@ -31,15 +31,15 @@ builds:
       - 386
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.buildSource=snap
-  - id: msi
-    goos:
-      - windows
-    goarch:
-      - amd64
-    ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.buildSource=binaryRelease
-    hooks:
-      post: go-msi make --msi dist/regolith-{{.Version}}.msi --version {{.Version}} --src templates
+#  - id: msi
+#    goos:
+#      - windows
+#    goarch:
+#      - amd64
+#    ldflags:
+#      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.buildSource=binaryRelease
+#    hooks:
+#      post: go-msi make --msi dist/regolith-{{.Version}}.msi --version {{.Version}} --src templates
 
 archives:
   - builds:
@@ -63,9 +63,9 @@ snapshot:
 changelog:
   sort: asc
 
-release:
-  extra_files:
-    - glob: "./dist/regolith-{{.Version}}.msi"
+#release:
+#  extra_files:
+#    - glob: "./dist/regolith-{{.Version}}.msi"
 
 #brews:
 #  - tap:
