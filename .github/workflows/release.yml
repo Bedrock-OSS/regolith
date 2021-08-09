@@ -27,6 +27,10 @@ jobs:
           echo "C:\wix" >> $GITHUB_PATH
           go get github.com/mat007/go-msi
         shell: bash
+      - name: Sync vendor directory
+        run: |
+          go mod vendor
+        shell: bash
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
