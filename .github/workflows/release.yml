@@ -22,7 +22,7 @@ jobs:
       - name: Set up Wix Toolset
         run: |
           curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
-          .\wix311.exe /install /quiet /norestart
+          ./wix311.exe /install /quiet /norestart
           echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" >> $GITHUB_PATH
           go get github.com/mh-cbon/go-msi
         shell: bash
