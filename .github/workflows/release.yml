@@ -21,10 +21,11 @@ jobs:
           go-version: 1.16
       - name: Set up Wix Toolset
         run: |
-          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
-          ./wix311.exe /install /quiet /norestart
-          echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" >> $GITHUB_PATH
-          go get github.com/mh-cbon/go-msi
+          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip
+          mkdir -p C:/wix
+          unzip wix311-binaries.zip -d "C:/wix"
+          echo "C:\wix" >> $GITHUB_PATH
+          go get github.com/mat007/go-msi
         shell: bash
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
