@@ -12,13 +12,16 @@ import (
 const ManifestName = "regolith.json"
 
 type Project struct {
+	Name     string             `json:"name"`
 	Profiles map[string]Profile `json:"profiles"`
 }
 
 type Profile struct {
-	Unsafe  bool     `json:"unsafe"`
-	Filters []Filter `json:"filters"`
+	Unsafe       bool         `json:"unsafe"`
+	Filters      []Filter     `json:"filters"`
+	ExportTarget ExportTarget `json:"export"`
 }
+
 type Filter struct {
 	Name      string   `json:"name"`
 	Location  string   `json:"location"`
@@ -26,6 +29,14 @@ type Filter struct {
 	Arguments []string `json:"arguments"`
 	Url       string   `json:"url"`
 	Filter    string   `json:"filter"`
+}
+
+type ExportTarget struct {
+	Target        string `json:"target"`
+	ComMojangPath string `json:"com_mojang_path"`
+	WorldName     string `json:"world_name"`
+	WorldPath     string `json:"world_path"`
+	Path          string `json:"path"`
 }
 
 func IsConfigExists() bool {

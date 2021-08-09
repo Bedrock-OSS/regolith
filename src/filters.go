@@ -44,6 +44,7 @@ func RunProfile(profileName string) {
 	project := LoadConfig()
 	// The first arg specifies the profile of the manifest used
 	profile := project.Profiles[profileName]
+
 	if profile.Unsafe {
 		Logger.Info("Warning! Profile flagged as unsafe. Exercise caution!")
 	}
@@ -65,8 +66,47 @@ func RunProfile(profileName string) {
 	os.RemoveAll("build")
 	os.Rename(".regolith/tmp", "build")
 	Logger.Debug("Done in ", time.Since(start))
+
+	// copy the build to the target directory
+	Logger.Info("Copying build to target directory")
+	start = time.Now()
+	ExportProject(profile, project.Name)
+	Logger.Debug("Done in ", time.Since(start))
+
 	//Done!
 	Logger.Info(color.GreenString("Finished"))
+}
+
+func GetExportPaths(export_target ExportTarget, name string) (string, string) {
+	Logger.Debug(export_target)
+
+	if export_target.Target == "development" {
+		com_mojang := FindMojangDir()
+		return com_mojang + "/development_behavior_packs/" + name + "_bp", com_mojang + "/development_resource_packs/" + name + "_rp"
+	}
+
+	// Throw fatal error that export target isn't valid
+	Logger.Fatal("Export target not valid")
+	return "", ""
+}
+
+func ExportProject(profile Profile, name string) {
+	var err error
+	export_target := profile.ExportTarget
+	bp_path, rp_path := GetExportPaths(export_target, name)
+
+	Logger.Info("Exporting project to ", bp_path)
+	Logger.Info("Exporting project to ", rp_path)
+
+	err = copy.Copy("build/BP/", bp_path, copy.Options{PreserveTimes: false, Sync: false})
+	if err != nil {
+		Logger.Fatal(color.RedString("Couldn't copy BP files to %s", bp_path), err)
+	}
+
+	err = copy.Copy("build/RP/", rp_path, copy.Options{PreserveTimes: false, Sync: false})
+	if err != nil {
+		Logger.Fatal(color.RedString("Couldn't copy RP files to %s", rp_path), err)
+	}
 }
 
 // Runs the filter by selecting the correct filter type and running it
