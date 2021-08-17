@@ -86,7 +86,7 @@ func GetExportPaths(export_target ExportTarget, name string) (string, string) {
 	}
 
 	// Throw fatal error that export target isn't valid
-	Logger.Fatal("Export target not valid")
+	Logger.Fatalf("Export '%s' target not valid", export_target.Target)
 	return "", ""
 }
 
@@ -121,7 +121,9 @@ func RunFilter(filter Filter, absoluteLocation string) {
 	} else {
 		switch filter.RunWith {
 		case "python":
-			RunPythonFilter(filter, absoluteLocation+filter.Location)
+			RunPythonFilter(filter, absoluteLocation+string(os.PathSeparator)+filter.Location)
+		case "nodejs":
+			RunNodeJSFilter(filter, absoluteLocation+string(os.PathSeparator)+filter.Location)
 		default:
 			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 		}
@@ -164,7 +166,11 @@ func RunRemoteFilter(url string, arguments []string) {
 }
 
 func RunPythonFilter(filter Filter, absoluteLocation string) {
-	RunSubProcess(filter.RunWith, append([]string{"-u", absoluteLocation}, filter.Arguments...))
+	RunSubProcess("python", append([]string{"-u", absoluteLocation}, filter.Arguments...))
+}
+
+func RunNodeJSFilter(filter Filter, absoluteLocation string) {
+	RunSubProcess("node", append([]string{absoluteLocation}, filter.Arguments...))
 }
 
 func GetAbsoluteWorkingDirectory() string {
