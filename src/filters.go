@@ -15,7 +15,23 @@ import (
 	"github.com/otiai10/copy"
 )
 
+type filterFunc func(filter Filter, absoluteLocation string)
+type checkFunc func()
+
+type filterDefinition struct {
+	filter filterFunc
+	check  checkFunc
+}
+
+var FilterTypes = map[string]filterDefinition{}
+
+func RegisterFilters() {
+	RegisterPythonFilter(FilterTypes)
+	RegisterNodeJSFilter(FilterTypes)
+}
+
 func Setup() error {
+	RegisterFilters()
 	start := time.Now()
 	// Setup Directories
 	Logger.Debug("Cleaning .regolith/tmp")
@@ -119,12 +135,9 @@ func RunFilter(filter Filter, absoluteLocation string) {
 	} else if filter.Filter != "" {
 		RunStandardFilter(filter, filter.Arguments)
 	} else {
-		switch filter.RunWith {
-		case "python":
-			RunPythonFilter(filter, absoluteLocation+string(os.PathSeparator)+filter.Location)
-		case "nodejs":
-			RunNodeJSFilter(filter, absoluteLocation+string(os.PathSeparator)+filter.Location)
-		default:
+		if f, ok := FilterTypes[filter.RunWith]; ok {
+			f.filter(filter, absoluteLocation+string(os.PathSeparator)+filter.Location)
+		} else {
 			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 		}
 		Logger.Info("Executed in ", time.Since(start))
@@ -163,14 +176,6 @@ func RunRemoteFilter(url string, arguments []string) {
 	for _, filter := range LoadFiltersFromPath(path).Filters {
 		RunFilter(filter, absolutePath)
 	}
-}
-
-func RunPythonFilter(filter Filter, absoluteLocation string) {
-	RunSubProcess("python", append([]string{"-u", absoluteLocation}, filter.Arguments...))
-}
-
-func RunNodeJSFilter(filter Filter, absoluteLocation string) {
-	RunSubProcess("node", append([]string{absoluteLocation}, filter.Arguments...))
 }
 
 func GetAbsoluteWorkingDirectory() string {
