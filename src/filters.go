@@ -31,7 +31,6 @@ func RegisterFilters() {
 }
 
 func Setup() error {
-	RegisterFilters()
 	start := time.Now()
 	// Setup Directories
 	Logger.Debug("Cleaning .regolith/tmp")
@@ -63,6 +62,21 @@ func RunProfile(profileName string) {
 
 	if profile.Unsafe {
 		Logger.Info("Warning! Profile flagged as unsafe. Exercise caution!")
+	}
+
+	// Check whether filter, that the user wants to run meet the requirements
+	checked := map[string]bool{}
+	for _, filter := range profile.Filters {
+		if filter.RunWith != "" {
+			if c, ok := checked[filter.RunWith]; ok || !c {
+				if f, ok := FilterTypes[filter.RunWith]; ok {
+					checked[filter.RunWith] = true
+					f.check()
+				} else {
+					Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
+				}
+			}
+		}
 	}
 
 	err := Setup()
