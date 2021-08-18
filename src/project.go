@@ -23,12 +23,13 @@ type Profile struct {
 }
 
 type Filter struct {
-	Name      string   `json:"name"`
-	Location  string   `json:"location"`
-	RunWith   string   `json:"run_with"`
-	Arguments []string `json:"arguments"`
-	Url       string   `json:"url"`
-	Filter    string   `json:"filter"`
+	Name      string                 `json:"name"`
+	Location  string                 `json:"location"`
+	RunWith   string                 `json:"run_with"`
+	Arguments []string               `json:"arguments"`
+	Url       string                 `json:"url"`
+	Filter    string                 `json:"filter"`
+	Settings  map[string]interface{} `json:"settings"`
 }
 
 type ExportTarget struct {
