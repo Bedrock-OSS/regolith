@@ -1,6 +1,7 @@
 package src
 
 import (
+	"encoding/json"
 	"os/exec"
 	"strings"
 )
@@ -14,8 +15,13 @@ func RegisterPythonFilter(filters map[string]filterDefinition) {
 	}
 }
 
-func runPythonFilter(filter Filter, absoluteLocation string) {
-	RunSubProcess("python", append([]string{"-u", absoluteLocation}, filter.Arguments...))
+func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) {
+	if len(settings) == 0 {
+		RunSubProcess("python", append([]string{"-u", absoluteLocation}, filter.Arguments...))
+	} else {
+		jsonSettings, _ := json.Marshal(settings)
+		RunSubProcess("python", append([]string{"-u", absoluteLocation, string(jsonSettings)}, filter.Arguments...))
+	}
 }
 
 func checkPythonRequirements() {

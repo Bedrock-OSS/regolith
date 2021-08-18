@@ -1,6 +1,7 @@
 package src
 
 import (
+	"encoding/json"
 	"os/exec"
 	"strings"
 )
@@ -14,8 +15,13 @@ func RegisterNodeJSFilter(filters map[string]filterDefinition) {
 	}
 }
 
-func runNodeJSFilter(filter Filter, absoluteLocation string) {
-	RunSubProcess("node", append([]string{absoluteLocation}, filter.Arguments...))
+func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) {
+	if len(settings) == 0 {
+		RunSubProcess("node", append([]string{absoluteLocation}, filter.Arguments...))
+	} else {
+		jsonSettings, _ := json.Marshal(settings)
+		RunSubProcess("node", append([]string{absoluteLocation, string(jsonSettings)}, filter.Arguments...))
+	}
 }
 
 func checkNodeJSRequirements() {

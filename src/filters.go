@@ -15,7 +15,7 @@ import (
 	"github.com/otiai10/copy"
 )
 
-type filterFunc func(filter Filter, absoluteLocation string)
+type filterFunc func(filter Filter, settings map[string]interface{}, absoluteLocation string)
 type checkFunc func()
 
 type filterDefinition struct {
@@ -145,12 +145,12 @@ func RunFilter(filter Filter, absoluteLocation string) {
 	start := time.Now()
 
 	if filter.Url != "" {
-		RunRemoteFilter(filter.Url, filter.Arguments)
+		RunRemoteFilter(filter.Url, filter.Settings, filter.Arguments)
 	} else if filter.Filter != "" {
-		RunStandardFilter(filter, filter.Arguments)
+		RunStandardFilter(filter)
 	} else {
 		if f, ok := FilterTypes[filter.RunWith]; ok {
-			f.filter(filter, absoluteLocation+string(os.PathSeparator)+filter.Location)
+			f.filter(filter, filter.Settings, absoluteLocation+string(os.PathSeparator)+filter.Location)
 		} else {
 			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 		}
@@ -158,9 +158,9 @@ func RunFilter(filter Filter, absoluteLocation string) {
 	}
 }
 
-func RunStandardFilter(filter Filter, arguments []string) {
+func RunStandardFilter(filter Filter) {
 	Logger.Infof("RunStandardFilter '%s'", filter.Filter)
-	RunRemoteFilter(FilterNameToUrl(filter.Filter), arguments)
+	RunRemoteFilter(FilterNameToUrl(filter.Filter), filter.Settings, filter.Arguments)
 }
 
 func LoadFiltersFromPath(path string) Profile {
@@ -179,7 +179,7 @@ func LoadFiltersFromPath(path string) Profile {
 	return result
 }
 
-func RunRemoteFilter(url string, arguments []string) {
+func RunRemoteFilter(url string, settings map[string]interface{}, arguments []string) {
 	Logger.Infof("RunRemoteFilter '%s'", url)
 	if !IsRemoteFilterCached(url) {
 		Logger.Error("Filter is not downloaded! Please run 'regolith install'.")
@@ -188,6 +188,10 @@ func RunRemoteFilter(url string, arguments []string) {
 	path := UrlToPath(url)
 	absolutePath, _ := filepath.Abs(path)
 	for _, filter := range LoadFiltersFromPath(path).Filters {
+		// Join settings from local config to remote definition
+		for k, v := range settings {
+			filter.Settings[k] = v
+		}
 		RunFilter(filter, absolutePath)
 	}
 }
