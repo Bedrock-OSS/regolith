@@ -15,12 +15,10 @@ import (
 	"github.com/otiai10/copy"
 )
 
-type filterFunc func(filter Filter, settings map[string]interface{}, absoluteLocation string)
-type checkFunc func()
-
 type filterDefinition struct {
-	filter filterFunc
-	check  checkFunc
+	filter  func(filter Filter, settings map[string]interface{}, absoluteLocation string)
+	install func(filter Filter, path string)
+	check   func()
 }
 
 var FilterTypes = map[string]filterDefinition{}
@@ -201,9 +199,22 @@ func GetAbsoluteWorkingDirectory() string {
 	return absoluteWorkingDir
 }
 
-func RunSubProcess(command string, args []string) {
+//func RunSubProcess(command string, args []string) {
+//	cmd := exec.Command(command, args...)
+//	cmd.Dir = GetAbsoluteWorkingDirectory()
+//	cmd.Stdout = os.Stdout
+//	cmd.Stderr = os.Stderr
+//
+//	err := cmd.Run()
+//
+//	if err != nil {
+//		Logger.Fatal(zap.Error(err))
+//	}
+//}
+
+func RunSubProcess(command string, args []string, workingDir string) {
 	cmd := exec.Command(command, args...)
-	cmd.Dir = GetAbsoluteWorkingDirectory()
+	cmd.Dir = workingDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
