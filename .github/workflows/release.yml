@@ -21,17 +21,17 @@ jobs:
           go-version: 1.16
       - name: Set up Wix Toolset
         run: |
-          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip
           mkdir -p C:/wix
-          unzip wix311-binaries.zip -d "C:/wix"
+          curl -OLS -o C:/wix/ https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip
+          unzip C:/wix/wix311-binaries.zip -d "C:/wix"
           echo "C:\wix" >> $GITHUB_PATH
           go get github.com/stirante/go-msi
           mkdir ./go-msi-tmp
         shell: bash
-      - name: Sync vendor directory
-        run: |
-          go mod vendor
-        shell: bash
+#      - name: Sync vendor directory
+#        run: |
+#          go mod vendor
+#        shell: bash
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
