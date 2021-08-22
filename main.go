@@ -20,6 +20,7 @@ func main() {
 	//goland:noinspection GoBoolExpressions
 	src.InitLogging(buildSource == "DEV")
 	src.CustomHelp()
+	src.RegisterFilters()
 	err := (&cli.App{
 		Name:                 "Regolith",
 		Usage:                "A bedrock addon compiler pipeline",

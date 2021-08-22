@@ -15,6 +15,21 @@ import (
 	"github.com/otiai10/copy"
 )
 
+type filterFunc func(filter Filter, settings map[string]interface{}, absoluteLocation string)
+type checkFunc func()
+
+type filterDefinition struct {
+	filter filterFunc
+	check  checkFunc
+}
+
+var FilterTypes = map[string]filterDefinition{}
+
+func RegisterFilters() {
+	RegisterPythonFilter(FilterTypes)
+	RegisterNodeJSFilter(FilterTypes)
+}
+
 func Setup() error {
 	start := time.Now()
 	// Setup Directories
@@ -47,6 +62,21 @@ func RunProfile(profileName string) {
 
 	if profile.Unsafe {
 		Logger.Info("Warning! Profile flagged as unsafe. Exercise caution!")
+	}
+
+	// Check whether filter, that the user wants to run meet the requirements
+	checked := map[string]bool{}
+	for _, filter := range profile.Filters {
+		if filter.RunWith != "" {
+			if c, ok := checked[filter.RunWith]; ok || !c {
+				if f, ok := FilterTypes[filter.RunWith]; ok {
+					checked[filter.RunWith] = true
+					f.check()
+				} else {
+					Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
+				}
+			}
+		}
 	}
 
 	err := Setup()
@@ -86,7 +116,7 @@ func GetExportPaths(export_target ExportTarget, name string) (string, string) {
 	}
 
 	// Throw fatal error that export target isn't valid
-	Logger.Fatal("Export target not valid")
+	Logger.Fatalf("Export '%s' target not valid", export_target.Target)
 	return "", ""
 }
 
@@ -115,23 +145,22 @@ func RunFilter(filter Filter, absoluteLocation string) {
 	start := time.Now()
 
 	if filter.Url != "" {
-		RunRemoteFilter(filter.Url, filter.Arguments)
+		RunRemoteFilter(filter.Url, filter.Settings, filter.Arguments)
 	} else if filter.Filter != "" {
-		RunStandardFilter(filter, filter.Arguments)
+		RunStandardFilter(filter)
 	} else {
-		switch filter.RunWith {
-		case "python":
-			RunPythonFilter(filter, absoluteLocation+filter.Location)
-		default:
+		if f, ok := FilterTypes[filter.RunWith]; ok {
+			f.filter(filter, filter.Settings, absoluteLocation+string(os.PathSeparator)+filter.Location)
+		} else {
 			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 		}
 		Logger.Info("Executed in ", time.Since(start))
 	}
 }
 
-func RunStandardFilter(filter Filter, arguments []string) {
+func RunStandardFilter(filter Filter) {
 	Logger.Infof("RunStandardFilter '%s'", filter.Filter)
-	RunRemoteFilter(FilterNameToUrl(filter.Filter), arguments)
+	RunRemoteFilter(FilterNameToUrl(filter.Filter), filter.Settings, filter.Arguments)
 }
 
 func LoadFiltersFromPath(path string) Profile {
@@ -150,7 +179,7 @@ func LoadFiltersFromPath(path string) Profile {
 	return result
 }
 
-func RunRemoteFilter(url string, arguments []string) {
+func RunRemoteFilter(url string, settings map[string]interface{}, arguments []string) {
 	Logger.Infof("RunRemoteFilter '%s'", url)
 	if !IsRemoteFilterCached(url) {
 		Logger.Error("Filter is not downloaded! Please run 'regolith install'.")
@@ -159,12 +188,12 @@ func RunRemoteFilter(url string, arguments []string) {
 	path := UrlToPath(url)
 	absolutePath, _ := filepath.Abs(path)
 	for _, filter := range LoadFiltersFromPath(path).Filters {
+		// Join settings from local config to remote definition
+		for k, v := range settings {
+			filter.Settings[k] = v
+		}
 		RunFilter(filter, absolutePath)
 	}
-}
-
-func RunPythonFilter(filter Filter, absoluteLocation string) {
-	RunSubProcess(filter.RunWith, append([]string{"-u", absoluteLocation}, filter.Arguments...))
 }
 
 func GetAbsoluteWorkingDirectory() string {
