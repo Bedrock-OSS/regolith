@@ -58,7 +58,7 @@ func needsVenv(filterPath string) bool {
 func checkPythonRequirements() {
 	_, err := exec.LookPath("python")
 	if err != nil {
-		Logger.Fatal("Python not found")
+		Logger.Fatal("Python not found. Download and install it from https://www.python.org/downloads/")
 	}
 	cmd, _ := exec.Command("python", "--version").Output()
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "Python ")
