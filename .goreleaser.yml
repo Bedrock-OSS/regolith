@@ -39,7 +39,7 @@ builds:
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.buildSource=binaryRelease
     hooks:
-      post: go-msi make --msi dist/regolith-{{.Version}}.msi --version {{.Version}} --src templates --out go-msi-tmp
+      post: go-msi make --msi dist/regolith-{{.Version}}.msi --version {{.Version}} --src .\templates --out .\go-msi-tmp
 
 archives:
   - builds:
