@@ -10,18 +10,23 @@ const nodeJSFilterName = "nodejs"
 
 func RegisterNodeJSFilter(filters map[string]filterDefinition) {
 	filters[nodeJSFilterName] = filterDefinition{
-		filter: runNodeJSFilter,
-		check:  checkNodeJSRequirements,
+		filter:  runNodeJSFilter,
+		install: installNodeJSFilter,
+		check:   checkNodeJSRequirements,
 	}
 }
 
 func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) {
 	if len(settings) == 0 {
-		RunSubProcess("node", append([]string{absoluteLocation}, filter.Arguments...))
+		RunSubProcess("node", append([]string{absoluteLocation}, filter.Arguments...), GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		RunSubProcess("node", append([]string{absoluteLocation, string(jsonSettings)}, filter.Arguments...))
+		RunSubProcess("node", append([]string{absoluteLocation, string(jsonSettings)}, filter.Arguments...), GetAbsoluteWorkingDirectory())
 	}
+}
+
+func installNodeJSFilter(filter Filter, filterPath string) {
+
 }
 
 func checkNodeJSRequirements() {

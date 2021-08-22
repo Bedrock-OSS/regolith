@@ -1,7 +1,9 @@
 package src
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -75,10 +77,37 @@ func InstallDependency(url string) error {
 
 	// Install the url into the cache folder
 
-	err := getter.Get(UrlToPath(url), url)
+	path := UrlToPath(url)
+	err := getter.Get(path, url)
 
 	if err != nil {
 		log.Fatal(color.RedString("Could not install dependency %s: ", url), err)
+	}
+	file, err := ioutil.ReadFile(path + "/filter.json")
+
+	if err != nil {
+		log.Fatal(color.RedString("Couldn't find %s/filter.json!", path), err)
+	}
+
+	var result Profile
+	err = json.Unmarshal(file, &result)
+	if err != nil {
+		log.Fatal(color.RedString("Couldn't load %s/filter.json: ", path), err)
+	}
+
+	// Check whether filter, that the user wants to run meet the requirements
+	checked := map[string]bool{}
+	for _, filter := range result.Filters {
+		if filter.RunWith != "" {
+			if c, ok := checked[filter.RunWith]; ok || !c {
+				if f, ok := FilterTypes[filter.RunWith]; ok {
+					checked[filter.RunWith] = true
+					f.install(filter, path)
+				} else {
+					Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
+				}
+			}
+		}
 	}
 
 	return nil

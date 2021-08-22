@@ -2,7 +2,10 @@ package src
 
 import (
 	"encoding/json"
+	"os"
 	"os/exec"
+	"path"
+	"runtime"
 	"strings"
 )
 
@@ -10,18 +13,47 @@ const pythonFilterName = "python"
 
 func RegisterPythonFilter(filters map[string]filterDefinition) {
 	filters[pythonFilterName] = filterDefinition{
-		filter: runPythonFilter,
-		check:  checkPythonRequirements,
+		filter:  runPythonFilter,
+		install: installPythonFilter,
+		check:   checkPythonRequirements,
 	}
 }
 
 func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) {
+	command := "python"
+	dir := path.Dir(absoluteLocation)
+	if needsVenv(dir) {
+		suffix := ""
+		if runtime.GOOS == "windows" {
+			suffix = ".exe"
+		}
+		command = dir + "/venv/Scripts/python" + suffix
+	}
+	Logger.Debug(command)
 	if len(settings) == 0 {
-		RunSubProcess("python", append([]string{"-u", absoluteLocation}, filter.Arguments...))
+		RunSubProcess(command, append([]string{"-u", absoluteLocation}, filter.Arguments...), GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		RunSubProcess("python", append([]string{"-u", absoluteLocation, string(jsonSettings)}, filter.Arguments...))
+		RunSubProcess(command, append([]string{"-u", absoluteLocation, string(jsonSettings)}, filter.Arguments...), GetAbsoluteWorkingDirectory())
 	}
+}
+
+func installPythonFilter(filter Filter, filterPath string) {
+	if needsVenv(filterPath) {
+		Logger.Info("Creating venv...")
+		RunSubProcess("python", []string{"-m", "venv", "venv"}, filterPath)
+		suffix := ""
+		if runtime.GOOS == "windows" {
+			suffix = ".exe"
+		}
+		Logger.Info("Installing dependencies...")
+		RunSubProcess("venv/Scripts/pip"+suffix, []string{"install", "-r", "requirements.txt"}, filterPath)
+	}
+}
+
+func needsVenv(filterPath string) bool {
+	_, err := os.Stat(path.Join(filterPath, "requirements.txt"))
+	return err == nil
 }
 
 func checkPythonRequirements() {
