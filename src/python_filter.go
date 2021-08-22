@@ -29,7 +29,6 @@ func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 		}
 		command = dir + "/venv/Scripts/python" + suffix
 	}
-	Logger.Debug(command)
 	if len(settings) == 0 {
 		RunSubProcess(command, append([]string{"-u", absoluteLocation}, filter.Arguments...), GetAbsoluteWorkingDirectory())
 	} else {

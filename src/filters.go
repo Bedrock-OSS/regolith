@@ -106,8 +106,6 @@ func RunProfile(profileName string) {
 }
 
 func GetExportPaths(export_target ExportTarget, name string) (string, string) {
-	Logger.Debug(export_target)
-
 	if export_target.Target == "development" {
 		com_mojang := FindMojangDir()
 		return com_mojang + "/development_behavior_packs/" + name + "_bp", com_mojang + "/development_resource_packs/" + name + "_rp"
