@@ -42,7 +42,7 @@ func hasPackageJson(filterPath string) bool {
 func checkNodeJSRequirements() {
 	_, err := exec.LookPath("node")
 	if err != nil {
-		Logger.Fatal("NodeJS not found")
+		Logger.Fatal("NodeJS not found. Download and install it from https://nodejs.org/en/")
 	}
 	cmd, _ := exec.Command("node", "--version").Output()
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
