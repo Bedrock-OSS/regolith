@@ -28,10 +28,10 @@ jobs:
           go get github.com/stirante/go-msi
           mkdir ./go-msi-tmp
         shell: bash
-#      - name: Sync vendor directory
-#        run: |
-#          go mod vendor
-#        shell: bash
+      - name: Sync vendor directory
+        run: |
+          go mod vendor
+        shell: bash
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
