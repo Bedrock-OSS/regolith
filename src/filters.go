@@ -87,7 +87,7 @@ func RunProfile(profileName string) {
 	//now, we go through the filters!
 	for _, filter := range profile.Filters {
 		path, _ := filepath.Abs(".")
-		RunFilter(filter, path)
+		filter.RunFilter(path)
 	}
 
 	//copy contents of .regolith/tmp to build
@@ -140,17 +140,17 @@ func ExportProject(profile Profile, name string) {
 }
 
 // Runs the filter by selecting the correct filter type and running it
-func RunFilter(filter Filter, absoluteLocation string) {
+func (filter *Filter) RunFilter(absoluteLocation string) {
 	Logger.Infof("Running filter '%s'", filter.Name)
 	start := time.Now()
 
 	if filter.Url != "" {
 		RunRemoteFilter(filter.Url, filter.Settings, filter.Arguments)
 	} else if filter.Filter != "" {
-		RunStandardFilter(filter)
+		RunStandardFilter(*filter)
 	} else {
 		if f, ok := FilterTypes[filter.RunWith]; ok {
-			f.filter(filter, filter.Settings, absoluteLocation+string(os.PathSeparator)+filter.Location)
+			f.filter(*filter, filter.Settings, absoluteLocation+string(os.PathSeparator)+filter.Location)
 		} else {
 			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 		}
@@ -192,7 +192,7 @@ func RunRemoteFilter(url string, settings map[string]interface{}, arguments []st
 		for k, v := range settings {
 			filter.Settings[k] = v
 		}
-		RunFilter(filter, absolutePath)
+		filter.RunFilter(absolutePath)
 	}
 }
 
