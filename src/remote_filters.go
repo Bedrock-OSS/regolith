@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
-	"github.com/fatih/color"
 	getter "github.com/hashicorp/go-getter"
 )
 
@@ -53,27 +51,27 @@ func GatherDependencies() []string {
 }
 
 func InstallDependencies() {
-	log.Println(color.GreenString("Installing dependencies..."))
-	log.Println(color.YellowString("Warning: This may take a while..."))
+	Logger.Infof("Installing dependencies...")
+	Logger.Warnf("This may take a while...")
 
 	err := os.MkdirAll(".regolith/cache", 0777)
 	if err != nil {
-		log.Fatal(color.RedString("Could not create .regolith/cache: "), err)
+		Logger.Fatal(fmt.Sprintf("Could not create .regolith/cache: "), err)
 	}
 
 	dependencies := GatherDependencies()
 	for _, dependency := range dependencies {
 		err := InstallDependency(dependency)
 		if err != nil {
-			log.Fatal(color.RedString("Could not install dependency %s: ", dependency), err)
+			Logger.Fatal(fmt.Sprintf("Could not install dependency %s: ", dependency), err)
 		}
 	}
 
-	log.Println(color.GreenString("Dependencies installed."))
+	Logger.Infof("Dependencies installed.")
 }
 
 func InstallDependency(url string) error {
-	log.Println(color.GreenString("Installing dependency %s...", url))
+	Logger.Infof("Installing dependency %s...", url)
 
 	// Install the url into the cache folder
 
@@ -81,18 +79,18 @@ func InstallDependency(url string) error {
 	err := getter.Get(path, url)
 
 	if err != nil {
-		log.Fatal(color.RedString("Could not install dependency %s: ", url), err)
+		Logger.Fatal(fmt.Sprintf("Could not install dependency %s: ", url), err)
 	}
 	file, err := ioutil.ReadFile(path + "/filter.json")
 
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't find %s/filter.json!", path), err)
+		Logger.Fatal(fmt.Sprintf("Couldn't find %s/filter.json!", path), err)
 	}
 
 	var result Profile
 	err = json.Unmarshal(file, &result)
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't load %s/filter.json: ", path), err)
+		Logger.Fatal(fmt.Sprintf("Couldn't load %s/filter.json: ", path), err)
 	}
 
 	// Check whether filter, that the user wants to run meet the requirements
