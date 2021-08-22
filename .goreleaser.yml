@@ -65,7 +65,7 @@ changelog:
 
 release:
   extra_files:
-    - glob: "./dist/regolith-{{.Version}}.msi"
+    - glob: "./regolith-*.msi"
 
 #brews:
 #  - tap:
