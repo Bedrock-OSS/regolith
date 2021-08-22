@@ -45,7 +45,7 @@ func installPythonFilter(filter Filter, filterPath string) {
 		if runtime.GOOS == "windows" {
 			suffix = ".exe"
 		}
-		Logger.Info("Installing dependencies...")
+		Logger.Info("Installing pip dependencies...")
 		RunSubProcess("venv/Scripts/pip"+suffix, []string{"install", "-r", "requirements.txt"}, filterPath)
 	}
 }

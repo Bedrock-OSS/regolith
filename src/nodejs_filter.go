@@ -2,7 +2,9 @@ package src
 
 import (
 	"encoding/json"
+	"os"
 	"os/exec"
+	"path"
 	"strings"
 )
 
@@ -26,7 +28,15 @@ func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 }
 
 func installNodeJSFilter(filter Filter, filterPath string) {
+	if hasPackageJson(filterPath) {
+		Logger.Info("Installing npm dependencies...")
+		RunSubProcess("npm", []string{"i"}, filterPath)
+	}
+}
 
+func hasPackageJson(filterPath string) bool {
+	_, err := os.Stat(path.Join(filterPath, "package.json"))
+	return err == nil
 }
 
 func checkNodeJSRequirements() {
