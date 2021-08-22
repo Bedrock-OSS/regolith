@@ -28,7 +28,7 @@ A `filter` is any process that edits/adds/deletes files inside of the `temp` fol
 Examples of potential filters:
  - A filter that removes all comments from json, allowing the next filter(s) to read json without needing to handle comments
  - A filter which automatically generates `texture_list.json`
- - A filter which takes a `.ps` file, and automatically exports the png, allowing you to work directly in photoshop, without needing to export the files each time you edit it.
+ - A filter which takes a `.psd` file, and automatically exports the png, allowing you to work directly in photoshop, without needing to export the files each time you edit it.
  - A filter which generates `1.10` format items, based on item-textures in a specific folder.
  - A filter which automatically inserts your team-branding maps or entities.
 
