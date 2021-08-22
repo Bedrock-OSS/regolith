@@ -25,8 +25,8 @@ jobs:
           mkdir -p C:/wix
           unzip wix311-binaries.zip -d "C:/wix"
           echo "C:\wix" >> $GITHUB_PATH
-          go get github.com/mat007/go-msi
-          mkdir go-msi-tmp
+          go get github.com/stirante/go-msi
+          mkdir ./go-msi-tmp
         shell: bash
       - name: Sync vendor directory
         run: |
