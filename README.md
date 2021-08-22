@@ -44,6 +44,8 @@ You can also reference filters from github, by simply adding the github link as 
 
 The Regolith Standard Library is a git repository which contains "official" filters. This is the safest way to use Regolith, and the least technical.
 
+Source for all standard library filters can be found [here](https://github.com/Bedrock-OSS/regolith-filters)
+
 ## Running
 
 ### Install Golang
