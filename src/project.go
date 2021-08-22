@@ -2,6 +2,7 @@ package src
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -51,12 +52,12 @@ func IsConfigExists() bool {
 func LoadConfig() Project {
 	file, err := ioutil.ReadFile(ManifestName)
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't find %s! Consider running 'regolith init'", ManifestName))
+		Logger.Fatalf("Couldn't find %s! Consider running 'regolith init'", ManifestName)
 	}
 	var result Project
 	err = json.Unmarshal(file, &result)
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't load %s: ", ManifestName), err)
+		Logger.Fatal(fmt.Sprintf("Couldn't load %s: ", ManifestName), err)
 	}
 	return result
 }
@@ -65,13 +66,13 @@ func InitializeRegolithProject(isForced bool) bool {
 
 	// Do not attempt to initialize if project is already initialized (can be forced)
 	if !isForced && IsConfigExists() {
-		log.Fatal(color.RedString("Could not initialize Regolith project. File %s already exists.", ManifestName))
+		Logger.Errorf("Could not initialize Regolith project. File %s already exists.", ManifestName)
 		return false
 	} else {
-		log.Println(color.GreenString("Initializing Regolith project..."))
+		Logger.Info("Initializing Regolith project...")
 
 		if isForced {
-			log.Println(color.YellowString("Warning: Initialization forced. Data may be lost."))
+			Logger.Warn("Warning: Initialization forced. Data may be lost.")
 		}
 
 		// Delete old configuration
@@ -82,19 +83,36 @@ func InitializeRegolithProject(isForced bool) bool {
 		if err != nil {
 			log.Fatal(color.RedString("Could not create %s: ", ManifestName), err)
 		}
-		defer file.Close()
+		defer func(file *os.File) {
+			err := file.Close()
+			if err != nil {
+				Logger.Fatal("Failed to close the file")
+			}
+		}(file)
 
 		// Write default configuration
-		var jsonData interface{}
-		json.Unmarshal(json.RawMessage(`{"profiles":{"default":{"unsafe":false,"filters":[]}}}`), &jsonData)
-		jsonBytes, _ := json.MarshalIndent(jsonData, "", "\t")
-		file.Write(jsonBytes)
-		log.Println(color.GreenString("Regolith project initialized."))
+		jsonData := Project{
+			Profiles: map[string]Profile{
+				"default": {
+					Unsafe:  false,
+					Filters: []Filter{},
+					ExportTarget: ExportTarget{
+						Target: "development",
+					},
+				},
+			},
+		}
+		jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
+		_, err = file.Write(jsonBytes)
+		if err != nil {
+			Logger.Fatal("Failed to write project file contents")
+		}
+		Logger.Info("Regolith project initialized.")
 
 		// Create .regolith folder
 		err = os.Mkdir(".regolith", 0777)
 		if err != nil {
-			log.Fatal(color.RedString("Could not create .regolith folder: "), err)
+			Logger.Fatal("Could not create .regolith folder", err)
 		}
 
 		return true
