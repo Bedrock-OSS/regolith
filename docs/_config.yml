@@ -19,7 +19,7 @@ email: sirlich.business@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
   LOREM IPSUM
 github_username: Bedrock-OSS
-minimal_mistakes_skin: "plum" # "default", "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum" "sunrise"
+minimal_mistakes_skin: "regolith" # "default", "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum" "sunrise"
 search: true
 
 # Build settings

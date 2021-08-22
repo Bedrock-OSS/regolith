@@ -6,21 +6,21 @@ intro:
   - excerpt: 'Regolith: The Addon Compiler.'
   - type: center
 cards:
-  - image_path: assets/images/fast.png
+  - image_path: assets/images/homepage/fast.png
     alt: "Business Logic Icon: Clock and Paper"
     title: "Blazingly Fast"
     excerpt: "LOREM IPSUM"
     url: "documentation/getting_started"
     btn_class: "btn--primary"
     btn_label: "Learn more"
-  - image_path: /assets/images/powerful.png
+  - image_path: /assets/images/homepage/powerful.png
     alt: "Business Logic Icon: Gear and Wrench"
     title: "Powerful"
     excerpt: "LOREM IPSUM"
     url: "documentation/getting_started"
     btn_class: "btn--primary"
     btn_label: "Learn more"
-  - image_path: /assets/images/simple.png
+  - image_path: /assets/images/homepage/simple.png
     alt: "Business Logic Icon: Cactus"
     title: "Simple"
     excerpt: "LOREM IPSUM"
@@ -32,8 +32,7 @@ testimonials:
   - title: "SirLich"
     excerpt: "LOREM IPSUM"
 logo:
-  - image_path: /assets/images/echo.png
-    alt: "Echo:NPC Logo: Bunny with Echo NPC text"
+  - image_path: /assets/images/title_logo.png
     excerpt: "LOREM IPSUM"
     url: "/documentation/getting_started"
     btn_label: "Get Started"
@@ -54,6 +53,5 @@ logo:
 
 {% include feature_row id="testimonials"%}
 
-<!-- {% include video id="QpN7Wva5r20" provider="youtube" %} -->
 
 <div>Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
