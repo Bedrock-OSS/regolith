@@ -30,7 +30,7 @@ func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 func installNodeJSFilter(filter Filter, filterPath string) {
 	if hasPackageJson(filterPath) {
 		Logger.Info("Installing npm dependencies...")
-		RunSubProcess("npm", []string{"i"}, filterPath)
+		RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath)
 	}
 }
 
