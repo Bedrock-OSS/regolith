@@ -91,8 +91,14 @@ func RunProfile(profileName string) {
 	//copy contents of .regolith/tmp to build
 	Logger.Info("Moving files to target directory")
 	start := time.Now()
-	os.RemoveAll("build")
-	os.Rename(".regolith/tmp", "build")
+	err = os.RemoveAll("build")
+	if err != nil {
+		Logger.Fatal("Unable to clean build directory")
+	}
+	err = os.Rename(".regolith/tmp", "build")
+	if err != nil {
+		Logger.Fatal("Unable to move output to build directory")
+	}
 	Logger.Debug("Done in ", time.Since(start))
 
 	// copy the build to the target directory
@@ -105,37 +111,37 @@ func RunProfile(profileName string) {
 	Logger.Info(color.GreenString("Finished"))
 }
 
-func GetExportPaths(export_target ExportTarget, name string) (string, string) {
-	if export_target.Target == "development" {
-		com_mojang := FindMojangDir()
-		return com_mojang + "/development_behavior_packs/" + name + "_bp", com_mojang + "/development_resource_packs/" + name + "_rp"
+func GetExportPaths(exportTarget ExportTarget, name string) (string, string) {
+	if exportTarget.Target == "development" {
+		comMojang := FindMojangDir()
+		return comMojang + "/development_behavior_packs/" + name + "_bp", comMojang + "/development_resource_packs/" + name + "_rp"
 	}
 
 	// Throw fatal error that export target isn't valid
-	Logger.Fatalf("Export '%s' target not valid", export_target.Target)
+	Logger.Fatalf("Export '%s' target not valid", exportTarget.Target)
 	return "", ""
 }
 
 func ExportProject(profile Profile, name string) {
 	var err error
-	export_target := profile.ExportTarget
-	bp_path, rp_path := GetExportPaths(export_target, name)
+	exportTarget := profile.ExportTarget
+	bpPath, rpPath := GetExportPaths(exportTarget, name)
 
-	Logger.Info("Exporting project to ", bp_path)
-	Logger.Info("Exporting project to ", rp_path)
+	Logger.Info("Exporting project to ", bpPath)
+	Logger.Info("Exporting project to ", rpPath)
 
-	err = copy.Copy("build/BP/", bp_path, copy.Options{PreserveTimes: false, Sync: false})
+	err = copy.Copy("build/BP/", bpPath, copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
-		Logger.Fatal(color.RedString("Couldn't copy BP files to %s", bp_path), err)
+		Logger.Fatal(color.RedString("Couldn't copy BP files to %s", bpPath), err)
 	}
 
-	err = copy.Copy("build/RP/", rp_path, copy.Options{PreserveTimes: false, Sync: false})
+	err = copy.Copy("build/RP/", rpPath, copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
-		Logger.Fatal(color.RedString("Couldn't copy RP files to %s", rp_path), err)
+		Logger.Fatal(color.RedString("Couldn't copy RP files to %s", rpPath), err)
 	}
 }
 
-// Runs the filter by selecting the correct filter type and running it
+// RunFilter Runs the filter by selecting the correct filter type and running it
 func (filter *Filter) RunFilter(absoluteLocation string) {
 	Logger.Infof("Running filter '%s'", filter.Name)
 	start := time.Now()
@@ -196,19 +202,6 @@ func GetAbsoluteWorkingDirectory() string {
 	absoluteWorkingDir, _ := filepath.Abs(".regolith/tmp")
 	return absoluteWorkingDir
 }
-
-//func RunSubProcess(command string, args []string) {
-//	cmd := exec.Command(command, args...)
-//	cmd.Dir = GetAbsoluteWorkingDirectory()
-//	cmd.Stdout = os.Stdout
-//	cmd.Stderr = os.Stderr
-//
-//	err := cmd.Run()
-//
-//	if err != nil {
-//		Logger.Fatal(zap.Error(err))
-//	}
-//}
 
 func RunSubProcess(command string, args []string, workingDir string) {
 	cmd := exec.Command(command, args...)
