@@ -1,0 +1,23 @@
+{
+  "product": "regolith",
+  "company": "Bedrock-OSS",
+  "license": "LICENSE.rtf",
+  "upgrade-code": "a68fe70c-ddbc-4f04-a6db-a633322e304e",
+  "info": {
+  },
+  "files": [
+    {
+      "path": "dist/msi_windows_amd64/regolith.exe"
+    }
+  ],
+  "environments": [
+    {
+      "name": "path",
+      "value": "[INSTALLDIR]",
+      "permanent": "yes",
+      "system": "yes",
+      "action": "set",
+      "part": "last"
+    }
+  ]
+}

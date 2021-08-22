@@ -1,0 +1,41 @@
+name: goreleaser
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      - name: Set up Wix Toolset
+        run: |
+          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip
+          mkdir -p C:/wix
+          unzip wix311-binaries.zip -d "C:/wix"
+          echo "C:\wix" >> $GITHUB_PATH
+          go get github.com/mat007/go-msi
+        shell: bash
+      - name: Sync vendor directory
+        run: |
+          go mod vendor
+        shell: bash
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
