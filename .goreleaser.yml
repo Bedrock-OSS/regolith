@@ -63,7 +63,14 @@ snapshot:
 changelog:
   filters:
     exclude:
+      # For excluding docs related commits
       - '^docs:'
+      # For excluding configuration related commits
+      - '^config:'
+      # For excluding small typo commits
+      - '^typo:'
+      # For excluding dependencies related commits
+      - '^dep:'
   sort: asc
 
 release:
