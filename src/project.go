@@ -27,6 +27,7 @@ type Filter struct {
 	Name      string                 `json:"name"`
 	Location  string                 `json:"location"`
 	RunWith   string                 `json:"run_with"`
+	Command   string                 `json:"command"`
 	Arguments []string               `json:"arguments"`
 	Url       string                 `json:"url"`
 	Filter    string                 `json:"filter"`

@@ -26,6 +26,7 @@ var FilterTypes = map[string]filterDefinition{}
 func RegisterFilters() {
 	RegisterPythonFilter(FilterTypes)
 	RegisterNodeJSFilter(FilterTypes)
+	RegisterShellFilter(FilterTypes)
 }
 
 func Setup() error {
@@ -152,7 +153,7 @@ func (filter *Filter) RunFilter(absoluteLocation string) {
 		RunStandardFilter(*filter)
 	} else {
 		if f, ok := FilterTypes[filter.RunWith]; ok {
-			f.filter(*filter, filter.Settings, absoluteLocation+string(os.PathSeparator)+filter.Location)
+			f.filter(*filter, filter.Settings, absoluteLocation)
 		} else {
 			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 		}
