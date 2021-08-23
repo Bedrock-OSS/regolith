@@ -30,10 +30,10 @@ func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 		command = dir + "/venv/Scripts/python" + suffix
 	}
 	if len(settings) == 0 {
-		RunSubProcess(command, append([]string{"-u", absoluteLocation}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Location}, filter.Arguments...), GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		RunSubProcess(command, append([]string{"-u", absoluteLocation, string(jsonSettings)}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Location, string(jsonSettings)}, filter.Arguments...), GetAbsoluteWorkingDirectory())
 	}
 }
 
