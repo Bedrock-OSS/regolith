@@ -14,13 +14,15 @@ const ManifestName = "config.json"
 
 // TODO implement the rest of the standard config spec
 type Config struct {
-	Name   string `json:"name"`
-	Author string `json:"author"`
-	Packs  struct {
-		BehaviorFolder string `json:"behaviorPack"`
-		ResourceFolder string `json:"resourcePack"`
-	}
+	Name            string `json:"name"`
+	Author          string `json:"author"`
+	Packs           `json:"packs"`
 	RegolithProject `json:"regolith"`
+}
+
+type Packs struct {
+	BehaviorFolder string `json:"behaviorPack"`
+	ResourceFolder string `json:"resourcePack"`
 }
 
 type RegolithProject struct {
@@ -104,13 +106,21 @@ func InitializeRegolithProject(isForced bool) bool {
 		}(file)
 
 		// Write default configuration
-		jsonData := RegolithProject{
-			Profiles: map[string]Profile{
-				"default": {
-					Unsafe:  false,
-					Filters: []Filter{},
-					ExportTarget: ExportTarget{
-						Target: "development",
+		jsonData := Config{
+			Name:   "Project Name",
+			Author: "Your name",
+			Packs: Packs{
+				BehaviorFolder: "./packs/BP",
+				ResourceFolder: "./packs/RP",
+			},
+			RegolithProject: RegolithProject{
+				Profiles: map[string]Profile{
+					"dev": {
+						Unsafe:  false,
+						Filters: []Filter{},
+						ExportTarget: ExportTarget{
+							Target: "development",
+						},
 					},
 				},
 			},
@@ -120,14 +130,29 @@ func InitializeRegolithProject(isForced bool) bool {
 		if err != nil {
 			Logger.Fatal("Failed to write project file contents")
 		}
-		Logger.Info("Regolith project initialized.")
 
-		// Create .regolith folder
-		err = os.Mkdir(".regolith", 0777)
+		// Create folders
+		err = os.Mkdir("packs", 0777)
 		if err != nil {
-			Logger.Fatal("Could not create .regolith folder", err)
+			Logger.Error("Could not create packs folder", err)
 		}
 
+		err = os.Mkdir("./packs/RP", 0777)
+		if err != nil {
+			Logger.Error("Could not create ./packs/RP folder", err)
+		}
+
+		err = os.Mkdir("./packs/BP", 0777)
+		if err != nil {
+			Logger.Error("Could not create ./packs/BP folder", err)
+		}
+
+		err = os.Mkdir(".regolith", 0777)
+		if err != nil {
+			Logger.Error("Could not create .regolith folder", err)
+		}
+
+		Logger.Info("Regolith project initialized.")
 		return true
 	}
 }
