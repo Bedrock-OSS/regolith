@@ -45,10 +45,17 @@ func Setup() error {
 
 	// Copy the contents of the `regolith` folder to `.regolith/tmp`
 	Logger.Debug("Copying project files to .regolith/tmp")
-	err = copy.Copy("regolith", ".regolith/tmp", copy.Options{PreserveTimes: false, Sync: false})
+
+	err = copy.Copy(LoadConfig().Packs.BehaviorFolder, ".regolith/tmp/BP", copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
 		return err
 	}
+
+	err = copy.Copy(LoadConfig().Packs.ResourceFolder, ".regolith/tmp/RP", copy.Options{PreserveTimes: false, Sync: false})
+	if err != nil {
+		return err
+	}
+
 	Logger.Debug("Setup done in ", time.Since(start))
 	return nil
 }
@@ -127,6 +134,15 @@ func ExportProject(profile Profile, name string) {
 	var err error
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath := GetExportPaths(exportTarget, name)
+
+	// Allow clearing output locations, before writing
+	// TODO Uncomment this. Is it safe? Can we send to recycle bin?
+	// if exportTarget.Clean {
+	// 	os.RemoveAll(bpPath")
+	// 	os.MkdirAll(bpPath", 0777)
+	// 	os.RemoveAll(rpPath")
+	// 	os.MkdirAll(rpPath", 0777)
+	// }
 
 	Logger.Info("Exporting project to ", bpPath)
 	Logger.Info("Exporting project to ", rpPath)
