@@ -10,10 +10,20 @@ import (
 	"github.com/fatih/color"
 )
 
-const ManifestName = "regolith.json"
+const ManifestName = "config.json"
 
-type Project struct {
-	Name     string             `json:"name"`
+// TODO implement the rest of the standard config spec
+type Config struct {
+	Name   string `json:"name"`
+	Author string `json:"author"`
+	Packs  struct {
+		BehaviorFolder string `json:"behaviorPack"`
+		ResourceFolder string `json:"resourcePack"`
+	}
+	RegolithProject `json:"regolith"`
+}
+
+type RegolithProject struct {
 	Profiles map[string]Profile `json:"profiles"`
 }
 
@@ -35,6 +45,7 @@ type Filter struct {
 }
 
 type ExportTarget struct {
+	Clean         bool   `json:"clean"`
 	Target        string `json:"target"`
 	ComMojangPath string `json:"com_mojang_path"`
 	WorldName     string `json:"world_name"`
@@ -42,7 +53,8 @@ type ExportTarget struct {
 	Path          string `json:"path"`
 }
 
-func IsConfigExists() bool {
+func IsProjectConfigured() bool {
+	// TODO: Write a better system here, that checks all possible files.
 	info, err := os.Stat(ManifestName)
 	if os.IsNotExist(err) {
 		return false
@@ -50,12 +62,12 @@ func IsConfigExists() bool {
 	return !info.IsDir()
 }
 
-func LoadConfig() Project {
+func LoadConfig() Config {
 	file, err := ioutil.ReadFile(ManifestName)
 	if err != nil {
 		Logger.Fatalf("Couldn't find %s! Consider running 'regolith init'", ManifestName)
 	}
-	var result Project
+	var result Config
 	err = json.Unmarshal(file, &result)
 	if err != nil {
 		Logger.Fatal(fmt.Sprintf("Couldn't load %s: ", ManifestName), err)
@@ -66,14 +78,14 @@ func LoadConfig() Project {
 func InitializeRegolithProject(isForced bool) bool {
 
 	// Do not attempt to initialize if project is already initialized (can be forced)
-	if !isForced && IsConfigExists() {
+	if !isForced && IsProjectConfigured() {
 		Logger.Errorf("Could not initialize Regolith project. File %s already exists.", ManifestName)
 		return false
 	} else {
 		Logger.Info("Initializing Regolith project...")
 
 		if isForced {
-			Logger.Warn("Warning: Initialization forced. Data may be lost.")
+			Logger.Warn("Initialization forced. Data may be lost.")
 		}
 
 		// Delete old configuration
@@ -92,7 +104,7 @@ func InitializeRegolithProject(isForced bool) bool {
 		}(file)
 
 		// Write default configuration
-		jsonData := Project{
+		jsonData := RegolithProject{
 			Profiles: map[string]Profile{
 				"default": {
 					Unsafe:  false,
