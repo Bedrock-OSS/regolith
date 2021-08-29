@@ -51,8 +51,11 @@ func installPythonFilter(filter Filter, filterPath string) {
 }
 
 func needsVenv(filterPath string) bool {
-	_, err := os.Stat(path.Join(filterPath, "requirements.txt"))
-	return err == nil
+	stats, err := os.Stat(path.Join(filterPath, "requirements.txt"))
+	if err == nil {
+		return !stats.IsDir()
+	}
+	return false
 }
 
 func checkPythonRequirements() {
