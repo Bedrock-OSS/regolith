@@ -9,50 +9,21 @@ main:
 sidebar:
   - title: Getting Started
     children:
+      - title: "Introduction"
+        url: /docs/introduction
+      - title: "Installing"
+        url: /docs/installing
       - title: "Getting Started"
-        url: /documentation/getting_started
-      - title: "Running"
-        url: /documentation/running
+        url: /docs/getting-started
       - title: "Troubleshooting"
-        url: /documentation/troubleshooting
-
-  - title: Manual
+        url: /docs/troubleshooting
+  - title: Documentation
     children:
-      - title: "Templates"
-        url: /documentation/templates
-      - title: "Set-lang"
-        url: /documentation/setlang
-      - title: "Settings"
-        url: /documentation/settings
-      - title: "Single States"
-        url: /documentation/single_states
-      - title: "Transitions"
-        url: /documentation/transitions
-      - title: "Randomizers"
-        url: /documentation/randomizers
-
-  - title: Example
-    children:
-      - title: "Simple Example"
-        url: /documentation/examples/simple
-      - title: "Voice Examples"
-        url: /documentation/examples/voice
-      - title: "Without Dialogue"
-        url: /documentation/examples/no_dialogue
-      - title: "Using Custom Entities"
-        url: /documentation/examples/custom_entity
-      - title: "Multiple-State Entity"
-        url: /documentation/examples/multi_state
-      - title: "Trap Entity"
-        url: /documentation/examples/trap
-      - title: "Tutorial Entity"
-        url: /documentation/examples/tutorial_npc
-      - title: "Pathfinding"
-        url: /documentation/examples/pathfinding
-      - title: "Quest"
-        url: "/documentation/examples/quest"
-      
-  - title: Schemas
-    children:
-    - title: "Template Schema"
-      url: /documentation/schemas/template
+      - title: "Configuration File"
+        url: /docs/configuration
+      - title: "Custom Filters"
+        url: /docs/custom-filters
+      - title: "Standard Library"
+        url: /docs/standard-library
+      - title: "Troubleshooting"
+        url: /docs/troubleshooting
