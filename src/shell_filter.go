@@ -2,11 +2,12 @@ package src
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 const shellFilterName = "shell"
@@ -15,15 +16,13 @@ var shells = [][]string{{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"
 
 func RegisterShellFilter(filters map[string]filterDefinition) {
 	filters[shellFilterName] = filterDefinition{
-		filter: runShellFilter,
-		install: func(filter Filter, path string) {
-
-		},
-		check: checkShellRequirements,
+		filter:  runShellFilter,
+		install: func(filter Filter, path string, profile Profile) {},
+		check:   checkShellRequirements,
 	}
 }
 
-func runShellFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) {
+func runShellFilter(filter Filter, settings map[string]interface{}, absoluteLocation string, profile Profile) {
 	if len(settings) == 0 {
 		executeCommand(filter.Command, filter.Arguments, absoluteLocation, GetAbsoluteWorkingDirectory())
 	} else {
