@@ -2,7 +2,7 @@ main:
   - title: "Home"
     url: /
   - title: "Documentation"
-    url: /documentation
+    url: /docs
   - title: "Discord"
     url: https://discord.gg/XjV87YN
   

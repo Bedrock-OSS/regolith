@@ -10,7 +10,7 @@ feature_row:
 
 {% include feature_row id="feature_row" type="center" %}
 
-# Documentation
+# Welcome to Regolith!
 
-LOREM IPSUM
+Get started by reading out [introduction](/docs/introduction).
 
