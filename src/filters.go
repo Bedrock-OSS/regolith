@@ -75,7 +75,7 @@ func RunProfile(profileName string) {
 	exists := struct{}{}
 	for _, filter := range profile.Filters {
 		if filter.RunWith != "" {
-			if _, ok := checked[filter.RunWith]; ok {
+			if _, ok := checked[filter.RunWith]; !ok {
 				if f, ok := FilterTypes[filter.RunWith]; ok {
 					checked[filter.RunWith] = exists
 					f.check()
