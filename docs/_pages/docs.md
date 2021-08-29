@@ -1,6 +1,7 @@
 ---
-permalink: /documentation/
+permalink: /docs/
 layout: single
+classes: wide
 sidebar:
   nav: "sidebar"
 feature_row:
