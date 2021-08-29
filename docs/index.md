@@ -30,11 +30,11 @@ cards:
     
 testimonials:
   - title: "SirLich"
-    excerpt: "LOREM IPSUM"
+    excerpt: "Regolith is the bomb yo"
 logo:
   - image_path: /assets/images/title_logo.png
-    excerpt: "LOREM IPSUM"
-    url: "/documentation/getting_started"
+    excerpt: "Regolith: Addon Compiler for the Bedrock Edition of Minecraft"
+    url: "/docs/introduction"
     btn_label: "Get Started"
     btn_class: "btn--primary"
 ---
