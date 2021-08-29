@@ -73,11 +73,11 @@ func InstallDependencies() {
 func InstallDependency(url string) error {
 	Logger.Infof("Installing dependency %s...", url)
 
-	// Install the url into the cache folder
-
+	// Download the filter into the cache folder
 	path := UrlToPath(url)
 	err := getter.Get(path, url)
 
+	// Check required files
 	if err != nil {
 		Logger.Fatal(fmt.Sprintf("Could not install dependency %s: ", url), err)
 	}
@@ -93,17 +93,13 @@ func InstallDependency(url string) error {
 		Logger.Fatal(fmt.Sprintf("Couldn't load %s/filter.json: ", path), err)
 	}
 
-	// Check whether filter, that the user wants to run meet the requirements
-	checked := map[string]bool{}
+	// Install filter dependencies
 	for _, filter := range result.Filters {
 		if filter.RunWith != "" {
-			if c, ok := checked[filter.RunWith]; ok || !c {
-				if f, ok := FilterTypes[filter.RunWith]; ok {
-					checked[filter.RunWith] = true
-					f.install(filter, path)
-				} else {
-					Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
-				}
+			if f, ok := FilterTypes[filter.RunWith]; ok {
+				f.install(filter, path)
+			} else {
+				Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 			}
 		}
 	}

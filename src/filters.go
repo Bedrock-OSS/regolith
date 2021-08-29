@@ -71,12 +71,13 @@ func RunProfile(profileName string) {
 	}
 
 	// Check whether filter, that the user wants to run meet the requirements
-	checked := map[string]bool{}
+	checked := make(map[string]struct{})
+	exists := struct{}{}
 	for _, filter := range profile.Filters {
 		if filter.RunWith != "" {
-			if c, ok := checked[filter.RunWith]; ok || !c {
+			if _, ok := checked[filter.RunWith]; ok {
 				if f, ok := FilterTypes[filter.RunWith]; ok {
-					checked[filter.RunWith] = true
+					checked[filter.RunWith] = exists
 					f.check()
 				} else {
 					Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
