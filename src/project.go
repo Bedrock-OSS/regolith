@@ -38,7 +38,7 @@ type Profile struct {
 type Filter struct {
 	Name      string                 `json:"name"`
 	Location  string                 `json:"location"`
-	RunWith   string                 `json:"run_with"`
+	RunWith   string                 `json:"runWith"`
 	Command   string                 `json:"command"`
 	Arguments []string               `json:"arguments"`
 	Url       string                 `json:"url"`
@@ -49,9 +49,9 @@ type Filter struct {
 type ExportTarget struct {
 	Clean         bool   `json:"clean"`
 	Target        string `json:"target"`
-	ComMojangPath string `json:"com_mojang_path"`
-	WorldName     string `json:"world_name"`
-	WorldPath     string `json:"world_path"`
+	ComMojangPath string `json:"comMojangPath"`
+	WorldName     string `json:"worldName"`
+	WorldPath     string `json:"worldPath"`
 	Path          string `json:"path"`
 }
 
