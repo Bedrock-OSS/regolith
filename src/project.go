@@ -33,7 +33,7 @@ type Profile struct {
 	Unsafe       bool         `json:"unsafe"`
 	Filters      []Filter     `json:"filters"`
 	ExportTarget ExportTarget `json:"export"`
-	VenvPath     string       `json:"venv_path"`
+	VenvPath     string       `json:"venvPath"`
 }
 
 type Filter struct {

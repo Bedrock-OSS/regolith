@@ -71,19 +71,16 @@ func resolveVenvPath(profile Profile, filterPath string) string {
 		if err != nil {
 			Logger.Fatal("Unable to resolve filter path: ", filterPath)
 		}
-		Logger.Debug("Using default venv_path: ", resolvedPath)
 	} else if filepath.IsAbs(profile.VenvPath) {
 		// path is absolute (don't change)
-		Logger.Debug("Using absolute venv_path: ", profile.VenvPath)
 		return profile.VenvPath
 	} else {
 		// non-absolute path put it into .regolith/venvs
 		resolvedPath, err = filepath.Abs(
 			path.Join(".regolith/venvs", profile.VenvPath))
 		if err != nil {
-			Logger.Fatal("Unable to resolve venv_path: ", profile.VenvPath)
+			Logger.Fatal("Unable to resolve venvPath: ", profile.VenvPath)
 		}
-		Logger.Debug("Using resolved venv_path: ", profile.VenvPath)
 	}
 	return resolvedPath
 }
