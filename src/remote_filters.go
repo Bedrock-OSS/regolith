@@ -18,12 +18,8 @@ func FilterNameToUrl(name string) string {
 }
 
 func IsRemoteFilterCached(url string) bool {
-
 	_, err := os.Stat(UrlToPath(url))
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func DownloadFileTest() {
@@ -33,18 +29,16 @@ func DownloadFileTest() {
 	getter.Get("./.regolith/cache/test", fileUrl)
 }
 
-func GatherDependencies() []string {
-	project := LoadConfig()
+func GatherDependencies(profile Profile) []string {
 	var dependencies []string
-	for _, profile := range project.Profiles {
-		for _, filter := range profile.Filters {
-			if filter.Url != "" {
-				dependencies = append(dependencies, filter.Url)
-			}
 
-			if filter.Filter != "" {
-				dependencies = append(dependencies, FilterNameToUrl(filter.Filter))
-			}
+	for _, filter := range profile.Filters {
+		if filter.Url != "" {
+			dependencies = append(dependencies, filter.Url)
+		}
+
+		if filter.Filter != "" {
+			dependencies = append(dependencies, FilterNameToUrl(filter.Filter))
 		}
 	}
 	return dependencies
@@ -56,21 +50,29 @@ func InstallDependencies() {
 
 	err := os.MkdirAll(".regolith/cache", 0777)
 	if err != nil {
-		Logger.Fatal(fmt.Sprintf("Could not create .regolith/cache: "), err)
+		Logger.Fatal("Could not create .regolith/cache: ", err)
+	}
+	// Special path for virtual environments for python
+	err = os.MkdirAll(".regolith/venvs", 0777)
+	if err != nil {
+		Logger.Fatal("Could not create .regolith/venvs: ", err)
 	}
 
-	dependencies := GatherDependencies()
-	for _, dependency := range dependencies {
-		err := InstallDependency(dependency)
-		if err != nil {
-			Logger.Fatal(fmt.Sprintf("Could not install dependency %s: ", dependency), err)
+	project := LoadConfig()
+	for _, profile := range project.Profiles {
+		dependencies := GatherDependencies(profile)
+		for _, dependency := range dependencies {
+			err := InstallDependency(dependency, profile)
+			if err != nil {
+				Logger.Fatal(fmt.Sprintf("Could not install dependency %s: ", dependency), err)
+			}
 		}
 	}
 
 	Logger.Infof("Dependencies installed.")
 }
 
-func InstallDependency(url string) error {
+func InstallDependency(url string, profile Profile) error {
 	Logger.Infof("Installing dependency %s...", url)
 
 	// Download the filter into the cache folder
@@ -97,7 +99,7 @@ func InstallDependency(url string) error {
 	for _, filter := range result.Filters {
 		if filter.RunWith != "" {
 			if f, ok := FilterTypes[filter.RunWith]; ok {
-				f.install(filter, path)
+				f.install(filter, path, profile)
 			} else {
 				Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 			}

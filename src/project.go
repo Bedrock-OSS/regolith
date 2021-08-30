@@ -33,6 +33,7 @@ type Profile struct {
 	Unsafe       bool         `json:"unsafe"`
 	Filters      []Filter     `json:"filters"`
 	ExportTarget ExportTarget `json:"export"`
+	VenvPath     string       `json:"venv_path"`
 }
 
 type Filter struct {
@@ -91,7 +92,7 @@ func InitializeRegolithProject(isForced bool) bool {
 		}
 
 		// Delete old configuration
-		err := os.Remove(ManifestName)
+		os.Remove(ManifestName)
 
 		// Create new configuration
 		file, err := os.Create(ManifestName)
