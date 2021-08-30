@@ -16,8 +16,8 @@ import (
 )
 
 type filterDefinition struct {
-	filter  func(filter Filter, settings map[string]interface{}, absoluteLocation string)
-	install func(filter Filter, path string)
+	filter  func(filter Filter, settings map[string]interface{}, absoluteLocation string, profile Profile)
+	install func(filter Filter, path string, profile Profile)
 	check   func()
 }
 
@@ -94,7 +94,7 @@ func RunProfile(profileName string) {
 	//now, we go through the filters!
 	for _, filter := range profile.Filters {
 		path, _ := filepath.Abs(".")
-		filter.RunFilter(path)
+		filter.RunFilter(path, profile)
 	}
 
 	//copy contents of .regolith/tmp to build
@@ -160,17 +160,17 @@ func ExportProject(profile Profile, name string) {
 }
 
 // RunFilter Runs the filter by selecting the correct filter type and running it
-func (filter *Filter) RunFilter(absoluteLocation string) {
+func (filter *Filter) RunFilter(absoluteLocation string, profile Profile) {
 	Logger.Infof("Running filter '%s'", filter.Name)
 	start := time.Now()
 
 	if filter.Url != "" {
-		RunRemoteFilter(filter.Url, filter.Settings, filter.Arguments)
+		RunRemoteFilter(filter.Url, filter.Settings, filter.Arguments, profile)
 	} else if filter.Filter != "" {
-		RunStandardFilter(*filter)
+		RunStandardFilter(*filter, profile)
 	} else {
 		if f, ok := FilterTypes[filter.RunWith]; ok {
-			f.filter(*filter, filter.Settings, absoluteLocation)
+			f.filter(*filter, filter.Settings, absoluteLocation, profile)
 		} else {
 			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 		}
@@ -178,9 +178,9 @@ func (filter *Filter) RunFilter(absoluteLocation string) {
 	}
 }
 
-func RunStandardFilter(filter Filter) {
+func RunStandardFilter(filter Filter, profile Profile) {
 	Logger.Infof("RunStandardFilter '%s'", filter.Filter)
-	RunRemoteFilter(FilterNameToUrl(filter.Filter), filter.Settings, filter.Arguments)
+	RunRemoteFilter(FilterNameToUrl(filter.Filter), filter.Settings, filter.Arguments, profile)
 }
 
 func LoadFiltersFromPath(path string) Profile {
@@ -199,7 +199,7 @@ func LoadFiltersFromPath(path string) Profile {
 	return result
 }
 
-func RunRemoteFilter(url string, settings map[string]interface{}, arguments []string) {
+func RunRemoteFilter(url string, settings map[string]interface{}, arguments []string, profile Profile) {
 	Logger.Infof("RunRemoteFilter '%s'", url)
 	if !IsRemoteFilterCached(url) {
 		Logger.Error("Filter is not downloaded! Please run 'regolith install'.")
@@ -212,7 +212,7 @@ func RunRemoteFilter(url string, settings map[string]interface{}, arguments []st
 		for k, v := range settings {
 			filter.Settings[k] = v
 		}
-		filter.RunFilter(absolutePath)
+		filter.RunFilter(absolutePath, profile)
 	}
 }
 

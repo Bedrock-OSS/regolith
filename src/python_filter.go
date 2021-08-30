@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -19,15 +20,15 @@ func RegisterPythonFilter(filters map[string]filterDefinition) {
 	}
 }
 
-func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) {
+func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLocation string, profile Profile) {
 	command := "python"
-	dir := path.Dir(absoluteLocation)
-	if needsVenv(dir) {
+	if needsVenv(absoluteLocation) {
+		venvPath := resolveVenvPath(profile, absoluteLocation)
 		suffix := ""
 		if runtime.GOOS == "windows" {
 			suffix = ".exe"
 		}
-		command = dir + "/venv/Scripts/python" + suffix
+		command = path.Join(venvPath, "Scripts/python"+suffix)
 	}
 	if len(settings) == 0 {
 		RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Location}, filter.Arguments...), GetAbsoluteWorkingDirectory())
@@ -37,16 +38,19 @@ func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 	}
 }
 
-func installPythonFilter(filter Filter, filterPath string) {
+func installPythonFilter(filter Filter, filterPath string, profile Profile) {
 	if needsVenv(filterPath) {
+		venvPath := resolveVenvPath(profile, filterPath)
 		Logger.Info("Creating venv...")
-		RunSubProcess("python", []string{"-m", "venv", "venv"}, filterPath)
+		RunSubProcess("python", []string{"-m", "venv", venvPath}, "")
 		suffix := ""
 		if runtime.GOOS == "windows" {
 			suffix = ".exe"
 		}
 		Logger.Info("Installing pip dependencies...")
-		RunSubProcess("venv/Scripts/pip"+suffix, []string{"install", "-r", "requirements.txt"}, filterPath)
+		RunSubProcess(
+			path.Join(venvPath, "Scripts/pip"+suffix),
+			[]string{"install", "-r", "requirements.txt"}, filterPath)
 	}
 }
 
@@ -56,6 +60,32 @@ func needsVenv(filterPath string) bool {
 		return !stats.IsDir()
 	}
 	return false
+}
+
+func resolveVenvPath(profile Profile, filterPath string) string {
+	var resolvedPath string
+	var err error
+	if profile.VenvPath == "" {
+		// No path defined use filterPath
+		resolvedPath, err = filepath.Abs(path.Join(filterPath, "venv"))
+		if err != nil {
+			Logger.Fatal("Unable to resolve filter path: ", filterPath)
+		}
+		Logger.Debug("Using default venv_path: ", resolvedPath)
+	} else if filepath.IsAbs(profile.VenvPath) {
+		// path is absolute (don't change)
+		Logger.Debug("Using absolute venv_path: ", profile.VenvPath)
+		return profile.VenvPath
+	} else {
+		// non-absolute path put it into .regolith/venvs
+		resolvedPath, err = filepath.Abs(
+			path.Join(".regolith/venvs", profile.VenvPath))
+		if err != nil {
+			Logger.Fatal("Unable to resolve venv_path: ", profile.VenvPath)
+		}
+		Logger.Debug("Using resolved venv_path: ", profile.VenvPath)
+	}
+	return resolvedPath
 }
 
 func checkPythonRequirements() {
