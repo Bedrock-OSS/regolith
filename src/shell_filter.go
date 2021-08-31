@@ -17,12 +17,12 @@ var shells = [][]string{{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"
 func RegisterShellFilter(filters map[string]filterDefinition) {
 	filters[shellFilterName] = filterDefinition{
 		filter:  runShellFilter,
-		install: func(filter Filter, path string, profile Profile) {},
+		install: func(filter Filter, path string) {},
 		check:   checkShellRequirements,
 	}
 }
 
-func runShellFilter(filter Filter, settings map[string]interface{}, absoluteLocation string, profile Profile) {
+func runShellFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) {
 	if len(settings) == 0 {
 		executeCommand(filter.Command, filter.Arguments, absoluteLocation, GetAbsoluteWorkingDirectory())
 	} else {
