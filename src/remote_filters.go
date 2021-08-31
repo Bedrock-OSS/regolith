@@ -62,9 +62,13 @@ func InstallDependency(profile Profile) error { // TODO - rename that and split 
 
 		// Download the filter into the cache folder
 		path := UrlToPath(url)
-		err := getter.Get(path, url)
-		if err != nil {
-			Logger.Fatal(fmt.Sprintf("Could not install dependency %s: ", url), err)
+		ok := DownloadGitHubUrl(url, "master", path)
+		if !ok {
+			Logger.Debug("Failed to download filter " + filter.Filter + " without git")
+			err := getter.Get(path, url)
+			if err != nil {
+				Logger.Fatal(fmt.Sprintf("Could not install dependency %s: ", url), err)
+			}
 		}
 
 		// Check required files
