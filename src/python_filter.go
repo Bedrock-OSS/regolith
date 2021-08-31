@@ -2,11 +2,13 @@ package src
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -20,10 +22,11 @@ func RegisterPythonFilter(filters map[string]filterDefinition) {
 	}
 }
 
-func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLocation string, profile Profile) {
+func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) {
 	command := "python"
 	if needsVenv(absoluteLocation) {
-		venvPath := resolveVenvPath(profile, absoluteLocation)
+		venvPath := resolveVenvPath(filter, absoluteLocation)
+		Logger.Debug("Running Python filter using venv: ", venvPath)
 		suffix := ""
 		if runtime.GOOS == "windows" {
 			suffix = ".exe"
@@ -38,9 +41,9 @@ func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 	}
 }
 
-func installPythonFilter(filter Filter, filterPath string, profile Profile) {
+func installPythonFilter(filter Filter, filterPath string) {
 	if needsVenv(filterPath) {
-		venvPath := resolveVenvPath(profile, filterPath)
+		venvPath := resolveVenvPath(filter, filterPath)
 		Logger.Info("Creating venv...")
 		RunSubProcess("python", []string{"-m", "venv", venvPath}, "")
 		suffix := ""
@@ -62,25 +65,11 @@ func needsVenv(filterPath string) bool {
 	return false
 }
 
-func resolveVenvPath(profile Profile, filterPath string) string {
-	var resolvedPath string
-	var err error
-	if profile.VenvPath == "" {
-		// No path defined use filterPath
-		resolvedPath, err = filepath.Abs(path.Join(filterPath, "venv"))
-		if err != nil {
-			Logger.Fatal("Unable to resolve filter path: ", filterPath)
-		}
-	} else if filepath.IsAbs(profile.VenvPath) {
-		// path is absolute (don't change)
-		return profile.VenvPath
-	} else {
-		// non-absolute path put it into .regolith/venvs
-		resolvedPath, err = filepath.Abs(
-			path.Join(".regolith/venvs", profile.VenvPath))
-		if err != nil {
-			Logger.Fatal("Unable to resolve venvPath: ", profile.VenvPath)
-		}
+func resolveVenvPath(filter Filter, filterPath string) string {
+	resolvedPath, err := filepath.Abs(
+		path.Join(".regolith/cache/venvs", strconv.Itoa(filter.VenvSlot)))
+	if err != nil {
+		Logger.Fatal(fmt.Sprintf("VenvSlot %v: Unable to create venv", filter.VenvSlot))
 	}
 	return resolvedPath
 }

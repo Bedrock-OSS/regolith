@@ -18,7 +18,7 @@ func RegisterNodeJSFilter(filters map[string]filterDefinition) {
 	}
 }
 
-func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLocation string, profile Profile) {
+func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) {
 	if len(settings) == 0 {
 		RunSubProcess("node", append([]string{absoluteLocation + string(os.PathSeparator) + filter.Location}, filter.Arguments...), GetAbsoluteWorkingDirectory())
 	} else {
@@ -27,7 +27,7 @@ func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 	}
 }
 
-func installNodeJSFilter(filter Filter, filterPath string, profile Profile) {
+func installNodeJSFilter(filter Filter, filterPath string) {
 	if hasPackageJson(filterPath) {
 		Logger.Info("Installing npm dependencies...")
 		RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath)

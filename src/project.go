@@ -33,7 +33,6 @@ type Profile struct {
 	Unsafe       bool         `json:"unsafe"`
 	Filters      []Filter     `json:"filters"`
 	ExportTarget ExportTarget `json:"export"`
-	VenvPath     string       `json:"venvPath"`
 }
 
 type Filter struct {
@@ -45,6 +44,7 @@ type Filter struct {
 	Url       string                 `json:"url"`
 	Filter    string                 `json:"filter"`
 	Settings  map[string]interface{} `json:"settings"`
+	VenvSlot  int                    `json:"venvSlot"`
 }
 
 type ExportTarget struct {
