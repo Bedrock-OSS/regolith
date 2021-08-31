@@ -22,13 +22,6 @@ func IsRemoteFilterCached(url string) bool {
 	return err == nil
 }
 
-func DownloadFileTest() {
-	fmt.Println("HELLO WORD!")
-	fileUrl := "github.com/Bedrock-OSS/regolith-filters//texture_list"
-
-	getter.Get("./.regolith/cache/test", fileUrl)
-}
-
 func InstallDependencies() {
 	Logger.Infof("Installing dependencies...")
 	Logger.Warnf("This may take a while...")

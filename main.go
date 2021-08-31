@@ -35,14 +35,6 @@ func main() {
 		ErrWriter: color2.Error,
 		Commands: []*cli.Command{
 			{
-				Name:  "test",
-				Usage: "Useful for quickly testing function execution",
-				Action: func(c *cli.Context) error {
-					src.DownloadFileTest()
-					return nil
-				},
-			},
-			{
 				Name:  "run",
 				Usage: "Runs Regolith, and generates cooked RP and BP, which will be exported per the config.",
 				Action: func(c *cli.Context) error {
