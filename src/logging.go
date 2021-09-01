@@ -10,18 +10,21 @@ import (
 )
 
 var Logger *zap.SugaredLogger
+var LoggerLevel zap.AtomicLevel
 
 func InitLogging(dev bool) {
-	level := zap.InfoLevel
+	LoggerLevel = zap.NewAtomicLevelAt(zap.InfoLevel)
 	if dev {
-		level = zap.DebugLevel
+		LoggerLevel.SetLevel(zap.DebugLevel)
 	}
 	logger, _ := zap.Config{
-		Development:      false,
-		Level:            zap.NewAtomicLevelAt(level),
-		Encoding:         "console",
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
+		Development:       dev,
+		Level:             LoggerLevel,
+		Encoding:          "console",
+		OutputPaths:       []string{"stdout"},
+		ErrorOutputPaths:  []string{"stderr"},
+		DisableStacktrace: !dev,
+		DisableCaller:     !dev,
 		EncoderConfig: zapcore.EncoderConfig{
 			TimeKey:       "T",
 			LevelKey:      "L",
