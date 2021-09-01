@@ -9,19 +9,26 @@ import (
 	getter "github.com/hashicorp/go-getter"
 )
 
+// UrlToPath returns regolith cache path for given URL.
 func UrlToPath(url string) string {
 	return ".regolith/cache/filters/" + url
 }
 
+// FilterNameToUrl returns the URL of a standard filter based on its name.
 func FilterNameToUrl(name string) string {
 	return "github.com/Bedrock-OSS/regolith-filters//" + name
 }
 
+// IsRemotrFilterCached checks whether the filter of given URL is already saved
+// in cache.
 func IsRemoteFilterCached(url string) bool {
 	_, err := os.Stat(UrlToPath(url))
 	return err == nil
 }
 
+// InstallDependencies downloads all of the remote filters of every
+// profile specified in config.json and recursively downloads the filters
+// specified in filter.json of every downloaded filter.
 func InstallDependencies() {
 	Logger.Infof("Installing dependencies...")
 	Logger.Warnf("This may take a while...")
@@ -47,6 +54,8 @@ func InstallDependencies() {
 	Logger.Infof("Dependencies installed.")
 }
 
+// InstallDependency recursively downloads the filters of a profile and the
+// filters specifed in other filters.
 func InstallDependency(profile Profile) error { // TODO - rename that and split into two functions?
 	for _, filter := range profile.Filters {
 		// Get the url of the dependency
