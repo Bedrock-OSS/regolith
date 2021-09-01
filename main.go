@@ -17,10 +17,8 @@ var (
 )
 
 func main() {
-	//goland:noinspection GoBoolExpressions
-	src.InitLogging(buildSource == "DEV")
 	src.CustomHelp()
-	src.RegisterFilters()
+	var debug bool
 	err := (&cli.App{
 		Name:                 "Regolith",
 		Usage:                "A bedrock addon compiler pipeline",
@@ -33,11 +31,20 @@ func main() {
 		},
 		Writer:    color2.Output,
 		ErrWriter: color2.Error,
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:        "debug",
+				Aliases:     []string{"d"},
+				Usage:       "Enables debugging.",
+				Destination: &debug,
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name:  "run",
 				Usage: "Runs Regolith, and generates cooked RP and BP, which will be exported per the config.",
 				Action: func(c *cli.Context) error {
+					initRegolith(debug)
 					args := c.Args().Slice()
 					var profile string
 
@@ -55,6 +62,7 @@ func main() {
 				Name:  "install",
 				Usage: "Installs dependencies into the .regolith folder.",
 				Action: func(c *cli.Context) error {
+					initRegolith(debug)
 					src.InstallDependencies()
 					return nil
 				},
@@ -63,6 +71,7 @@ func main() {
 				Name:  "init",
 				Usage: "Initialize a Regolith project in the current directory.",
 				Action: func(c *cli.Context) error {
+					initRegolith(debug)
 					src.InitializeRegolithProject(src.StringArrayContains(c.FlagNames(), "force"))
 					return nil
 				},
@@ -70,7 +79,7 @@ func main() {
 					&cli.BoolFlag{
 						Name:    "force",
 						Aliases: []string{"f"},
-						Usage:   "Force the operateion, overriding potential safeguards.",
+						Usage:   "Force the operation, overriding potential safeguards.",
 					},
 				},
 			},
@@ -79,4 +88,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func initRegolith(debug bool) {
+	//goland:noinspection GoBoolExpressions
+	src.InitLogging(buildSource == "DEV" || debug)
+	src.RegisterFilters()
 }
