@@ -133,6 +133,10 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
 		rpPath = comMojang + "/development_resource_packs/" + name + "_rp"
 		return
+	} else if exportTarget.Target == "exact" {
+		bpPath = exportTarget.BpPath
+		rpPath = exportTarget.RpPath
+		return
 	}
 
 	// Throw fatal error that export target isn't valid
