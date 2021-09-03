@@ -48,12 +48,15 @@ type Filter struct {
 }
 
 type ExportTarget struct {
-	Clean         bool   `json:"clean"`
-	Target        string `json:"target"`
-	ComMojangPath string `json:"comMojangPath"`
-	WorldName     string `json:"worldName"`
-	WorldPath     string `json:"worldPath"`
-	Path          string `json:"path"`
+	Target string `json:"target"` // The mode of exporting. "develop" or "exact"
+	RpPath string `json:"rpPath"` // Relative or absolute path to resource pack for "exact" export target
+	BpPath string `json:"bpPath"` // Relative or absolute path to resource pack for "exact" export target
+	// NOT USED, DISABLED FOR NOW.
+	// Clean         bool   `json:"clean"`
+	// ComMojangPath string `json:"comMojangPath"`
+	// WorldName     string `json:"worldName"`
+	// WorldPath     string `json:"worldPath"`
+	// Path          string `json:"path"`
 }
 
 func IsProjectConfigured() bool {
