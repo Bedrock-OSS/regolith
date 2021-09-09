@@ -153,14 +153,24 @@ func ExportProject(profile Profile, name string) {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath := GetExportPaths(exportTarget, name)
 
-	// Allow clearing output locations, before writing
-	// TODO Uncomment this. Is it safe? Can we send to recycle bin?
-	// if exportTarget.Clean {
-	// 	os.RemoveAll(bpPath")
-	// 	os.MkdirAll(bpPath", 0777)
-	// 	os.RemoveAll(rpPath")
-	// 	os.MkdirAll(rpPath", 0777)
-	// }
+	// Loading edited_files.json or creating empty object
+	editedFiles := LoadEditedFiles()
+	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
+	if err != nil {
+		Logger.Fatal(
+			"Exporting project was aborted because it could  remove some ",
+			"files you want to keep: ", err, ". If you are trying to run ",
+			"Regolith for the first time on this project make sure that the ",
+			"export paths are empty. Otherwise, you can check \"",
+			EDITED_FILES_PATH, "\" file to see if it contains the full list of ",
+			"the files that can be reomved.")
+	}
+	// Clearing output locations
+	// Spooky, I hope file protection works and it won't do any damage
+	os.RemoveAll(bpPath)
+	os.MkdirAll(bpPath, 0777)
+	os.RemoveAll(rpPath)
+	os.MkdirAll(rpPath, 0777)
 
 	Logger.Info("Exporting project to ", bpPath)
 	Logger.Info("Exporting project to ", rpPath)
@@ -173,6 +183,16 @@ func ExportProject(profile Profile, name string) {
 	err = copy.Copy("build/RP/", rpPath, copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
 		Logger.Fatal(color.RedString("Couldn't copy RP files to %s", rpPath), err)
+	}
+
+	// Create new edited_files.json
+	editedFiles, err = NewEditedFiles(rpPath, bpPath)
+	if err != nil {
+		Logger.Fatal(err)
+	}
+	err = editedFiles.Dump()
+	if err != nil {
+		Logger.Error(err)
 	}
 }
 
