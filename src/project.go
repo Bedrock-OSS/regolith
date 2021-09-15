@@ -48,14 +48,14 @@ type Filter struct {
 }
 
 type ExportTarget struct {
-	Target string `json:"target"` // The mode of exporting. "develop" or "exact"
-	RpPath string `json:"rpPath"` // Relative or absolute path to resource pack for "exact" export target
-	BpPath string `json:"bpPath"` // Relative or absolute path to resource pack for "exact" export target
+	Target    string `json:"target"` // The mode of exporting. "develop" or "exact"
+	RpPath    string `json:"rpPath"` // Relative or absolute path to resource pack for "exact" export target
+	BpPath    string `json:"bpPath"` // Relative or absolute path to resource pack for "exact" export target
+	WorldName string `json:"worldName"`
+	WorldPath string `json:"worldPath"`
+	// ComMojangPath string `json:"comMojangPath"`
 	// NOT USED, DISABLED FOR NOW.
 	// Clean         bool   `json:"clean"`
-	// ComMojangPath string `json:"comMojangPath"`
-	// WorldName     string `json:"worldName"`
-	// WorldPath     string `json:"worldPath"`
 	// Path          string `json:"path"`
 }
 
