@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-const EDITED_FILES_PATH = ".regolith/cache/edited_files.json"
+const EditedFilesPath = ".regolith/cache/edited_files.json"
 
 // EditedFiles is used to load edited_files.json from cache in order
 // to check if the files are safe to delete.
@@ -17,13 +17,13 @@ type EditedFiles struct {
 	Bp []string `json:"bp"`
 }
 
-// Dump dumps EditedFiles to EDITED_FILES_PATH in JSON format.
+// Dump dumps EditedFiles to EditedFilesPath in JSON format.
 func (f *EditedFiles) Dump() error {
 	result, err := json.MarshalIndent(f, "", "\t")
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(EDITED_FILES_PATH, result, 0777)
+	err = ioutil.WriteFile(EditedFilesPath, result, 0777)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
 // LoadEditedFiles data from edited_files.json or returns an empty object
 // if file doesn't exist.
 func LoadEditedFiles() EditedFiles {
-	data, err := ioutil.ReadFile(EDITED_FILES_PATH)
+	data, err := ioutil.ReadFile(EditedFilesPath)
 	var result EditedFiles
 	if err != nil {
 		return EditedFiles{}

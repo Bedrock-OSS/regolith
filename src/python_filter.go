@@ -2,6 +2,7 @@ package src
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -22,10 +23,13 @@ func RegisterPythonFilter(filters map[string]filterDefinition) {
 	}
 }
 
-func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) {
+func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) error {
 	command := "python"
 	if needsVenv(absoluteLocation) {
-		venvPath := resolveVenvPath(filter, absoluteLocation)
+		venvPath, err := resolveVenvPath(filter, absoluteLocation)
+		if err != nil {
+			return wrapError("Failed to run Python filter", err)
+		}
 		Logger.Debug("Running Python filter using venv: ", venvPath)
 		suffix := ""
 		if runtime.GOOS == "windows" {
@@ -39,11 +43,15 @@ func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 		jsonSettings, _ := json.Marshal(settings)
 		RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Location, string(jsonSettings)}, filter.Arguments...), GetAbsoluteWorkingDirectory())
 	}
+	return nil
 }
 
-func installPythonFilter(filter Filter, filterPath string) {
+func installPythonFilter(filter Filter, filterPath string) error {
 	if needsVenv(filterPath) {
-		venvPath := resolveVenvPath(filter, filterPath)
+		venvPath, err := resolveVenvPath(filter, filterPath)
+		if err != nil {
+			return wrapError("Failed to install Python filter", err)
+		}
 		Logger.Info("Creating venv...")
 		RunSubProcess("python", []string{"-m", "venv", venvPath}, "")
 		suffix := ""
@@ -55,6 +63,7 @@ func installPythonFilter(filter Filter, filterPath string) {
 			path.Join(venvPath, "Scripts/pip"+suffix),
 			[]string{"install", "-r", "requirements.txt"}, filterPath)
 	}
+	return nil
 }
 
 func needsVenv(filterPath string) bool {
@@ -65,21 +74,25 @@ func needsVenv(filterPath string) bool {
 	return false
 }
 
-func resolveVenvPath(filter Filter, filterPath string) string {
+func resolveVenvPath(filter Filter, filterPath string) (string, error) {
 	resolvedPath, err := filepath.Abs(
 		path.Join(".regolith/cache/venvs", strconv.Itoa(filter.VenvSlot)))
 	if err != nil {
-		Logger.Fatal(fmt.Sprintf("VenvSlot %v: Unable to create venv", filter.VenvSlot))
+		return "", wrapError(fmt.Sprintf("VenvSlot %v: Unable to create venv", filter.VenvSlot), err)
 	}
-	return resolvedPath
+	return resolvedPath, nil
 }
 
-func checkPythonRequirements() {
+func checkPythonRequirements() error {
 	_, err := exec.LookPath("python")
 	if err != nil {
-		Logger.Fatal("Python not found. Download and install it from https://www.python.org/downloads/")
+		return errors.New("Python not found. Download and install it from https://www.python.org/downloads/")
 	}
-	cmd, _ := exec.Command("python", "--version").Output()
+	cmd, err := exec.Command("python", "--version").Output()
+	if err != nil {
+		return wrapError("Python version check failed", err)
+	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "Python ")
 	Logger.Debugf("Found Python version %s", a)
+	return nil
 }
