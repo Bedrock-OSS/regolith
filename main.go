@@ -54,8 +54,7 @@ func main() {
 						profile = args[0]
 					}
 
-					src.RunProfile(profile)
-					return nil
+					return src.RunProfile(profile)
 				},
 			},
 			{
@@ -86,7 +85,7 @@ func main() {
 		},
 	}).Run(os.Args)
 	if err != nil {
-		panic(err)
+		src.Logger.Error(err)
 	}
 }
 

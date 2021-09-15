@@ -2,6 +2,8 @@ package src
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,9 +18,9 @@ import (
 )
 
 type filterDefinition struct {
-	filter  func(filter Filter, settings map[string]interface{}, absoluteLocation string)
-	install func(filter Filter, path string)
-	check   func()
+	filter  func(filter Filter, settings map[string]interface{}, absoluteLocation string) error
+	install func(filter Filter, path string) error
+	check   func() error
 }
 
 var FilterTypes = map[string]filterDefinition{}
@@ -64,7 +66,7 @@ func SetupTmpFiles() error {
 
 // RunProfile loads the profile from config.json and runs it. The profileName
 // is the name of the profile which should be loaded from the configuration.
-func RunProfile(profileName string) {
+func RunProfile(profileName string) error {
 	Logger.Info("Running profile: ", profileName)
 	project := LoadConfig()
 	profile := project.Profiles[profileName]
@@ -81,7 +83,10 @@ func RunProfile(profileName string) {
 			if _, ok := checked[filter.RunWith]; !ok {
 				if f, ok := FilterTypes[filter.RunWith]; ok {
 					checked[filter.RunWith] = exists
-					f.check()
+					err := f.check()
+					if err != nil {
+						return err
+					}
 				} else {
 					Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 				}
@@ -92,13 +97,16 @@ func RunProfile(profileName string) {
 	// Prepare tmp files
 	err := SetupTmpFiles()
 	if err != nil {
-		Logger.Fatal("Unable to setup profile")
+		return wrapError("Unable to setup profile", err)
 	}
 
 	// Run the filters!
 	for _, filter := range profile.Filters {
 		path, _ := filepath.Abs(".")
-		filter.RunFilter(path)
+		err := filter.RunFilter(path)
+		if err != nil {
+			return wrapError(fmt.Sprintf("Running filter '%s' failed", filter.Name), err)
+		}
 	}
 
 	// Copy contents of .regolith/tmp to build
@@ -106,26 +114,30 @@ func RunProfile(profileName string) {
 	start := time.Now()
 	err = os.RemoveAll("build")
 	if err != nil {
-		Logger.Fatal("Unable to clean build directory")
+		return wrapError("Unable to clean build directory", err)
 	}
 	err = os.Rename(".regolith/tmp", "build")
 	if err != nil {
-		Logger.Fatal("Unable to move output to build directory")
+		return wrapError("Unable to move output to build directory", err)
 	}
 	Logger.Debug("Done in ", time.Since(start))
 
 	// copy the build to the target directory
 	Logger.Info("Copying build to target directory")
 	start = time.Now()
-	ExportProject(profile, project.Name)
+	err = ExportProject(profile, project.Name)
+	if err != nil {
+		return wrapError("Exporting project failed", err)
+	}
 	Logger.Debug("Done in ", time.Since(start))
 	Logger.Info(color.GreenString("Finished"))
+	return nil
 }
 
 // GetExportPaths returns file paths for exporting behavior pack and
 // resource pack based on exportTarget (a structure with data related to
 // export settings) and the name of the project.
-func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPath string) {
+func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPath string, err error) {
 	if exportTarget.Target == "development" {
 		comMojang := FindMojangDir()
 		// TODO - I don't like the _rp and _bp sufixes. Can we get rid of that?
@@ -138,97 +150,116 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 		rpPath = exportTarget.RpPath
 		return
 	}
-
-	// Throw fatal error that export target isn't valid
-	Logger.Fatalf("Export '%s' target not valid", exportTarget.Target)
-	// Unreachable code
+	err = errors.New(fmt.Sprintf("Export '%s' target not valid", exportTarget.Target))
 	return
 }
 
 // ExportProject copies files from the build paths (build/BP and build/RP) into
 // the project's export target and its name. The paths are generated with
 // GetExportPaths.
-func ExportProject(profile Profile, name string) {
-	var err error
+func ExportProject(profile Profile, name string) error {
 	exportTarget := profile.ExportTarget
-	bpPath, rpPath := GetExportPaths(exportTarget, name)
+	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
+	if err != nil {
+		return err
+	}
 
 	// Loading edited_files.json or creating empty object
 	editedFiles := LoadEditedFiles()
 	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
 	if err != nil {
-		Logger.Fatal(
-			"Exporting project was aborted because it could  remove some ",
-			"files you want to keep: ", err, ". If you are trying to run ",
-			"Regolith for the first time on this project make sure that the ",
-			"export paths are empty. Otherwise, you can check \"",
-			EDITED_FILES_PATH, "\" file to see if it contains the full list of ",
-			"the files that can be reomved.")
+		return errors.New(
+			"Exporting project was aborted because it could remove some " +
+				"files you want to keep: " + err.Error() + ". If you are trying to run " +
+				"Regolith for the first time on this project make sure that the " +
+				"export paths are empty. Otherwise, you can check \"" +
+				EditedFilesPath + "\" file to see if it contains the full list of " +
+				"the files that can be reomved.")
 	}
 	// Clearing output locations
-	// Spooky, I hope file protection works and it won't do any damage
-	os.RemoveAll(bpPath)
-	os.MkdirAll(bpPath, 0777)
-	os.RemoveAll(rpPath)
-	os.MkdirAll(rpPath, 0777)
+	// Spooky, I hope file protection works, and it won't do any damage
+	err = os.RemoveAll(bpPath)
+	if err != nil {
+		return wrapError("Failed to clear behavior pack build output", err)
+	}
+	err = os.MkdirAll(bpPath, 0777)
+	if err != nil {
+		return wrapError("Failed to create required directories for behavior pack build output", err)
+	}
+	err = os.RemoveAll(rpPath)
+	if err != nil {
+		return wrapError("Failed to clear resource pack build output", err)
+	}
+	err = os.MkdirAll(rpPath, 0777)
+	if err != nil {
+		return wrapError("Failed to create required directories for resource pack build output", err)
+	}
 
 	Logger.Info("Exporting project to ", bpPath)
 	Logger.Info("Exporting project to ", rpPath)
 
 	err = copy.Copy("build/BP/", bpPath, copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
-		Logger.Fatal(color.RedString("Couldn't copy BP files to %s", bpPath), err)
+		return wrapError(fmt.Sprintf("Couldn't copy BP files to %s", bpPath), err)
 	}
 
 	err = copy.Copy("build/RP/", rpPath, copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
-		Logger.Fatal(color.RedString("Couldn't copy RP files to %s", rpPath), err)
+		return wrapError(fmt.Sprintf("Couldn't copy RP files to %s", rpPath), err)
 	}
 
 	// Create new edited_files.json
 	editedFiles, err = NewEditedFiles(rpPath, bpPath)
 	if err != nil {
-		Logger.Fatal(err)
+		return err
 	}
 	err = editedFiles.Dump()
-	if err != nil {
-		Logger.Error(err)
-	}
+	return err
 }
 
 // RunFilter determinates whether the filter is remote, standard (from standard
 // library) or local and executes it using the proper function. The
 // absoluteLocation is an absolute path to the root folder of the filter.
 // In case of local filters it's a root path of the project.
-func (filter *Filter) RunFilter(absoluteLocation string) {
+func (filter *Filter) RunFilter(absoluteLocation string) error {
 	Logger.Infof("Running filter '%s'", filter.Name)
 	start := time.Now()
 
 	if filter.Url != "" {
-		RunRemoteFilter(filter.Url, *filter)
+		err := RunRemoteFilter(filter.Url, *filter)
+		if err != nil {
+			return err
+		}
 	} else if filter.Filter != "" {
-		RunStandardFilter(*filter)
+		err := RunStandardFilter(*filter)
+		if err != nil {
+			return err
+		}
 	} else {
 		if f, ok := FilterTypes[filter.RunWith]; ok {
-			f.filter(*filter, filter.Settings, absoluteLocation)
+			err := f.filter(*filter, filter.Settings, absoluteLocation)
+			if err != nil {
+				return err
+			}
 		} else {
 			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 		}
 		Logger.Info("Executed in ", time.Since(start))
 	}
+	return nil
 }
 
 // RunStandardFilter runs a filter from standard Bedrock-OSS library. The
 // function doesn't test if the filter passed on input is standard.
-func RunStandardFilter(filter Filter) {
+func RunStandardFilter(filter Filter) error {
 	Logger.Infof("RunStandardFilter '%s'", filter.Filter)
-	RunRemoteFilter(FilterNameToUrl(filter.Filter), filter)
+	return RunRemoteFilter(FilterNameToUrl(filter.Filter), filter)
 }
 
 // LoadFiltersFromPath returns a Profile with list of filters loaded from
 // filters.json from input file path. The path should point at a directory
 // with filters.json file in it, not at the file itself.
-func LoadFiltersFromPath(path string) Profile {
+func LoadFiltersFromPath(path string) (*Profile, error) {
 	path = path + "/filter.json"
 	file, err := ioutil.ReadFile(path)
 
@@ -236,12 +267,12 @@ func LoadFiltersFromPath(path string) Profile {
 		log.Fatal(color.RedString("Couldn't find %s! Consider running 'regolith install'", path), err)
 	}
 
-	var result Profile
+	var result *Profile
 	err = json.Unmarshal(file, &result)
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't load %s: ", path), err)
+		return nil, wrapError(fmt.Sprintf("Couldn't load %s: ", path), err)
 	}
-	return result
+	return result, nil
 }
 
 // RunRemoteFilter runs loads and runs the content of filter.json from in
@@ -249,26 +280,34 @@ func LoadFiltersFromPath(path string) Profile {
 // was downloaded (used to specify its path in the cache). The parentFilter is
 // is a filter that caused the downloading. Some of the properties of
 // parentFilter are propagated to its children.
-func RunRemoteFilter(url string, parentFilter Filter) {
+func RunRemoteFilter(url string, parentFilter Filter) error {
 	settings := parentFilter.Settings
 	// TODO - I think this also should be used somehow:
 	// arguments := parentFilter.Arguments
 	Logger.Infof("RunRemoteFilter '%s'", url)
 	if !IsRemoteFilterCached(url) {
-		Logger.Error("Filter is not downloaded! Please run 'regolith install'.")
+		return errors.New("Filter is not downloaded! Please run 'regolith install'.")
 	}
 
 	path := UrlToPath(url)
 	absolutePath, _ := filepath.Abs(path)
-	for _, filter := range LoadFiltersFromPath(path).Filters {
+	profile, err := LoadFiltersFromPath(path)
+	if err != nil {
+		return err
+	}
+	for _, filter := range profile.Filters {
 		// Overwrite the venvSlot with the parent value
 		filter.VenvSlot = parentFilter.VenvSlot
 		// Join settings from local config to remote definition
 		for k, v := range settings {
 			filter.Settings[k] = v
 		}
-		filter.RunFilter(absolutePath)
+		err := filter.RunFilter(absolutePath)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // GetAbsoluteWorkingDirectory returns an absolute path to .regolith/tmp
