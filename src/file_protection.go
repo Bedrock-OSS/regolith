@@ -2,9 +2,11 @@ package src
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
@@ -101,7 +103,16 @@ func listFiles(path string) ([]string, error) {
 // an error in opposite case.
 func checkDeletionSafety(path string, removableFiles []string) error {
 	i := 0 // current index on the removableFiles list to check
-	err := filepath.WalkDir(path,
+	stats, err := os.Stat("path")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // directory doesn't exist there is nothing to check
+		}
+		return err // other error
+	} else if !stats.IsDir() {
+		return errors.New("output path is a file")
+	}
+	err = filepath.WalkDir(path,
 		func(s string, d fs.DirEntry, e error) error {
 			if e != nil {
 				return e

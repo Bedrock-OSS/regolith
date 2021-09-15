@@ -9,8 +9,8 @@ import (
 )
 
 type World struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
+	Id   string `json:"id"`   // The name of the world directory
+	Name string `json:"name"` // The name of the world in levelname.txt
 	Path string `json:"path"`
 }
 

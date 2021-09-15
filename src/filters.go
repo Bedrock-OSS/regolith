@@ -123,13 +123,15 @@ func RunProfile(profileName string) error {
 	Logger.Debug("Done in ", time.Since(start))
 
 	// copy the build to the target directory
-	Logger.Info("Copying build to target directory")
-	start = time.Now()
-	err = ExportProject(profile, project.Name)
-	if err != nil {
-		return wrapError("Exporting project failed", err)
+	if profile.ExportTarget.Target != "none" {
+		Logger.Info("Copying build to target directory")
+		start = time.Now()
+		err = ExportProject(profile, project.Name)
+		if err != nil {
+			return wrapError("Exporting project failed", err)
+		}
+		Logger.Debug("Done in ", time.Since(start))
 	}
-	Logger.Debug("Done in ", time.Since(start))
 	Logger.Info(color.GreenString("Finished"))
 	return nil
 }
@@ -144,13 +146,29 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 		// I for example always name my packs "0".
 		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
 		rpPath = comMojang + "/development_resource_packs/" + name + "_rp"
-		return
 	} else if exportTarget.Target == "exact" {
 		bpPath = exportTarget.BpPath
 		rpPath = exportTarget.RpPath
-		return
+	} else if exportTarget.Target == "world" {
+		if exportTarget.WorldPath != "" {
+			if exportTarget.WorldName != "" {
+				Logger.Fatal("Using both \"worldName\" and \"worldPath\" is not allowed.")
+			}
+			bpPath = filepath.Join(exportTarget.WorldPath, "behavior_packs", name+"_bp")
+			rpPath = filepath.Join(exportTarget.WorldPath, "resource_packs", name+"_rp")
+		} else if exportTarget.WorldName != "" {
+			for _, world := range ListWorlds(FindMojangDir()) {
+				if world.Name == exportTarget.WorldName {
+					bpPath = filepath.Join(world.Path, "behavior_packs", name+"_bp")
+					rpPath = filepath.Join(world.Path, "resource_packs", name+"_rp")
+				}
+			}
+		} else {
+			err = errors.New("The \"world\" export target requires either a \"worldName\" or \"worldPath\" property")
+		}
+	} else {
+		err = errors.New(fmt.Sprintf("Export '%s' target not valid", exportTarget.Target))
 	}
-	err = errors.New(fmt.Sprintf("Export '%s' target not valid", exportTarget.Target))
 	return
 }
 
