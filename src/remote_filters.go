@@ -77,7 +77,7 @@ func InstallDependency(profile Profile) error { // TODO - rename that and split 
 		path := UrlToPath(url)
 		ok, err := DownloadGitHubUrl(url, "master", path)
 		if err != nil {
-			return wrapError("Failed to download filter", err)
+			Logger.Debug(err)
 		}
 		if !ok {
 			Logger.Debug("Failed to download filter " + filter.Filter + " without git")
