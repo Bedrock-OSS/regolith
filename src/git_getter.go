@@ -3,6 +3,7 @@ package src
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -50,10 +51,16 @@ func DownloadGitHubUrl(url string, branch string, localPath string) bool {
 		return false
 	}
 	filterName := split[3]
-	data := fetchTree(fmt.Sprintf(treeApiUrl, split[1], split[2], branch))
+	data, err := fetchTree(fmt.Sprintf(treeApiUrl, split[1], split[2], branch))
+	if err != nil {
+		return false
+	}
 	for _, leaf := range data.Tree {
 		if leaf.Path == filterName && leaf.Type == "tree" {
-			data = fetchTree(leaf.Url + "?recursive=1")
+			data, err = fetchTree(leaf.Url + "?recursive=1")
+			if err != nil {
+				return false
+			}
 			for _, l := range data.Tree {
 				if l.Type == "blob" {
 					downloadLeaf(l, localPath)
@@ -106,19 +113,22 @@ func downloadLeaf(l Leaf, localPath string) {
 }
 
 // fetchTree fetches tree json
-func fetchTree(url string) TreeResponse {
+func fetchTree(url string) (TreeResponse, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		Logger.Fatal("Failed to fetch the tree")
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		return TreeResponse{}, err
 	}
 	var data TreeResponse
 	err = json.Unmarshal(body, &data)
-	if data.Message != "" {
-		Logger.Fatal(data.Message)
+	if err != nil {
+		return TreeResponse{}, err
 	}
-	return data
+	if data.Message != "" {
+		return TreeResponse{}, errors.New(data.Message)
+	}
+	return data, nil
 }
