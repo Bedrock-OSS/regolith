@@ -78,6 +78,14 @@ func LoadConfig() Config {
 	if err != nil {
 		Logger.Fatal(fmt.Sprintf("Couldn't load %s: ", ManifestName), err)
 	}
+	// If settings is nil replace it with empty map
+	for _, profile := range result.Profiles {
+		for fk := range profile.Filters {
+			if profile.Filters[fk].Settings == nil {
+				profile.Filters[fk].Settings = make(map[string]interface{})
+			}
+		}
+	}
 	return result
 }
 

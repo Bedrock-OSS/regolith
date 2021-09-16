@@ -290,6 +290,12 @@ func LoadFiltersFromPath(path string) (*Profile, error) {
 	if err != nil {
 		return nil, wrapError(fmt.Sprintf("Couldn't load %s: ", path), err)
 	}
+	// Replace nil filter settings with empty map
+	for fk := range result.Filters {
+		if result.Filters[fk].Settings == nil {
+			result.Filters[fk].Settings = make(map[string]interface{})
+		}
+	}
 	return result, nil
 }
 
