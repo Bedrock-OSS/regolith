@@ -5,13 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
-
-	"go.uber.org/zap"
 
 	"github.com/fatih/color"
 	"github.com/otiai10/copy"
@@ -31,7 +28,6 @@ func RegisterFilters() {
 	RegisterShellFilter(FilterTypes)
 }
 
-// SetupTmpFiles copies the source RP and BP to .regolith/tmp path to create
 // the workspace for the filters.
 func SetupTmpFiles() error {
 	start := time.Now()
@@ -50,12 +46,16 @@ func SetupTmpFiles() error {
 	// Copy the contents of the `regolith` folder to `.regolith/tmp`
 	Logger.Debug("Copying project files to .regolith/tmp")
 
-	err = copy.Copy(LoadConfig().Packs.BehaviorFolder, ".regolith/tmp/BP", copy.Options{PreserveTimes: false, Sync: false})
+	config, err := LoadConfig()
+	if err != nil {
+		return wrapError("Failed to load project config", err)
+	}
+	err = copy.Copy(config.Packs.BehaviorFolder, ".regolith/tmp/BP", copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
 		return err
 	}
 
-	err = copy.Copy(LoadConfig().Packs.ResourceFolder, ".regolith/tmp/RP", copy.Options{PreserveTimes: false, Sync: false})
+	err = copy.Copy(config.Packs.ResourceFolder, ".regolith/tmp/RP", copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,10 @@ func SetupTmpFiles() error {
 // is the name of the profile which should be loaded from the configuration.
 func RunProfile(profileName string) error {
 	Logger.Info("Running profile: ", profileName)
-	project := LoadConfig()
+	project, err := LoadConfig()
+	if err != nil {
+		return wrapError("Failed to load project config", err)
+	}
 	profile := project.Profiles[profileName]
 
 	if profile.Unsafe {
@@ -95,7 +98,7 @@ func RunProfile(profileName string) error {
 	}
 
 	// Prepare tmp files
-	err := SetupTmpFiles()
+	err = SetupTmpFiles()
 	if err != nil {
 		return wrapError("Unable to setup profile", err)
 	}
@@ -141,7 +144,10 @@ func RunProfile(profileName string) error {
 // export settings) and the name of the project.
 func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPath string, err error) {
 	if exportTarget.Target == "development" {
-		comMojang := FindMojangDir()
+		comMojang, err := FindMojangDir()
+		if err != nil {
+			return "", "", wrapError("Failed to find com.mojang directory", err)
+		}
 		// TODO - I don't like the _rp and _bp sufixes. Can we get rid of that?
 		// I for example always name my packs "0".
 		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
@@ -152,12 +158,20 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 	} else if exportTarget.Target == "world" {
 		if exportTarget.WorldPath != "" {
 			if exportTarget.WorldName != "" {
-				Logger.Fatal("Using both \"worldName\" and \"worldPath\" is not allowed.")
+				return "", "", errors.New("Using both \"worldName\" and \"worldPath\" is not allowed.")
 			}
 			bpPath = filepath.Join(exportTarget.WorldPath, "behavior_packs", name+"_bp")
 			rpPath = filepath.Join(exportTarget.WorldPath, "resource_packs", name+"_rp")
 		} else if exportTarget.WorldName != "" {
-			for _, world := range ListWorlds(FindMojangDir()) {
+			dir, err := FindMojangDir()
+			if err != nil {
+				return "", "", wrapError("Failed to find com.mojang directory", err)
+			}
+			worlds, err := ListWorlds(dir)
+			if err != nil {
+				return "", "", wrapError("Failed to list worlds", err)
+			}
+			for _, world := range worlds {
 				if world.Name == exportTarget.WorldName {
 					bpPath = filepath.Join(world.Path, "behavior_packs", name+"_bp")
 					rpPath = filepath.Join(world.Path, "resource_packs", name+"_rp")
@@ -282,7 +296,7 @@ func LoadFiltersFromPath(path string) (*Profile, error) {
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		log.Fatal(color.RedString("Couldn't find %s! Consider running 'regolith install'", path), err)
+		return nil, wrapError(fmt.Sprintf("Couldn't find %s! Consider running 'regolith install'", path), err)
 	}
 
 	var result *Profile
@@ -342,15 +356,11 @@ func GetAbsoluteWorkingDirectory() string {
 
 // RunSubProcess runs a sub-process with specified arguments and working
 // directory
-func RunSubProcess(command string, args []string, workingDir string) {
+func RunSubProcess(command string, args []string, workingDir string) error {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = workingDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	err := cmd.Run()
-
-	if err != nil {
-		Logger.Fatal(zap.Error(err))
-	}
+	return cmd.Run()
 }

@@ -4,10 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
-
-	"github.com/fatih/color"
 )
 
 const ManifestName = "config.json"
@@ -68,15 +65,15 @@ func IsProjectConfigured() bool {
 	return !info.IsDir()
 }
 
-func LoadConfig() Config {
+func LoadConfig() (*Config, error) {
 	file, err := ioutil.ReadFile(ManifestName)
 	if err != nil {
-		Logger.Fatalf("Couldn't find %s! Consider running 'regolith init'", ManifestName)
+		return nil, wrapError(fmt.Sprintf("Couldn't find %s! Consider running 'regolith init'", ManifestName), err)
 	}
-	var result Config
+	var result *Config
 	err = json.Unmarshal(file, &result)
 	if err != nil {
-		Logger.Fatal(fmt.Sprintf("Couldn't load %s: ", ManifestName), err)
+		return nil, wrapError(fmt.Sprintf("Couldn't load %s: ", ManifestName), err)
 	}
 	// If settings is nil replace it with empty map
 	for _, profile := range result.Profiles {
@@ -86,15 +83,14 @@ func LoadConfig() Config {
 			}
 		}
 	}
-	return result
+	return result, nil
 }
 
-func InitializeRegolithProject(isForced bool) bool {
-
+func InitializeRegolithProject(isForced bool) error {
 	// Do not attempt to initialize if project is already initialized (can be forced)
 	if !isForced && IsProjectConfigured() {
 		Logger.Errorf("Could not initialize Regolith project. File %s already exists.", ManifestName)
-		return false
+		return nil
 	} else {
 		Logger.Info("Initializing Regolith project...")
 
@@ -103,19 +99,22 @@ func InitializeRegolithProject(isForced bool) bool {
 		}
 
 		// Delete old configuration
-		os.Remove(ManifestName)
+		err := os.Remove(ManifestName)
+		if err != nil {
+			return err
+		}
 
 		// Create new configuration
 		file, err := os.Create(ManifestName)
 		if err != nil {
-			log.Fatal(color.RedString("Could not create %s: ", ManifestName), err)
+			return wrapError(fmt.Sprintf("Could not create %s: ", ManifestName), err)
 		}
 		defer func(file *os.File) {
-			err := file.Close()
-			if err != nil {
-				Logger.Fatal("Failed to close the file")
-			}
+			err = file.Close()
 		}(file)
+		if err != nil {
+			return wrapError(fmt.Sprintf("Could not close %s: ", ManifestName), err)
+		}
 
 		// Write default configuration
 		jsonData := Config{
@@ -140,7 +139,7 @@ func InitializeRegolithProject(isForced bool) bool {
 		jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
 		_, err = file.Write(jsonBytes)
 		if err != nil {
-			Logger.Fatal("Failed to write project file contents")
+			return wrapError("Failed to write project file contents", err)
 		}
 
 		// Create folders
@@ -165,6 +164,6 @@ func InitializeRegolithProject(isForced bool) bool {
 		}
 
 		Logger.Info("Regolith project initialized.")
-		return true
+		return nil
 	}
 }

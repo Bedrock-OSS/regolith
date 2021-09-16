@@ -29,29 +29,33 @@ func IsRemoteFilterCached(url string) bool {
 // InstallDependencies downloads all of the remote filters of every
 // profile specified in config.json and recursively downloads the filters
 // specified in filter.json of every downloaded filter.
-func InstallDependencies() {
+func InstallDependencies() error {
 	Logger.Infof("Installing dependencies...")
 	Logger.Warnf("This may take a while...")
 
 	err := os.MkdirAll(".regolith/cache/filters", 0777)
 	if err != nil {
-		Logger.Fatal("Could not create .regolith/cache/filters: ", err)
+		return wrapError("Could not create .regolith/cache/filters", err)
 	}
 	// Special path for virtual environments for python
 	err = os.MkdirAll(".regolith/cache/venvs", 0777)
 	if err != nil {
-		Logger.Fatal("Could not create .regolith/cache/venvs: ", err)
+		return wrapError("Could not create .regolith/cache/venvs", err)
 	}
 
-	project := LoadConfig()
+	project, err := LoadConfig()
+	if err != nil {
+		return wrapError("Failed to load project config", err)
+	}
 	for _, profile := range project.Profiles {
 		err := InstallDependency(profile)
 		if err != nil {
-			Logger.Fatal("Could not install dependency") // TODO - better error message
+			return wrapError("Could not install dependency", err)
 		}
 	}
 
 	Logger.Infof("Dependencies installed.")
+	return nil
 }
 
 // InstallDependency recursively downloads the filters of a profile and the
@@ -71,26 +75,29 @@ func InstallDependency(profile Profile) error { // TODO - rename that and split 
 
 		// Download the filter into the cache folder
 		path := UrlToPath(url)
-		ok := DownloadGitHubUrl(url, "master", path)
+		ok, err := DownloadGitHubUrl(url, "master", path)
+		if err != nil {
+			return wrapError("Failed to download filter", err)
+		}
 		if !ok {
 			Logger.Debug("Failed to download filter " + filter.Filter + " without git")
 			err := getter.Get(path, url)
 			if err != nil {
-				Logger.Fatal(fmt.Sprintf("Could not install dependency %s: ", url), err)
+				return err
 			}
 		}
 
 		// Check required files
 		file, err := ioutil.ReadFile(path + "/filter.json")
 		if err != nil {
-			Logger.Fatal(fmt.Sprintf("Couldn't find %s/filter.json!", path), err)
+			return wrapError(fmt.Sprintf("Couldn't find %s/filter.json!", path), err)
 		}
 
 		// Load subprofile (remote filter)
 		var remoteProfile Profile
 		err = json.Unmarshal(file, &remoteProfile)
 		if err != nil {
-			Logger.Fatal(fmt.Sprintf("Couldn't load %s/filter.json: ", path), err)
+			return wrapError(fmt.Sprintf("Couldn't load %s/filter.json: ", path), err)
 		}
 		// Propagate venvSlot property
 		for f := range remoteProfile.Filters {
@@ -107,7 +114,10 @@ func InstallDependency(profile Profile) error { // TODO - rename that and split 
 		for _, filter := range remoteProfile.Filters {
 			if filter.RunWith != "" {
 				if f, ok := FilterTypes[filter.RunWith]; ok {
-					f.install(filter, path)
+					err := f.install(filter, path)
+					if err != nil {
+						return wrapError(fmt.Sprintf("Couldn't install filter %s", filter.Name), err)
+					}
 				} else {
 					Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 				}

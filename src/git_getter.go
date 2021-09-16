@@ -3,9 +3,9 @@ package src
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -44,81 +44,95 @@ const treeApiUrl = "https://api.github.com/repos/%s/%s/git/trees/%s"
 
 // DownloadGitHubUrl downloads part of the repository. It will only filter by the first level directory.
 // Expects url github.com/owner/repo/folder with host part lowercase
-func DownloadGitHubUrl(url string, branch string, localPath string) bool {
+func DownloadGitHubUrl(url string, branch string, localPath string) (bool, error) {
 	split := strings.Split(path.Clean(url), "/")
 	if len(split) < 4 || !strings.HasSuffix(split[0], "github.com") {
-		return false
+		return false, nil
 	}
 	filterName := split[3]
-	data := fetchTree(fmt.Sprintf(treeApiUrl, split[1], split[2], branch))
+	data, err := fetchTree(fmt.Sprintf(treeApiUrl, split[1], split[2], branch))
+	if err != nil {
+		return false, wrapError("Failed to fetch the tree", err)
+	}
+	if data.Message != "" {
+		Logger.Debugf("GitHub API responded with %s", data.Message)
+		return false, nil
+	}
 	for _, leaf := range data.Tree {
 		if leaf.Path == filterName && leaf.Type == "tree" {
-			data = fetchTree(leaf.Url + "?recursive=1")
+			data, err = fetchTree(leaf.Url + "?recursive=1")
+			if err != nil {
+				return false, wrapError(fmt.Sprintf("Failed to fetch the tree %s", leaf.Path), err)
+			}
+			if data.Message != "" {
+				return false, wrapError(fmt.Sprintf("Failed to fetch the tree %s: %s", leaf.Path, data.Message), err)
+			}
 			for _, l := range data.Tree {
 				if l.Type == "blob" {
-					downloadLeaf(l, localPath)
+					err := downloadLeaf(l, localPath)
+					if err != nil {
+						return false, wrapError(fmt.Sprintf("Failed to download the leaf %s", l.Path), err)
+					}
 				}
 			}
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 // downloadLeaf Downloads file specified by the leaf
-func downloadLeaf(l Leaf, localPath string) {
+func downloadLeaf(l Leaf, localPath string) error {
 	resp, err := http.Get(l.Url)
 	if err != nil {
-		Logger.Fatal("Failed to fetch the blob")
+		return errors.New("Failed to fetch the blob")
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	var data BlobResponse
 	err = json.Unmarshal(body, &data)
 	if data.Message != "" {
-		Logger.Fatal(data.Message)
+		return errors.New(data.Message)
 	}
 	base64Text := make([]byte, data.Size)
 	_, err = base64.StdEncoding.Decode(base64Text, []byte(data.Content))
 	dest := filepath.Clean(filepath.Join(localPath, l.Path))
 	err = os.MkdirAll(filepath.Dir(dest), os.ModePerm)
 	if err != nil {
-		Logger.Fatal("Failed to create directories")
+		return wrapError("Failed to create directories", err)
 	}
 	create, err := os.Create(dest)
 	if err != nil {
-		Logger.Fatal("Failed to create file")
+		return wrapError("Failed to create file", err)
 	}
 	_, err = create.Write(base64Text)
 	if err != nil {
-		Logger.Fatal("Failed to write to file")
+		return wrapError("Failed to write to file", err)
 	}
 	err = create.Sync()
 	if err != nil {
-		Logger.Fatal("Failed to sync the file")
+		return wrapError("Failed to sync the file", err)
 	}
 	err = create.Close()
 	if err != nil {
-		Logger.Fatal("Failed to close the file")
+		return wrapError("Failed to close the file", err)
 	}
+	return nil
 }
 
 // fetchTree fetches tree json
-func fetchTree(url string) TreeResponse {
+func fetchTree(url string) (*TreeResponse, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		Logger.Fatal("Failed to fetch the tree")
+		return nil, wrapError("Failed to fetch the tree", err)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
-	var data TreeResponse
+	var data *TreeResponse
 	err = json.Unmarshal(body, &data)
-	if data.Message != "" {
-		Logger.Fatal(data.Message)
-	}
-	return data
+	return data, nil
 }

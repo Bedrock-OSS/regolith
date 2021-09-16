@@ -20,10 +20,16 @@ func RegisterNodeJSFilter(filters map[string]filterDefinition) {
 
 func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) error {
 	if len(settings) == 0 {
-		RunSubProcess("node", append([]string{absoluteLocation + string(os.PathSeparator) + filter.Location}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		err := RunSubProcess("node", append([]string{absoluteLocation + string(os.PathSeparator) + filter.Location}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		if err != nil {
+			return wrapError("Failed to run NodeJS script", err)
+		}
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		RunSubProcess("node", append([]string{absoluteLocation + string(os.PathSeparator) + filter.Location, string(jsonSettings)}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		err := RunSubProcess("node", append([]string{absoluteLocation + string(os.PathSeparator) + filter.Location, string(jsonSettings)}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		if err != nil {
+			return wrapError("Failed to run NodeJS script", err)
+		}
 	}
 	return nil
 }
@@ -31,7 +37,10 @@ func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 func installNodeJSFilter(filter Filter, filterPath string) error {
 	if hasPackageJson(filterPath) {
 		Logger.Info("Installing npm dependencies...")
-		RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath)
+		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath)
+		if err != nil {
+			return wrapError("Failed to run npm", err)
+		}
 	}
 	return nil
 }

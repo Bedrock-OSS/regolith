@@ -51,7 +51,7 @@ func executeCommand(command string, args []string, absoluteLocation string, work
 	err = cmd.Run()
 
 	if err != nil {
-		return wrapError("Failed to run shell filter", err)
+		return wrapError("Failed to run shell script", err)
 	}
 	return nil
 }

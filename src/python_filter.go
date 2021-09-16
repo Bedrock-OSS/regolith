@@ -28,7 +28,7 @@ func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 	if needsVenv(absoluteLocation) {
 		venvPath, err := resolveVenvPath(filter, absoluteLocation)
 		if err != nil {
-			return wrapError("Failed to run Python filter", err)
+			return wrapError("Failed to resolve venv path", err)
 		}
 		Logger.Debug("Running Python filter using venv: ", venvPath)
 		suffix := ""
@@ -38,10 +38,16 @@ func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 		command = path.Join(venvPath, "Scripts/python"+suffix)
 	}
 	if len(settings) == 0 {
-		RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Location}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		err := RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Location}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		if err != nil {
+			return wrapError("Failed to run Python script", err)
+		}
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Location, string(jsonSettings)}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		err := RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Location, string(jsonSettings)}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		if err != nil {
+			return wrapError("Failed to run Python script", err)
+		}
 	}
 	return nil
 }
@@ -50,18 +56,24 @@ func installPythonFilter(filter Filter, filterPath string) error {
 	if needsVenv(filterPath) {
 		venvPath, err := resolveVenvPath(filter, filterPath)
 		if err != nil {
-			return wrapError("Failed to install Python filter", err)
+			return wrapError("Failed to resolve venv path", err)
 		}
 		Logger.Info("Creating venv...")
-		RunSubProcess("python", []string{"-m", "venv", venvPath}, "")
+		err = RunSubProcess("python", []string{"-m", "venv", venvPath}, "")
+		if err != nil {
+			return err
+		}
 		suffix := ""
 		if runtime.GOOS == "windows" {
 			suffix = ".exe"
 		}
 		Logger.Info("Installing pip dependencies...")
-		RunSubProcess(
+		err = RunSubProcess(
 			path.Join(venvPath, "Scripts/pip"+suffix),
 			[]string{"install", "-r", "requirements.txt"}, filterPath)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
