@@ -1,6 +1,7 @@
 package src
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,7 +15,7 @@ type World struct {
 	Path string `json:"path"`
 }
 
-func ListWorlds(mojangDir string) []World {
+func ListWorlds(mojangDir string) ([]*World, error) {
 	var worlds = make(map[string]World)
 	var existingWorldNames = make(map[string]struct{}) // A set with duplicated world names
 	var exists = struct{}{}
@@ -22,8 +23,7 @@ func ListWorlds(mojangDir string) []World {
 	worldsPath := path.Join(mojangDir, "minecraftWorlds")
 	files, err := ioutil.ReadDir(worldsPath)
 	if err != nil {
-		Logger.Fatal(err)
-		return nil
+		return nil, wrapError("Failed to list files inside worlds dir", err)
 	}
 	for _, f := range files {
 		if f.IsDir() {
@@ -48,22 +48,20 @@ func ListWorlds(mojangDir string) []World {
 		}
 	}
 	// Convert result to list
-	var result []World
+	var result []*World
 	for _, val := range worlds {
-		result = append(result, val)
+		result = append(result, &val)
 	}
-	return result
+	return result, nil
 }
 
-func FindMojangDir() string {
+func FindMojangDir() (string, error) {
 	if runtime.GOOS != "windows" {
-		Logger.Fatal(fmt.Sprintf("unsupported OS '%s'", runtime.GOOS))
-		return ""
+		return "", errors.New(fmt.Sprintf("unsupported OS '%s'", runtime.GOOS))
 	}
 	result := path.Join(os.Getenv("LOCALAPPDATA"), "Packages", "Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games", "com.mojang")
 	if _, err := os.Stat(result); os.IsNotExist(err) {
-		Logger.Fatal(err)
-		return ""
+		return "", wrapError(fmt.Sprintf("Failed to find file %s", result), err)
 	}
-	return result
+	return result, nil
 }

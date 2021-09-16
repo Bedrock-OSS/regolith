@@ -62,8 +62,7 @@ func main() {
 				Usage: "Installs dependencies into the .regolith folder.",
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
-					src.InstallDependencies()
-					return nil
+					return src.InstallDependencies()
 				},
 			},
 			{
@@ -71,8 +70,7 @@ func main() {
 				Usage: "Initialize a Regolith project in the current directory.",
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
-					src.InitializeRegolithProject(src.StringArrayContains(c.FlagNames(), "force"))
-					return nil
+					return src.InitializeRegolithProject(src.StringArrayContains(c.FlagNames(), "force"))
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
