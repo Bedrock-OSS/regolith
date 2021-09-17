@@ -1,0 +1,24 @@
+{
+  "name": "Project Name",
+  "author": "Your name",
+  "packs": {
+    "behaviorPack": "./packs/BP",
+    "resourcePack": "./packs/RP"
+  },
+  "regolith": {
+    "profiles": {
+      "dev": {
+        "unsafe": false,
+        "filters": [],
+        "export": {
+          "target": "development",
+          "rpPath": "",
+          "bpPath": "",
+          "worldName": "",
+          "worldPath": ""
+        },
+        "dataPath": ""
+      }
+    }
+  }
+}
