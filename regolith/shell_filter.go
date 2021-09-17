@@ -1,4 +1,4 @@
-package src
+package regolith
 
 import (
 	"encoding/json"

@@ -1,7 +1,7 @@
 package test
 
 import (
-	"bedrock-oss.github.com/regolith/src"
+	"bedrock-oss.github.com/regolith/regolith"
 	"crypto/md5"
 	"encoding/hex"
 	"io"
@@ -57,7 +57,7 @@ func listPaths(path string, root string) (map[string]string, error) {
 }
 
 // TestRegolithInit tests the results of InitializeRegolithProject against
-// the values from src/testdata/fresh_project.
+// the values from test/testdata/fresh_project.
 func TestRegolithInit(t *testing.T) {
 	// Get paths expected in initialized project
 	expectedPaths, err := listPaths(
@@ -78,8 +78,8 @@ func TestRegolithInit(t *testing.T) {
 		t.Fatal("Unable to change working directory:", err.Error())
 	}
 	// Test regolith init
-	src.InitLogging(true)
-	src.InitializeRegolithProject(false)
+	regolith.InitLogging(true)
+	regolith.InitializeRegolithProject(false)
 	createdPaths, err := listPaths(".", ".")
 	if err != nil {
 		log.Fatal("Unable to get list of created paths:", err)
