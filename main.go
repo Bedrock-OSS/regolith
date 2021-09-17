@@ -5,7 +5,7 @@ import (
 
 	"github.com/fatih/color"
 
-	"bedrock-oss.github.com/regolith/src"
+	"bedrock-oss.github.com/regolith/regolith"
 	"github.com/urfave/cli/v2"
 )
 
@@ -17,7 +17,7 @@ var (
 )
 
 func main() {
-	src.CustomHelp()
+	regolith.CustomHelp()
 	var debug bool
 	err := (&cli.App{
 		Name:                 "Regolith",
@@ -54,7 +54,7 @@ func main() {
 						profile = args[0]
 					}
 
-					return src.RunProfile(profile)
+					return regolith.RunProfile(profile)
 				},
 			},
 			{
@@ -62,7 +62,7 @@ func main() {
 				Usage: "Installs dependencies into the .regolith folder.",
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
-					return src.InstallDependencies()
+					return regolith.InstallDependencies()
 				},
 			},
 			{
@@ -70,7 +70,7 @@ func main() {
 				Usage: "Initialize a Regolith project in the current directory.",
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
-					return src.InitializeRegolithProject(src.StringArrayContains(c.FlagNames(), "force"))
+					return regolith.InitializeRegolithProject(regolith.StringArrayContains(c.FlagNames(), "force"))
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -85,20 +85,20 @@ func main() {
 				Usage: "Cleans cache from the .regolith folder.",
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
-					return src.CleanCache()
+					return regolith.CleanCache()
 				},
 			},
 		},
 	}).Run(os.Args)
 	if err != nil {
-		src.Logger.Error(err)
+		regolith.Logger.Error(err)
 	} else {
-		src.Logger.Info(color.GreenString("Finished"))
+		regolith.Logger.Info(color.GreenString("Finished"))
 	}
 }
 
 func initRegolith(debug bool) {
 	//goland:noinspection GoBoolExpressions
-	src.InitLogging(buildSource == "DEV" || debug)
-	src.RegisterFilters()
+	regolith.InitLogging(buildSource == "DEV" || debug)
+	regolith.RegisterFilters()
 }
