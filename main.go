@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	color2 "github.com/fatih/color"
+	"github.com/fatih/color"
 
 	"bedrock-oss.github.com/regolith/src"
 	"github.com/urfave/cli/v2"
@@ -29,8 +29,8 @@ func main() {
 			"Date":        date,
 			"BuildSource": buildSource,
 		},
-		Writer:    color2.Output,
-		ErrWriter: color2.Error,
+		Writer:    color.Output,
+		ErrWriter: color.Error,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:        "debug",
@@ -80,10 +80,20 @@ func main() {
 					},
 				},
 			},
+			{
+				Name:  "clean",
+				Usage: "Cleans cache from the .regolith folder.",
+				Action: func(c *cli.Context) error {
+					initRegolith(debug)
+					return src.CleanCache()
+				},
+			},
 		},
 	}).Run(os.Args)
 	if err != nil {
 		src.Logger.Error(err)
+	} else {
+		src.Logger.Info(color.GreenString("Finished"))
 	}
 }
 

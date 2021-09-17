@@ -26,7 +26,22 @@ func IsRemoteFilterCached(url string) bool {
 	return err == nil
 }
 
-// InstallDependencies downloads all of the remote filters of every
+// CleanCache removes all contents of .regolith folder.
+func CleanCache() error {
+	Logger.Infof("Cleaning cache...")
+	err := os.RemoveAll(".regolith")
+	if err != nil {
+		return wrapError("Failed to remove .regolith folder", err)
+	}
+	err = os.Mkdir(".regolith", 0777)
+	if err != nil {
+		return wrapError("Failed to recreate .regolith folder", err)
+	}
+	Logger.Infof("Cache cleaned.")
+	return nil
+}
+
+// InstallDependencies downloads all the remote filters of every
 // profile specified in config.json and recursively downloads the filters
 // specified in filter.json of every downloaded filter.
 func InstallDependencies() error {
