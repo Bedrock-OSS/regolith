@@ -1,6 +1,7 @@
-package src
+package test
 
 import (
+	"bedrock-oss.github.com/regolith/src"
 	"crypto/md5"
 	"encoding/hex"
 	"io"
@@ -12,14 +13,12 @@ import (
 	"testing"
 )
 
-// listPaths returns a dircionary with paths of the files from 'path' directory
+// listPaths returns a dictionary with paths of the files from 'path' directory
 // relative to 'root' directory used as keys, and with md5 hashes paths as
 // values. The directory paths use empty strings instead of MD5. The function
-// ignores files called .ignoreme (they're used to simulate empty directories
+// ignores files called .ignoreme (they simulate empty directories
 // in git repository).
 func listPaths(path string, root string) (map[string]string, error) {
-	// 150 is just an arbitrary number I chose to avoid constant memory
-	// allocation while expanding the slice capacity
 	result := map[string]string{}
 	err := filepath.WalkDir(path,
 		func(path string, data fs.DirEntry, err error) error {
@@ -79,8 +78,8 @@ func TestRegolithInit(t *testing.T) {
 		t.Fatal("Unable to change working directory:", err.Error())
 	}
 	// Test regolith init
-	InitLogging(true)
-	InitializeRegolithProject(false)
+	src.InitLogging(true)
+	src.InitializeRegolithProject(false)
 	createdPaths, err := listPaths(".", ".")
 	if err != nil {
 		log.Fatal("Unable to get list of created paths:", err)
@@ -100,6 +99,9 @@ func TestRegolithInit(t *testing.T) {
 			} else if createdHash == "" {
 				t.Fatalf("%q should be a directory but is a file instead", k)
 			}
+			// Print the file, that doesn't match
+			//bytes, _ := ioutil.ReadFile(k)
+			//t.Log(string(bytes))
 			t.Fatalf("%q file is different that expected", k)
 		}
 	}
