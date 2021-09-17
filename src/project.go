@@ -99,10 +99,11 @@ func InitializeRegolithProject(isForced bool) error {
 			Logger.Warn("Initialization forced. Data may be lost.")
 		}
 
-		// Delete old configuration
-		err := os.Remove(ManifestName)
-		if err != nil {
-			return err
+		// Delete old configuration if it exists
+		if err := os.Remove(ManifestName); !os.IsNotExist(err) {
+			if err != nil {
+				return err
+			}
 		}
 
 		// Create new configuration
