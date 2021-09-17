@@ -30,6 +30,7 @@ type Profile struct {
 	Unsafe       bool         `json:"unsafe"`
 	Filters      []Filter     `json:"filters"`
 	ExportTarget ExportTarget `json:"export"`
+	DataPath     string       `json:"dataPath"`
 }
 
 type Filter struct {
