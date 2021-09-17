@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/otiai10/copy"
 )
 
@@ -146,7 +145,6 @@ func RunProfile(profileName string) error {
 		}
 		Logger.Debug("Done in ", time.Since(start))
 	}
-	Logger.Info(color.GreenString("Finished"))
 	return nil
 }
 
