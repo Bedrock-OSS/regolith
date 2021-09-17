@@ -29,7 +29,7 @@ func RegisterFilters() {
 }
 
 // the workspace for the filters.
-func SetupTmpFiles() error {
+func SetupTmpFiles(config Config, profile Profile) error {
 	start := time.Now()
 	// Setup Directories
 	Logger.Debug("Cleaning .regolith/tmp")
@@ -46,10 +46,6 @@ func SetupTmpFiles() error {
 	// Copy the contents of the `regolith` folder to `.regolith/tmp`
 	Logger.Debug("Copying project files to .regolith/tmp")
 
-	config, err := LoadConfig()
-	if err != nil {
-		return wrapError("Failed to load project config", err)
-	}
 	err = copy.Copy(config.Packs.BehaviorFolder, ".regolith/tmp/BP", copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
 		return err
@@ -58,6 +54,17 @@ func SetupTmpFiles() error {
 	err = copy.Copy(config.Packs.ResourceFolder, ".regolith/tmp/RP", copy.Options{PreserveTimes: false, Sync: false})
 	if err != nil {
 		return err
+	}
+	if profile.DataPath != "" { // datapath copied only if specified
+		err = copy.Copy(profile.DataPath, ".regolith/tmp/data", copy.Options{PreserveTimes: false, Sync: false})
+		if err != nil {
+			return err
+		}
+	} else { // create empty data path
+		err = os.MkdirAll(".regolith/data", 0777)
+		if err != nil {
+			return err
+		}
 	}
 
 	Logger.Debug("Setup done in ", time.Since(start))
@@ -98,7 +105,7 @@ func RunProfile(profileName string) error {
 	}
 
 	// Prepare tmp files
-	err = SetupTmpFiles()
+	err = SetupTmpFiles(*project, profile)
 	if err != nil {
 		return wrapError("Unable to setup profile", err)
 	}
@@ -118,6 +125,10 @@ func RunProfile(profileName string) error {
 	err = os.RemoveAll("build")
 	if err != nil {
 		return wrapError("Unable to clean build directory", err)
+	}
+	err = os.RemoveAll(".regolith/tmp/data")
+	if err != nil {
+		return wrapError("Unable to clean .regolith/tmp/data directory", err)
 	}
 	err = os.Rename(".regolith/tmp", "build")
 	if err != nil {
