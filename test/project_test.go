@@ -1,16 +1,17 @@
 package test
 
 import (
-	"bedrock-oss.github.com/regolith/regolith"
 	"crypto/md5"
 	"encoding/hex"
-	"io"
 	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"bedrock-oss.github.com/regolith/regolith"
 )
 
 // listPaths returns a dictionary with paths of the files from 'path' directory
@@ -35,17 +36,14 @@ func listPaths(path string, root string) (map[string]string, error) {
 			if data.IsDir() {
 				result[relPath] = ""
 			} else {
-				file, err := os.Open(path)
+				content, err := ioutil.ReadFile(path)
 				if err != nil {
 					return err
 				}
-				defer file.Close()
 				hash := md5.New()
-				if _, err := io.Copy(hash, file); err != nil {
-					return err
-				}
-				//Get the 16 bytes hash
-				hashInBytes := hash.Sum(nil)[:16]
+				// Get the hash value, ignore carriage return
+				hash.Write([]byte(strings.Replace(string(content), "\r", "", -1)))
+				hashInBytes := hash.Sum(nil)
 				result[relPath] = hex.EncodeToString(hashInBytes)
 			}
 			return nil
