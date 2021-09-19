@@ -18,7 +18,7 @@ func SetupTmpFiles(config Config, profile Profile) error {
 		return err
 	}
 
-	err = os.MkdirAll(".regolith/tmp", 0777)
+	err = os.MkdirAll(".regolith/tmp", 0666)
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func SetupTmpFiles(config Config, profile Profile) error {
 			return err
 		}
 	} else { // create empty data path
-		err = os.MkdirAll(".regolith/data", 0777)
+		err = os.MkdirAll(".regolith/data", 0666)
 		if err != nil {
 			return err
 		}
