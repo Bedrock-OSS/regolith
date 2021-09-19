@@ -38,13 +38,13 @@ func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 		command = path.Join(venvPath, "Scripts/python"+suffix)
 	}
 	if len(settings) == 0 {
-		err := RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Location}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		err := RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Script}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
 		if err != nil {
 			return wrapError("Failed to run Python script", err)
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		err := RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Location, string(jsonSettings)}, filter.Arguments...), GetAbsoluteWorkingDirectory())
+		err := RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Script, string(jsonSettings)}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
 		if err != nil {
 			return wrapError("Failed to run Python script", err)
 		}
@@ -59,7 +59,7 @@ func installPythonFilter(filter Filter, filterPath string) error {
 			return wrapError("Failed to resolve venv path", err)
 		}
 		Logger.Info("Creating venv...")
-		err = RunSubProcess("python", []string{"-m", "venv", venvPath}, "")
+		err = RunSubProcess("python", []string{"-m", "venv", venvPath}, filterPath, "")
 		if err != nil {
 			return err
 		}
@@ -70,7 +70,7 @@ func installPythonFilter(filter Filter, filterPath string) error {
 		Logger.Info("Installing pip dependencies...")
 		err = RunSubProcess(
 			path.Join(venvPath, "Scripts/pip"+suffix),
-			[]string{"install", "-r", "requirements.txt"}, filterPath)
+			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath)
 		if err != nil {
 			return err
 		}

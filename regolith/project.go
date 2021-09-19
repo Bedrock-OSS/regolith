@@ -35,7 +35,7 @@ type Profile struct {
 
 type Filter struct {
 	Name      string                 `json:"name"`
-	Location  string                 `json:"location"`
+	Script    string                 `json:"script"`
 	RunWith   string                 `json:"runWith"`
 	Command   string                 `json:"command"`
 	Arguments []string               `json:"arguments"`
@@ -168,4 +168,19 @@ func InitializeRegolithProject(isForced bool) error {
 		Logger.Info("Regolith project initialized.")
 		return nil
 	}
+}
+
+// CleanCache removes all contents of .regolith folder.
+func CleanCache() error {
+	Logger.Infof("Cleaning cache...")
+	err := os.RemoveAll(".regolith")
+	if err != nil {
+		return wrapError("Failed to remove .regolith folder", err)
+	}
+	err = os.Mkdir(".regolith", 0777)
+	if err != nil {
+		return wrapError("Failed to recreate .regolith folder", err)
+	}
+	Logger.Infof("Cache cleaned.")
+	return nil
 }

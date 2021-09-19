@@ -19,26 +19,11 @@ func FilterNameToUrl(name string) string {
 	return "github.com/Bedrock-OSS/regolith-filters//" + name
 }
 
-// IsRemotrFilterCached checks whether the filter of given URL is already saved
+// IsRemoteFilterCached checks whether the filter of given URL is already saved
 // in cache.
 func IsRemoteFilterCached(url string) bool {
 	_, err := os.Stat(UrlToPath(url))
 	return err == nil
-}
-
-// CleanCache removes all contents of .regolith folder.
-func CleanCache() error {
-	Logger.Infof("Cleaning cache...")
-	err := os.RemoveAll(".regolith")
-	if err != nil {
-		return wrapError("Failed to remove .regolith folder", err)
-	}
-	err = os.Mkdir(".regolith", 0777)
-	if err != nil {
-		return wrapError("Failed to recreate .regolith folder", err)
-	}
-	Logger.Infof("Cache cleaned.")
-	return nil
 }
 
 // InstallDependencies downloads all the remote filters of every
@@ -74,7 +59,7 @@ func InstallDependencies() error {
 }
 
 // InstallDependency recursively downloads the filters of a profile and the
-// filters specifed in other filters.
+// filters specified in other filters.
 func InstallDependency(profile Profile) error { // TODO - rename that and split into two functions?
 	for _, filter := range profile.Filters {
 		// Get the url of the dependency

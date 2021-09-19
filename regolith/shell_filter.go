@@ -37,7 +37,7 @@ func executeCommand(command string, args []string, absoluteLocation string, work
 		args[i] = strconv.Quote(arg)
 	}
 	joined := strings.Join(append([]string{command}, args...), " ")
-	Logger.Debug(joined)
+	Logger.Debugf("Executing command: %s", joined)
 	shell, arg, err := findShell()
 	if err != nil {
 		return err
