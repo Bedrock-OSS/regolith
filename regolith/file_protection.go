@@ -25,7 +25,7 @@ func (f *EditedFiles) Dump() error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(EditedFilesPath, result, 0777)
+	err = ioutil.WriteFile(EditedFilesPath, result, 0666)
 	if err != nil {
 		return err
 	}

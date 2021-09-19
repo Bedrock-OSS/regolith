@@ -8,6 +8,8 @@ import (
 )
 
 const ManifestName = "config.json"
+const GitIgnore = `/build
+/.regolith`
 
 // TODO implement the rest of the standard config spec
 type Config struct {
@@ -107,18 +109,6 @@ func InitializeRegolithProject(isForced bool) error {
 		}
 
 		// Create new configuration
-		file, err := os.Create(ManifestName)
-		if err != nil {
-			return wrapError(fmt.Sprintf("Could not create %s: ", ManifestName), err)
-		}
-		defer func(file *os.File) {
-			err = file.Close()
-		}(file)
-		if err != nil {
-			return wrapError(fmt.Sprintf("Could not close %s: ", ManifestName), err)
-		}
-
-		// Write default configuration
 		jsonData := Config{
 			Name:   "Project Name",
 			Author: "Your name",
@@ -139,28 +129,34 @@ func InitializeRegolithProject(isForced bool) error {
 			},
 		}
 		jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
-		_, err = file.Write(jsonBytes)
+		err := ioutil.WriteFile(ManifestName, jsonBytes, 0666)
 		if err != nil {
 			return wrapError("Failed to write project file contents", err)
 		}
 
+		// Create default gitignore file
+		err = ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
+		if err != nil {
+			return wrapError("Failed to write .gitignore file contents", err)
+		}
+
 		// Create folders
-		err = os.Mkdir("packs", 0777)
+		err = os.Mkdir("packs", 0666)
 		if err != nil {
 			Logger.Error("Could not create packs folder", err)
 		}
 
-		err = os.Mkdir("./packs/RP", 0777)
+		err = os.Mkdir("./packs/RP", 0666)
 		if err != nil {
 			Logger.Error("Could not create ./packs/RP folder", err)
 		}
 
-		err = os.Mkdir("./packs/BP", 0777)
+		err = os.Mkdir("./packs/BP", 0666)
 		if err != nil {
 			Logger.Error("Could not create ./packs/BP folder", err)
 		}
 
-		err = os.Mkdir(".regolith", 0777)
+		err = os.Mkdir(".regolith", 0666)
 		if err != nil {
 			Logger.Error("Could not create .regolith folder", err)
 		}
@@ -177,7 +173,7 @@ func CleanCache() error {
 	if err != nil {
 		return wrapError("Failed to remove .regolith folder", err)
 	}
-	err = os.Mkdir(".regolith", 0777)
+	err = os.Mkdir(".regolith", 0666)
 	if err != nil {
 		return wrapError("Failed to recreate .regolith folder", err)
 	}

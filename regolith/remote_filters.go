@@ -33,12 +33,12 @@ func InstallDependencies() error {
 	Logger.Infof("Installing dependencies...")
 	Logger.Warnf("This may take a while...")
 
-	err := os.MkdirAll(".regolith/cache/filters", 0777)
+	err := os.MkdirAll(".regolith/cache/filters", 0666)
 	if err != nil {
 		return wrapError("Could not create .regolith/cache/filters", err)
 	}
 	// Special path for virtual environments for python
-	err = os.MkdirAll(".regolith/cache/venvs", 0777)
+	err = os.MkdirAll(".regolith/cache/venvs", 0666)
 	if err != nil {
 		return wrapError("Could not create .regolith/cache/venvs", err)
 	}
