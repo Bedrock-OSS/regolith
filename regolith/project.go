@@ -59,6 +59,13 @@ type ExportTarget struct {
 	// Path          string `json:"path"`
 }
 
+func (filter Filter) GetName() string {
+	if filter.Name != "" {
+		return filter.Name
+	}
+	return fmt.Sprintf("Running filter %s", filter.Filter)
+}
+
 func IsProjectConfigured() bool {
 	// TODO: Write a better system here, that checks all possible files.
 	info, err := os.Stat(ManifestName)
