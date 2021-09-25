@@ -95,7 +95,7 @@ func RunProfile(profileName string) error {
 		path, _ := filepath.Abs(".")
 		err := filter.RunFilter(path)
 		if err != nil {
-			return wrapError(fmt.Sprintf("Running filter '%s' failed", filter.Name), err)
+			return wrapError(fmt.Sprintf("%s failed", filter.GetName()), err)
 		}
 	}
 
