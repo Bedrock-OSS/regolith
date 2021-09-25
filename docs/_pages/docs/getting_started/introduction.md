@@ -19,7 +19,7 @@ Here is what a newly initialized Regolith project looks like:
 
 ## Compiling
 
-In the simplest case, Regolith can be used to move your packs from the project folder, into your target location (usually the development folders in `com.mojang). Each time you run regolith, the packs will be moved over, and updated.
+In the simplest case, Regolith can be used to move your packs from the project folder, into your target location (usually the development folders in `com.mojang`). Each time you run regolith, the packs will be moved over, and updated.
 
 However, Regoliths real value preposition is the ability to run *arbitrary code during this copy*. 
 

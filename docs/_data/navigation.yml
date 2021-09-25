@@ -19,6 +19,8 @@ sidebar:
         url: /docs/troubleshooting
   - title: Documentation
     children:
+      - title: "Filter Types"
+        url: /docs/filter-types
       - title: "Configuration File"
         url: /docs/configuration
       - title: "Custom Filters"
