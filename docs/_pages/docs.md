@@ -12,5 +12,5 @@ feature_row:
 
 # Welcome to Regolith!
 
-Get started by reading out [introduction](/docs/introduction).
+Get started by reading the [introduction!](/docs/introduction)
 
