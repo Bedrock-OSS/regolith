@@ -26,6 +26,9 @@ func (cw colorWriter) Sync() error {
 }
 
 func InitLogging(dev bool) {
+	if Logger != nil {
+		return
+	}
 	err := zap.RegisterSink("color", func(url *url.URL) (zap.Sink, error) {
 		if url.Host == "stderr" {
 			return colorWriter{color.Output}, nil
