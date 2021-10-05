@@ -2,6 +2,8 @@ package regolith
 
 import (
 	"fmt"
+	"io"
+	"net/url"
 	"time"
 
 	"github.com/fatih/color"
@@ -12,7 +14,27 @@ import (
 var Logger *zap.SugaredLogger
 var LoggerLevel zap.AtomicLevel
 
+type colorWriter struct {
+	io.Writer
+}
+
+func (cw colorWriter) Close() error {
+	return nil
+}
+func (cw colorWriter) Sync() error {
+	return nil
+}
+
 func InitLogging(dev bool) {
+	err := zap.RegisterSink("color", func(url *url.URL) (zap.Sink, error) {
+		if url.Host == "stderr" {
+			return colorWriter{color.Output}, nil
+		}
+		return colorWriter{color.Output}, nil
+	})
+	if err != nil {
+		fmt.Printf("%s", err.Error())
+	}
 	LoggerLevel = zap.NewAtomicLevelAt(zap.InfoLevel)
 	if dev {
 		LoggerLevel.SetLevel(zap.DebugLevel)
@@ -21,8 +43,8 @@ func InitLogging(dev bool) {
 		Development:       dev,
 		Level:             LoggerLevel,
 		Encoding:          "console",
-		OutputPaths:       []string{"stdout"},
-		ErrorOutputPaths:  []string{"stderr"},
+		OutputPaths:       []string{"color:stdout"},
+		ErrorOutputPaths:  []string{"color:stderr"},
 		DisableStacktrace: !dev,
 		DisableCaller:     !dev,
 		EncoderConfig: zapcore.EncoderConfig{
