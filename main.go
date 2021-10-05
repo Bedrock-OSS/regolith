@@ -18,6 +18,7 @@ var (
 
 func main() {
 	regolith.CustomHelp()
+	go regolith.CheckUpdate(version)
 	var debug bool
 	err := (&cli.App{
 		Name:                 "Regolith",
