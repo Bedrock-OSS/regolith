@@ -3,9 +3,10 @@ package regolith
 import (
 	"errors"
 	"fmt"
-	"github.com/otiai10/copy"
 	"os"
 	"path/filepath"
+
+	"github.com/otiai10/copy"
 )
 
 // GetExportPaths returns file paths for exporting behavior pack and
@@ -49,15 +50,17 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 		} else {
 			err = errors.New("The \"world\" export target requires either a \"worldName\" or \"worldPath\" property")
 		}
+	} else if exportTarget.Target == "local" {
+		bpPath = "build/BP/"
+		rpPath = "build/RP/"
 	} else {
 		err = errors.New(fmt.Sprintf("Export '%s' target not valid", exportTarget.Target))
 	}
 	return
 }
 
-// ExportProject copies files from the build paths (build/BP and build/RP) into
-// the project's export target and its name. The paths are generated with
-// GetExportPaths.
+// ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
+// the project's export target. The paths are generated with GetExportPaths.
 func ExportProject(profile Profile, name string) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
@@ -83,30 +86,29 @@ func ExportProject(profile Profile, name string) error {
 	if err != nil {
 		return wrapError("Failed to clear behavior pack build output", err)
 	}
-	err = os.MkdirAll(bpPath, 0777)
-	if err != nil {
-		return wrapError("Failed to create required directories for behavior pack build output", err)
-	}
 	err = os.RemoveAll(rpPath)
 	if err != nil {
 		return wrapError("Failed to clear resource pack build output", err)
-	}
-	err = os.MkdirAll(rpPath, 0777)
-	if err != nil {
-		return wrapError("Failed to create required directories for resource pack build output", err)
 	}
 
 	Logger.Info("Exporting project to ", bpPath)
 	Logger.Info("Exporting project to ", rpPath)
 
-	err = copy.Copy("build/BP/", bpPath, copy.Options{PreserveTimes: false, Sync: false})
-	if err != nil {
-		return wrapError(fmt.Sprintf("Couldn't copy BP files to %s", bpPath), err)
+	err = os.Rename(".regolith/tmp/BP/", bpPath)
+	if err != nil { // Rename might fail if output path is on a different drive
+		Logger.Infof("Couldn't move BP files to %s. Trying to copy files instead...", bpPath)
+		err = copy.Copy(".regolith/tmp/BP/", bpPath, copy.Options{PreserveTimes: false, Sync: false})
+		if err != nil {
+			return wrapError(fmt.Sprintf("Couldn't copy BP files to %s", bpPath), err)
+		}
 	}
-
-	err = copy.Copy("build/RP/", rpPath, copy.Options{PreserveTimes: false, Sync: false})
-	if err != nil {
-		return wrapError(fmt.Sprintf("Couldn't copy RP files to %s", rpPath), err)
+	err = os.Rename(".regolith/tmp/RP/", rpPath)
+	if err != nil { // Rename might fail if output path is on a different drive
+		Logger.Infof("Couldn't move RP files to %s. Trying to copy files instead...", rpPath)
+		err = copy.Copy(".regolith/tmp/RP/", rpPath, copy.Options{PreserveTimes: false, Sync: false})
+		if err != nil {
+			return wrapError(fmt.Sprintf("Couldn't copy RP files to %s", rpPath), err)
+		}
 	}
 
 	// Create new edited_files.json

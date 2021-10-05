@@ -1,8 +1,10 @@
 package regolith
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,9 +34,18 @@ func GetAbsoluteWorkingDirectory() string {
 func RunSubProcess(command string, args []string, absoluteLocation string, workingDir string) error {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = workingDir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	out, _ := cmd.StdoutPipe()
+	err, _ := cmd.StderrPipe()
+	go LogStd(out, Logger.Infof)
+	go LogStd(err, Logger.Errorf)
 	cmd.Env = append(os.Environ(), "FILTER_DIR="+absoluteLocation)
 
 	return cmd.Run()
+}
+
+func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})) {
+	scanner := bufio.NewScanner(in)
+	for scanner.Scan() {
+		logFunc("[Filter] %s", scanner.Text())
+	}
 }

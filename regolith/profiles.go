@@ -2,10 +2,11 @@ package regolith
 
 import (
 	"fmt"
-	"github.com/otiai10/copy"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/otiai10/copy"
 )
 
 // SetupTmpFiles set up the workspace for the filters.
@@ -95,36 +96,22 @@ func RunProfile(profileName string) error {
 		path, _ := filepath.Abs(".")
 		err := filter.RunFilter(path)
 		if err != nil {
-			return wrapError(fmt.Sprintf("Running filter '%s' failed", filter.Name), err)
+			return wrapError(fmt.Sprintf("%s failed", filter.GetName()), err)
 		}
 	}
 
-	// Copy contents of .regolith/tmp to build
+	// Export files
 	Logger.Info("Moving files to target directory")
 	start := time.Now()
-	err = os.RemoveAll("build")
+	err = ExportProject(profile, project.Name)
 	if err != nil {
-		return wrapError("Unable to clean build directory", err)
+		return wrapError("Exporting project failed", err)
 	}
+	Logger.Debug("Done in ", time.Since(start))
+	// Clear the tmp/data path
 	err = os.RemoveAll(".regolith/tmp/data")
 	if err != nil {
 		return wrapError("Unable to clean .regolith/tmp/data directory", err)
-	}
-	err = os.Rename(".regolith/tmp", "build")
-	if err != nil {
-		return wrapError("Unable to move output to build directory", err)
-	}
-	Logger.Debug("Done in ", time.Since(start))
-
-	// copy the build to the target directory
-	if profile.ExportTarget.Target != "none" {
-		Logger.Info("Copying build to target directory")
-		start = time.Now()
-		err = ExportProject(profile, project.Name)
-		if err != nil {
-			return wrapError("Exporting project failed", err)
-		}
-		Logger.Debug("Done in ", time.Since(start))
 	}
 	return nil
 }

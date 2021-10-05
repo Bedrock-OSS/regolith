@@ -93,6 +93,7 @@ func main() {
 	if err != nil {
 		regolith.Logger.Error(err)
 	} else {
+		regolith.InitLogging(false)
 		regolith.Logger.Info(color.GreenString("Finished"))
 	}
 }
