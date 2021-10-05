@@ -38,7 +38,7 @@ func runJavaFilter(filter Filter, settings map[string]interface{}, absoluteLocat
 func checkJavaRequirements() error {
 	_, err := exec.LookPath("java")
 	if err != nil {
-		Logger.Fatal("Java not found. Download and install it from https://nodejs.org/en/")
+		Logger.Fatal("Java not found. Download and install it from https://adoptopenjdk.net/")
 	}
 	cmd, err := exec.Command("java", "--version").Output()
 	if err != nil {
