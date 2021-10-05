@@ -2,12 +2,17 @@ package regolith
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
+	"github.com/fatih/color"
+	"github.com/google/go-github/v39/github"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 func StringArrayContains(arr []string, str string) bool {
@@ -47,5 +52,76 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
 		logFunc("[Filter] %s", scanner.Text())
+	}
+}
+
+const latestReleaseUrl = "https://api.github.com/repos/Bedrock-OSS/regolith/releases/latest"
+
+type Release struct {
+	Url             string `json:"url"`
+	AssetsUrl       string `json:"assets_url"`
+	UploadUrl       string `json:"upload_url"`
+	HtmlUrl         string `json:"html_url"`
+	Id              int64  `json:"id"`
+	NodeId          string `json:"node_id"`
+	TagName         string `json:"tag_name"`
+	TargetCommitish string `json:"target_commitish"`
+	Name            string `json:"name"`
+	Draft           bool   `json:"draft"`
+	PreRelease      bool   `json:"prerelease"`
+	CreatedAt       string `json:"created_at"`
+	PublishedAt     string `json:"published_at"`
+	TarBallUrl      string `json:"tarball_url"`
+	ZipBallUrl      string `json:"zipball_url"`
+	Body            string `json:"body"`
+}
+
+func parseSemver(semver string) (major int, minor int, patch int) {
+	split := strings.Split(semver, ".")
+	length := len(split)
+	if length > 0 {
+		major, _ = strconv.Atoi(split[0])
+	}
+	if length > 1 {
+		minor, _ = strconv.Atoi(split[1])
+	}
+	if length > 2 {
+		patch, _ = strconv.Atoi(split[2])
+	}
+	return major, minor, patch
+}
+
+// Returns 1 if first version is newer, -1 if older, 0 if the same
+func compareSemver(ver1 string, ver2 string) int {
+	major1, minor1, patch1 := parseSemver(ver1)
+	major2, minor2, patch2 := parseSemver(ver2)
+	if major1 > major2 {
+		return 1
+	} else if major1 < major2 {
+		return -1
+	} else {
+		if minor1 > minor2 {
+			return 1
+		} else if minor1 < minor2 {
+			return -1
+		} else {
+			if patch1 > patch2 {
+				return 1
+			} else if patch1 < patch2 {
+				return -1
+			} else {
+				return 0
+			}
+		}
+	}
+}
+
+func CheckUpdate(version string) {
+	client := github.NewClient(nil)
+	// Ignore the error, since it's not critical to regolith
+	release, _, _ := client.Repositories.GetLatestRelease(context.Background(), "Bedrock-OSS", "regolith")
+	if compareSemver(*release.TagName, version) == 1 {
+		_, _ = fmt.Fprintln(color.Output, color.GreenString("New version available!"))
+		_, _ = fmt.Fprintln(color.Output, color.GreenString(*release.HTMLURL))
 	}
 }
