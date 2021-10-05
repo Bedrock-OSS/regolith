@@ -100,32 +100,18 @@ func RunProfile(profileName string) error {
 		}
 	}
 
-	// Copy contents of .regolith/tmp to build
+	// Export files
 	Logger.Info("Moving files to target directory")
 	start := time.Now()
-	err = os.RemoveAll("build")
+	err = ExportProject(profile, project.Name)
 	if err != nil {
-		return wrapError("Unable to clean build directory", err)
+		return wrapError("Exporting project failed", err)
 	}
+	Logger.Debug("Done in ", time.Since(start))
+	// Clear the tmp/data path
 	err = os.RemoveAll(".regolith/tmp/data")
 	if err != nil {
 		return wrapError("Unable to clean .regolith/tmp/data directory", err)
-	}
-	err = os.Rename(".regolith/tmp", "build")
-	if err != nil {
-		return wrapError("Unable to move output to build directory", err)
-	}
-	Logger.Debug("Done in ", time.Since(start))
-
-	// copy the build to the target directory
-	if profile.ExportTarget.Target != "local" {
-		Logger.Info("Copying build to target directory")
-		start = time.Now()
-		err = ExportProject(profile, project.Name)
-		if err != nil {
-			return wrapError("Exporting project failed", err)
-		}
-		Logger.Debug("Done in ", time.Since(start))
 	}
 	return nil
 }
