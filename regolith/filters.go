@@ -21,6 +21,7 @@ func RegisterFilters() {
 	RegisterPythonFilter(FilterTypes)
 	RegisterNodeJSFilter(FilterTypes)
 	RegisterShellFilter(FilterTypes)
+	RegisterJavaFilter(FilterTypes)
 }
 
 // RunFilter determine whether the filter is remote, standard (from standard
@@ -94,8 +95,6 @@ func LoadFiltersFromPath(path string) (*Profile, error) {
 // parentFilter are propagated to its children.
 func RunRemoteFilter(url string, parentFilter Filter) error {
 	settings := parentFilter.Settings
-	// TODO - I think this also should be used somehow:
-	// arguments := parentFilter.Arguments
 	Logger.Debugf("RunRemoteFilter '%s'", url)
 	if !IsRemoteFilterCached(url) {
 		return errors.New("Filter is not downloaded! Please run 'regolith install'.")
@@ -110,6 +109,7 @@ func RunRemoteFilter(url string, parentFilter Filter) error {
 	for _, filter := range profile.Filters {
 		// Overwrite the venvSlot with the parent value
 		filter.VenvSlot = parentFilter.VenvSlot
+		filter.Arguments = append(filter.Arguments, parentFilter.Arguments...)
 		// Join settings from local config to remote definition
 		for k, v := range settings {
 			filter.Settings[k] = v
