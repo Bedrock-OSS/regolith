@@ -56,27 +56,6 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 	}
 }
 
-const latestReleaseUrl = "https://api.github.com/repos/Bedrock-OSS/regolith/releases/latest"
-
-type Release struct {
-	Url             string `json:"url"`
-	AssetsUrl       string `json:"assets_url"`
-	UploadUrl       string `json:"upload_url"`
-	HtmlUrl         string `json:"html_url"`
-	Id              int64  `json:"id"`
-	NodeId          string `json:"node_id"`
-	TagName         string `json:"tag_name"`
-	TargetCommitish string `json:"target_commitish"`
-	Name            string `json:"name"`
-	Draft           bool   `json:"draft"`
-	PreRelease      bool   `json:"prerelease"`
-	CreatedAt       string `json:"created_at"`
-	PublishedAt     string `json:"published_at"`
-	TarBallUrl      string `json:"tarball_url"`
-	ZipBallUrl      string `json:"zipball_url"`
-	Body            string `json:"body"`
-}
-
 func parseSemver(semver string) (major int, minor int, patch int) {
 	split := strings.Split(semver, ".")
 	length := len(split)
