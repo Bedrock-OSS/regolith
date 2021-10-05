@@ -1,10 +1,12 @@
 package regolith
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/go-github/v39/github"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -44,13 +46,19 @@ const treeApiUrl = "https://api.github.com/repos/%s/%s/git/trees/%s"
 
 // DownloadGitHubUrl downloads part of the repository. It will only filter by the first level directory.
 // Expects url github.com/owner/repo/folder with host part lowercase
-func DownloadGitHubUrl(url string, branch string, localPath string) (bool, error) {
+func DownloadGitHubUrl(url string, localPath string) (bool, error) {
 	split := strings.Split(path.Clean(url), "/")
 	if len(split) < 4 || !strings.HasSuffix(split[0], "github.com") {
 		return false, nil
 	}
+	client := github.NewClient(nil)
+	repo, _, err := client.Repositories.Get(context.Background(), split[1], split[2])
+	if err != nil {
+		return false, wrapError("Failed to get the repository information", err)
+	}
+	branch := repo.DefaultBranch
 	filterName := split[3]
-	data, err := fetchTree(fmt.Sprintf(treeApiUrl, split[1], split[2], branch))
+	data, err := fetchTree(fmt.Sprintf(treeApiUrl, split[1], split[2], *branch))
 	if err != nil {
 		return false, wrapError("Failed to fetch the tree", err)
 	}
