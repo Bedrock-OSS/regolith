@@ -2,10 +2,11 @@ package regolith
 
 import (
 	"fmt"
-	"github.com/otiai10/copy"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/otiai10/copy"
 )
 
 // SetupTmpFiles set up the workspace for the filters.
@@ -117,7 +118,7 @@ func RunProfile(profileName string) error {
 	Logger.Debug("Done in ", time.Since(start))
 
 	// copy the build to the target directory
-	if profile.ExportTarget.Target != "none" {
+	if profile.ExportTarget.Target != "local" {
 		Logger.Info("Copying build to target directory")
 		start = time.Now()
 		err = ExportProject(profile, project.Name)
