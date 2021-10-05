@@ -28,7 +28,7 @@ func RegisterFilters() {
 // absoluteLocation is an absolute path to the root folder of the filter.
 // In case of local filters it's a root path of the project.
 func (filter *Filter) RunFilter(absoluteLocation string) error {
-	Logger.Infof("Running filter '%s'", filter.Name)
+	Logger.Info(filter.GetName())
 	start := time.Now()
 
 	if filter.Url != "" {
@@ -50,7 +50,7 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 		} else {
 			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
 		}
-		Logger.Info("Executed in ", time.Since(start))
+		Logger.Debugf("Executed in %s", time.Since(start))
 	}
 	return nil
 }
@@ -58,7 +58,7 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 // RunStandardFilter runs a filter from standard Bedrock-OSS library. The
 // function doesn't test if the filter passed on input is standard.
 func RunStandardFilter(filter Filter) error {
-	Logger.Infof("RunStandardFilter '%s'", filter.Filter)
+	Logger.Debugf("RunStandardFilter '%s'", filter.Filter)
 	return RunRemoteFilter(FilterNameToUrl(filter.Filter), filter)
 }
 
@@ -96,7 +96,7 @@ func RunRemoteFilter(url string, parentFilter Filter) error {
 	settings := parentFilter.Settings
 	// TODO - I think this also should be used somehow:
 	// arguments := parentFilter.Arguments
-	Logger.Infof("RunRemoteFilter '%s'", url)
+	Logger.Debugf("RunRemoteFilter '%s'", url)
 	if !IsRemoteFilterCached(url) {
 		return errors.New("Filter is not downloaded! Please run 'regolith install'.")
 	}
