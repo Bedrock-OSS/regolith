@@ -29,3 +29,7 @@ sidebar:
         url: /docs/standard-library
       - title: "Troubleshooting"
         url: /docs/troubleshooting
+  - title: Content
+    children:
+      - title: "Community Filters"
+        url: /docs/community-filters
