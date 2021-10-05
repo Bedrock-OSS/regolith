@@ -37,6 +37,7 @@ func GetAbsoluteWorkingDirectory() string {
 // RunSubProcess runs a sub-process with specified arguments and working
 // directory
 func RunSubProcess(command string, args []string, absoluteLocation string, workingDir string) error {
+	Logger.Debugf("Exec: %s %s", command, strings.Join(args, " "))
 	cmd := exec.Command(command, args...)
 	cmd.Dir = workingDir
 	out, _ := cmd.StdoutPipe()
