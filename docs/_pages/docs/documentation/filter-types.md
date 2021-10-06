@@ -15,7 +15,7 @@ The standard library is a special [github repository](https://github.com/Bedrock
 
 This repository is special, since folders here can be accessed by-name inside of Regolith, instead of by URL. This makes the standard library very easy to use for beginners. 
 
-[The full list of available standard-library filters can be found here.](/docs/documentation/standard-library)
+[The full list of available standard-library filters can be found here.](/regolith/docs/standard-library)
 
 
 Example:
