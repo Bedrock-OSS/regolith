@@ -7,7 +7,7 @@ sidebar:
   nav: "sidebar"
 ---
 
-To get started with Regolith, you should first read our [introduction](/docs/getting-started/introduction) page, and the [installation](/docs/getting-started/installation) page.
+To get started with Regolith, you should first read our [introduction](/docs/introduction) page, and the [installation](/docs/getting-started/installation) page.
 
 You can test for installation by running `regolith` inside of a terminal. This guide will assume you have installed regolith directly, but you can follow along with a stand-alone build. Just ensure that the executable is placed inside of your project folder.
 
