@@ -126,8 +126,9 @@ func InitializeRegolithProject(isForced bool) error {
 			RegolithProject: RegolithProject{
 				Profiles: map[string]Profile{
 					"dev": {
-						Unsafe:  false,
-						Filters: []Filter{},
+						Unsafe:   false,
+						DataPath: "./packs/data",
+						Filters:  []Filter{},
 						ExportTarget: ExportTarget{
 							Target: "development",
 						},
@@ -161,6 +162,11 @@ func InitializeRegolithProject(isForced bool) error {
 		err = os.Mkdir("./packs/BP", 0666)
 		if err != nil {
 			Logger.Error("Could not create ./packs/BP folder", err)
+		}
+
+		err = os.Mkdir("./packs/data", 0666)
+		if err != nil {
+			Logger.Error("Could not create ./packs/data folder", err)
 		}
 
 		err = os.Mkdir(".regolith", 0666)

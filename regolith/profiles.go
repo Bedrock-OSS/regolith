@@ -24,7 +24,7 @@ func SetupTmpFiles(config Config, profile Profile) error {
 		return err
 	}
 
-	// Copy the contents of the `regolith` folder to `.regolith/tmp`
+	// Copy the contents of the 'regolith' folder to '.regolith/tmp'
 	Logger.Debug("Copying project files to .regolith/tmp")
 
 	err = copy.Copy(config.Packs.BehaviorFolder, ".regolith/tmp/BP", copy.Options{PreserveTimes: false, Sync: false})
@@ -36,12 +36,14 @@ func SetupTmpFiles(config Config, profile Profile) error {
 	if err != nil {
 		return err
 	}
+
+	// Copy the contents of 'data' folder to '.regolith/tmp'
 	if profile.DataPath != "" { // datapath copied only if specified
 		err = copy.Copy(profile.DataPath, ".regolith/tmp/data", copy.Options{PreserveTimes: false, Sync: false})
 		if err != nil {
 			return err
 		}
-	} else { // create empty data path
+	} else { // create empty data path otherwise.
 		err = os.MkdirAll(".regolith/data", 0666)
 		if err != nil {
 			return err
