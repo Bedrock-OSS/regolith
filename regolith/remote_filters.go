@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
+	"strings"
 
 	getter "github.com/hashicorp/go-getter"
+	"github.com/otiai10/copy"
 )
 
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
@@ -62,7 +65,7 @@ func InstallDependencies() error {
 
 // InstallDependency recursively downloads the filters of a profile and the
 // filters specified in other filters.
-func InstallDependency(profile Profile) error { // TODO - rename that and split into two functions?
+func InstallDependency(profile Profile) error {
 	for _, filter := range profile.Filters {
 		// Get the url of the dependency
 		var url string
@@ -76,30 +79,46 @@ func InstallDependency(profile Profile) error { // TODO - rename that and split 
 		Logger.Infof("Installing dependency %s...", url)
 
 		// Download the filter into the cache folder
-		path := UrlToPath(url)
-		ok, err := DownloadGitHubUrl(url, path)
+		downloadPath := UrlToPath(url)
+		ok, err := DownloadGitHubUrl(url, downloadPath)
 		if err != nil {
 			Logger.Debug(err)
 		}
 		if !ok {
 			Logger.Debug("Failed to download filter " + filter.Filter + " without git")
-			err := getter.Get(path, url)
+			err := getter.Get(downloadPath, url)
 			if err != nil {
 				return err
 			}
 		}
 
-		// Check required files
-		file, err := ioutil.ReadFile(path + "/filter.json")
+		// Move filters 'data' folder contents into 'data'
+		filterName := strings.Split(path.Clean(url), "/")[3]
+
+		filterDataPath := path.Join(profile.DataPath, filterName)
+		err = os.MkdirAll(filterDataPath, 0666)
 		if err != nil {
-			return wrapError(fmt.Sprintf("Couldn't find %s/filter.json!", path), err)
+			Logger.Error("Could not create filter data folder", err)
+		}
+
+		if profile.DataPath != "" {
+			err = copy.Copy(path.Join(downloadPath, "data"), filterDataPath, copy.Options{PreserveTimes: false, Sync: false})
+			if err != nil {
+				Logger.Error("Could not initialize filter data", err)
+			}
+		}
+
+		// Check required files
+		file, err := ioutil.ReadFile(downloadPath + "/filter.json")
+		if err != nil {
+			return wrapError(fmt.Sprintf("Couldn't find %s/filter.json!", downloadPath), err)
 		}
 
 		// Load subprofile (remote filter)
 		var remoteProfile Profile
 		err = json.Unmarshal(file, &remoteProfile)
 		if err != nil {
-			return wrapError(fmt.Sprintf("Couldn't load %s/filter.json: ", path), err)
+			return wrapError(fmt.Sprintf("Couldn't load %s/filter.json: ", downloadPath), err)
 		}
 		// Propagate venvSlot property
 		for f := range remoteProfile.Filters {
@@ -116,7 +135,7 @@ func InstallDependency(profile Profile) error { // TODO - rename that and split 
 		for _, filter := range remoteProfile.Filters {
 			if filter.RunWith != "" {
 				if f, ok := FilterTypes[filter.RunWith]; ok {
-					err := f.install(filter, path)
+					err := f.install(filter, downloadPath)
 					if err != nil {
 						return wrapError(fmt.Sprintf("Couldn't install filter %s", filter.Name), err)
 					}

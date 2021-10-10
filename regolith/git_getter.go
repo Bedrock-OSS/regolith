@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/go-github/v39/github"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/google/go-github/v39/github"
 )
 
 type TreeResponse struct {
@@ -49,7 +50,7 @@ const treeApiUrl = "https://api.github.com/repos/%s/%s/git/trees/%s"
 func DownloadGitHubUrl(url string, localPath string) (bool, error) {
 	split := strings.Split(path.Clean(url), "/")
 	if len(split) < 4 || !strings.HasSuffix(split[0], "github.com") {
-		return false, nil
+		return false, wrapError("Remote repositories must be of the form: github.com/owner/repo/folder", nil)
 	}
 	client := github.NewClient(nil)
 	repo, _, err := client.Repositories.Get(context.Background(), split[1], split[2])
