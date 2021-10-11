@@ -18,7 +18,6 @@ var (
 
 func main() {
 	regolith.CustomHelp()
-	go regolith.CheckUpdate(version)
 	var debug bool
 	err := (&cli.App{
 		Name:                 "Regolith",
@@ -102,5 +101,6 @@ func main() {
 func initRegolith(debug bool) {
 	//goland:noinspection GoBoolExpressions
 	regolith.InitLogging(debug)
+	go regolith.CheckUpdate(version)
 	regolith.RegisterFilters()
 }
