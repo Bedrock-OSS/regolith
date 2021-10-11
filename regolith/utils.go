@@ -100,7 +100,11 @@ func compareSemver(ver1 string, ver2 string) int {
 func CheckUpdate(version string) {
 	client := github.NewClient(nil)
 	// Ignore the error, since it's not critical to regolith
-	release, _, _ := client.Repositories.GetLatestRelease(context.Background(), "Bedrock-OSS", "regolith")
+	release, _, err := client.Repositories.GetLatestRelease(context.Background(), "Bedrock-OSS", "regolith")
+	if err != nil {
+		Logger.Warn("Update check failed")
+		return
+	}
 	if compareSemver(*release.TagName, version) == 1 {
 		_, _ = fmt.Fprintln(color.Output, color.GreenString("New version available!"))
 		_, _ = fmt.Fprintln(color.Output, color.GreenString(*release.HTMLURL))
