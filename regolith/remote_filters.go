@@ -31,10 +31,12 @@ func IsRemoteFilterCached(url string) bool {
 	return err == nil
 }
 
-// InstallDependencies downloads all the remote filters of every
-// profile specified in config.json and recursively downloads the filters
-// specified in filter.json of every downloaded filter.
-func InstallDependencies() error {
+/*
+Recursively install dependencies for the entire config.
+ - Force mode will overwrite existing dependencies.
+ - Non-force mode will only install dependencies that are not already installed.
+*/
+func InstallDependencies(isForced bool) error {
 	Logger.Infof("Installing dependencies...")
 
 	err := os.MkdirAll(".regolith/cache/filters", 0666)
@@ -54,7 +56,7 @@ func InstallDependencies() error {
 	}
 
 	for _, profile := range project.Profiles {
-		err := InstallDependency(profile)
+		err := InstallDependency(profile, isForced)
 		if err != nil {
 			return wrapError("Could not install dependency", err)
 		}
@@ -66,7 +68,7 @@ func InstallDependencies() error {
 
 // InstallDependency recursively downloads the filters of a profile and the
 // filters specified in other filters.
-func InstallDependency(profile Profile) error {
+func InstallDependency(profile Profile, isForced bool) error {
 	for _, filter := range profile.Filters {
 		// Get the url of the dependency, which may be constructed
 		var url string
@@ -82,12 +84,19 @@ func InstallDependency(profile Profile) error {
 		// Download the filter into the cache folder
 		downloadPath := UrlToPath(url)
 
-		//We must not install if the filter is already present
-
 		// If downloadPath already exists, continue
 		if _, err := os.Stat(downloadPath); err == nil {
-			Logger.Infof("Dependency %s already installed, skipping.", url)
-			continue
+			if !isForced {
+				Logger.Infof("Dependency %s already installed, skipping.", url)
+				continue
+			} else {
+				Logger.Infof("Dependency %s already installed, but forcing installation.", url)
+				err := os.RemoveAll(downloadPath)
+				if err != nil {
+					return wrapError("Could not remove installed filter", err)
+				}
+
+			}
 		}
 
 		// Download the filter fresh
@@ -108,8 +117,17 @@ func InstallDependency(profile Profile) error {
 		filterDataPath := path.Join(profile.DataPath, filterName)
 
 		// If the filterDataPath already exists, print a warning and continue
+
 		if _, err := os.Stat(filterDataPath); err == nil {
-			Logger.Warnf("Filter %s already has data in the 'data' folder. You may clear this data and reinstall if desired.", filterName)
+			if isForced {
+				Logger.Infof("Installation forced. Overwriting existing filter data %s", filterDataPath)
+				err := os.RemoveAll(filterDataPath)
+				if err != nil {
+					return wrapError("Could not remove existing filter data", err)
+				}
+			} else {
+				Logger.Warnf("Filter %s already has data in the 'data' folder. You may re-run with --force to download anyways.", filterName)
+			}
 			continue
 		}
 
@@ -143,7 +161,7 @@ func InstallDependency(profile Profile) error {
 		}
 		// Install dependencies of remote filters
 		// recursion ends when there is no more nested remote dependencies
-		err = InstallDependency(remoteProfile)
+		err = InstallDependency(remoteProfile, isForced)
 		if err != nil {
 			return err
 		}
