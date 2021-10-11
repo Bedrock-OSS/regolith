@@ -36,12 +36,12 @@ func IsRemoteFilterCached(url string) bool {
 // specified in filter.json of every downloaded filter.
 func InstallDependencies() error {
 	Logger.Infof("Installing dependencies...")
-	Logger.Warnf("This may take a while...")
 
 	err := os.MkdirAll(".regolith/cache/filters", 0666)
 	if err != nil {
 		return wrapError("Could not create .regolith/cache/filters", err)
 	}
+
 	// Special path for virtual environments for python
 	err = os.MkdirAll(".regolith/cache/venvs", 0666)
 	if err != nil {
@@ -52,6 +52,7 @@ func InstallDependencies() error {
 	if err != nil {
 		return wrapError("Failed to load project config", err)
 	}
+
 	for _, profile := range project.Profiles {
 		err := InstallDependency(profile)
 		if err != nil {
@@ -67,7 +68,7 @@ func InstallDependencies() error {
 // filters specified in other filters.
 func InstallDependency(profile Profile) error {
 	for _, filter := range profile.Filters {
-		// Get the url of the dependency
+		// Get the url of the dependency, which may be constructed
 		var url string
 		if filter.Url != "" {
 			url = FilterNameToUrl(filter.Url, filter.Filter)
@@ -80,6 +81,16 @@ func InstallDependency(profile Profile) error {
 
 		// Download the filter into the cache folder
 		downloadPath := UrlToPath(url)
+
+		//We must not install if the filter is already present
+
+		// If downloadPath already exists, continue
+		if _, err := os.Stat(downloadPath); err == nil {
+			Logger.Infof("Dependency %s already installed, skipping.", url)
+			continue
+		}
+
+		// Download the filter fresh
 		ok, err := DownloadGitHubUrl(url, downloadPath)
 		if err != nil {
 			Logger.Debug(err)
@@ -94,8 +105,14 @@ func InstallDependency(profile Profile) error {
 
 		// Move filters 'data' folder contents into 'data'
 		filterName := strings.Split(path.Clean(url), "/")[3]
-
 		filterDataPath := path.Join(profile.DataPath, filterName)
+
+		// If the filterDataPath already exists, print a warning and continue
+		if _, err := os.Stat(filterDataPath); err == nil {
+			Logger.Warnf("Filter %s already has data in the 'data' folder. You may clear this data and reinstall if desired.", filterName)
+			continue
+		}
+
 		err = os.MkdirAll(filterDataPath, 0666)
 		if err != nil {
 			Logger.Error("Could not create filter data folder", err)
