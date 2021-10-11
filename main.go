@@ -62,7 +62,14 @@ func main() {
 				Usage: "Installs dependencies into the .regolith folder.",
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
-					return regolith.InstallDependencies()
+					return regolith.InstallDependencies(regolith.StringArrayContains(c.FlagNames(), "force"))
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "force",
+						Aliases: []string{"f"},
+						Usage:   "Force the operation, overriding potential safeguards.",
+					},
 				},
 			},
 			{
