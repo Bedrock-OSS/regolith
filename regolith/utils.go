@@ -5,14 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/google/go-github/v39/github"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/fatih/color"
+	"github.com/google/go-github/v39/github"
 )
 
 func StringArrayContains(arr []string, str string) bool {
