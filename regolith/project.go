@@ -38,6 +38,7 @@ type Profile struct {
 type Filter struct {
 	Name      string                 `json:"name"`
 	Script    string                 `json:"script"`
+	Disabled  bool                   `json:"disabled"`
 	RunWith   string                 `json:"runWith"`
 	Command   string                 `json:"command"`
 	Arguments []string               `json:"arguments"`
@@ -59,6 +60,7 @@ type ExportTarget struct {
 	// Path          string `json:"path"`
 }
 
+// TODO This function is kinda weird. Probably should not include "Running filter"
 func (filter Filter) GetName() string {
 	if filter.Name != "" {
 		return filter.Name

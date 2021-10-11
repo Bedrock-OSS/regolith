@@ -61,6 +61,7 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export target. The paths are generated with GetExportPaths.
+
 func ExportProject(profile Profile, name string) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
@@ -78,8 +79,9 @@ func ExportProject(profile Profile, name string) error {
 				"Regolith for the first time on this project make sure that the " +
 				"export paths are empty. Otherwise, you can check \"" +
 				EditedFilesPath + "\" file to see if it contains the full list of " +
-				"the files that can be reomved.")
+				"the files that can be removed.")
 	}
+
 	// Clearing output locations
 	// Spooky, I hope file protection works, and it won't do any damage
 	err = os.RemoveAll(bpPath)
@@ -90,25 +92,26 @@ func ExportProject(profile Profile, name string) error {
 	if err != nil {
 		return wrapError("Failed to clear resource pack build output", err)
 	}
+	err = os.RemoveAll(profile.DataPath)
+	if err != nil {
+		return wrapError("Failed to clear filter data path", err)
+	}
 
 	Logger.Info("Exporting project to ", bpPath)
-	Logger.Info("Exporting project to ", rpPath)
-
-	err = os.Rename(".regolith/tmp/BP/", bpPath)
-	if err != nil { // Rename might fail if output path is on a different drive
-		Logger.Infof("Couldn't move BP files to %s. Trying to copy files instead...", bpPath)
-		err = copy.Copy(".regolith/tmp/BP/", bpPath, copy.Options{PreserveTimes: false, Sync: false})
-		if err != nil {
-			return wrapError(fmt.Sprintf("Couldn't copy BP files to %s", bpPath), err)
-		}
+	err = CopyOrMove(".regolith/tmp/BP", bpPath)
+	if err != nil {
+		return err
 	}
-	err = os.Rename(".regolith/tmp/RP/", rpPath)
-	if err != nil { // Rename might fail if output path is on a different drive
-		Logger.Infof("Couldn't move RP files to %s. Trying to copy files instead...", rpPath)
-		err = copy.Copy(".regolith/tmp/RP/", rpPath, copy.Options{PreserveTimes: false, Sync: false})
-		if err != nil {
-			return wrapError(fmt.Sprintf("Couldn't copy RP files to %s", rpPath), err)
-		}
+
+	Logger.Info("Exporting project to ", rpPath)
+	err = CopyOrMove(".regolith/tmp/RP", rpPath)
+	if err != nil {
+		return err
+	}
+
+	err = CopyOrMove(".regolith/tmp/data", profile.DataPath)
+	if err != nil {
+		return err
 	}
 
 	// Create new edited_files.json
@@ -118,4 +121,16 @@ func ExportProject(profile Profile, name string) error {
 	}
 	err = editedFiles.Dump()
 	return err
+}
+
+func CopyOrMove(source string, destination string) error {
+	err := os.Rename(source, destination)
+	if err != nil { // Rename might fail if output path is on a different drive
+		Logger.Infof("Couldn't move files to %s. Trying to copy files instead...", destination)
+		err = copy.Copy(source, destination, copy.Options{PreserveTimes: false, Sync: false})
+		if err != nil {
+			return wrapError(fmt.Sprintf("Couldn't copy data files to %s, aborting.", destination), err)
+		}
+	}
+	return nil
 }
