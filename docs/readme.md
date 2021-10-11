@@ -1,6 +1,6 @@
 # Regolith Docs
 
-This folder contains all the docs for Regolith. It is built using Jekyll, the the [Minimal Mistakes](https://mmistakes.github.io/minimal-mistakes/) theme.
+This folder contains all the docs for Regolith. It is built using Jekyll, the [Minimal Mistakes](https://mmistakes.github.io/minimal-mistakes/) theme.
 
 ## Running Locally
 You can locally test the website by [installing Jekyll](https://jekyllrb.com/docs/installation/#guides) and then running  `bundle install` and `bundle exec jekyll serve`.
