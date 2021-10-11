@@ -16,7 +16,7 @@ You can test for installation by running `regolith` inside of a terminal. This g
 To create a new project, navigate to a blank folder, and run `regolith init`. This will create a few files:
 
 
-![](/assets/images/docs/introduction/project-folder.png)
+![](/assets/images/docs/introduction/project-folder.png) ![](\docs\assets\images\docs\introduction\project-folder.png)
 
 You may now create your addon inside of the RP and BP folders, or better yet, import them from an addon you are currently working on.
 
