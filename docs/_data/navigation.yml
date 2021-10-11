@@ -4,9 +4,9 @@ main:
   - title: "Documentation"
     url: /docs
   - title: "Discord"
-    url: https://discord.gg/XjV87YN
+    url: discord.gg/XjV87YN
   - title: "GitHub"
-    link: https://github.com/Bedrock-OSS/regolith
+    link: github.com/Bedrock-OSS/regolith
   
 sidebar:
   - title: Getting Started
