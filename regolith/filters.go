@@ -32,6 +32,12 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 	Logger.Info(filter.GetName())
 	start := time.Now()
 
+	// Disabled filters are skipped
+	if filter.Disabled == true {
+		Logger.Infof("Filter '%s' is disabled, skipping.", filter.GetName())
+		return nil
+	}
+
 	if filter.Url != "" {
 		err := RunRemoteFilter(filter.Url, *filter)
 		if err != nil {
