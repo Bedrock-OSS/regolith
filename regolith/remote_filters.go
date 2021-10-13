@@ -79,25 +79,26 @@ func InstallDependency(profile Profile, isForced bool) error {
 		} else { // Leaf of profile tree (nothing to install)
 			continue
 		}
-		Logger.Infof("Installing dependency %s...", url)
 
 		// Download the filter into the cache folder
 		downloadPath := UrlToPath(url)
 
-		// If downloadPath already exists, continue
+		// If downloadPath already exists, we don't need to download it again.
+		// Force mode allows overwriting.
 		if _, err := os.Stat(downloadPath); err == nil {
 			if !isForced {
-				Logger.Infof("Dependency %s already installed, skipping.", url)
+				Logger.Warnf("Dependency %s already installed, skipping. Run with '-f' to force.", url)
 				continue
 			} else {
-				Logger.Infof("Dependency %s already installed, but forcing installation.", url)
+				Logger.Warnf("Dependency %s already installed, but forcing installation.", url)
 				err := os.RemoveAll(downloadPath)
 				if err != nil {
 					return wrapError("Could not remove installed filter", err)
 				}
-
 			}
 		}
+
+		Logger.Infof("Installing dependency %s...", url)
 
 		// Download the filter fresh
 		ok, err := DownloadGitHubUrl(url, downloadPath)
@@ -116,30 +117,24 @@ func InstallDependency(profile Profile, isForced bool) error {
 		filterName := strings.Split(path.Clean(url), "/")[3]
 		filterDataPath := path.Join(profile.DataPath, filterName)
 
-		// If the filterDataPath already exists, print a warning and continue
-
+		// If the filterDataPath already exists, we must not overwrite
 		if _, err := os.Stat(filterDataPath); err == nil {
-			if isForced {
-				Logger.Infof("Installation forced. Overwriting existing filter data %s", filterDataPath)
-				err := os.RemoveAll(filterDataPath)
+			Logger.Warnf("Filter %s already has data in the 'data' folder. \nYou may manually delete this data and reinstall if you would like these configuration files to be updated.", filterName)
+		} else {
+			// Ensure folder exists
+			err = os.MkdirAll(filterDataPath, 0666)
+			if err != nil {
+				Logger.Error("Could not create filter data folder", err)
+			}
+
+			// Copy 'data' to dataPath
+			if profile.DataPath != "" {
+				err = copy.Copy(path.Join(downloadPath, "data"), filterDataPath, copy.Options{PreserveTimes: false, Sync: false})
 				if err != nil {
-					return wrapError("Could not remove existing filter data", err)
+					Logger.Error("Could not initialize filter data", err)
 				}
 			} else {
-				Logger.Warnf("Filter %s already has data in the 'data' folder. You may re-run with --force to download anyways.", filterName)
-			}
-			continue
-		}
-
-		err = os.MkdirAll(filterDataPath, 0666)
-		if err != nil {
-			Logger.Error("Could not create filter data folder", err)
-		}
-
-		if profile.DataPath != "" {
-			err = copy.Copy(path.Join(downloadPath, "data"), filterDataPath, copy.Options{PreserveTimes: false, Sync: false})
-			if err != nil {
-				Logger.Error("Could not initialize filter data", err)
+				Logger.Warnf("Filter %s has installation data, but the dataPath is not set. Skipping.", filterName)
 			}
 		}
 
