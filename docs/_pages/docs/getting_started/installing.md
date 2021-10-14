@@ -14,12 +14,12 @@ Regolith can be installed, or downloaded as a standalone application. Both links
 To download directly, install the `regolith-x.x.x.msi` file. You may need to select "trust" to run the installer. The installation window will look like this:
 
 
-![](/assets/images/docs/installing/regolith-msi.png)
+![](/regolith/assets/images/installing/regolith_msi.png)
 
 After installing, Regolith can be used in any command-prompt by typing `regolith`. You should see something like this:
 
 
-![](/assets/images/docs/installing/regolith-help.png)
+![](/regolith/assets/images/installing/regolith_help.png)
 
 
 ## Stand-Alone

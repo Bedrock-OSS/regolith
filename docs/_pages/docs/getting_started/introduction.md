@@ -7,6 +7,7 @@ sidebar:
   nav: "sidebar"
 ---
 
+
 Regolith is an Addon Compiler for the Bedrock Edition of Minecraft.
 
 Much like [bridge v2](https://editor.bridge-core.app/), Regolith introduces the concept of a "project folder", where your addons are written, including the RP, the BP, and any models, textures or configuration files. This single-folder-structure is great for version control, and allows you to keep your "source-of-truth" outside of com.mojang.
@@ -14,7 +15,7 @@ Much like [bridge v2](https://editor.bridge-core.app/), Regolith introduces the 
 Here is what a newly initialized Regolith project looks like:
 
 
-![](regolith/assets/images/docs/introduction/project-folder.png)
+![](/regolith/assets/images/introduction/project_folder.png)
 
 
 ## Compiling
