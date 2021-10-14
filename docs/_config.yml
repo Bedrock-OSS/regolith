@@ -14,13 +14,16 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 title: Regolith
-subtitle: Documentation
+subtitle: Addon Compiler
 email: sirlich.business@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
-  LOREM IPSUM
+  A flexible and language-agnostic addon-compiler for the Bedrock Edition of Minecraft.
 github_username: Bedrock-OSS
 minimal_mistakes_skin: "regolith" # "default", "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum" "sunrise"
 search: true
+url: "https://bedrock-oss.github.io"
+baseurl: "/regolith"
+repository: "bedrock-oss/regolith"
 
 # Build settings
 markdown: kramdown
