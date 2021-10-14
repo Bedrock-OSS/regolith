@@ -14,7 +14,7 @@ Much like [bridge v2](https://editor.bridge-core.app/), Regolith introduces the 
 Here is what a newly initialized Regolith project looks like:
 
 
-![](/assets/images/docs/introduction/project-folder.png)
+![](assets/images/docs/introduction/project-folder.png)
 
 
 ## Compiling
