@@ -9,21 +9,21 @@ cards:
   - image_path: assets/images/homepage/fast.png
     alt: "Business Logic Icon: Clock and Paper"
     title: "Blazingly Fast"
-    excerpt: "LOREM IPSUM"
+    excerpt: "Regolith can improve your velocity by automating away boring or repetitive tasks."
     url: "documentation/getting_started"
     btn_class: "btn--primary"
     btn_label: "Learn more"
   - image_path: /assets/images/homepage/powerful.png
     alt: "Business Logic Icon: Gear and Wrench"
-    title: "Powerful"
-    excerpt: "LOREM IPSUM"
+    title: "Flexible"
+    excerpt: "Regolith is designed with a language agnostic, tool agnostic feature set. The flexibility of Regolith allows you to bring all scripts and tools under a single, unified workflow."
     url: "documentation/getting_started"
     btn_class: "btn--primary"
     btn_label: "Learn more"
   - image_path: /assets/images/homepage/simple.png
     alt: "Business Logic Icon: Cactus"
-    title: "Simple"
-    excerpt: "LOREM IPSUM"
+    title: "Version Control Friendly"
+    excerpt: "Regolith keeps the 'source of truth' out of your com.mojang folder, allowing for seemless git integration."
     url: "/documentation/examples/simple"
     btn_class: "btn--primary"
     btn_label: "Learn more"
@@ -48,10 +48,7 @@ logo:
 
 {% include feature_row id="marketplace_maps"%} -->
 
-# Testimonials
+<!-- # Testimonials
 {: style="font-size: 200%; text-align: center;"}
 
-{% include feature_row id="testimonials"%}
-
-
-<div>Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
+{% include feature_row id="testimonials"%} -->
