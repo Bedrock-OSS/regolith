@@ -31,6 +31,8 @@ sidebar:
         url: /docs/standard-library
       - title: "Troubleshooting"
         url: /docs/troubleshooting
+      - title: "Data Folder"
+        url: /docs/data-folder
   - title: Content
     children:
       - title: "Community Filters"
