@@ -11,6 +11,8 @@ To get started with Regolith, you should first read our [introduction](/regolith
 
 You can test for installation by running `regolith` inside of a terminal. This guide will assume you have installed regolith directly, but you can follow along with a stand-alone build. Just ensure that the executable is placed inside of your project folder.
 
+If you run into issues installing, you can check our troubleshooting guide for tips TODO LINK.
+
 ## Creating a new Project
 
 To create a new project, navigate to a blank folder, and run `regolith init`. This will create a few files:
@@ -28,6 +30,7 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
 {
   "name": "Project Name", // Put your project name here
   "author": "Your name", // Put your name here
+
   "packs": {
     "behaviorPack": "./packs/BP",
     "resourcePack": "./packs/RP"
@@ -36,7 +39,8 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
     "profiles": {
       "dev": {
         "unsafe": false,
-        "filters": [],
+        "filters": [
+        ],
         "export": {
           "clean": false,
           "target": "development"
@@ -49,9 +53,11 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
 
 Later on you can play with the additional configuration options, but for now, just set a project name, and author name.
 
+We suggest using a name like 'dragons' or 'cars' for the project name, as opposed to 'My Dragon Adventure Map', since the project name will be used as the folder name for the final export.
+
 ## Running Regolith
 
-To run regolith, open up a terminal and type `regolith run dev`. This will run the `dev` profile, which is the default in `config.json`. When you run this command, Regolith will copy/paste your addon into the `development` folders inside of `com.mojang`. If you navigate there, you should be able to see your pack folders, with a name like `project_name_bp`. 
+To run regolith, open up a terminal and type `regolith run`. This will run the default profile (dev) from `config.json`. When you run this command, Regolith will copy/paste your addon into the `development` folders inside of `com.mojang`. If you navigate there, you should be able to see your pack folders, with a name like `project_name_bp`. 
 
 Every time you want to update your addon, re-run this command. 
 
@@ -61,9 +67,9 @@ Later on, you can experiment with creating multiple profiles -for example, one f
 
 Regolith contains a very powerful filter system, that allows you write filters in many languages, as well as from the internet. For now, we will simply use the `standard library`, which is a set of approved filters that we maintain. 
 
-To add a new filter to your profile, you must add items into your `"filters": [],`.
+To add a new filter to your profile, you must add items into the `"filters": [],` list of your profile.
 
-We will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, [read here](https://wiki.bedrock.dev/visuals/textures-list.html).
+As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, [read here](https://wiki.bedrock.dev/visuals/textures-list.html).
 
 ```json
 "filters": [
@@ -77,7 +83,7 @@ We will use the `texture_list` filter, which automatically creates the `texture_
 
 :`Warning:` If your project doesn't have any textures, than `texture_list.json` will simply create a blank file `[]`. Consider adding some textures to see the filter at work!
 
-Run `regolith run` (since `dev` is the default profile, you can omit the argument). You will most likely crash, since the dependencies for `texture_list` were not installed yet. This is expected.
+Run `regolith run`. You will crash, since the dependencies for `texture_list` were not installed yet. This is expected!
 
 Run `regolith install`. This may take some time, but you only need to run it when you add new filters.
 
@@ -87,6 +93,6 @@ Check `com.mojang`, and open the new `texture_list.json` file in `RP/textures/te
 
 ## Whats Next
 
-Now that you've created your first Regolith project, and installed your first filters, you are well on your way to being a Regolith expert! You should check out the standard library, to see if additional filters might be useful for you.
+Now that you've created your first Regolith project, and installed your first filters, you are well on your way to being a Regolith expert! You should check out the standard library, to see if additional filters might be useful for you TODO LINK
 
-Otherwise, you can learn about writing custom filters here.
+Otherwise, you can learn about writing custom filters here TODO LINK

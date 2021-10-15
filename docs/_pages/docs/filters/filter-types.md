@@ -13,7 +13,7 @@ Regolith contains three distinct filter types, which allow you maximum flexibili
 
 The standard library is a special [github repository](https://github.com/Bedrock-OSS/regolith-filters) hosted in the Bedrock OSS organization. 
 
-This repository is special, since folders here can be accessed by-name inside of Regolith, instead of by URL. This makes the standard library very easy to use for beginners. 
+This repository is special, since folders here can be accessed by-name inside of Regolith, instead of by URL. This makes the standard library very easy to use for beginners!
 
 [The full list of available standard-library filters can be found here.](/regolith/docs/standard-library)
 
