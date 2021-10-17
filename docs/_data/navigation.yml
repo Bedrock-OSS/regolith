@@ -23,8 +23,6 @@ sidebar:
     children:
       - title: "Configuration File"
         url: /docs/configuration
-      - title: "Troubleshooting"
-        url: /docs/troubleshooting
       - title: "Data Folder"
         url: /docs/data-folder
       - title: "Export Targets"
