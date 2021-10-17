@@ -1,8 +1,8 @@
 ---
-permalink: /docs/standard-library
+permalink: /docs/standard-filters
 layout: single
 classes: wide
-title: Standard Library
+title: Standard Filters
 sidebar:
   nav: "sidebar"
 ---

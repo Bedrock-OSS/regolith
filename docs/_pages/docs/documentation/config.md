@@ -60,3 +60,4 @@ Example config:
 ## Properties Explained
 
 `profiles` is a list of filters and export options, that can be run using `regolith run`. Learn more here TODO LINK.
+
