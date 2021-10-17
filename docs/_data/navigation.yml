@@ -21,19 +21,38 @@ sidebar:
         url: /docs/troubleshooting
   - title: Documentation
     children:
-      - title: "Filter Types"
-        url: /docs/filter-types
       - title: "Configuration File"
         url: /docs/configuration
-      - title: "Custom Filters"
-        url: /docs/custom-filters
-      - title: "Standard Library"
-        url: /docs/standard-library
       - title: "Troubleshooting"
         url: /docs/troubleshooting
       - title: "Data Folder"
         url: /docs/data-folder
+      - title: "Export Targets"
+        url: /docs/export-targets
+      - title: "Profiles"
+        url: /docs/profiles
+      - title: "Safety"
+        url: /docs/safety
+  - title: Filters
+    children:
+      - title: "Filter Types"
+        url: /docs/filter-types
+      - title: "Custom Filters"
+        url: "/docs/custom-filters"
+      - title: "Online Filters"
+        url: /docs/online-filters
+      - title: "Java Filters"
+        url: /docs/java-filters
+      - title: "Python Filters"
+        url: /docs/python-filters
+      - title: "Shell Filters"
+        url: /docs/shell-filters
+      - title: "Node JS Filters"
+        url: /docs/node-filters
+      
   - title: Content
     children:
+      - title: "Standard Filters"
+        url: /docs/standard-filters
       - title: "Community Filters"
         url: /docs/community-filters
