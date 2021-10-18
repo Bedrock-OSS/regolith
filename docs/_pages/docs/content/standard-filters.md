@@ -7,6 +7,22 @@ sidebar:
   nav: "sidebar"
 ---
 
+The Standard Library is a special set of filters, approved or written by the Regolith maintainers. Standard Filters offers the safest, easiest, and best support. 
+
+Please be aware that when running in safe mode, standard filters are the only filters allowed.
+
+## Using a Standard Filter
+
+The syntax for standard filters is like this:
+
+```json
+{
+  "filter": "<filter_name>",
+  "settings" { ... } // Optional
+}
+```
+
+
 | Filter | Description |
 | ------ | ----------- |
 | [blockbench_convert](https://github.com/Bedrock-OSS/regolith-filters/tree/master/blockbench_convert) | No description. |
