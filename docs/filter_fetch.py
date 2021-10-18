@@ -60,6 +60,7 @@ def get_filter_description(filter_name):
     filter_file_url = RAW_BASE_URL + filter_name + '/filter.json'
     response = requests.get(filter_file_url)
     response.raise_for_status()
+    print(response.json())
     return response.json().get('description', 'No description.')
 
 def main():
