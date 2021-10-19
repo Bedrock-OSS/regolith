@@ -51,6 +51,9 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 		}
 	} else {
 		if f, ok := FilterTypes[filter.RunWith]; ok {
+			if filter.Script == "" {
+				return errors.New("Missing 'script' field in filter definition")
+			}
 			err := f.filter(*filter, filter.Settings, absoluteLocation)
 			if err != nil {
 				return err
