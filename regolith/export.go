@@ -109,7 +109,7 @@ func ExportProject(profile Profile, name string) error {
 		return err
 	}
 
-	err = MoveOrCopy(".regolith/tmp/data", profile.DataPath, exportTarget.ReadOnly)
+	err = MoveOrCopy(".regolith/tmp/data", profile.DataPath, false)
 	if err != nil {
 		return err
 	}
