@@ -22,6 +22,7 @@ func RegisterFilters() {
 	RegisterNodeJSFilter(FilterTypes)
 	RegisterShellFilter(FilterTypes)
 	RegisterJavaFilter(FilterTypes)
+	RegisterNimFilter(FilterTypes)
 }
 
 // RunFilter determine whether the filter is remote, standard (from standard
