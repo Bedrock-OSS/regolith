@@ -77,3 +77,12 @@ Example:
 ## Package
 
 The packaging workflow for Regolith is still being worked on.
+
+# Additional properties
+
+This is a list of properties that can always be added regardless of the
+`target` property being used.
+
+- `readOnly` - changes the permissions of exported files to read-only. The default
+  value is `false`. This property can be used to protect against accidental
+  editing of files that should only be edited by Regolith.

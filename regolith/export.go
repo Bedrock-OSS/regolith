@@ -3,6 +3,7 @@ package regolith
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -61,7 +62,6 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export target. The paths are generated with GetExportPaths.
-
 func ExportProject(profile Profile, name string) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
@@ -98,18 +98,18 @@ func ExportProject(profile Profile, name string) error {
 	}
 
 	Logger.Info("Exporting project to ", bpPath)
-	err = CopyOrMove(".regolith/tmp/BP", bpPath)
+	err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly)
 	if err != nil {
 		return err
 	}
 
 	Logger.Info("Exporting project to ", rpPath)
-	err = CopyOrMove(".regolith/tmp/RP", rpPath)
+	err = MoveOrCopy(".regolith/tmp/RP", rpPath, exportTarget.ReadOnly)
 	if err != nil {
 		return err
 	}
 
-	err = CopyOrMove(".regolith/tmp/data", profile.DataPath)
+	err = MoveOrCopy(".regolith/tmp/data", profile.DataPath, false)
 	if err != nil {
 		return err
 	}
@@ -123,13 +123,33 @@ func ExportProject(profile Profile, name string) error {
 	return err
 }
 
-func CopyOrMove(source string, destination string) error {
+// MoveOrCopy tries to move the the source to destination first and in case
+// of failore it copies the files instead.
+func MoveOrCopy(source string, destination string, makeReadOnly bool) error {
 	err := os.Rename(source, destination)
 	if err != nil { // Rename might fail if output path is on a different drive
 		Logger.Infof("Couldn't move files to %s. Trying to copy files instead...", destination)
-		err = copy.Copy(source, destination, copy.Options{PreserveTimes: false, Sync: false})
+		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
+		if makeReadOnly { // Copy with read only permission
+			(&copyOptions).AddPermission = 0444
+		}
+		err = copy.Copy(source, destination, copyOptions)
 		if err != nil {
 			return wrapError(fmt.Sprintf("Couldn't copy data files to %s, aborting.", destination), err)
+		}
+	} else if makeReadOnly { // Moved successfully but need to change permission
+		err := filepath.WalkDir(destination,
+			func(s string, d fs.DirEntry, e error) error {
+				if e != nil {
+					return e
+				}
+				if !d.IsDir() {
+					os.Chmod(s, 0444)
+				}
+				return nil
+			})
+		if err != nil {
+			Logger.Warnf("Unable to change file permissions of %q into read-only", destination)
 		}
 	}
 	return nil
