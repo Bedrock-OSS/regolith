@@ -1,5 +1,5 @@
 ---
-permalink: /docs/configuration
+permalink: /docs/export-targets
 layout: single
 classes: wide
 title: Export Targets
