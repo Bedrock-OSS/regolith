@@ -54,6 +54,7 @@ type ExportTarget struct {
 	BpPath    string `json:"bpPath"` // Relative or absolute path to resource pack for "exact" export target
 	WorldName string `json:"worldName"`
 	WorldPath string `json:"worldPath"`
+	ReadOnly  bool   `json:"readOnly"` // Whether the exported files should be read-only
 	// ComMojangPath string `json:"comMojangPath"`
 	// NOT USED, DISABLED FOR NOW.
 	// Clean         bool   `json:"clean"`

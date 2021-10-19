@@ -15,9 +15,10 @@
           "rpPath": "",
           "bpPath": "",
           "worldName": "",
-          "worldPath": ""
+          "worldPath": "",
+          "readOnly": false
         },
-        "dataPath": ""
+        "dataPath": "./packs/data"
       }
     }
   }
