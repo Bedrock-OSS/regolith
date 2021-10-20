@@ -74,12 +74,13 @@ func ExportProject(profile Profile, name string) error {
 	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
 	if err != nil {
 		return errors.New(
-			"Exporting project was aborted because it could remove some " +
-				"files you want to keep: " + err.Error() + ". If you are trying to run " +
-				"Regolith for the first time on this project make sure that the " +
-				"export paths are empty. Otherwise, you can check \"" +
-				EditedFilesPath + "\" file to see if it contains the full list of " +
-				"the files that can be removed.")
+			err.Error() +
+				". Exporting to the target directory would delete all of its files. " +
+				"If you are trying to run Regolith for the first time on this" +
+				" project make sure that the export paths are empty. " +
+				"Otherwise, you can check \"" +
+				EditedFilesPath + "\" to see if it contains the full " +
+				"list of the files that can be removed.")
 	}
 
 	// Clearing output locations

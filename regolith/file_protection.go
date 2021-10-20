@@ -103,7 +103,7 @@ func listFiles(path string) ([]string, error) {
 // an error in opposite case.
 func checkDeletionSafety(path string, removableFiles []string) error {
 	i := 0 // current index on the removableFiles list to check
-	stats, err := os.Stat("path")
+	stats, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // directory doesn't exist there is nothing to check
@@ -122,14 +122,14 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 			}
 			for {
 				if i >= len(removableFiles) {
-					return fmt.Errorf("file path %q is not on the list", s)
+					return fmt.Errorf("file path %q is not on the list of the files recently modified by Regolith", s)
 				}
 				currPath := removableFiles[i]
 				i++
 				if s == currPath { // found path on the list
 					break
-				} else if s > currPath { // this path won't be on the list
-					return fmt.Errorf("file path %q is not on the list", s)
+				} else if s < currPath { // this path won't be on the list
+					return fmt.Errorf("file path %q is not on the list of the files recently modified by Regolith", s)
 				}
 			}
 			return nil
