@@ -10,7 +10,7 @@ sidebar:
 The configuration of regolith is stored completely in `config.json`, at the top level of your Regolith project. This file will be created when you run `regolith init`.
 
 ## Project Config Standard
-Regolith follows the Project Config Standard TODO LINK. This config is a shared format, used by programs that interact with Minecraft Bedrock, such as [bridge](https://editor.bridge-core.app/).
+Regolith follows the [Project Config Standard](https://github.com/Bedrock-OSS/project-config-standard). This config is a shared format, used by programs that interact with Minecraft Bedrock, such as [bridge](https://editor.bridge-core.app/).
 
 Here is an example of the format:
 ```json
