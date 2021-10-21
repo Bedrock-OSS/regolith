@@ -23,7 +23,7 @@ Once this folder is created, you can add your scripts here. You can organize wit
 
 ## Filter Data
 
-The accepted flow for Regolith is to store configuration scripts and configs inside of the `data` folder. This folder has special support that makes it easy to access during compilation. Read more about the data folder here. TODO.
+The accepted flow for Regolith is to store configuration scripts and configs inside of the `data` folder. This folder has special support that makes it easy to access during compilation. Read more about the data folder [here](/regolith/docs/data-folder).
 
 ## Running Custom Filter
 

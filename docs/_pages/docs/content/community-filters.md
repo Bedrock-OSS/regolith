@@ -7,7 +7,7 @@ sidebar:
   nav: "sidebar"
 ---
 
-The beauty of Regolith is that filters can be written and shared by anyone! This page contains an uncurated list of community filters. If your filter doesn't appear here, let us know!
+The beauty of Regolith is that filters can be written and shared by anyone! This page contains an uncurated list of community filters. If your filter doesn't appear here, [let us know](https://discord.com/invite/XjV87YN)!
 
 Community filters may always be accessed directly via their URL:
 
