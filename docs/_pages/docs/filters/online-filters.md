@@ -9,7 +9,7 @@ sidebar:
 
 Regolith allows custom filters to be placed on GitHub. This is perfect for a filter that you want to make public, or potentially share internally in a team. 
 
-The standard filters library TODO LINK is a good reference for how to structure an online filter, but we will also explain here.
+The standard [filters library](/regolith/docs/standard-filters) is a good reference for how to structure an online filter, but we will also explain here.
 
 ## Running an Online Filter
 
@@ -52,4 +52,4 @@ As you can see, the format is pretty much identical to a local filter TODO LINK.
 
 If you need some default configuration files for your remote filter, you can create a folder called `data` in your filter folder. Here, you can store your default configuration files. When a user runs `regolith install`, this data folder will be moved into their data folder, namespaced under the name of the filter. 
 
-You can learn more about this flow here TODO LINK.
+You can learn more about this flow [here](/regolith/docs/data-folder).
