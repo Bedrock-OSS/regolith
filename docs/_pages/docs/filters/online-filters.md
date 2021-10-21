@@ -46,7 +46,7 @@ Next, you need to create a `filter.json` file, which contains the following:
 }
 ```
 
-As you can see, the format is pretty much identical to a local filter TODO LINK. 
+As you can see, the format is pretty much identical to a [local filter](/regolith/docs/filter-types#local-filters). 
 
 ## Data Folder
 
