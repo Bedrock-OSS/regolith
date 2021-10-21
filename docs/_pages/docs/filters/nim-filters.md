@@ -19,4 +19,4 @@ The syntax for running a nim filter is this:
 ## Requirements and Dependencies
 
 If your filter has dependencies, put a .nimble file in the same directory as your .nim file.
-Documentation on how to make a .nimble file is located at https://github.com/nim-lang/nimble#creating-packages
+Documentation on how to make a .nimble file is located [here](https://github.com/nim-lang/nimble#creating-packages).
