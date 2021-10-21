@@ -41,6 +41,8 @@ sidebar:
         url: /docs/online-filters
       - title: "Java Filters"
         url: /docs/java-filters
+      - title: "Nim Filters"
+        url: /docs/nim-filters
       - title: "Python Filters"
         url: /docs/python-filters
       - title: "Shell Filters"
