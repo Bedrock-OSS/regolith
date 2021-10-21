@@ -11,7 +11,7 @@ To get started with Regolith, you should first read our [introduction](/regolith
 
 You can test for installation by running `regolith` inside of a terminal. This guide will assume you have installed regolith directly, but you can follow along with a stand-alone build. Just ensure that the executable is placed inside of your project folder.
 
-If you run into issues installing, you can check our troubleshooting guide for tips TODO LINK.
+If you run into issues installing, you can check our [troubleshooting guide](/regolith/docs/troubleshooting) for tips.
 
 ## Creating a new Project
 
@@ -69,7 +69,7 @@ Regolith contains a very powerful filter system, that allows you write filters i
 
 To add a new filter to your profile, you must add items into the `"filters": [],` list of your profile.
 
-As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, [read here](https://wiki.bedrock.dev/visuals/textures-list.html).
+As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, read [here](https://wiki.bedrock.dev/visuals/textures-list.html).
 
 ```json
 "filters": [
@@ -93,6 +93,6 @@ Check `com.mojang`, and open the new `texture_list.json` file in `RP/textures/te
 
 ## Whats Next
 
-Now that you've created your first Regolith project, and installed your first filters, you are well on your way to being a Regolith expert! You should check out the standard library, to see if additional filters might be useful for you TODO LINK
+Now that you've created your first Regolith project, and installed your first filters, you are well on your way to being a Regolith expert! You should check out the [standard library](/regolith/docs/standard-filters), to see if additional filters might be useful for you.
 
-Otherwise, you can learn about writing custom filters here TODO LINK
+Otherwise, you can learn about writing [custom filters](/regolith/docs/custom-filters).
