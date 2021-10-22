@@ -6,7 +6,7 @@ main:
   - title: "Discord"
     url: "https://discord.gg/XjV87YN"
   - title: "GitHub"
-    link: "https://github.com/Bedrock-OSS/regolith"
+    url: "https://github.com/Bedrock-OSS/regolith"
   
 sidebar:
   - title: Getting Started
