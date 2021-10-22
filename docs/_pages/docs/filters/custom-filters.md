@@ -42,6 +42,7 @@ You can use the following "runWith" types:
  - python
  - node
  - java
+ - nim
  - shell
 
 Please see the dedicated pages for these run-types for more information. TODO
