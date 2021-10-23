@@ -3,7 +3,6 @@ package regolith
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -126,32 +125,18 @@ func ExportProject(profile Profile, name string) error {
 
 // MoveOrCopy tries to move the the source to destination first and in case
 // of failore it copies the files instead.
+//
+// TODO - implement the "move" part of this function without repeating the
+// problem of issue #85. Current version of this function always copies
+// the files.
 func MoveOrCopy(source string, destination string, makeReadOnly bool) error {
-	err := os.Rename(source, destination)
-	if err != nil { // Rename might fail if output path is on a different drive
-		Logger.Infof("Couldn't move files to %s. Trying to copy files instead...", destination)
-		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
-		if makeReadOnly { // Copy with read only permission
-			(&copyOptions).AddPermission = 0444
-		}
-		err = copy.Copy(source, destination, copyOptions)
-		if err != nil {
-			return wrapError(fmt.Sprintf("Couldn't copy data files to %s, aborting.", destination), err)
-		}
-	} else if makeReadOnly { // Moved successfully but need to change permission
-		err := filepath.WalkDir(destination,
-			func(s string, d fs.DirEntry, e error) error {
-				if e != nil {
-					return e
-				}
-				if !d.IsDir() {
-					os.Chmod(s, 0444)
-				}
-				return nil
-			})
-		if err != nil {
-			Logger.Warnf("Unable to change file permissions of %q into read-only", destination)
-		}
+	copyOptions := copy.Options{PreserveTimes: false, Sync: false}
+	if makeReadOnly { // Copy with read only permission
+		(&copyOptions).AddPermission = 0444
+	}
+	err := copy.Copy(source, destination, copyOptions)
+	if err != nil {
+		return wrapError(fmt.Sprintf("Couldn't copy data files to %s, aborting.", destination), err)
 	}
 	return nil
 }
