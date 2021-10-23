@@ -24,6 +24,13 @@ func FilterNameToUrl(libraryUrl string, name string) string {
 	return fmt.Sprintf("%s//%s", libraryUrl, name)
 }
 
+func ValidateUrl(url string) error {
+	if !strings.HasPrefix(url, "http") {
+		return fmt.Errorf("Invalid URL: %s", url)
+	}
+	return nil
+}
+
 // IsRemoteFilterCached checks whether the filter of given URL is already saved
 // in cache.
 func IsRemoteFilterCached(url string) bool {
@@ -78,6 +85,11 @@ func InstallDependency(profile Profile, isForced bool) error {
 			url = FilterNameToUrl(StandardLibraryUrl, filter.Filter)
 		} else { // Leaf of profile tree (nothing to install)
 			continue
+		}
+
+		err := ValidateUrl(url)
+		if err != nil {
+			return err
 		}
 
 		// Download the filter into the cache folder
