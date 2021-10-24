@@ -2,7 +2,6 @@ package test
 
 import (
 	"bytes"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,13 +22,13 @@ func TestMoveFilesAcl(t *testing.T) {
 	// Switching working directories in this test, make sure to go back
 	wd, err := os.Getwd()
 	if err != nil {
-		log.Fatal("Unable to get current working directory")
+		t.Fatal("Unable to get current working directory")
 	}
 	defer os.Chdir(wd)
 	// Find path to com.mojang
 	mojangDir, err := regolith.FindMojangDir()
 	if err != nil {
-		log.Fatal(err.Error())
+		t.Fatal(err.Error())
 	}
 	// The project will be tested from C:/regolithtestProject (or whatever
 	// drive you use for Minecraft)
@@ -39,7 +38,7 @@ func TestMoveFilesAcl(t *testing.T) {
 		strings.Split(mojangDir, sep)[0]+sep,
 		"regolithTestProject")
 	if _, err := os.Stat(workingDir); err == nil { // The path SHOULDN'T exist
-		log.Fatalf("Clear path %q before testing", workingDir)
+		t.Fatalf("Clear path %q before testing", workingDir)
 	}
 	// Copy the test project to the working directory
 	err = copy.Copy(
@@ -48,7 +47,7 @@ func TestMoveFilesAcl(t *testing.T) {
 		copy.Options{PreserveTimes: false, Sync: false},
 	)
 	if err != nil {
-		log.Fatalf(
+		t.Fatalf(
 			"Failed to copy test files %q into the working directory %q",
 			minimalProjectPath, workingDir,
 		)
@@ -61,7 +60,7 @@ func TestMoveFilesAcl(t *testing.T) {
 	// Get the name of the project from config
 	project, err := regolith.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load project config: %s", err)
+		t.Fatalf("Failed to load project config: %s", err)
 	}
 	bpPath := filepath.Join(
 		mojangDir, "development_behavior_packs", project.Name+"_bp")
@@ -75,9 +74,9 @@ func TestMoveFilesAcl(t *testing.T) {
 	// Test if the RP and BP were created in the right paths
 	assertDirExists := func(dir string) {
 		if stats, err := os.Stat(dir); err != nil {
-			log.Fatalf("Unable to get stats of %q", dir)
+			t.Fatalf("Unable to get stats of %q", dir)
 		} else if !stats.IsDir() {
-			log.Fatalf("Created path %q is not a directory", dir)
+			t.Fatalf("Created path %q is not a directory", dir)
 		}
 	}
 	assertDirExists(rpPath)
@@ -93,7 +92,7 @@ func TestMoveFilesAcl(t *testing.T) {
 		cmd.Stdout = result
 		// cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			log.Fatalf("icacls.exe execution failed in %q with error:\n%s", dir, err)
+			t.Fatalf("icacls.exe execution failed in %q with error:\n%s", dir, err)
 		}
 		return result.String()
 	}
@@ -105,7 +104,7 @@ func TestMoveFilesAcl(t *testing.T) {
 		mojangAcl, "  Mandatory Label\\Low Mandatory Level:(NW)\n", "", -1)
 	assertValidAcl := func(dir string) {
 		if acl := getAclPermissions(dir); acl != mojangAcl {
-			log.Fatalf(
+			t.Fatalf(
 				"Permissions of the pack and com.mojang are different:"+
 					"\n===============\n%s:\n%s\n\n===============\n%s:\n%s"+
 					"===============",

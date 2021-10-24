@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"io/fs"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,19 +59,19 @@ func TestRegolithInit(t *testing.T) {
 	// Switching working directories in this test, make sure to go back
 	wd, err := os.Getwd()
 	if err != nil {
-		log.Fatal("Unable to get current working directory")
+		t.Fatal("Unable to get current working directory")
 	}
 	defer os.Chdir(wd)
 	// Get paths expected in initialized project
 	expectedPaths, err := listPaths(
 		freshProjectPath, freshProjectPath)
 	if err != nil {
-		log.Fatal("Unable to get list of created paths:", err)
+		t.Fatal("Unable to get list of created paths:", err)
 	}
 	// Create temporary directory
 	tmpDir, err := ioutil.TempDir("", "regolith-test")
 	if err != nil {
-		log.Fatal("Unable to create temporary directory:", err)
+		t.Fatal("Unable to create temporary directory:", err)
 	}
 	t.Log("Created temporary path:", tmpDir)
 	// Before removing working dir make sure the script isn't using it anymore
@@ -88,7 +87,7 @@ func TestRegolithInit(t *testing.T) {
 	regolith.InitializeRegolithProject(false)
 	createdPaths, err := listPaths(".", ".")
 	if err != nil {
-		log.Fatal("Unable to get list of created paths:", err)
+		t.Fatal("Unable to get list of created paths:", err)
 	}
 
 	checked := struct{}{}
