@@ -24,6 +24,13 @@ func FilterNameToUrl(libraryUrl string, name string) string {
 	return fmt.Sprintf("%s//%s", libraryUrl, name)
 }
 
+func ValidateUrl(url string) error {
+	if !strings.HasPrefix(url, "http") {
+		return fmt.Errorf("Invalid URL: %s", url)
+	}
+	return nil
+}
+
 // IsRemoteFilterCached checks whether the filter of given URL is already saved
 // in cache.
 func IsRemoteFilterCached(url string) bool {
@@ -39,7 +46,12 @@ Recursively install dependencies for the entire config.
 func InstallDependencies(isForced bool) error {
 	Logger.Infof("Installing dependencies...")
 
-	err := os.MkdirAll(".regolith/cache/filters", 0666)
+	project, err := LoadConfig()
+	if err != nil {
+		return wrapError("Failed to load project config", err)
+	}
+
+	err = os.MkdirAll(".regolith/cache/filters", 0666)
 	if err != nil {
 		return wrapError("Could not create .regolith/cache/filters", err)
 	}
@@ -48,11 +60,6 @@ func InstallDependencies(isForced bool) error {
 	err = os.MkdirAll(".regolith/cache/venvs", 0666)
 	if err != nil {
 		return wrapError("Could not create .regolith/cache/venvs", err)
-	}
-
-	project, err := LoadConfig()
-	if err != nil {
-		return wrapError("Failed to load project config", err)
 	}
 
 	for _, profile := range project.Profiles {
@@ -78,6 +85,11 @@ func InstallDependency(profile Profile, isForced bool) error {
 			url = FilterNameToUrl(StandardLibraryUrl, filter.Filter)
 		} else { // Leaf of profile tree (nothing to install)
 			continue
+		}
+
+		err := ValidateUrl(url)
+		if err != nil {
+			return err
 		}
 
 		// Download the filter into the cache folder
@@ -115,21 +127,23 @@ func InstallDependency(profile Profile, isForced bool) error {
 
 		// Move filters 'data' folder contents into 'data'
 		filterName := strings.Split(path.Clean(url), "/")[3]
-		filterDataPath := path.Join(profile.DataPath, filterName)
+		localDataPath := path.Join(profile.DataPath, filterName)
+		remoteDataPath := path.Join(downloadPath, "data")
 
 		// If the filterDataPath already exists, we must not overwrite
-		if _, err := os.Stat(filterDataPath); err == nil {
+		// Additionally, if the remote data path doesn't exist, we don't need to do anything
+		if _, err := os.Stat(localDataPath); err == nil {
 			Logger.Warnf("Filter %s already has data in the 'data' folder. \nYou may manually delete this data and reinstall if you would like these configuration files to be updated.", filterName)
-		} else {
+		} else if _, err := os.Stat(remoteDataPath); err == nil {
 			// Ensure folder exists
-			err = os.MkdirAll(filterDataPath, 0666)
+			err = os.MkdirAll(localDataPath, 0666)
 			if err != nil {
 				Logger.Error("Could not create filter data folder", err)
 			}
 
 			// Copy 'data' to dataPath
 			if profile.DataPath != "" {
-				err = copy.Copy(path.Join(downloadPath, "data"), filterDataPath, copy.Options{PreserveTimes: false, Sync: false})
+				err = copy.Copy(remoteDataPath, localDataPath, copy.Options{PreserveTimes: false, Sync: false})
 				if err != nil {
 					Logger.Error("Could not initialize filter data", err)
 				}
