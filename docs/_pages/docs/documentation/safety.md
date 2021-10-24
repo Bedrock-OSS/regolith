@@ -40,7 +40,7 @@ A compromised filter is able to completely destroy your system.
 
 ## Why isn't Regolith Sandboxed?
 
-Software sandboxing is extremely difficult, especially since Regolith offers run targets in three languages, as well as a native shell integration.
+Software sandboxing is extremely difficult, especially since Regolith offers run targets in multiple languages, as well as a native shell integration.
 
 Sandboxing would also limit the things our users can do. Currently, anything possible with programming can be integrated with Regolith! Sandboxing would limit this.
 
