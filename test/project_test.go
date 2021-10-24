@@ -57,9 +57,15 @@ func listPaths(path string, root string) (map[string]string, error) {
 // TestRegolithInit tests the results of InitializeRegolithProject against
 // the values from test/testdata/fresh_project.
 func TestRegolithInit(t *testing.T) {
+	// Switching working directories in this test, make sure to go back
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Unable to get current working directory")
+	}
+	defer os.Chdir(wd)
 	// Get paths expected in initialized project
 	expectedPaths, err := listPaths(
-		"testdata/fresh_project", "testdata/fresh_project")
+		freshProjectPath, freshProjectPath)
 	if err != nil {
 		log.Fatal("Unable to get list of created paths:", err)
 	}
@@ -68,8 +74,10 @@ func TestRegolithInit(t *testing.T) {
 	if err != nil {
 		log.Fatal("Unable to create temporary directory:", err)
 	}
-	defer os.RemoveAll(tmpDir) // Schedule deletion
 	t.Log("Created temporary path:", tmpDir)
+	// Before removing working dir make sure the script isn't using it anymore
+	defer os.RemoveAll(tmpDir)
+	defer os.Chdir(wd)
 
 	// Change working directory to the tmp path
 	if err := os.Chdir(tmpDir); err != nil {
