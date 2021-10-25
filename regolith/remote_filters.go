@@ -87,10 +87,11 @@ func InstallDependency(profile Profile, isForced bool) error {
 			continue
 		}
 
-		err := ValidateUrl(url)
-		if err != nil {
-			return err
-		}
+		// TODO This needs to be re-implemented
+		// err := ValidateUrl(url)
+		// if err != nil {
+		// 	return err
+		// }
 
 		// Download the filter into the cache folder
 		downloadPath := UrlToPath(url)
