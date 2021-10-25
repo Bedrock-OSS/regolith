@@ -1,15 +1,14 @@
 package test
 
 import (
-	"bytes"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"bedrock-oss.github.com/regolith/regolith"
 	"github.com/otiai10/copy"
+	"golang.org/x/sys/windows"
 )
 
 // TestMoveFilesAcl tests for issue #85. It creates a project on the same drive
@@ -31,7 +30,9 @@ func TestMoveFilesAcl(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 	// The project will be tested from C:/regolithtestProject (or whatever
-	// drive you use for Minecraft)
+	// drive you use for Minecraft) Don't change that to ioutil.TmpDir.
+	// Current implementation assures that the working dir will be on the
+	// same drive as Minecraft which is crucial for this test.
 	sep := string(filepath.Separator)
 	workingDir := filepath.Join(
 		// https://github.com/golang/go/issues/26953
@@ -85,29 +86,29 @@ func TestMoveFilesAcl(t *testing.T) {
 	defer os.RemoveAll(bpPath)
 	// Compare the permissions of the mojang path with the permissions of RP
 	// and BP
-	getAclPermissions := func(dir string) string {
-		result := bytes.NewBufferString("")
-		cmd := exec.Command("icacls", ".")
-		cmd.Dir = dir
-		cmd.Stdout = result
-		// cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("icacls.exe execution failed in %q with error:\n%s", dir, err)
+
+	// getSecurityString gets the string representation of the path security
+	// info of the path
+	getSecurityString := func(path string) string {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("Unable to get the file stats of %q", path)
 		}
-		return result.String()
+		securityInfo, err := windows.GetNamedSecurityInfo(
+			path,
+			windows.SE_FILE_OBJECT,
+			windows.DACL_SECURITY_INFORMATION)
+		if err != nil {
+			t.Fatalf("Unable to get security info about %q", path)
+		}
+		// dacl, defaulted, err := securityInfo.DACL()
+		return securityInfo.String()
 	}
-	mojangAcl := getAclPermissions(mojangDir)
-	// This solution is an awful hack :(
-	// com.mojang has additional property which must be removed so the
-	// string comparison below will match
-	mojangAcl = strings.Replace(
-		mojangAcl, "  Mandatory Label\\Low Mandatory Level:(NW)\n", "", -1)
+	mojangAcl := getSecurityString(mojangDir)
 	assertValidAcl := func(dir string) {
-		if acl := getAclPermissions(dir); acl != mojangAcl {
+		if acl := getSecurityString(dir); acl != mojangAcl {
 			t.Fatalf(
-				"Permissions of the pack and com.mojang are different:"+
-					"\n===============\n%s:\n%s\n\n===============\n%s:\n%s"+
-					"===============",
+				"Permission settings of the pack and com.mojang are different:"+
+					"\n\n%q:\n%s\n\n\n\n%q:\n%s",
 				dir, acl, mojangDir, mojangAcl)
 		}
 	}
