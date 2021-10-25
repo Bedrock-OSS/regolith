@@ -27,6 +27,10 @@ You must run `regolith install` before you can compile. This will pull the files
 
 To update your online filters, you may use `regolith install --force`, or you can manually delete the cached folder, and reinstall by using `regolith install`
 
+## Finding Online Filters
+
+Online filters can be created and shared by anyone! You can find our un-curated list of [community filters here](/regolith/docs/community-filters).
+
 ## Creating Online Filter
 
 To create an online filter, your github project needs to be structured a little special. For starters, every filter will get its own folder, at the top of the github project. This folder name is very important, as it will be the name of the filter.
