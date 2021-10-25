@@ -17,8 +17,10 @@ Community filters may always be accessed directly via their URL:
 }
 ```
 
+**Warning:** Please use extreme caution when running unknown code. Regolith and its maintainers take no responsibility for any damages incurred by using the filters on this page. To learn more, please read our [safety page](/regolith/docs/safety).
+{: .notice--warning}
 
-Please use caution when running unknown code.
+**Tip:** Having trouble? You can learn more about [online filters here](/regolith/docs/online-filters).
 {: .notice--warning}
 
 

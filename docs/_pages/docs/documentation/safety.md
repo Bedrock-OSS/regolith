@@ -10,6 +10,7 @@ sidebar:
 Please be aware that Regolith is only intended to be used by competent users. Due to the extreme power and flexibility that Regolith offers, there is an increased chance of harm to your system, if used improperly.
 
 Please use caution when using Regolith. If you are not a developer, we highly recommend that you leave your Regolith installation in "Safe Mode".
+{: .notice--warning}
 
 ## What is Safe Mode?
 
