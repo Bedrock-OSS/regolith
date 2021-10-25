@@ -17,7 +17,10 @@ Community filters may always be accessed directly via their URL:
 }
 ```
 
-As always, please use caution when running unknown code.
+
+Please use caution when running unknown code.
+{: .notice--warning}
+
 
 ## Filters
 
