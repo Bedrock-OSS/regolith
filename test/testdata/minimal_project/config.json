@@ -1,0 +1,20 @@
+{
+  "name": "regolith_test_project",
+  "author": "Bedrock-OSS",
+  "packs": {
+    "behaviorPack": "./packs/BP",
+    "resourcePack": "./packs/RP"
+  },
+  "regolith": {
+    "profiles": {
+      "dev": {
+        "unsafe": false,
+        "filters": [],
+        "export": {
+          "target": "development"
+        },
+        "dataPath": "./packs/data"
+      }
+    }
+  }
+}

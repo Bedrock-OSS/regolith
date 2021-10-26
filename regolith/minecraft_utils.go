@@ -1,11 +1,11 @@
 package regolith
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 )
 
@@ -57,11 +57,14 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 
 func FindMojangDir() (string, error) {
 	if runtime.GOOS != "windows" {
-		return "", errors.New(fmt.Sprintf("unsupported OS '%s'", runtime.GOOS))
+		return "", fmt.Errorf("unsupported OS '%s'", runtime.GOOS)
 	}
-	result := path.Join(os.Getenv("LOCALAPPDATA"), "Packages", "Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games", "com.mojang")
-	if _, err := os.Stat(result); os.IsNotExist(err) {
-		return "", wrapError(fmt.Sprintf("Failed to find file %s", result), err)
+	result := filepath.Join(os.Getenv("LOCALAPPDATA"), "Packages", "Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games", "com.mojang")
+	if _, err := os.Stat(result); err != nil {
+		if os.IsNotExist(err) {
+			return "", wrapError(fmt.Sprintf("Failed to find file %s", result), err)
+		}
+		return "", wrapError(fmt.Sprintf("Failed to access stats of %s", result), err)
 	}
 	return result, nil
 }
