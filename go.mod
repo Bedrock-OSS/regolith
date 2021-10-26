@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/storage v1.18.2 // indirect
 	github.com/aws/aws-sdk-go v1.41.11 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
+	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/fatih/color v1.13.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-github/v39 v39.2.0
