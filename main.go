@@ -95,6 +95,14 @@ func main() {
 					return regolith.CleanCache()
 				},
 			},
+			{
+				Name:  "unlock",
+				Usage: "Unlocks Regolith, to enable use of Remote and Local filters.",
+				Action: func(c *cli.Context) error {
+					initRegolith(debug)
+					return regolith.Unlock()
+				},
+			},
 		},
 	}).Run(os.Args)
 	if err != nil {

@@ -133,7 +133,8 @@ func InitializeRegolithProject(isForced bool) error {
 						DataPath: "./packs/data",
 						Filters:  []Filter{},
 						ExportTarget: ExportTarget{
-							Target: "development",
+							Target:   "development",
+							ReadOnly: false,
 						},
 					},
 				},
@@ -175,6 +176,16 @@ func InitializeRegolithProject(isForced bool) error {
 		err = os.Mkdir(".regolith", 0666)
 		if err != nil {
 			Logger.Error("Could not create .regolith folder", err)
+		}
+
+		err = os.Mkdir(".regolith/cache", 0666)
+		if err != nil {
+			Logger.Error("Could not create cache folder", err)
+		}
+
+		err = os.Mkdir(".regolith/venvs", 0666)
+		if err != nil {
+			Logger.Error("Could not create venvs folder", err)
 		}
 
 		Logger.Info("Regolith project initialized.")

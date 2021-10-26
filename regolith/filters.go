@@ -39,29 +39,38 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 		return nil
 	}
 
-	if filter.Url != "" {
-		err := RunRemoteFilter(filter.Url, *filter)
-		if err != nil {
-			return err
-		}
-	} else if filter.Filter != "" {
+	// Standard Filter is only filter that doesn't require authentication.
+	if filter.Filter != "" {
 		err := RunStandardFilter(*filter)
 		if err != nil {
 			return err
 		}
 	} else {
-		if f, ok := FilterTypes[filter.RunWith]; ok {
-			if filter.Script == "" {
-				return errors.New("Missing 'script' field in filter definition")
-			}
-			err := f.filter(*filter, filter.Settings, absoluteLocation)
+
+		// All other filters require safe mode to be turned off
+		if !IsUnlocked() {
+			return errors.New("Safe mode is on. Please turn it off using 'regolith unlock'.")
+		}
+
+		if filter.Url != "" {
+			err := RunRemoteFilter(filter.Url, *filter)
 			if err != nil {
 				return err
 			}
 		} else {
-			Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
+			if f, ok := FilterTypes[filter.RunWith]; ok {
+				if filter.Script == "" {
+					return errors.New("Missing 'script' field in filter definition")
+				}
+				err := f.filter(*filter, filter.Settings, absoluteLocation)
+				if err != nil {
+					return err
+				}
+			} else {
+				Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
+			}
+			Logger.Debugf("Executed in %s", time.Since(start))
 		}
-		Logger.Debugf("Executed in %s", time.Since(start))
 	}
 	return nil
 }
