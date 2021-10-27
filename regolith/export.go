@@ -3,10 +3,12 @@ package regolith
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
 	"github.com/otiai10/copy"
+	"golang.org/x/sys/windows"
 )
 
 // GetExportPaths returns file paths for exporting behavior pack and
@@ -98,18 +100,18 @@ func ExportProject(profile Profile, name string) error {
 	}
 
 	Logger.Info("Exporting project to ", bpPath)
-	err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly)
+	err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
 	if err != nil {
 		return err
 	}
 
 	Logger.Info("Exporting project to ", rpPath)
-	err = MoveOrCopy(".regolith/tmp/RP", rpPath, exportTarget.ReadOnly)
+	err = MoveOrCopy(".regolith/tmp/RP", rpPath, exportTarget.ReadOnly, true)
 	if err != nil {
 		return err
 	}
 
-	err = MoveOrCopy(".regolith/tmp/data", profile.DataPath, false)
+	err = MoveOrCopy(".regolith/tmp/data", profile.DataPath, false, false)
 	if err != nil {
 		return err
 	}
@@ -123,20 +125,76 @@ func ExportProject(profile Profile, name string) error {
 	return err
 }
 
+// copyFileSecurityInfo copies the DACL info from source path to DACL of
+// the target path
+func copyFileSecurityInfo(source string, target string) error {
+	securityInfo, err := windows.GetNamedSecurityInfo(
+		source,
+		windows.SE_FILE_OBJECT,
+		windows.DACL_SECURITY_INFORMATION)
+	if err != nil {
+		return wrapError(
+			fmt.Sprintf("Unable to get security info of %q.", source), err)
+	}
+	dacl, _, err := securityInfo.DACL()
+	if err != nil {
+		return wrapError(
+			fmt.Sprintf("Unable to get DACL of %q.", source), err)
+	}
+	err = windows.SetNamedSecurityInfo(
+		target,
+		windows.SE_FILE_OBJECT,
+		windows.DACL_SECURITY_INFORMATION, nil, nil, dacl, nil,
+	)
+	if err != nil {
+		return wrapError(
+			fmt.Sprintf("Unable to set DACL of %q.", target), err)
+	}
+	return nil
+}
+
 // MoveOrCopy tries to move the the source to destination first and in case
 // of failore it copies the files instead.
-//
-// TODO - implement the "move" part of this function without repeating the
-// problem of issue #85. Current version of this function always copies
-// the files.
-func MoveOrCopy(source string, destination string, makeReadOnly bool) error {
-	copyOptions := copy.Options{PreserveTimes: false, Sync: false}
-	if makeReadOnly { // Copy with read only permission
-		(&copyOptions).AddPermission = 0444
+func MoveOrCopy(
+	source string, destination string, makeReadOnly bool, copyParentAcl bool,
+) error {
+	if err := os.Rename(source, destination); err != nil {
+		Logger.Infof("Couldn't move files to %s. Trying to copy files instead...", destination)
+		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
+		err := copy.Copy(source, destination, copyOptions)
+		if err != nil {
+			return wrapError(fmt.Sprintf("Couldn't copy data files to %s, aborting.", destination), err)
+		}
+	} else if copyParentAcl { // No errors with moving files but needs ACL copy
+		parent := filepath.Dir(destination)
+		if _, err := os.Stat(parent); os.IsNotExist(err) {
+			return err
+		}
+		err = copyFileSecurityInfo(parent, destination)
+		if err != nil {
+			return wrapError(
+				fmt.Sprintf(
+					"Counldn't set ACL to the target file %s, aborting.",
+					destination),
+				err,
+			)
+		}
 	}
-	err := copy.Copy(source, destination, copyOptions)
-	if err != nil {
-		return wrapError(fmt.Sprintf("Couldn't copy data files to %s, aborting.", destination), err)
+	// Make files read only if this option is selected
+	if makeReadOnly {
+		err := filepath.WalkDir(destination,
+			func(s string, d fs.DirEntry, e error) error {
+				if e != nil {
+					return e
+				}
+				if !d.IsDir() {
+					os.Chmod(s, 0444)
+				}
+				return nil
+			})
+		if err != nil {
+			Logger.Warnf("Unable to change file permissions of %q into read-only", destination)
+		}
 	}
 	return nil
 }
