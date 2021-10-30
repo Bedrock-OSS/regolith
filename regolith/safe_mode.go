@@ -11,7 +11,7 @@ import (
 func IsUnlocked() bool {
 	id, err := GetMachineId()
 	if err != nil {
-		fmt.Println("Failed to get machine ID.", err)
+		Logger.Info("Failed to get machine ID.", err)
 		return false
 	}
 
@@ -23,7 +23,7 @@ func IsUnlocked() bool {
 	unlocked := id == string(lockedId)
 
 	if !unlocked {
-		fmt.Println("Safe mode is locked. Unlock it by running `regolith unlock`.")
+		Logger.Info("Safe mode is locked. Unlock it by running `regolith unlock`.")
 	}
 
 	return unlocked
