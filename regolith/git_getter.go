@@ -77,7 +77,7 @@ func DownloadGitHubUrl(url string, localPath string) (bool, error) {
 				return false, wrapError(fmt.Sprintf("Failed to fetch the tree %s: %s", leaf.Path, data.Message), err)
 			}
 			for _, l := range data.Tree {
-				if l.Type == "blob" {
+				if l.Type == "blob" && l.Path != "test" {
 					err := downloadLeaf(l, localPath)
 					if err != nil {
 						return false, wrapError(fmt.Sprintf("Failed to download the leaf %s", l.Path), err)
