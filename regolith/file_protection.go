@@ -5,18 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
 
 const EditedFilesPath = ".regolith/cache/edited_files.json"
 
+// PathList is an alias for []string. It's used to store a list of file paths.
+type filesList = []string
+
 // EditedFiles is used to load edited_files.json from cache in order
 // to check if the files are safe to delete.
 type EditedFiles struct {
-	Rp []string `json:"rp"`
-	Bp []string `json:"bp"`
+	Rp map[string]filesList `json:"rp"`
+	Bp map[string]filesList `json:"bp"`
 }
 
 // Dump dumps EditedFiles to EditedFilesPath in JSON format.
@@ -25,7 +27,12 @@ func (f *EditedFiles) Dump() error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(EditedFilesPath, result, 0666)
+	// Create parent directory of EditedFilesPath
+	err = os.MkdirAll(filepath.Dir(EditedFilesPath), 0666)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(EditedFilesPath, result, 0666)
 	if err != nil {
 		return err
 	}
@@ -35,43 +42,57 @@ func (f *EditedFiles) Dump() error {
 // CheckDeletionSafety checks whether it's safe to delete files from rpPath and
 // bpPath based on the lists of removeable files from EditedFiles object.
 func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
-	err := checkDeletionSafety(rpPath, f.Rp)
+	files, ok := f.Rp[rpPath]
+	if !ok {
+		files = make([]string, 0)
+	}
+	err := checkDeletionSafety(rpPath, files)
 	if err != nil {
 		return err
 	}
-	return checkDeletionSafety(bpPath, f.Bp)
+	files, ok = f.Bp[bpPath]
+	if !ok {
+		files = make([]string, 0)
+	}
+	return checkDeletionSafety(bpPath, files)
+}
+
+func (f *EditedFiles) UpdateFromPaths(rpPath string, bpPath string) error {
+	rpFiles, err := listFiles(rpPath)
+	if err != nil {
+		return err
+	}
+	bpFiles, err := listFiles(bpPath)
+	if err != nil {
+		return err
+	}
+	f.Rp[rpPath] = rpFiles
+	f.Bp[bpPath] = bpFiles
+	return nil
 }
 
 // LoadEditedFiles data from edited_files.json or returns an empty object
 // if file doesn't exist.
 func LoadEditedFiles() EditedFiles {
-	data, err := ioutil.ReadFile(EditedFilesPath)
-	var result EditedFiles
+	data, err := os.ReadFile(EditedFilesPath)
 	if err != nil {
-		return EditedFiles{}
+		return NewEditedFiles()
 	}
+	result := NewEditedFiles()
 	err = json.Unmarshal(data, &result)
 	if err != nil {
-		return EditedFiles{}
+		return NewEditedFiles()
 	}
 	return result
 }
 
 // NewEditedFiles creates new EditedFiles object with lists of the files from
 // rpPath and bpPath.
-func NewEditedFiles(rpPath string, bpPath string) (EditedFiles, error) {
+func NewEditedFiles() EditedFiles {
 	var result EditedFiles
-	rpFiles, err := listFiles(rpPath)
-	if err != nil {
-		return result, err
-	}
-	bpFiles, err := listFiles(bpPath)
-	if err != nil {
-		return result, err
-	}
-	result.Rp = rpFiles
-	result.Bp = bpFiles
-	return result, nil
+	result.Rp = make(map[string]filesList)
+	result.Bp = make(map[string]filesList)
+	return result
 }
 
 // listFiles returns a slice of strings with paths to all of the files
@@ -86,7 +107,7 @@ func listFiles(path string) ([]string, error) {
 				return e
 			}
 			if !d.IsDir() {
-				result = append(result, s)
+				result = append(result, s[len(path)+1:])
 			}
 			return nil
 		})
@@ -120,6 +141,7 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 			if d.IsDir() { // Directories aren't checked
 				return nil
 			}
+			s = s[len(path)+1:] // remove path from the file path
 			for {
 				if i >= len(removableFiles) {
 					return fmt.Errorf("file path %q is not on the list of the files recently modified by Regolith", s)
