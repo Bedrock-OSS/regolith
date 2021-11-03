@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/google/go-github/v39/github"
 )
 
@@ -97,16 +96,22 @@ func compareSemver(ver1 string, ver2 string) int {
 	}
 }
 
-func CheckUpdate(version string) {
+type UpdateStatus struct {
+	ShouldUpdate bool
+	Url          *string
+	Err          *error
+}
+
+func CheckUpdate(version string, status chan UpdateStatus) {
 	client := github.NewClient(nil)
 	// Ignore the error, since it's not critical to regolith
 	release, _, err := client.Repositories.GetLatestRelease(context.Background(), "Bedrock-OSS", "regolith")
 	if err != nil {
-		Logger.Warn("Update check failed")
+		status <- UpdateStatus{Err: &err}
 		return
 	}
-	if compareSemver(*release.TagName, version) == 1 {
-		_, _ = fmt.Fprintln(color.Output, color.GreenString("New version available!"))
-		_, _ = fmt.Fprintln(color.Output, color.GreenString(*release.HTMLURL))
+	status <- UpdateStatus{
+		ShouldUpdate: compareSemver(*release.TagName, version) == 1,
+		Url:          release.HTMLURL,
 	}
 }

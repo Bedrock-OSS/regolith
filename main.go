@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/fatih/color"
@@ -17,6 +18,8 @@ var (
 )
 
 func main() {
+	status := make(chan regolith.UpdateStatus)
+	go regolith.CheckUpdate(version, status)
 	regolith.CustomHelp()
 	var debug bool
 	err := (&cli.App{
@@ -111,11 +114,17 @@ func main() {
 		regolith.InitLogging(false)
 		regolith.Logger.Info(color.GreenString("Finished"))
 	}
+	result := <-status
+	if result.Err != nil {
+		regolith.Logger.Warn("Update check failed")
+	} else if result.ShouldUpdate {
+		_, _ = fmt.Fprintln(color.Output, color.GreenString("New version available!"))
+		_, _ = fmt.Fprintln(color.Output, color.GreenString(*result.Url))
+	}
 }
 
 func initRegolith(debug bool) {
 	//goland:noinspection GoBoolExpressions
 	regolith.InitLogging(debug)
-	go regolith.CheckUpdate(version)
 	regolith.RegisterFilters()
 }
