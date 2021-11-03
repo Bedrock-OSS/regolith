@@ -1,0 +1,32 @@
+{
+  "name": "regolith_test_project",
+  "author": "Bedrock-OSS",
+  "packs": {
+    "behaviorPack": "./packs/BP",
+    "resourcePack": "./packs/RP"
+  },
+  "regolith": {
+    "profiles": {
+      "exact_export_A": {
+        "unsafe": false,
+        "filters": [],
+        "export": {
+          "target": "exact",
+          "rpPath": "../target-a/RP",
+          "bpPath": "../target-a/BP"
+        },
+        "dataPath": "./packs/data"
+      },
+      "exact_export_B": {
+        "unsafe": false,
+        "filters": [],
+        "export": {
+          "target": "exact",
+          "rpPath": "../target-b/RP",
+          "bpPath": "../target-b/BP"
+        },
+        "dataPath": "./packs/data"
+      }
+    }
+  }
+}

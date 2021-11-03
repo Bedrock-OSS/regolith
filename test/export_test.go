@@ -70,7 +70,10 @@ func TestMoveFilesAcl(t *testing.T) {
 	// Run regolith project
 	os.Chdir(workingDir)
 	regolith.InitLogging(true)
-	regolith.RunProfile("dev")
+	err = regolith.RunProfile("dev")
+	if err != nil {
+		t.Fatal("RunProfile function failed:", err)
+	}
 
 	// Test if the RP and BP were created in the right paths
 	assertDirExists := func(dir string) {

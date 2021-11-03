@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -28,7 +27,12 @@ func (f *EditedFiles) Dump() error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(EditedFilesPath, result, 0666)
+	// Create parent directory of EditedFilesPath
+	err = os.MkdirAll(filepath.Dir(EditedFilesPath), 0666)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(EditedFilesPath, result, 0666)
 	if err != nil {
 		return err
 	}
@@ -70,7 +74,7 @@ func (f *EditedFiles) UpdateFromPaths(rpPath string, bpPath string) error {
 // LoadEditedFiles data from edited_files.json or returns an empty object
 // if file doesn't exist.
 func LoadEditedFiles() EditedFiles {
-	data, err := ioutil.ReadFile(EditedFilesPath)
+	data, err := os.ReadFile(EditedFilesPath)
 	if err != nil {
 		return NewEditedFiles()
 	}
