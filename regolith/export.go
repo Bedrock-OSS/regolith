@@ -116,8 +116,8 @@ func ExportProject(profile Profile, name string) error {
 		return err
 	}
 
-	// Create new edited_files.json
-	editedFiles, err = NewEditedFiles(rpPath, bpPath)
+	// Update or create edited_files.json
+	err = editedFiles.UpdateFromPaths(rpPath, bpPath)
 	if err != nil {
 		return err
 	}
