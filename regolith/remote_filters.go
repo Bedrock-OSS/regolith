@@ -126,6 +126,17 @@ func InstallDependency(profile Profile, isForced bool) error {
 			}
 		}
 
+		// Remove 'test' folder, which may be installed via git-getter library
+		// This is a workaround for cases where our own getter library is not
+		// able to download the filter.
+		testFolder := path.Join(downloadPath, "test")
+		if _, err := os.Stat(testFolder); err == nil {
+			os.RemoveAll(testFolder)
+			if err != nil {
+				Logger.Debug("Could not remove test folder", err)
+			}
+		}
+
 		// Move filters 'data' folder contents into 'data'
 		filterName := strings.Split(path.Clean(url), "/")[3]
 		localDataPath := path.Join(profile.DataPath, filterName)
