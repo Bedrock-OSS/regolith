@@ -61,12 +61,13 @@ type ExportTarget struct {
 	// Path          string `json:"path"`
 }
 
-// TODO This function is kinda weird. Probably should not include "Running filter"
-func (filter Filter) GetName() string {
+// GetFriendlyName returns the friendly name of the filter that can be used for
+// logging.
+func (filter Filter) GetFriendlyName() string {
 	if filter.Name != "" {
 		return filter.Name
 	}
-	return fmt.Sprintf("Running filter %s", filter.Filter)
+	return filter.Filter
 }
 
 func IsProjectConfigured() bool {

@@ -30,12 +30,12 @@ func RegisterFilters() {
 // absoluteLocation is an absolute path to the root folder of the filter.
 // In case of local filters it's a root path of the project.
 func (filter *Filter) RunFilter(absoluteLocation string) error {
-	Logger.Info(filter.GetName())
+	Logger.Infof("Running filter %s", filter.GetFriendlyName())
 	start := time.Now()
 
 	// Disabled filters are skipped
 	if filter.Disabled == true {
-		Logger.Infof("Filter '%s' is disabled, skipping.", filter.GetName())
+		Logger.Infof("Filter '%s' is disabled, skipping.", filter.GetFriendlyName())
 		return nil
 	}
 
