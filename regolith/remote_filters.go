@@ -61,8 +61,12 @@ func InstallDependencies(isForced bool) error {
 		return wrapError("Could not create .regolith/cache/venvs", err)
 	}
 
+	wd, err := os.Getwd()
+	if err != nil {
+		return wrapError("Could not get working directory", err)
+	}
 	for _, profile := range project.Profiles {
-		err := profile.Install(isForced)
+		err := profile.Install(isForced, wd)
 		if err != nil {
 			return wrapError("Could not install dependency", err)
 		}
@@ -98,18 +102,19 @@ func LoadFilterJsonProfile(filterJsonPath string, parentFilter Filter) (*Profile
 }
 
 // Install installs all of the dependencies of the profile
-func (p *Profile) Install(isForced bool) error {
+func (p *Profile) Install(isForced bool, profilePath string) error {
 	for filter := range p.Filters {
 		filter := &p.Filters[filter] // Using pointer is faster than creating copies in the loop and gives more options
-		downloadPath, err := filter.Download(isForced)
+
+		downloadPath, err := filter.Download(isForced, profilePath)
 		// TODO - we could use type switch to handle different kinds of errors
 		// here. Download can fail on downloading or on cleaning the download
 		// path. It can also fail when isForced is false and the path already
 		// exists.
 		if err != nil {
 			return wrapError("Could not download filter", err) // TODO - I don't think this should break the entire install
-		} else if downloadPath == "" {
-			continue // Not a remote filter, skip
+		} else if downloadPath == "" { // filter.RunWith != "" && filter.Script != ""
+			continue
 		}
 
 		// Move filters 'data' folder contents into 'data'
@@ -155,28 +160,9 @@ func (p *Profile) Install(isForced bool) error {
 
 		// Install dependencies of remote filters. Recursion ends when there
 		// is no more nested remote dependencies.
-		err = remoteProfile.Install(isForced)
+		err = remoteProfile.Install(isForced, downloadPath)
 		if err != nil {
 			return err
-		}
-
-		// Install filter dependencies (python/nodejs modules etc.)
-		// TODO - can we move this out of the loop? This way the filters from
-		// config.json would also run their install function and we could
-		// modify the code a little to enable dependencies for them.
-		for _, filter := range remoteProfile.Filters {
-			if filter.RunWith != "" {
-				if f, ok := FilterTypes[filter.RunWith]; ok {
-					err := f.install(filter, downloadPath)
-					if err != nil {
-						return wrapError(fmt.Sprintf(
-							"Couldn't install filter %s", filter.Name), err)
-					}
-				} else {
-					Logger.Warnf(
-						"Filter type '%s' not supported", filter.RunWith)
-				}
-			}
 		}
 	}
 	return nil
@@ -207,11 +193,28 @@ func (f *Filter) GetIdName() string {
 }
 
 // Download downloads the filter and returns the download path. If the filter
-// is not remote, it returns empty string.
-func (f *Filter) Download(isForced bool) (string, error) {
+// is not remote, it downloads the dependencies of the filter and returns
+// empty string. The profileDir is a path to the directory of the profile that
+// owns the filter (the directory of either the config.json or filter.json
+// file). The profileDir combined with Script property of the filter gives
+// the absolute path to the script.
+func (f *Filter) Download(isForced bool, profileDir string) (string, error) {
 	url := f.GetDownloadUrl()
 	if url == "" {
-		return "", nil // No dependency to install
+		// Not a remote filter, download the dependencies
+		if filterDefinition, ok := FilterTypes[f.RunWith]; ok {
+			scriptPath := path.Join(profileDir, f.Script)
+			err := filterDefinition.install(*f, filepath.Dir(scriptPath))
+			if err != nil {
+				return "", wrapError(fmt.Sprintf(
+					"Couldn't install filter dependencies %s",
+					f.GetFriendlyName()), err)
+			}
+		} else {
+			Logger.Warnf(
+				"Filter type '%s' not supported", f.RunWith)
+		}
+		return "", nil // The filter is not downloaded (just dependencies)
 	}
 
 	// Download the filter into the cache folder
