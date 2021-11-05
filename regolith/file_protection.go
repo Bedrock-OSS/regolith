@@ -21,6 +21,21 @@ type EditedFiles struct {
 	Bp map[string]filesList `json:"bp"`
 }
 
+// LoadEditedFiles data from edited_files.json or returns an empty object
+// if file doesn't exist.
+func LoadEditedFiles() EditedFiles {
+	data, err := os.ReadFile(EditedFilesPath)
+	if err != nil {
+		return NewEditedFiles()
+	}
+	result := NewEditedFiles()
+	err = json.Unmarshal(data, &result)
+	if err != nil {
+		return NewEditedFiles()
+	}
+	return result
+}
+
 // Dump dumps EditedFiles to EditedFilesPath in JSON format.
 func (f *EditedFiles) Dump() error {
 	result, err := json.MarshalIndent(f, "", "\t")
@@ -69,21 +84,6 @@ func (f *EditedFiles) UpdateFromPaths(rpPath string, bpPath string) error {
 	f.Rp[rpPath] = rpFiles
 	f.Bp[bpPath] = bpFiles
 	return nil
-}
-
-// LoadEditedFiles data from edited_files.json or returns an empty object
-// if file doesn't exist.
-func LoadEditedFiles() EditedFiles {
-	data, err := os.ReadFile(EditedFilesPath)
-	if err != nil {
-		return NewEditedFiles()
-	}
-	result := NewEditedFiles()
-	err = json.Unmarshal(data, &result)
-	if err != nil {
-		return NewEditedFiles()
-	}
-	return result
 }
 
 // NewEditedFiles creates new EditedFiles object with lists of the files from

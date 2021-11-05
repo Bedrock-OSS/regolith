@@ -94,7 +94,8 @@ func RunProfile(profileName string) error {
 	}
 
 	// Run the filters!
-	for _, filter := range profile.Filters {
+	for filter := range profile.Filters {
+		filter := profile.Filters[filter]
 		path, _ := filepath.Abs(".")
 		err := filter.RunFilter(path)
 		if err != nil {

@@ -1,10 +1,7 @@
 package regolith
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"path/filepath"
 	"time"
 )
@@ -80,31 +77,6 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 func RunStandardFilter(filter Filter) error {
 	Logger.Debugf("RunStandardFilter '%s'", filter.Filter)
 	return RunRemoteFilter(FilterNameToUrl(StandardLibraryUrl, filter.Filter), filter)
-}
-
-// LoadFiltersFromPath returns a Profile with list of filters loaded from
-// filters.json from input file path. The path should point at a directory
-// with filters.json file in it, not at the file itself.
-func LoadFiltersFromPath(path string) (*Profile, error) {
-	path = path + "/filter.json"
-	file, err := ioutil.ReadFile(path)
-
-	if err != nil {
-		return nil, wrapError(fmt.Sprintf("Couldn't find %s! Consider running 'regolith install'", path), err)
-	}
-
-	var result *Profile
-	err = json.Unmarshal(file, &result)
-	if err != nil {
-		return nil, wrapError(fmt.Sprintf("Couldn't load %s: ", path), err)
-	}
-	// Replace nil filter settings with empty map
-	for fk := range result.Filters {
-		if result.Filters[fk].Settings == nil {
-			result.Filters[fk].Settings = make(map[string]interface{})
-		}
-	}
-	return result, nil
 }
 
 // RunRemoteFilter runs loads and runs the content of filter.json from in
