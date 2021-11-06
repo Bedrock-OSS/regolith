@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"bedrock-oss.github.com/regolith/regolith"
+	"github.com/otiai10/copy"
 )
 
 // listPaths returns a dictionary with paths of the files from 'path' directory
@@ -127,4 +128,40 @@ func TestRegolithInit(t *testing.T) {
 			t.Fatalf("%q file is different that expected", k)
 		}
 	}
+}
+
+// TestLocalRequirementsInstall tests if Regolith properly install the
+// project that uses local script with requirements.txt.
+func TestLocalRequirementsInstall(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal("Unable to get current working directory")
+	}
+	defer os.Chdir(wd)
+	// Create a temporary directory
+	tmpDir, err := ioutil.TempDir("", "regolith-test")
+	if err != nil {
+		t.Fatal("Unable to create temporary directory:", err)
+	}
+	t.Log("Created temporary directory:", tmpDir)
+	// Before deleting "workingDir" the test must stop using it
+	defer os.RemoveAll(tmpDir)
+	defer os.Chdir(wd)
+	// Copy the test project to the working directory
+	err = copy.Copy(
+		localRequirementsProjectPath,
+		tmpDir,
+		copy.Options{PreserveTimes: false, Sync: false},
+	)
+	if err != nil {
+		t.Fatalf(
+			"Failed to copy test files %q into the working directory %q",
+			localRequirementsProjectPath, tmpDir,
+		)
+	}
+	// Switch to the working directory
+	os.Chdir(tmpDir)
+	regolith.InitLogging(true)
+	regolith.RegisterFilters()
+	regolith.InstallDependencies(true)
 }
