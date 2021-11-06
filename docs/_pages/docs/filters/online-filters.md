@@ -17,7 +17,7 @@ To add an online filter to your profile, you must write like this:
 
 ```json
 {
-  "url": "https://github.com/username/repository/folder"
+  "url": "github.com/username/repository/folder"
 }
 ```
 
