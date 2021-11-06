@@ -39,11 +39,11 @@ Example:
 ```
 
 You can use the following "runWith" types:
- - python
- - node
- - java
- - nim
- - shell
+ - [python](/regolith/docs/python-filters)
+ - [nodejs](/regolith/docs/nodejs-filters)
+ - [java](/regolith/docs/java-filters)
+ - [nim](/regolith/docs/nim-filters)
+ - [shell](/regolith/docs/shell-filters)
 
 Please see the dedicated pages for these run-types for more information. TODO
 
@@ -80,12 +80,6 @@ Here is an example:
 }
 ```
 
-This will generate: `python ./filters/message.py {'hello':'world'}`
+This will generate: `python ./filters/message.py {'message':'Hello World!'}`
 
 This is useful for passing user-defined settings into your filter. Simply handle the first argument in the argument array, and interpret it as json!
-
-For example:
-
-```py
-TODO
-```

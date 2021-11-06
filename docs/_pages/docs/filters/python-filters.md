@@ -12,7 +12,7 @@ The syntax for running a python script is this:
 ```json
 {
   "runWith": "python",
-  "script": "./filters/
+  "script": "./filters/example.py"
 }
 ```
 
