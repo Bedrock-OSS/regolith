@@ -40,7 +40,7 @@ Example:
 
 You can use the following "runWith" types:
  - python
- - node
+ - nodejs
  - java
  - nim
  - shell
@@ -80,7 +80,7 @@ Here is an example:
 }
 ```
 
-This will generate: `python ./filters/message.py {'hello':'world'}`
+This will generate: `python ./filters/message.py {'message':'Hello World!'}`
 
 This is useful for passing user-defined settings into your filter. Simply handle the first argument in the argument array, and interpret it as json!
 
