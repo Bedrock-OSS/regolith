@@ -236,8 +236,13 @@ func (f *Filter) Download(isForced bool, profileDir string) (string, error) {
 	if url == "" {
 		// Not a remote filter, download the dependencies
 		if filterDefinition, ok := FilterTypes[f.RunWith]; ok {
-			scriptPath := path.Join(profileDir, f.Script)
-			err := filterDefinition.install(*f, filepath.Dir(scriptPath))
+			scriptPath, err := filepath.Abs(filepath.Join(profileDir, f.Script))
+			if err != nil {
+				return "", wrapError(fmt.Sprintf(
+					"Unable to resolve path of %s script",
+					f.GetFriendlyName()), err)
+			}
+			err = filterDefinition.install(*f, filepath.Dir(scriptPath))
 			if err != nil {
 				return "", wrapError(fmt.Sprintf(
 					"Couldn't install filter dependencies %s",
