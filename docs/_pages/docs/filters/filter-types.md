@@ -36,7 +36,7 @@ Example:
 
 ```json
 {
-    "url": "https://github.com/Bedrock-OSS/regolith-filters/tree/master/json_cleaner"
+    "url": "github.com/user/repo/folder"
 }
 ```
 
@@ -48,7 +48,7 @@ Local filters are great for quickly prototyping, or for personal filters that yo
 ```json
 {
     "runWith": "python",
-    "script": "./json_cleaner.py"
+    "script": "./filters/example.py"
 }
 ```
 

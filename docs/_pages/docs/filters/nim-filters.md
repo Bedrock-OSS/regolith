@@ -7,13 +7,6 @@ sidebar:
   nav: "sidebar"
 ---
 
-## How to install Nim
-```
-  1. download the newest version of choosenim from https://nim-lang.org/install_windows.html
-  2. open a terminal in the directory you downloaded choosenim to
-  3. run the choosenim executable from the terminal with the --firstInstall flag
-```
-
 The syntax for running a nim filter is this:
 
 ```json
@@ -21,6 +14,13 @@ The syntax for running a nim filter is this:
   "runWith": "nim",
   "script": "./filters/example.nim"
 }
+```
+
+## How to install Nim
+```
+  1. [Download the newest version of choosenim.](https://nim-lang.org/install_windows.html)
+  2. Open a terminal in the same directory that you downloaded `choosenim`.
+  3. Run the choosenim executable from the terminal with the `--firstInstall` flag.
 ```
 
 ## Requirements and Dependencies
