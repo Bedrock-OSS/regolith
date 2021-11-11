@@ -8,3 +8,8 @@ This folder is used to store resources used for testing.
     path.
 - `multitarget_project` - a copy of `minimal_project` but with modified
     config.json, to add multiple profiles with different export targets.
+- `double_remote_project` - a project that uses a remote filter from
+    [regolith-test-filters](https://github.com/Bedrock-OSS/regolith-test-filters).
+    The filter has a reference to another remote filter on the same reposiotry.
+- `double_remote_project_installed` - expected result of contents of
+    `double_remote_project` after installation.
