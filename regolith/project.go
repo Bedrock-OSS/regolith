@@ -90,8 +90,10 @@ func LoadFiltersFromPath(path string) (*Profile, error) {
 // LoadFilterJsonProfile loads a profile from path to filter.json file of
 // a remote filter and propagates the properties of the parent filter (the
 // filter in config.json or other remote filter that caused creation of this
-// profile).
-func LoadFilterJsonProfile(filterJsonPath string, parentFilter Filter) (*Profile, error) {
+// profile).and the parent profile to the returned profile.
+func LoadFilterJsonProfile(
+	filterJsonPath string, parentFilter Filter, parentProfile Profile,
+) (*Profile, error) {
 	// Open file
 	file, err := ioutil.ReadFile(filterJsonPath)
 	if err != nil {
@@ -109,6 +111,9 @@ func LoadFilterJsonProfile(filterJsonPath string, parentFilter Filter) (*Profile
 	for subfilter := range remoteProfile.Filters {
 		remoteProfile.Filters[subfilter].VenvSlot = parentFilter.VenvSlot
 	}
+	remoteProfile.DataPath = parentProfile.DataPath
+	remoteProfile.ExportTarget = parentProfile.ExportTarget
+	remoteProfile.Unsafe = parentProfile.Unsafe
 	return &remoteProfile, nil
 }
 
@@ -164,7 +169,7 @@ func (p *Profile) Install(isForced bool, profilePath string) error {
 
 		// Create profile from filter.json file
 		remoteProfile, err := LoadFilterJsonProfile(
-			filepath.Join(downloadPath, "filter.json"), *filter)
+			filepath.Join(downloadPath, "filter.json"), *filter, *p)
 		if err != nil {
 			return err // TODO - I don't think this should break the entire install. Just remove the files and continue.
 		}

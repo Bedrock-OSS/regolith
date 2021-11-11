@@ -1,0 +1,24 @@
+{
+  "name": "regolith_test_project",
+  "author": "Bedrock-OSS",
+  "packs": {
+    "behaviorPack": "./packs/BP",
+    "resourcePack": "./packs/RP"
+  },
+  "regolith": {
+    "profiles": {
+      "dev": {
+        "unsafe": false,
+        "filters": [
+          {
+            "url": "github.com/Bedrock-OSS/regolith-test-filters/nested-remote-filter"
+          }
+        ],
+        "export": {
+          "target": "development"
+        },
+        "dataPath": "./packs/data"
+      }
+    }
+  }
+}
