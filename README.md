@@ -1,12 +1,11 @@
 <h1 align="center">Regolith</h1>
 
-![Image](https://bedrock-oss.github.io/regolith/assets/images/logo.png)
+![](https://bedrock-oss.github.io/regolith/assets/images/title_logo.png)
 
 - Regolith is an Add-on Compiler for the Bedrock Edition of Minecraft.
 
 <p align="center">
-<bold>
-⭐ <a href="https://bedrock-oss.github.io/regolith/">Visit the Website!</a> ⭐</bold>
+<b>⭐ <a href="https://bedrock-oss.github.io/regolith/">Visit the Website!</a> ⭐</b>
 </p>
 
 - Much like `bridge. v2`, Regolith introduces the concept of a "project folder", where your addons are written, including the RP, the BP, and any models, textures or configuration files. This single-folder-structure is great for version control, and allows you to keep  your "source-of-truth" outside of `com.mojang`.
