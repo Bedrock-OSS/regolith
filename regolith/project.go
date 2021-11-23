@@ -360,7 +360,6 @@ func InitializeRegolithProject(isForced bool) error {
 			RegolithProject: RegolithProject{
 				Profiles: map[string]Profile{
 					"dev": {
-						Unsafe:   false,
 						DataPath: "./packs/data",
 						Filters:  []Filter{},
 						ExportTarget: ExportTarget{
