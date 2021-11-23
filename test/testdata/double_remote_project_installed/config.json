@@ -8,7 +8,6 @@
   "regolith": {
     "profiles": {
       "dev": {
-        "unsafe": false,
         "filters": [
           {
             "url": "github.com/Bedrock-OSS/regolith-test-filters/nested-remote-filter"

@@ -38,8 +38,8 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
   "regolith": {
     "profiles": {
       "dev": {
-        "unsafe": false,
         "filters": [
+          
         ],
         "export": {
           "clean": false,

@@ -8,7 +8,6 @@
   "regolith": {
     "profiles": {
       "dev": {
-        "unsafe": false,
         "filters": [],
         "export": {
           "target": "development",
