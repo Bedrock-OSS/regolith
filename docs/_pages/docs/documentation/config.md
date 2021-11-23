@@ -41,7 +41,6 @@ Example config:
   "regolith": {
     "profiles": {
       "dev": {
-        "unsafe": false,
         "dataPath": "./packs/data",
         "filters": [
           {

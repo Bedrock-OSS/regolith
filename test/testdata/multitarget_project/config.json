@@ -8,7 +8,6 @@
   "regolith": {
     "profiles": {
       "exact_export_A": {
-        "unsafe": false,
         "filters": [],
         "export": {
           "target": "exact",
@@ -18,7 +17,6 @@
         "dataPath": "./packs/data"
       },
       "exact_export_B": {
-        "unsafe": false,
         "filters": [],
         "export": {
           "target": "exact",
