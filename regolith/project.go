@@ -112,7 +112,6 @@ func LoadFilterJsonProfile(
 	}
 	remoteProfile.DataPath = parentProfile.DataPath
 	remoteProfile.ExportTarget = parentProfile.ExportTarget
-	remoteProfile.Unsafe = parentProfile.Unsafe
 	return &remoteProfile, nil
 }
 
