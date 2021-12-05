@@ -64,10 +64,6 @@ func RunProfile(profileName string) error {
 	}
 	profile := project.Profiles[profileName]
 
-	if profile.Unsafe {
-		Logger.Warn("Profile flagged as unsafe. Exercise caution!")
-	}
-
 	// Check whether every filter, uses a supported filter type
 	checked := make(map[string]struct{})
 	exists := struct{}{}
