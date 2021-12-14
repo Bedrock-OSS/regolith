@@ -25,7 +25,10 @@ func StringArrayContains(arr []string, str string) bool {
 }
 
 func wrapError(text string, err error) error {
-	return errors.New(fmt.Sprintf("%s\nCaused by: %s", text, err.Error()))
+	if err != nil {
+		return errors.New(fmt.Sprintf("%s\nCaused by: %s", text, err.Error()))
+	}
+	return errors.New(text)
 }
 
 // GetAbsoluteWorkingDirectory returns an absolute path to .regolith/tmp
