@@ -22,7 +22,7 @@
 
 - The value preposition for Regolith is that it allows many tools, in many languages and pay-structures to work together in a single, unified compilation flow. 
 
-- Hobbiests can use the Standard Library, or write their own filters. Marketplace teams can write proprietary filters, or internal filters.
+- Hobbiests can use the [Standard Library](https://github.com/Bedrock-OSS/regolith-filters), or write their own filters. Marketplace teams can write proprietary filters, or internal filters.
 
 
 # 💻 Regolith Development
