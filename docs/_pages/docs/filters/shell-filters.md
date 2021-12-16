@@ -15,7 +15,7 @@ The syntax for running a shell script is this:
 ```json
 {
   "runWith": "shell",
-  "script": "echo 'hello world'"
+  "command": "echo 'hello world'"
 }
 ```
 
@@ -24,6 +24,6 @@ Here is another example:
 ```json
 {
   "runWith": "shell",
-  "script": "python -u ./filters/my_filter.py"
+  "command": "python -u ./filters/my_filter.py"
 }
 ```
