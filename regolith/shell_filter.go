@@ -18,6 +18,12 @@ func RegisterShellFilter(filters map[string]filterDefinition) {
 		filter:  runShellFilter,
 		install: func(filter Filter, path string) error { return nil },
 		check:   checkShellRequirements,
+		validateDefinition: func(filter Filter) error {
+			if filter.Command == "" {
+				return errors.New("Missing 'command' field in filter definition")
+			}
+			return nil
+		},
 	}
 }
 

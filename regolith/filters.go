@@ -7,9 +7,10 @@ import (
 )
 
 type filterDefinition struct {
-	filter  func(filter Filter, settings map[string]interface{}, absoluteLocation string) error
-	install func(filter Filter, path string) error
-	check   func() error
+	filter             func(filter Filter, settings map[string]interface{}, absoluteLocation string) error
+	install            func(filter Filter, path string) error
+	check              func() error
+	validateDefinition func(filter Filter) error
 }
 
 var FilterTypes = map[string]filterDefinition{}
@@ -20,6 +21,13 @@ func RegisterFilters() {
 	RegisterShellFilter(FilterTypes)
 	RegisterJavaFilter(FilterTypes)
 	RegisterNimFilter(FilterTypes)
+}
+
+func DefaultValidateDefinition(filter Filter) error {
+	if filter.Script == "" {
+		return errors.New("Missing 'script' field in filter definition")
+	}
+	return nil
 }
 
 // RunFilter determine whether the filter is remote, standard (from standard
@@ -56,8 +64,16 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 			}
 		} else {
 			if f, ok := FilterTypes[filter.RunWith]; ok {
-				if filter.Script == "" {
-					return errors.New("Missing 'script' field in filter definition")
+				if f.validateDefinition != nil {
+					err := f.validateDefinition(*filter)
+					if err != nil {
+						return err
+					}
+				} else {
+					err := DefaultValidateDefinition(*filter)
+					if err != nil {
+						return err
+					}
 				}
 				err := f.filter(*filter, filter.Settings, absoluteLocation)
 				if err != nil {
