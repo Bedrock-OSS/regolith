@@ -83,3 +83,7 @@ Here is an example:
 This will generate: `python ./filters/message.py {'message':'Hello World!'}`
 
 This is useful for passing user-defined settings into your filter. Simply handle the first argument in the argument array, and interpret it as json!
+
+## Filter environment variables
+
+Every filter process ran by regolith has an additional environment variable, called `FILTER_DIR`. This environment variable contains an absolute path to the cache directory, where currently ran filter is.
