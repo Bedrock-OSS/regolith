@@ -41,7 +41,7 @@ func GetMachineId() (string, error) {
 // Unlocks safe mode, by signing the machine ID into lockfile.txt
 func Unlock() error {
 
-	if !IsProjectConfigured() {
+	if !IsProjectInitialized() {
 		return fmt.Errorf("This does not appear to be a Regolith project.")
 	}
 
