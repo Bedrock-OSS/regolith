@@ -46,6 +46,14 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 
 	// Standard Filter is only filter that doesn't require authentication.
 	if filter.Filter != "" {
+
+		// Special handling for our hello world filter,
+		// which welcomes new users to Regolith
+		if filter.Filter == "hello_world" {
+			return RunHelloWorldFilter(filter)
+		}
+
+		// Otherwise drop down to standard handling
 		err := RunStandardFilter(*filter)
 		if err != nil {
 			return err
@@ -93,6 +101,21 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 func RunStandardFilter(filter Filter) error {
 	Logger.Debugf("RunStandardFilter '%s'", filter.Filter)
 	return RunRemoteFilter(FilterNameToUrl(StandardLibraryUrl, filter.Filter), filter)
+}
+
+func RunHelloWorldFilter(filter *Filter) error {
+	Logger.Info(
+		"Hello world!\n" +
+			"===========================================================\n" +
+			" Welcome to Regolith!\n" +
+			"\n" +
+			" This message is generated from the 'hello_world' filter.\n" +
+			" You can delete this filter when you're ready, and replace it with" +
+			" Something more useful!\n" +
+			"===========================================================\n",
+	)
+
+	return nil
 }
 
 // RunRemoteFilter runs loads and runs the content of filter.json from in
