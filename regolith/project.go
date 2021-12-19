@@ -320,8 +320,7 @@ type ExportTarget struct {
 	// Path          string `json:"path"`
 }
 
-func IsProjectConfigured() bool {
-	// TODO: Write a better system here, that checks all possible files.
+func IsProjectInitialized() bool {
 	info, err := os.Stat(ManifestName)
 	if os.IsNotExist(err) {
 		return false
@@ -331,7 +330,7 @@ func IsProjectConfigured() bool {
 
 func InitializeRegolithProject(isForced bool) error {
 	// Do not attempt to initialize if project is already initialized (can be forced)
-	if !isForced && IsProjectConfigured() {
+	if !isForced && IsProjectInitialized() {
 		Logger.Errorf("Could not initialize Regolith project. File %s already exists.", ManifestName)
 		return nil
 	} else {
@@ -381,40 +380,21 @@ func InitializeRegolithProject(isForced bool) error {
 			return wrapError("Failed to write .gitignore file contents", err)
 		}
 
-		// Create folders
-		err = os.Mkdir("packs", 0666)
-		if err != nil {
-			Logger.Error("Could not create packs folder", err)
+		foldersToCreate := []string{
+			"packs",
+			"packs/data",
+			"packs/BP",
+			"packs/RP",
+			".regolith",
+			".regolith/cache",
+			".regolith/venvs",
 		}
 
-		err = os.Mkdir("./packs/RP", 0666)
-		if err != nil {
-			Logger.Error("Could not create ./packs/RP folder", err)
-		}
-
-		err = os.Mkdir("./packs/BP", 0666)
-		if err != nil {
-			Logger.Error("Could not create ./packs/BP folder", err)
-		}
-
-		err = os.Mkdir("./packs/data", 0666)
-		if err != nil {
-			Logger.Error("Could not create ./packs/data folder", err)
-		}
-
-		err = os.Mkdir(".regolith", 0666)
-		if err != nil {
-			Logger.Error("Could not create .regolith folder", err)
-		}
-
-		err = os.Mkdir(".regolith/cache", 0666)
-		if err != nil {
-			Logger.Error("Could not create cache folder", err)
-		}
-
-		err = os.Mkdir(".regolith/venvs", 0666)
-		if err != nil {
-			Logger.Error("Could not create venvs folder", err)
+		for _, folder := range foldersToCreate {
+			err = os.Mkdir(folder, 0666)
+			if err != nil {
+				Logger.Error("Could not create folder: %s", folder, err)
+			}
 		}
 
 		Logger.Info("Regolith project initialized.")
