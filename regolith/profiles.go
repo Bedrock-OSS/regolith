@@ -26,28 +26,56 @@ func SetupTmpFiles(config Config, profile Profile) error {
 
 	// Copy the contents of the 'regolith' folder to '.regolith/tmp'
 	Logger.Debug("Copying project files to .regolith/tmp")
+	// Avoid repetetive code of preparing ResourceFolder, BehaviorFolder
+	// and DataPath with a closure
+	setup_tmp_directory := func(
+		path, short_name, descriptive_name string,
+	) error {
+		if path != "" {
+			stats, err := os.Stat(path)
+			if err != nil {
+				if os.IsNotExist(err) {
+					Logger.Warnf(
+						"%s %q does not exist", descriptive_name, path)
+					err = os.MkdirAll(
+						fmt.Sprintf(".regolith/tmp/%s", short_name), 0666)
+					if err != nil {
+						return err
+					}
+				}
+			} else if stats.IsDir() {
+				err = copy.Copy(
+					path, fmt.Sprintf(".regolith/tmp/%s", short_name),
+					copy.Options{PreserveTimes: false, Sync: false})
+				if err != nil {
+					return err
+				}
+			} else { // The folder paths leads to a file
+				return fmt.Errorf(
+					"%s path %q is not a directory",
+					descriptive_name, path)
+			}
+		} else {
+			err = os.MkdirAll(
+				fmt.Sprintf(".regolith/tmp/%s", short_name), 0666)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 
-	err = copy.Copy(config.Packs.BehaviorFolder, ".regolith/tmp/BP", copy.Options{PreserveTimes: false, Sync: false})
+	err = setup_tmp_directory(config.ResourceFolder, "RP", "resource folder")
 	if err != nil {
 		return err
 	}
-
-	err = copy.Copy(config.Packs.ResourceFolder, ".regolith/tmp/RP", copy.Options{PreserveTimes: false, Sync: false})
+	err = setup_tmp_directory(config.BehaviorFolder, "BP", "behavior folder")
 	if err != nil {
 		return err
 	}
-
-	// Copy the contents of 'data' folder to '.regolith/tmp'
-	if profile.DataPath != "" { // datapath copied only if specified
-		err = copy.Copy(profile.DataPath, ".regolith/tmp/data", copy.Options{PreserveTimes: false, Sync: false})
-		if err != nil {
-			return err
-		}
-	} else { // create empty data path otherwise.
-		err = os.MkdirAll(".regolith/data", 0666)
-		if err != nil {
-			return err
-		}
+	err = setup_tmp_directory(profile.DataPath, "data", "data folder")
+	if err != nil {
+		return err
 	}
 
 	Logger.Debug("Setup done in ", time.Since(start))
