@@ -1,0 +1,19 @@
+{
+	"name": "filter_tester example",
+	"author": "Bedrock-OSS",
+	"packs": {
+		"behaviorPack": "./packs/BP"
+	},
+	"regolith": {
+		"profiles": {
+			"dev": {
+				"filters": [],
+				"export": {
+					"target": "local",
+					"readOnly": true
+				},
+				"dataPath": "./data"
+			}
+		}
+	}
+}

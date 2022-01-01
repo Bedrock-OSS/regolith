@@ -13,3 +13,5 @@ This folder is used to store resources used for testing.
     The filter has a reference to another remote filter on the same reposiotry.
 - `double_remote_project_installed` - expected result of contents of
     `double_remote_project` after installation.
+- `run_missing_rp_project` - a project that for testing `regolith run` which is
+  missing `packs/RP`. The profile doesn't have any filters.

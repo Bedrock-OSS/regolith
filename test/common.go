@@ -15,6 +15,7 @@ const minimalProjectPath = "testdata/minimal_project"
 const multitargetProjectPath = "testdata/multitarget_project"
 const doubleRemoteProjectPath = "testdata/double_remote_project"
 const doubleRemoteProjectInstalledPath = "testdata/double_remote_project_installed"
+const runMissingRpProjectPath = "testdata/run_missing_rp_project"
 
 // listPaths returns a dictionary with paths of the files from 'path' directory
 // relative to 'root' directory used as keys, and with md5 hashes paths as
