@@ -19,10 +19,10 @@ const GitIgnore = `/build
 
 // TODO implement the rest of the standard config spec
 type Config struct {
-	Name            string `json:"name"`
-	Author          string `json:"author"`
-	Packs           `json:"packs"`
-	RegolithProject `json:"regolith"`
+	Name            string `json:"name,omitempty"`
+	Author          string `json:"author,omitempty"`
+	Packs           `json:"packs,omitempty"`
+	RegolithProject `json:"regolith,omitempty"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -47,18 +47,18 @@ func LoadConfig() (*Config, error) {
 }
 
 type Packs struct {
-	BehaviorFolder string `json:"behaviorPack"`
-	ResourceFolder string `json:"resourcePack"`
+	BehaviorFolder string `json:"behaviorPack,omitempty"`
+	ResourceFolder string `json:"resourcePack,omitempty"`
 }
 
 type RegolithProject struct {
-	Profiles map[string]Profile `json:"profiles"`
+	Profiles map[string]Profile `json:"profiles,omitempty"`
 }
 
 type Profile struct {
-	Filters      []Filter     `json:"filters"`
-	ExportTarget ExportTarget `json:"export"`
-	DataPath     string       `json:"dataPath"`
+	Filters      []Filter     `json:"filters,omitempty"`
+	ExportTarget ExportTarget `json:"export,omitempty"`
+	DataPath     string       `json:"dataPath,omitempty"`
 }
 
 // LoadFiltersFromPath returns a Profile with list of filters loaded from
@@ -183,16 +183,16 @@ func (p *Profile) Install(isForced bool, profilePath string) error {
 }
 
 type Filter struct {
-	Name      string                 `json:"name"`
-	Script    string                 `json:"script"`
-	Disabled  bool                   `json:"disabled"`
-	RunWith   string                 `json:"runWith"`
-	Command   string                 `json:"command"`
-	Arguments []string               `json:"arguments"`
-	Url       string                 `json:"url"`
-	Filter    string                 `json:"filter"`
-	Settings  map[string]interface{} `json:"settings"`
-	VenvSlot  int                    `json:"venvSlot"`
+	Name      string                 `json:"name,omitempty"`
+	Script    string                 `json:"script,omitempty"`
+	Disabled  bool                   `json:"disabled,omitempty"`
+	RunWith   string                 `json:"runWith,omitempty"`
+	Command   string                 `json:"command,omitempty"`
+	Arguments []string               `json:"arguments,omitempty"`
+	Url       string                 `json:"url,omitempty"`
+	Filter    string                 `json:"filter,omitempty"`
+	Settings  map[string]interface{} `json:"settings,omitempty"`
+	VenvSlot  int                    `json:"venvSlot,omitempty"`
 }
 
 // GetFilterPath returns URL for downloading the filter or empty string
@@ -308,16 +308,12 @@ func (f *Filter) Download(isForced bool, profileDir string) (string, error) {
 }
 
 type ExportTarget struct {
-	Target    string `json:"target"` // The mode of exporting. "develop" or "exact"
-	RpPath    string `json:"rpPath"` // Relative or absolute path to resource pack for "exact" export target
-	BpPath    string `json:"bpPath"` // Relative or absolute path to resource pack for "exact" export target
-	WorldName string `json:"worldName"`
-	WorldPath string `json:"worldPath"`
+	Target    string `json:"target,omitempty"` // The mode of exporting. "develop" or "exact"
+	RpPath    string `json:"rpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
+	BpPath    string `json:"bpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
+	WorldName string `json:"worldName,omitempty"`
+	WorldPath string `json:"worldPath,omitempty"`
 	ReadOnly  bool   `json:"readOnly"` // Whether the exported files should be read-only
-	// ComMojangPath string `json:"comMojangPath"`
-	// NOT USED, DISABLED FOR NOW.
-	// Clean         bool   `json:"clean"`
-	// Path          string `json:"path"`
 }
 
 func IsProjectInitialized() bool {
@@ -359,7 +355,11 @@ func InitializeRegolithProject(isForced bool) error {
 				Profiles: map[string]Profile{
 					"dev": {
 						DataPath: "./packs/data",
-						Filters:  []Filter{},
+						Filters: []Filter{
+							{
+								Filter: "hello_world",
+							},
+						},
 						ExportTarget: ExportTarget{
 							Target:   "development",
 							ReadOnly: false,
