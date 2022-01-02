@@ -1,0 +1,25 @@
+{
+	"name": "Local Requirements Test Project",
+	"author": "Bedrock-OSS",
+	"packs": {
+		"behaviorPack": "./packs/BP",
+		"resourcePack": "./packs/RP"
+	},
+	"regolith": {
+		"profiles": {
+			"dev": {
+				"filters": [
+					{
+						"runWith": "python",
+						"script": "../scripts/some_script.py"
+					}
+				],
+				"export": {
+					"target": "local",
+					"readOnly": true
+				},
+				"dataPath": "./packs/data"
+			}
+		}
+	}
+}
