@@ -38,21 +38,10 @@ func IsRemoteFilterCached(url string) bool {
 func InstallDependencies(isForced bool) error {
 	Logger.Infof("Installing dependencies...")
 
-	project, err := LoadConfig()
-	if err != nil {
-		return wrapError("Failed to load project config", err)
-	}
+	project := LoadConfig()
 
-	err = os.MkdirAll(".regolith/cache/filters", 0666)
-	if err != nil {
-		return wrapError("Could not create .regolith/cache/filters", err)
-	}
-
-	// Special path for virtual environments for python
-	err = os.MkdirAll(".regolith/cache/venvs", 0666)
-	if err != nil {
-		return wrapError("Could not create .regolith/cache/venvs", err)
-	}
+	CreateDirectoryIfNotExists(".regolith/cache/filters", true)
+	CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
 
 	wd, err := os.Getwd()
 	if err != nil {
