@@ -51,12 +51,11 @@
 
 ### 2. Build
 
- `./scripts/build-local.sh`
+There are a few ways to build:
+ - `./scripts/build-local.sh` (no clue)
+ - `go build` (creates exe)
+ - `go install` (installs to gopath)
 
-#### or:
+## Running Tests
 
- `go build`
-
-#### or:
-
- `go install`
+`go test ./...`
