@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/google/go-github/v39/github"
 )
 
@@ -26,7 +27,7 @@ func StringArrayContains(arr []string, str string) bool {
 
 func wrapError(text string, err error) error {
 	if err != nil {
-		return errors.New(fmt.Sprintf("%s\nCaused by: %s", text, err.Error()))
+		return errors.New(fmt.Sprintf("%s\n[%s]: %s", text, color.RedString("+"), err.Error()))
 	}
 	return errors.New(text)
 }

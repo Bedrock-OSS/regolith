@@ -121,13 +121,14 @@ func (profile *Profile) Install(isForced bool, profilePath string) error {
 	for filter := range profile.Filters {
 		filter := &profile.Filters[filter] // Using pointer is faster than creating copies in the loop and gives more options
 
-		downloadPath, err := filter.Download(isForced, profilePath)
+		downloadPath := filter.GetDownloadUrl()
+		err := filter.Download(isForced, profilePath)
 		// TODO - we could use type switch to handle different kinds of errors
 		// here. Download can fail on downloading or on cleaning the download
 		// path. It can also fail when isForced is false and the path already
 		// exists.
 		if err != nil {
-			Logger.Warnf("Could not download filter", err)
+			Logger.Fatal(wrapError("Could not download filter: ", err))
 		} else if downloadPath == "" { // filter.RunWith != "" && filter.Script != ""
 			continue
 		}
@@ -269,7 +270,7 @@ func (filter *Filter) DownloadDependencies(isForced bool, profileDirectory strin
 }
 
 // Downloads the filter into its own directory and returns the download path.
-func (filter *Filter) Download(isForced bool, profileDirectory string) (string, error) {
+func (filter *Filter) Download(isForced bool, profileDirectory string) error {
 	url := filter.GetDownloadUrl()
 
 	// Download the filter into the cache folder
@@ -281,24 +282,25 @@ func (filter *Filter) Download(isForced bool, profileDirectory string) (string, 
 		if !isForced {
 			Logger.Warnf("Dependency %s already installed, skipping. Run "+
 				"with '-f' to force.", url)
-			return "", nil
+			return nil
 		} else {
 			Logger.Warnf("Dependency %s already installed and force mode is enabled.", url)
 			err := os.RemoveAll(downloadPath)
 			if err != nil {
-				return "", wrapError("Could not remove installed filter.", err)
+				return wrapError("Could not remove installed filter.", err)
 			}
 		}
-	} else {
-
 	}
 
 	Logger.Infof("Installing filter %s...", url)
 
 	// Download the filter using Git Getter
+	// TODO:
+	// Can we somehow detect whether this is a failure from git being not installed, or a failure from
+	// the repo/folder not existing?
 	err := getter.Get(downloadPath, url)
 	if err != nil {
-		return "", wrapError("Could not download filter. Is git installed?", err)
+		return wrapError("Could not download filter. \n	Is git installed? \n	Does that filter exist?", err)
 	}
 
 	// Remove 'test' folder, which we never want to use
@@ -307,7 +309,7 @@ func (filter *Filter) Download(isForced bool, profileDirectory string) (string, 
 		os.RemoveAll(testFolder)
 	}
 
-	return downloadPath, nil
+	return nil
 }
 
 type ExportTarget struct {
