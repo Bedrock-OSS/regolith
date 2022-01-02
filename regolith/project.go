@@ -115,10 +115,10 @@ func LoadFilterJsonProfile(
 	return &remoteProfile, nil
 }
 
-// Install installs all of the dependencies of the profile
-func (p *Profile) Install(isForced bool, profilePath string) error {
-	for filter := range p.Filters {
-		filter := &p.Filters[filter] // Using pointer is faster than creating copies in the loop and gives more options
+// Installs all dependencies of the profile
+func (profile *Profile) Install(isForced bool, profilePath string) error {
+	for filter := range profile.Filters {
+		filter := &profile.Filters[filter] // Using pointer is faster than creating copies in the loop and gives more options
 
 		downloadPath, err := filter.Download(isForced, profilePath)
 		// TODO - we could use type switch to handle different kinds of errors
@@ -126,14 +126,14 @@ func (p *Profile) Install(isForced bool, profilePath string) error {
 		// path. It can also fail when isForced is false and the path already
 		// exists.
 		if err != nil {
-			return wrapError("Could not download filter", err) // TODO - I don't think this should break the entire install
+			Logger.Warnf("Could not download filter", err)
 		} else if downloadPath == "" { // filter.RunWith != "" && filter.Script != ""
 			continue
 		}
 
 		// Move filters 'data' folder contents into 'data'
 		filterName := filter.GetIdName()
-		localDataPath := path.Join(p.DataPath, filterName)
+		localDataPath := path.Join(profile.DataPath, filterName)
 		remoteDataPath := path.Join(downloadPath, "data")
 
 		// If the filterDataPath already exists, we must not overwrite
@@ -152,7 +152,7 @@ func (p *Profile) Install(isForced bool, profilePath string) error {
 			}
 
 			// Copy 'data' to dataPath
-			if p.DataPath != "" {
+			if profile.DataPath != "" {
 				err = copy.Copy(
 					remoteDataPath, localDataPath,
 					copy.Options{PreserveTimes: false, Sync: false})
@@ -167,7 +167,7 @@ func (p *Profile) Install(isForced bool, profilePath string) error {
 
 		// Create profile from filter.json file
 		remoteProfile, err := LoadFilterJsonProfile(
-			filepath.Join(downloadPath, "filter.json"), *filter, *p)
+			filepath.Join(downloadPath, "filter.json"), *filter, *profile)
 		if err != nil {
 			return err // TODO - I don't think this should break the entire install. Just remove the files and continue.
 		}
@@ -190,30 +190,37 @@ type Filter struct {
 	Command   string                 `json:"command,omitempty"`
 	Arguments []string               `json:"arguments,omitempty"`
 	Url       string                 `json:"url,omitempty"`
+	Version   string                 `json:"version,omitempty"`
 	Filter    string                 `json:"filter,omitempty"`
 	Settings  map[string]interface{} `json:"settings,omitempty"`
 	VenvSlot  int                    `json:"venvSlot,omitempty"`
 }
 
-// GetFilterPath returns URL for downloading the filter or empty string
-// if the filter is not remote
-func (f *Filter) GetDownloadUrl() string {
-	if f.Url != "" {
-		return FilterNameToUrl(f.Url, f.Filter)
-	} else if f.Filter != "" {
-		return FilterNameToUrl(StandardLibraryUrl, f.Filter)
+// Creates a download URL, based on the filter definition
+func (filter *Filter) GetDownloadUrl() string {
+	repoUrl := ""
+	if filter.Url == "" {
+		repoUrl = STANDARD_LIBRARY_URL
+	} else {
+		repoUrl = filter.Url
 	}
-	return ""
+
+	repoVersion := ""
+	if filter.Version != "" {
+		repoVersion = "?ref=" + filter.Version
+	}
+
+	return fmt.Sprintf("%s//%s%s", repoUrl, filter.Filter, repoVersion)
 }
 
 // GetIdName returns the name that identifies the filter. This name is used to
 // create and access the data folder for the filter. This property only makes
 // sense for remote filters. Non-remote filters return empty string.
-func (f *Filter) GetIdName() string {
-	if f.Filter != "" {
-		return f.Filter
-	} else if f.Url != "" {
-		splitUrl := strings.Split(f.Url, "/")
+func (filter *Filter) GetIdName() string {
+	if filter.Filter != "" {
+		return filter.Filter
+	} else if filter.Url != "" {
+		splitUrl := strings.Split(filter.Url, "/")
 		return splitUrl[len(splitUrl)-1]
 	}
 	return ""
@@ -221,11 +228,11 @@ func (f *Filter) GetIdName() string {
 
 // GetFriendlyName returns the friendly name of the filter that can be used for
 // logging.
-func (f *Filter) GetFriendlyName() string {
-	if f.Name != "" {
-		return f.Name
+func (filter *Filter) GetFriendlyName() string {
+	if filter.Name != "" {
+		return filter.Name
 	}
-	return f.Filter
+	return filter.Filter
 }
 
 // Download downloads the filter and returns the download path. If the filter
@@ -234,26 +241,26 @@ func (f *Filter) GetFriendlyName() string {
 // owns the filter (the directory of either the config.json or filter.json
 // file). The profileDir combined with Script property of the filter gives
 // the absolute path to the script.
-func (f *Filter) Download(isForced bool, profileDir string) (string, error) {
-	url := f.GetDownloadUrl()
+func (filter *Filter) Download(isForced bool, profileDirectory string) (string, error) {
+	url := filter.GetDownloadUrl()
 	if url == "" {
 		// Not a remote filter, download the dependencies
-		if filterDefinition, ok := FilterTypes[f.RunWith]; ok {
-			scriptPath, err := filepath.Abs(filepath.Join(profileDir, f.Script))
+		if filterDefinition, ok := FilterTypes[filter.RunWith]; ok {
+			scriptPath, err := filepath.Abs(filepath.Join(profileDirectory, filter.Script))
 			if err != nil {
 				return "", wrapError(fmt.Sprintf(
 					"Unable to resolve path of %s script",
-					f.GetFriendlyName()), err)
+					filter.GetFriendlyName()), err)
 			}
-			err = filterDefinition.install(*f, filepath.Dir(scriptPath))
+			err = filterDefinition.install(*filter, filepath.Dir(scriptPath))
 			if err != nil {
 				return "", wrapError(fmt.Sprintf(
 					"Couldn't install filter dependencies %s",
-					f.GetFriendlyName()), err)
+					filter.GetFriendlyName()), err)
 			}
 		} else {
 			Logger.Warnf(
-				"Filter type '%s' not supported", f.RunWith)
+				"Filter type '%s' not supported", filter.RunWith)
 		}
 		return "", nil // The filter is not downloaded (just dependencies)
 	}
@@ -269,41 +276,28 @@ func (f *Filter) Download(isForced bool, profileDir string) (string, error) {
 				"with '-f' to force.", url)
 			return "", nil
 		} else {
-			Logger.Warnf("Dependency %s already installed, but forcing "+
-				"installation.", url)
+			Logger.Warnf("Dependency %s already installed and force mode is enabled.", url)
 			err := os.RemoveAll(downloadPath)
 			if err != nil {
-				return "", wrapError("Could not remove installed filter", err)
+				return "", wrapError("Could not remove installed filter.", err)
 			}
 		}
 	}
 
-	Logger.Infof("Installing dependency %s...", url)
+	Logger.Infof("Installing filter %s...", url)
 
-	// Download the filter fresh
-	ok, err := DownloadGitHubUrl(url, downloadPath)
+	// Download the filter using Git Getter
+	err := getter.Get(downloadPath, url)
 	if err != nil {
-		Logger.Debug(err)
-	}
-	if !ok {
-		Logger.Debug(
-			"Failed to download filter " + f.Filter + " without git")
-		err := getter.Get(downloadPath, url)
-		if err != nil {
-			return "", err
-		}
+		return "", wrapError("Could not download filter. Is git installed?", err)
 	}
 
-	// Remove 'test' folder, which may be installed via git-getter library
-	// This is a workaround for cases where our own getter library is not
-	// able to download the filter.
+	// Remove 'test' folder, which we never want to use
 	testFolder := path.Join(downloadPath, "test")
 	if _, err := os.Stat(testFolder); err == nil {
 		os.RemoveAll(testFolder)
-		if err != nil {
-			Logger.Debug("Could not remove test folder", err)
-		}
 	}
+
 	return downloadPath, nil
 }
 

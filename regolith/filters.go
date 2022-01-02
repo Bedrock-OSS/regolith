@@ -100,7 +100,7 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 // function doesn't test if the filter passed on input is standard.
 func RunStandardFilter(filter Filter) error {
 	Logger.Debugf("RunStandardFilter '%s'", filter.Filter)
-	return RunRemoteFilter(FilterNameToUrl(StandardLibraryUrl, filter.Filter), filter)
+	return RunRemoteFilter(filter.GetDownloadUrl(), filter)
 }
 
 func RunHelloWorldFilter(filter *Filter) error {
