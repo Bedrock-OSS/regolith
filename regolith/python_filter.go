@@ -108,11 +108,19 @@ func resolveVenvPath(filter Filter) (string, error) {
 }
 
 func checkPythonRequirements() error {
-	_, err := exec.LookPath("python")
+	python := ""
+	var err error
+	for _, c := range []string{"python", "python3"} {
+		_, err = exec.LookPath(c)
+		if err == nil {
+			python = c
+			break
+		}
+	}
 	if err != nil {
 		return errors.New("Python not found. Download and install it from https://www.python.org/downloads/")
 	}
-	cmd, err := exec.Command("python", "--version").Output()
+	cmd, err := exec.Command(python, "--version").Output()
 	if err != nil {
 		return wrapError("Python version check failed", err)
 	}
