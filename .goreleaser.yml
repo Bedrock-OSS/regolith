@@ -9,8 +9,6 @@ builds:
   - id: binary
     goos:
       - windows
-      - darwin
-      - linux
     goarch:
       - amd64
       - arm
@@ -21,16 +19,6 @@ builds:
       - 7
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.buildSource=binaryRelease
-  - id: snap
-    goos:
-      - linux
-    goarch:
-      - amd64
-      - arm
-      - arm64
-      - 386
-    ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.buildSource=snap
   - id: msi
     goos:
       - windows
@@ -45,8 +33,6 @@ archives:
   - builds:
       - binary
     replacements:
-      darwin: Darwin
-      linux: Linux
       windows: Windows
       386: x86
       amd64: x86_64
