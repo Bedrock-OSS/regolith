@@ -9,6 +9,13 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// venvScriptsPath is a folder name between "venv" and "python" that leads to
+// the python executable.
+const venvScriptsPath = "Scripts"
+
+// exeSuffix is a suffix for executable files.
+const exeSuffix = ".exe"
+
 // copyFileSecurityInfo copies the DACL info from source path to DACL of
 // the target path
 func copyFileSecurityInfo(source string, target string) error {
