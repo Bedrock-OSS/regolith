@@ -117,8 +117,8 @@ func LoadFilterJsonProfile(
 
 // Installs all dependencies of the profile
 func (profile *Profile) Install(isForced bool, profilePath string) error {
-	for filterName, filter := range profile.Filters {
-		Logger.Infof(" - installing filter %s...", filterName)
+	for filter := range profile.Filters {
+		filter := &profile.Filters[filter] // Using pointer is faster than creating copies in the loop and gives more options
 
 		downloadPath, err := filter.Download(isForced, profilePath)
 		// TODO - we could use type switch to handle different kinds of errors
@@ -170,7 +170,7 @@ func (profile *Profile) Install(isForced bool, profilePath string) error {
 
 		// Create profile from filter.json file
 		remoteProfile, err := LoadFilterJsonProfile(
-			filepath.Join(downloadPath, "filter.json"), filter, *profile)
+			filepath.Join(downloadPath, "filter.json"), *filter, *profile)
 		if err != nil {
 			return err // TODO - I don't think this should break the entire install. Just remove the files and continue.
 		}
@@ -288,6 +288,8 @@ func (filter *Filter) Download(isForced bool, profileDirectory string) (string, 
 				return "", wrapError("Could not remove installed filter.", err)
 			}
 		}
+	} else {
+
 	}
 
 	Logger.Infof("Installing filter %s...", url)
