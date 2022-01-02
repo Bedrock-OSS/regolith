@@ -68,7 +68,14 @@ func installPythonFilter(filter Filter, filterPath string) error {
 			return wrapError("Failed to resolve venv path", err)
 		}
 		Logger.Info("Creating venv...")
-		err = RunSubProcess("python", []string{"-m", "venv", venvPath}, filterPath, "")
+		// it's sometimes python3 on some OSs
+		for _, c := range []string{"python", "python3"} {
+			err = RunSubProcess(
+				c, []string{"-m", "venv", venvPath}, filterPath, "")
+			if err == nil {
+				break
+			}
+		}
 		if err != nil {
 			return err
 		}
