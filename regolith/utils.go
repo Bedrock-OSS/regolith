@@ -31,6 +31,19 @@ func wrapError(text string, err error) error {
 	return errors.New(text)
 }
 
+func CreateDirectoryIfNotExists(directory string, mustSucceed bool) {
+	if _, err := os.Stat(directory); os.IsNotExist(err) {
+		err = os.MkdirAll(directory, 0666)
+		if err != nil {
+			if mustSucceed {
+				Logger.Fatalf("Failed to create directory %s: %s", directory, err.Error())
+			} else {
+				Logger.Warnf("Failed to create directory %s: %s", directory, err.Error())
+			}
+		}
+	}
+}
+
 // GetAbsoluteWorkingDirectory returns an absolute path to .regolith/tmp
 func GetAbsoluteWorkingDirectory() string {
 	absoluteWorkingDir, _ := filepath.Abs(".regolith/tmp")
@@ -59,7 +72,7 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 	}
 }
 
-func parseSemver(semver string) (major int, minor int, patch int) {
+func ParseSemanticVersion(semver string) (major int, minor int, patch int) {
 	split := strings.Split(semver, ".")
 	length := len(split)
 	if length > 0 {
@@ -75,9 +88,9 @@ func parseSemver(semver string) (major int, minor int, patch int) {
 }
 
 // Returns 1 if first version is newer, -1 if older, 0 if the same
-func compareSemver(ver1 string, ver2 string) int {
-	major1, minor1, patch1 := parseSemver(ver1)
-	major2, minor2, patch2 := parseSemver(ver2)
+func CompareSemanticVersion(ver1 string, ver2 string) int {
+	major1, minor1, patch1 := ParseSemanticVersion(ver1)
+	major2, minor2, patch2 := ParseSemanticVersion(ver2)
 	if major1 > major2 {
 		return 1
 	} else if major1 < major2 {
@@ -114,7 +127,7 @@ func CheckUpdate(version string, status chan UpdateStatus) {
 		return
 	}
 	status <- UpdateStatus{
-		ShouldUpdate: compareSemver(*release.TagName, version) == 1,
+		ShouldUpdate: CompareSemanticVersion(*release.TagName, version) == 1,
 		Url:          release.HTMLURL,
 	}
 }
