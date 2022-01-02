@@ -121,20 +121,18 @@ func (profile *Profile) Install(isForced bool, profilePath string) error {
 	for filter := range profile.Filters {
 		filter := &profile.Filters[filter] // Using pointer is faster than creating copies in the loop and gives more options
 
-		downloadPath := filter.GetDownloadUrl()
-		err := filter.Download(isForced, profilePath)
-		// TODO - we could use type switch to handle different kinds of errors
-		// here. Download can fail on downloading or on cleaning the download
-		// path. It can also fail when isForced is false and the path already
-		// exists.
-		if err != nil {
-			Logger.Fatal(wrapError("Could not download filter: ", err))
-		} else if downloadPath == "" { // filter.RunWith != "" && filter.Script != ""
-			continue
+		downloadPath := UrlToPath(filter.GetDownloadUrl())
+		if filter.IsRemote() {
+			err := filter.Download(isForced, downloadPath)
+			if err != nil {
+				if err != nil {
+					Logger.Fatal(wrapError("Could not download filter: ", err))
+				}
+			}
 		}
 
 		// Install dependencies
-		err = filter.DownloadDependencies(isForced, downloadPath)
+		err := filter.DownloadDependencies(isForced, downloadPath)
 
 		// Move filters 'data' folder contents into 'data'
 		filterName := filter.GetIdName()
@@ -171,11 +169,17 @@ func (profile *Profile) Install(isForced bool, profilePath string) error {
 		}
 
 		// Create profile from filter.json file
-		remoteProfile, err := LoadFilterJsonProfile(
-			filepath.Join(downloadPath, "filter.json"), *filter, *profile)
+		filterPath, err := filepath.Abs(path.Join(downloadPath, "filter.json"))
+		if err != nil {
+			return wrapError("Could not find filter.json", err)
+		}
+
+		remoteProfile, err := LoadFilterJsonProfile(filterPath, *filter, *profile)
 		if err != nil {
 			return err // TODO - I don't think this should break the entire install. Just remove the files and continue.
 		}
+
+		Logger.Info("TEST")
 
 		// Install dependencies of remote filters. Recursion ends when there
 		// is no more nested remote dependencies.
@@ -199,6 +203,10 @@ type Filter struct {
 	Filter    string                 `json:"filter,omitempty"`
 	Settings  map[string]interface{} `json:"settings,omitempty"`
 	VenvSlot  int                    `json:"venvSlot,omitempty"`
+}
+
+func (filter *Filter) IsRemote() bool {
+	return filter.Url != ""
 }
 
 // Creates a download URL, based on the filter definition
@@ -249,6 +257,8 @@ func (filter *Filter) GetFriendlyName() string {
 
 // Installs all dependencies of the filter
 func (filter *Filter) DownloadDependencies(isForced bool, profileDirectory string) error {
+	Logger.Infof("Downloading dependencies for %s...", filter.GetFriendlyName())
+
 	if filterDefinition, ok := FilterTypes[filter.RunWith]; ok {
 		scriptPath, err := filepath.Abs(filepath.Join(profileDirectory, filter.Script))
 		if err != nil {
@@ -266,6 +276,8 @@ func (filter *Filter) DownloadDependencies(isForced bool, profileDirectory strin
 		Logger.Warnf(
 			"Filter type '%s' not supported", filter.RunWith)
 	}
+
+	Logger.Infof("Dependencies for %s installed successfully", filter.GetFriendlyName())
 	return nil
 }
 
@@ -280,19 +292,19 @@ func (filter *Filter) Download(isForced bool, profileDirectory string) error {
 	// Force mode allows overwriting.
 	if _, err := os.Stat(downloadPath); err == nil {
 		if !isForced {
-			Logger.Warnf("Dependency %s already installed, skipping. Run "+
-				"with '-f' to force.", url)
+			Logger.Warnf("Filter %s already installed, skipping. Run "+
+				"with '-f' to force.", filter.GetFriendlyName())
 			return nil
 		} else {
-			Logger.Warnf("Dependency %s already installed and force mode is enabled.", url)
+			Logger.Warnf("Filter %s already installed and force mode is enabled.", filter.GetFriendlyName())
 			err := os.RemoveAll(downloadPath)
 			if err != nil {
-				return wrapError("Could not remove installed filter.", err)
+				return wrapError(fmt.Sprintf("Could not remove installed filter %s.", filter.GetFriendlyName()), err)
 			}
 		}
 	}
 
-	Logger.Infof("Installing filter %s...", url)
+	Logger.Infof("Downloading filter %s...", filter.GetFriendlyName())
 
 	// Download the filter using Git Getter
 	// TODO:
@@ -300,7 +312,7 @@ func (filter *Filter) Download(isForced bool, profileDirectory string) error {
 	// the repo/folder not existing?
 	err := getter.Get(downloadPath, url)
 	if err != nil {
-		return wrapError("Could not download filter. \n	Is git installed? \n	Does that filter exist?", err)
+		return wrapError(fmt.Sprintf("Could not download filter from %s. \n	Is git installed? \n	Does that filter exist?", url), err)
 	}
 
 	// Remove 'test' folder, which we never want to use
@@ -309,6 +321,7 @@ func (filter *Filter) Download(isForced bool, profileDirectory string) error {
 		os.RemoveAll(testFolder)
 	}
 
+	Logger.Infof("Filter %s downloaded successfully.", url)
 	return nil
 }
 
