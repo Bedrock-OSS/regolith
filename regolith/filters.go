@@ -7,10 +7,10 @@ import (
 )
 
 type filterDefinition struct {
-	filter             func(filter Filter, settings map[string]interface{}, absoluteLocation string) error
-	install            func(filter Filter, path string) error
-	check              func() error
-	validateDefinition func(filter Filter) error
+	filter              func(filter Filter, settings map[string]interface{}, absoluteLocation string) error
+	installDependencies func(filter Filter, path string) error
+	check               func() error
+	validateDefinition  func(filter Filter) error
 }
 
 var FilterTypes = map[string]filterDefinition{}

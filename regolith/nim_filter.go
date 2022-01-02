@@ -12,9 +12,9 @@ const nimFilterName = "nim"
 
 func RegisterNimFilter(filters map[string]filterDefinition) {
 	filters[nimFilterName] = filterDefinition{
-		filter:  runNimFilter,
-		install: installNimFilter,
-		check:   checkNimRequirements,
+		filter:              runNimFilter,
+		installDependencies: installNimFilter,
+		check:               checkNimRequirements,
 	}
 }
 

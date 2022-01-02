@@ -26,9 +26,7 @@ func IsRemoteFilterCached(url string) bool {
 // Recursively install dependencies for the entire config.
 //  - Force mode will overwrite existing dependencies.
 //  - Non-force mode will only install dependencies that are not already installed.
-func InstallDependencies(isForced bool, updateFilters bool) error {
-	Logger.Infof("Installing dependencies...")
-
+func InstallFilters(isForced bool, updateFilters bool) error {
 	project, err := LoadConfig()
 	if err != nil {
 		return wrapError("Failed to load project config", err)
@@ -49,13 +47,14 @@ func InstallDependencies(isForced bool, updateFilters bool) error {
 	if err != nil {
 		return wrapError("Could not get working directory", err)
 	}
-	for _, profile := range project.Profiles {
+	for profileName, profile := range project.Profiles {
+		Logger.Infof("Installing profile %s...", profileName)
 		err := profile.Install(isForced, wd)
 		if err != nil {
-			return wrapError("Could not install dependency", err)
+			return wrapError("Could not install profile!", err)
 		}
 	}
 
-	Logger.Infof("Dependencies installed.")
+	Logger.Infof("Profile installation complete.")
 	return nil
 }
