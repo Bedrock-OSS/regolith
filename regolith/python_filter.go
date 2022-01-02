@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -25,7 +24,9 @@ func RegisterPythonFilter(filters map[string]filterDefinition) {
 func runPythonFilter(
 	filter Filter, settings map[string]interface{}, absoluteLocation string,
 ) error {
-	command := "python"
+	// command is a list of strings that can possibly run python (it's python3
+	// on some OSs)
+	command := []string{"python", "python3"}
 	scriptPath := filepath.Join(absoluteLocation, filter.Script)
 
 	if needsVenv(filepath.Dir(scriptPath)) {
@@ -34,11 +35,8 @@ func runPythonFilter(
 			return wrapError("Failed to resolve venv path", err)
 		}
 		Logger.Debug("Running Python filter using venv: ", venvPath)
-		suffix := ""
-		if runtime.GOOS == "windows" {
-			suffix = ".exe"
-		}
-		command = filepath.Join(venvPath, "Scripts/python"+suffix)
+		command = []string{
+			filepath.Join(venvPath, venvScriptsPath, "python"+exeSuffix)}
 	}
 	var args []string
 	if len(settings) == 0 {
@@ -49,8 +47,14 @@ func runPythonFilter(
 			[]string{"-u", scriptPath, string(jsonSettings)},
 			filter.Arguments...)
 	}
-	err := RunSubProcess(
-		command, args, absoluteLocation, GetAbsoluteWorkingDirectory())
+	var err error
+	for _, c := range command {
+		err = RunSubProcess(
+			c, args, absoluteLocation, GetAbsoluteWorkingDirectory())
+		if err == nil {
+			return nil
+		}
+	}
 	if err != nil {
 		return wrapError("Failed to run Python script", err)
 	}
@@ -64,17 +68,20 @@ func installPythonFilter(filter Filter, filterPath string) error {
 			return wrapError("Failed to resolve venv path", err)
 		}
 		Logger.Info("Creating venv...")
-		err = RunSubProcess("python", []string{"-m", "venv", venvPath}, filterPath, "")
+		// it's sometimes python3 on some OSs
+		for _, c := range []string{"python", "python3"} {
+			err = RunSubProcess(
+				c, []string{"-m", "venv", venvPath}, filterPath, "")
+			if err == nil {
+				break
+			}
+		}
 		if err != nil {
 			return err
 		}
-		suffix := ""
-		if runtime.GOOS == "windows" {
-			suffix = ".exe"
-		}
 		Logger.Info("Installing pip dependencies...")
 		err = RunSubProcess(
-			filepath.Join(venvPath, "Scripts/pip"+suffix),
+			filepath.Join(venvPath, venvScriptsPath, "pip"+exeSuffix),
 			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath)
 		if err != nil {
 			return err
@@ -101,11 +108,19 @@ func resolveVenvPath(filter Filter) (string, error) {
 }
 
 func checkPythonRequirements() error {
-	_, err := exec.LookPath("python")
+	python := ""
+	var err error
+	for _, c := range []string{"python", "python3"} {
+		_, err = exec.LookPath(c)
+		if err == nil {
+			python = c
+			break
+		}
+	}
 	if err != nil {
 		return errors.New("Python not found. Download and install it from https://www.python.org/downloads/")
 	}
-	cmd, err := exec.Command("python", "--version").Output()
+	cmd, err := exec.Command(python, "--version").Output()
 	if err != nil {
 		return wrapError("Python version check failed", err)
 	}
