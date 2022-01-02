@@ -117,8 +117,8 @@ func LoadFilterJsonProfile(
 
 // Installs all dependencies of the profile
 func (profile *Profile) Install(isForced bool, profilePath string) error {
-	for filter := range profile.Filters {
-		filter := &profile.Filters[filter] // Using pointer is faster than creating copies in the loop and gives more options
+	for filterName, filter := range profile.Filters {
+		Logger.Infof(" - installing filter %s...", filterName)
 
 		downloadPath, err := filter.Download(isForced, profilePath)
 		// TODO - we could use type switch to handle different kinds of errors
@@ -130,6 +130,9 @@ func (profile *Profile) Install(isForced bool, profilePath string) error {
 		} else if downloadPath == "" { // filter.RunWith != "" && filter.Script != ""
 			continue
 		}
+
+		// Install dependencies
+		err = filter.DownloadDependencies(isForced, downloadPath)
 
 		// Move filters 'data' folder contents into 'data'
 		filterName := filter.GetIdName()
@@ -167,7 +170,7 @@ func (profile *Profile) Install(isForced bool, profilePath string) error {
 
 		// Create profile from filter.json file
 		remoteProfile, err := LoadFilterJsonProfile(
-			filepath.Join(downloadPath, "filter.json"), *filter, *profile)
+			filepath.Join(downloadPath, "filter.json"), filter, *profile)
 		if err != nil {
 			return err // TODO - I don't think this should break the entire install. Just remove the files and continue.
 		}
@@ -241,29 +244,32 @@ func (filter *Filter) GetFriendlyName() string {
 // owns the filter (the directory of either the config.json or filter.json
 // file). The profileDir combined with Script property of the filter gives
 // the absolute path to the script.
+
+// Installs all dependencies of the filter
+func (filter *Filter) DownloadDependencies(isForced bool, profileDirectory string) error {
+	if filterDefinition, ok := FilterTypes[filter.RunWith]; ok {
+		scriptPath, err := filepath.Abs(filepath.Join(profileDirectory, filter.Script))
+		if err != nil {
+			return wrapError(fmt.Sprintf(
+				"Unable to resolve path of %s script",
+				filter.GetFriendlyName()), err)
+		}
+		err = filterDefinition.installDependencies(*filter, filepath.Dir(scriptPath))
+		if err != nil {
+			return wrapError(fmt.Sprintf(
+				"Couldn't install filter dependencies %s",
+				filter.GetFriendlyName()), err)
+		}
+	} else {
+		Logger.Warnf(
+			"Filter type '%s' not supported", filter.RunWith)
+	}
+	return nil
+}
+
+// Downloads the filter into its own directory and returns the download path.
 func (filter *Filter) Download(isForced bool, profileDirectory string) (string, error) {
 	url := filter.GetDownloadUrl()
-	if url == "" {
-		// Not a remote filter, download the dependencies
-		if filterDefinition, ok := FilterTypes[filter.RunWith]; ok {
-			scriptPath, err := filepath.Abs(filepath.Join(profileDirectory, filter.Script))
-			if err != nil {
-				return "", wrapError(fmt.Sprintf(
-					"Unable to resolve path of %s script",
-					filter.GetFriendlyName()), err)
-			}
-			err = filterDefinition.install(*filter, filepath.Dir(scriptPath))
-			if err != nil {
-				return "", wrapError(fmt.Sprintf(
-					"Couldn't install filter dependencies %s",
-					filter.GetFriendlyName()), err)
-			}
-		} else {
-			Logger.Warnf(
-				"Filter type '%s' not supported", filter.RunWith)
-		}
-		return "", nil // The filter is not downloaded (just dependencies)
-	}
 
 	// Download the filter into the cache folder
 	downloadPath := UrlToPath(url)

@@ -12,9 +12,9 @@ const nodeJSFilterName = "nodejs"
 
 func RegisterNodeJSFilter(filters map[string]filterDefinition) {
 	filters[nodeJSFilterName] = filterDefinition{
-		filter:  runNodeJSFilter,
-		install: installNodeJSFilter,
-		check:   checkNodeJSRequirements,
+		filter:              runNodeJSFilter,
+		installDependencies: installNodeJSFilter,
+		check:               checkNodeJSRequirements,
 	}
 }
 

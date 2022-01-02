@@ -12,7 +12,7 @@ const javaFilterName = "java"
 func RegisterJavaFilter(filters map[string]filterDefinition) {
 	filters[javaFilterName] = filterDefinition{
 		filter: runJavaFilter,
-		install: func(filter Filter, path string) error {
+		installDependencies: func(filter Filter, path string) error {
 			return nil
 		},
 		check: checkJavaRequirements,

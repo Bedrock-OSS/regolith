@@ -16,9 +16,9 @@ const pythonFilterName = "python"
 
 func RegisterPythonFilter(filters map[string]filterDefinition) {
 	filters[pythonFilterName] = filterDefinition{
-		filter:  runPythonFilter,
-		install: installPythonFilter,
-		check:   checkPythonRequirements,
+		filter:              runPythonFilter,
+		installDependencies: installPythonFilter,
+		check:               checkPythonRequirements,
 	}
 }
 

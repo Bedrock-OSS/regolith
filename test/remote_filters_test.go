@@ -53,7 +53,7 @@ func TestDoubleRemoteFilter(t *testing.T) {
 	// Run InstallDependencies
 	regolith.InitLogging(true)
 	regolith.RegisterFilters()
-	regolith.InstallDependencies(false, false)
+	regolith.InstallFilters(false, false)
 	// Load created paths for comparison with expected output
 	createdPaths, err := listPaths(".", ".")
 	if err != nil {
