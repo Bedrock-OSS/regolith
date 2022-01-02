@@ -61,15 +61,13 @@ func TestMoveFilesAcl(t *testing.T) {
 	defer os.Chdir(wd)
 	// Switch wd to wrokingDir
 	os.Chdir(workingDir)
-	// Get the name of the project from config
-	project, err := regolith.LoadConfig()
-	if err != nil {
-		t.Fatalf("Failed to load project config: %s", err)
-	}
+	// Get the name of the config from config
+	config := regolith.LoadConfig()
+
 	bpPath := filepath.Join(
-		mojangDir, "development_behavior_packs", project.Name+"_bp")
+		mojangDir, "development_behavior_packs", config.Name+"_bp")
 	rpPath := filepath.Join(
-		mojangDir, "development_resource_packs", project.Name+"_rp")
+		mojangDir, "development_resource_packs", config.Name+"_rp")
 	// Run regolith project
 	os.Chdir(workingDir)
 	regolith.InitLogging(true)
