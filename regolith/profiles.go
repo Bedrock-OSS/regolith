@@ -86,11 +86,9 @@ func SetupTmpFiles(config Config, profile Profile) error {
 // is the name of the profile which should be loaded from the configuration.
 func RunProfile(profileName string) error {
 	Logger.Info("Running profile: ", profileName)
-	project, err := LoadConfig()
-	if err != nil {
-		return wrapError("Failed to load project config", err)
-	}
-	profile := project.Profiles[profileName]
+	config := LoadConfig()
+
+	profile := config.Profiles[profileName]
 
 	// Check whether every filter, uses a supported filter type
 	checked := make(map[string]struct{})
@@ -112,7 +110,7 @@ func RunProfile(profileName string) error {
 	}
 
 	// Prepare tmp files
-	err = SetupTmpFiles(*project, profile)
+	err := SetupTmpFiles(*config, profile)
 	if err != nil {
 		return wrapError("Unable to setup profile", err)
 	}
@@ -130,7 +128,7 @@ func RunProfile(profileName string) error {
 	// Export files
 	Logger.Info("Moving files to target directory")
 	start := time.Now()
-	err = ExportProject(profile, project.Name)
+	err = ExportProject(profile, config.Name)
 	if err != nil {
 		return wrapError("Exporting project failed", err)
 	}

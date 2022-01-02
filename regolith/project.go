@@ -17,7 +17,6 @@ const ManifestName = "config.json"
 const GitIgnore = `/build
 /.regolith`
 
-// TODO implement the rest of the standard config spec
 type Config struct {
 	Name            string `json:"name,omitempty"`
 	Author          string `json:"author,omitempty"`
@@ -25,16 +24,18 @@ type Config struct {
 	RegolithProject `json:"regolith,omitempty"`
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig() *Config {
 	file, err := ioutil.ReadFile(ManifestName)
 	if err != nil {
-		return nil, wrapError(fmt.Sprintf("Couldn't find %s! Consider running 'regolith init'", ManifestName), err)
+		Logger.Fatal("Couldn't find %s! Consider running 'regolith init'.", ManifestName, err)
 	}
+
 	var result *Config
 	err = json.Unmarshal(file, &result)
 	if err != nil {
-		return nil, wrapError(fmt.Sprintf("Couldn't load %s: ", ManifestName), err)
+		Logger.Fatal("Couldn't load %s! Does the file contain correct json?", ManifestName, err)
 	}
+
 	// If settings is nil replace it with empty map
 	for _, profile := range result.Profiles {
 		for fk := range profile.Filters {
@@ -43,7 +44,7 @@ func LoadConfig() (*Config, error) {
 			}
 		}
 	}
-	return result, nil
+	return result
 }
 
 type Packs struct {
