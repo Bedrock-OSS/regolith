@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -23,10 +22,14 @@ func RegisterPythonFilter(filters map[string]filterDefinition) {
 	}
 }
 
-func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) error {
+func runPythonFilter(
+	filter Filter, settings map[string]interface{}, absoluteLocation string,
+) error {
 	command := "python"
-	if needsVenv(absoluteLocation) {
-		venvPath, err := resolveVenvPath(filter, absoluteLocation)
+	scriptPath := filepath.Join(absoluteLocation, filter.Script)
+
+	if needsVenv(filepath.Dir(scriptPath)) {
+		venvPath, err := resolveVenvPath(filter)
 		if err != nil {
 			return wrapError("Failed to resolve venv path", err)
 		}
@@ -35,26 +38,28 @@ func runPythonFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 		if runtime.GOOS == "windows" {
 			suffix = ".exe"
 		}
-		command = path.Join(venvPath, "Scripts/python"+suffix)
+		command = filepath.Join(venvPath, "Scripts/python"+suffix)
 	}
+	var args []string
 	if len(settings) == 0 {
-		err := RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Script}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
-		if err != nil {
-			return wrapError("Failed to run Python script", err)
-		}
+		args = append([]string{"-u", scriptPath}, filter.Arguments...)
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		err := RunSubProcess(command, append([]string{"-u", absoluteLocation + string(os.PathSeparator) + filter.Script, string(jsonSettings)}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
-		if err != nil {
-			return wrapError("Failed to run Python script", err)
-		}
+		args = append(
+			[]string{"-u", scriptPath, string(jsonSettings)},
+			filter.Arguments...)
+	}
+	err := RunSubProcess(
+		command, args, absoluteLocation, GetAbsoluteWorkingDirectory())
+	if err != nil {
+		return wrapError("Failed to run Python script", err)
 	}
 	return nil
 }
 
 func installPythonFilter(filter Filter, filterPath string) error {
 	if needsVenv(filterPath) {
-		venvPath, err := resolveVenvPath(filter, filterPath)
+		venvPath, err := resolveVenvPath(filter)
 		if err != nil {
 			return wrapError("Failed to resolve venv path", err)
 		}
@@ -69,7 +74,7 @@ func installPythonFilter(filter Filter, filterPath string) error {
 		}
 		Logger.Info("Installing pip dependencies...")
 		err = RunSubProcess(
-			path.Join(venvPath, "Scripts/pip"+suffix),
+			filepath.Join(venvPath, "Scripts/pip"+suffix),
 			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath)
 		if err != nil {
 			return err
@@ -79,16 +84,16 @@ func installPythonFilter(filter Filter, filterPath string) error {
 }
 
 func needsVenv(filterPath string) bool {
-	stats, err := os.Stat(path.Join(filterPath, "requirements.txt"))
+	stats, err := os.Stat(filepath.Join(filterPath, "requirements.txt"))
 	if err == nil {
 		return !stats.IsDir()
 	}
 	return false
 }
 
-func resolveVenvPath(filter Filter, filterPath string) (string, error) {
+func resolveVenvPath(filter Filter) (string, error) {
 	resolvedPath, err := filepath.Abs(
-		path.Join(".regolith/cache/venvs", strconv.Itoa(filter.VenvSlot)))
+		filepath.Join(".regolith/cache/venvs", strconv.Itoa(filter.VenvSlot)))
 	if err != nil {
 		return "", wrapError(fmt.Sprintf("VenvSlot %v: Unable to create venv", filter.VenvSlot), err)
 	}

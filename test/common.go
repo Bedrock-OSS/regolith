@@ -13,7 +13,7 @@ import (
 const freshProjectPath = "testdata/fresh_project"
 const minimalProjectPath = "testdata/minimal_project"
 const multitargetProjectPath = "testdata/multitarget_project"
-const localRequirementsProjectPath = "testdata/local_requirements_project"
+const localRequirementsPath = "testdata/local_requirements"
 const doubleRemoteProjectPath = "testdata/double_remote_project"
 const doubleRemoteProjectInstalledPath = "testdata/double_remote_project_installed"
 const runMissingRpProjectPath = "testdata/run_missing_rp_project"
