@@ -30,19 +30,22 @@ func DefaultValidateDefinition(filter Filter) error {
 	return nil
 }
 
-// RunFilter determine whether the filter is remote, standard (from standard
-// library) or local and executes it using the proper function. The
-// absoluteLocation is an absolute path to the root folder of the filter.
-// In case of local filters it's a root path of the project.
-func (filter *Filter) RunFilter(absoluteLocation string) error {
-	Logger.Infof("Running filter %s", filter.GetFriendlyName())
-	start := time.Now()
+/*
+Run determine whether the filter is remote, standard (from standard
+library) or local and executes it using the proper function.
 
+absoluteLocation is an absolute path to the root folder of the filter.
+In case of local filters it's a root path of the project.
+*/
+func (filter *Filter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if filter.Disabled == true {
 		Logger.Infof("Filter '%s' is disabled, skipping.", filter.GetFriendlyName())
 		return nil
 	}
+
+	Logger.Infof("Running filter %s", filter.GetFriendlyName())
+	start := time.Now()
 
 	// Standard Filter is only filter that doesn't require authentication.
 	if filter.Filter != "" {
@@ -62,7 +65,7 @@ func (filter *Filter) RunFilter(absoluteLocation string) error {
 
 		// All other filters require safe mode to be turned off
 		if !IsUnlocked() {
-			return errors.New("Safe mode is on. Please turn it off using 'regolith unlock'.")
+			return errors.New("Safe mode is on, which protects you from potentially unsafe code. \nYou may turn it off using 'regolith unlock'.")
 		}
 
 		if filter.Url != "" {
@@ -118,7 +121,7 @@ func RunHelloWorldFilter(filter *Filter) error {
 	return nil
 }
 
-// RunRemoteFilter runs loads and runs the content of filter.json from in
+// RunRemoteFilter loads and runs the content of filter.json from in
 // regolith cache. The url is the URL of the filter from which the filter
 // was downloaded (used to specify its path in the cache). The parentFilter
 // is a filter that caused the downloading. Some properties of
@@ -144,7 +147,7 @@ func RunRemoteFilter(url string, parentFilter Filter) error {
 		for k, v := range settings {
 			filter.Settings[k] = v
 		}
-		err := filter.RunFilter(absolutePath)
+		err := filter.Run(absolutePath)
 		if err != nil {
 			return err
 		}

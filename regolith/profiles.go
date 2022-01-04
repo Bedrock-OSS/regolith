@@ -119,7 +119,7 @@ func RunProfile(profileName string) error {
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
 		path, _ := filepath.Abs(".")
-		err := filter.RunFilter(path)
+		err := filter.Run(path)
 		if err != nil {
 			return wrapError(fmt.Sprintf("%s failed", filter.GetFriendlyName()), err)
 		}

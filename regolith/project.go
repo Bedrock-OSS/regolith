@@ -17,11 +17,39 @@ const ManifestName = "config.json"
 const GitIgnore = `/build
 /.regolith`
 
+// The full configuration file of Regolith, as saved in config.json
 type Config struct {
 	Name            string `json:"name,omitempty"`
 	Author          string `json:"author,omitempty"`
 	Packs           `json:"packs,omitempty"`
 	RegolithProject `json:"regolith,omitempty"`
+}
+
+// The export information for a profile, which denotes where compiled files will go
+type ExportTarget struct {
+	Target    string `json:"target,omitempty"` // The mode of exporting. "develop" or "exact"
+	RpPath    string `json:"rpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
+	BpPath    string `json:"bpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
+	WorldName string `json:"worldName,omitempty"`
+	WorldPath string `json:"worldPath,omitempty"`
+	ReadOnly  bool   `json:"readOnly"` // Whether the exported files should be read-only
+}
+
+type Packs struct {
+	BehaviorFolder string `json:"behaviorPack,omitempty"`
+	ResourceFolder string `json:"resourcePack,omitempty"`
+}
+
+// Regolith namespace within the Minecraft Project Schema
+type RegolithProject struct {
+	Profiles map[string]Profile `json:"profiles,omitempty"`
+}
+
+// List of filter definitions
+type Profile struct {
+	Filters      []Filter     `json:"filters,omitempty"`
+	ExportTarget ExportTarget `json:"export,omitempty"`
+	DataPath     string       `json:"dataPath,omitempty"`
 }
 
 func LoadConfig() *Config {
@@ -36,7 +64,7 @@ func LoadConfig() *Config {
 		Logger.Fatal("Couldn't load %s! Does the file contain correct json?", ManifestName, err)
 	}
 
-	// If settings is nil replace it with empty map
+	// If settings is nil replace it with empty map.
 	for _, profile := range result.Profiles {
 		for fk := range profile.Filters {
 			if profile.Filters[fk].Settings == nil {
@@ -47,21 +75,6 @@ func LoadConfig() *Config {
 	return result
 }
 
-type Packs struct {
-	BehaviorFolder string `json:"behaviorPack,omitempty"`
-	ResourceFolder string `json:"resourcePack,omitempty"`
-}
-
-type RegolithProject struct {
-	Profiles map[string]Profile `json:"profiles,omitempty"`
-}
-
-type Profile struct {
-	Filters      []Filter     `json:"filters,omitempty"`
-	ExportTarget ExportTarget `json:"export,omitempty"`
-	DataPath     string       `json:"dataPath,omitempty"`
-}
-
 // LoadFiltersFromPath returns a Profile with list of filters loaded from
 // filters.json from input file path. The path should point at a directory
 // with filters.json file in it, not at the file itself.
@@ -70,13 +83,13 @@ func LoadFiltersFromPath(path string) (*Profile, error) {
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, wrapError(fmt.Sprintf("Couldn't find %s! Consider running 'regolith install'", path), err)
+		return nil, WrapError(fmt.Sprintf("Couldn't find %s! Consider running 'regolith install'", path), err)
 	}
 
 	var result *Profile
 	err = json.Unmarshal(file, &result)
 	if err != nil {
-		return nil, wrapError(fmt.Sprintf("Couldn't load %s: ", path), err)
+		return nil, WrapError(fmt.Sprintf("Couldn't load %s: ", path), err)
 	}
 	// Replace nil filter settings with empty map
 	for fk := range result.Filters {
@@ -97,14 +110,14 @@ func LoadFilterJsonProfile(
 	// Open file
 	file, err := ioutil.ReadFile(filterJsonPath)
 	if err != nil {
-		return nil, wrapError(fmt.Sprintf(
+		return nil, WrapError(fmt.Sprintf(
 			"Couldn't find %s", filterJsonPath), err)
 	}
 	// Load data into Profile struct
 	var remoteProfile Profile
 	err = json.Unmarshal(file, &remoteProfile)
 	if err != nil {
-		return nil, wrapError(fmt.Sprintf(
+		return nil, WrapError(fmt.Sprintf(
 			"Couldn't load %s: ", filterJsonPath), err)
 	}
 	// Propagate venvSlot property
@@ -116,23 +129,33 @@ func LoadFilterJsonProfile(
 	return &remoteProfile, nil
 }
 
-// Installs all dependencies of the profile
-func (profile *Profile) Install(isForced bool, profilePath string) error {
+// Installs a profile, by looping over and installing every filter
+func (profile *Profile) Install(isForced bool) error {
+	for _, filter := range profile.Filters {
+		err := filter.RecursiveInstall(isForced)
+		if err != nil {
+			return err
+		}
+	}
+}
+
+// This function will loop over every filter in the profile, and recursively download it
+// and install it's dependencies, including child filters as well as libraries.
+func (profile *Profile) Install_OLD(isForced bool, profilePath string) error {
 	for filter := range profile.Filters {
 		filter := &profile.Filters[filter] // Using pointer is faster than creating copies in the loop and gives more options
 
+		// If filter is remote, download it
 		downloadPath := UrlToPath(filter.GetDownloadUrl())
 		if filter.IsRemote() {
-			err := filter.Download(isForced, downloadPath)
+			err := filter.Download(isForced)
 			if err != nil {
-				if err != nil {
-					Logger.Fatal(wrapError("Could not download filter: ", err))
-				}
+				Logger.Fatal(WrapError("Could not download filter: ", err))
 			}
 		}
 
 		// Install dependencies
-		err := filter.DownloadDependencies(isForced, downloadPath)
+		err := filter.DownloadDependencies(downloadPath)
 
 		// Move filters 'data' folder contents into 'data'
 		filterName := filter.GetIdName()
@@ -171,21 +194,19 @@ func (profile *Profile) Install(isForced bool, profilePath string) error {
 		// Create profile from filter.json file
 		filterPath, err := filepath.Abs(path.Join(downloadPath, "filter.json"))
 		if err != nil {
-			return wrapError("Could not find filter.json", err)
+			return WrapError("Could not find filter.json", err)
 		}
 
 		remoteProfile, err := LoadFilterJsonProfile(filterPath, *filter, *profile)
 		if err != nil {
-			return err // TODO - I don't think this should break the entire install. Just remove the files and continue.
+			return WrapError("Could not read filter.json. Is the json valid?", err)
 		}
-
-		Logger.Info("TEST")
 
 		// Install dependencies of remote filters. Recursion ends when there
 		// is no more nested remote dependencies.
-		err = remoteProfile.Install(isForced, downloadPath)
+		err = remoteProfile.Install_OLD(isForced, filterPath)
 		if err != nil {
-			return err
+			return WrapError("Could not install recursive profile", err)
 		}
 	}
 	return nil
@@ -205,11 +226,79 @@ type Filter struct {
 	VenvSlot  int                    `json:"venvSlot,omitempty"`
 }
 
+// Returns whether the filter is a remote filter or not.
+// A remote filter requires installation
 func (filter *Filter) IsRemote() bool {
-	return filter.Url != ""
+	return filter.Filter != ""
 }
 
-// Creates a download URL, based on the filter definition
+// Returns whether the filter is currently installed or not.
+func (filter *Filter) IsInstalled() bool {
+	if _, err := os.Stat(filter.GetDownloadPath()); err == nil {
+		return true
+	}
+	return false
+}
+
+// Returns the currently installed version, or "" for a filter that isn't installed
+func (filter *Filter) InstalledVersion() string {
+	if filter.IsInstalled() {
+
+		// TODO THIS IS WRONG
+		// We need to store the current version into the actual download, somehow
+		return filter.Version
+	}
+	return ""
+}
+
+func (filter *Filter) GetLatestVersion() string {
+	// TODO This function needs to be created
+	return ""
+}
+
+// Returns whether the downloaded filter it out of date or not.
+func (filter *Filter) IsFilterOutdated() bool {
+	if filter.IsInstalled() {
+
+		// TODO THIS IS WRONG
+		// We need to ping the remote repo to test for latest version
+		if filter.InstalledVersion() != filter.Version {
+			return true
+		}
+	}
+	return false
+}
+
+// Recursively installs a filter:
+// - Downloads the filter if it is remote
+// - Installs dependencies
+// - Copies the filter's data to the data folder
+// - Handles additional filters within the 'filters.json' file
+func (filter *Filter) RecursiveInstall(isForced bool) error {
+	filterDirectory := ""
+
+	if filter.IsRemote() {
+		filterDirectory, err := filter.Download(isForced)
+		if err != nil {
+			return WrapError("Could not download filter: ", err)
+		}
+	}
+
+	// Install dependencies
+	err := filter.DownloadDependencies(filterDirectory)
+	if err != nil {
+		return WrapError("Could not download dependencies: ", err)
+	}
+
+	return nil
+}
+
+// Returns the path location where the filter can be found.
+func (filter *Filter) GetDownloadPath() string {
+	return UrlToPath(filter.Url)
+}
+
+// Creates a download URL, based on the filter definition.
 func (filter *Filter) GetDownloadUrl() string {
 	repoUrl := ""
 	if filter.Url == "" {
@@ -248,27 +337,28 @@ func (filter *Filter) GetFriendlyName() string {
 	return filter.Filter
 }
 
-// Download downloads the filter and returns the download path. If the filter
-// is not remote, it downloads the dependencies of the filter and returns
-// empty string. The profileDir is a path to the directory of the profile that
-// owns the filter (the directory of either the config.json or filter.json
-// file). The profileDir combined with Script property of the filter gives
-// the absolute path to the script.
+func (filter *Filter) Uninstall() {
+	err := os.RemoveAll(filter.GetDownloadPath())
+	if err != nil {
+		Logger.Error(WrapError(fmt.Sprintf("Could not remove installed filter %s.", filter.GetFriendlyName()), err))
+	}
+}
 
-// Installs all dependencies of the filter
-func (filter *Filter) DownloadDependencies(isForced bool, profileDirectory string) error {
+// Installs all dependencies of the filter.
+// The profile directory is the location in which the filter is installed
+func (filter *Filter) DownloadDependencies(installLocation string) error {
 	Logger.Infof("Downloading dependencies for %s...", filter.GetFriendlyName())
 
 	if filterDefinition, ok := FilterTypes[filter.RunWith]; ok {
-		scriptPath, err := filepath.Abs(filepath.Join(profileDirectory, filter.Script))
+		scriptPath, err := filepath.Abs(filepath.Join(installLocation, filter.Script))
 		if err != nil {
-			return wrapError(fmt.Sprintf(
+			return WrapError(fmt.Sprintf(
 				"Unable to resolve path of %s script",
 				filter.GetFriendlyName()), err)
 		}
 		err = filterDefinition.installDependencies(*filter, filepath.Dir(scriptPath))
 		if err != nil {
-			return wrapError(fmt.Sprintf(
+			return WrapError(fmt.Sprintf(
 				"Couldn't install filter dependencies %s",
 				filter.GetFriendlyName()), err)
 		}
@@ -281,26 +371,22 @@ func (filter *Filter) DownloadDependencies(isForced bool, profileDirectory strin
 	return nil
 }
 
-// Downloads the filter into its own directory and returns the download path.
-func (filter *Filter) Download(isForced bool, profileDirectory string) error {
+// Downloads the filter into its own directory and returns the download path of the directory.
+func (filter *Filter) Download(isForced bool) (string, error) {
 	url := filter.GetDownloadUrl()
+	downloadPath := filter.GetDownloadPath()
 
-	// Download the filter into the cache folder
-	downloadPath := UrlToPath(url)
-
-	// If downloadPath already exists, we don't need to download it again.
-	// Force mode allows overwriting.
-	if _, err := os.Stat(downloadPath); err == nil {
+	if filter.IsInstalled() {
 		if !isForced {
 			Logger.Warnf("Filter %s already installed, skipping. Run "+
 				"with '-f' to force.", filter.GetFriendlyName())
-			return nil
+			return "", nil
 		} else {
-			Logger.Warnf("Filter %s already installed and force mode is enabled.", filter.GetFriendlyName())
-			err := os.RemoveAll(downloadPath)
-			if err != nil {
-				return wrapError(fmt.Sprintf("Could not remove installed filter %s.", filter.GetFriendlyName()), err)
-			}
+			// TODO should we print version information here?
+			// like "version 1.4.2 uninstalled, version 1.4.3 installed"
+			Logger.Warnf("Filter %s already installed, but force mode is enabled.\n"+
+				"Filter will be installed, erasing prior contents.", filter.GetFriendlyName())
+			filter.Uninstall()
 		}
 	}
 
@@ -312,26 +398,17 @@ func (filter *Filter) Download(isForced bool, profileDirectory string) error {
 	// the repo/folder not existing?
 	err := getter.Get(downloadPath, url)
 	if err != nil {
-		return wrapError(fmt.Sprintf("Could not download filter from %s. \n	Is git installed? \n	Does that filter exist?", url), err)
+		return "", WrapError(fmt.Sprintf("Could not download filter from %s. \n	Is git installed? \n	Does that filter exist?", url), err)
 	}
 
-	// Remove 'test' folder, which we never want to use
+	// Remove 'test' folder, which we never want to use (saves space on disk)
 	testFolder := path.Join(downloadPath, "test")
 	if _, err := os.Stat(testFolder); err == nil {
 		os.RemoveAll(testFolder)
 	}
 
-	Logger.Infof("Filter %s downloaded successfully.", url)
-	return nil
-}
-
-type ExportTarget struct {
-	Target    string `json:"target,omitempty"` // The mode of exporting. "develop" or "exact"
-	RpPath    string `json:"rpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
-	BpPath    string `json:"bpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
-	WorldName string `json:"worldName,omitempty"`
-	WorldPath string `json:"worldPath,omitempty"`
-	ReadOnly  bool   `json:"readOnly"` // Whether the exported files should be read-only
+	Logger.Infof("Filter %s downloaded successfully.", filter.GetFriendlyName())
+	return downloadPath, nil
 }
 
 func IsProjectInitialized() bool {
@@ -389,13 +466,13 @@ func InitializeRegolithProject(isForced bool) error {
 		jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
 		err := ioutil.WriteFile(ManifestName, jsonBytes, 0666)
 		if err != nil {
-			return wrapError("Failed to write project file contents", err)
+			return WrapError("Failed to write project file contents", err)
 		}
 
 		// Create default gitignore file
 		err = ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
 		if err != nil {
-			return wrapError("Failed to write .gitignore file contents", err)
+			return WrapError("Failed to write .gitignore file contents", err)
 		}
 
 		foldersToCreate := []string{
@@ -425,11 +502,11 @@ func CleanCache() error {
 	Logger.Infof("Cleaning cache...")
 	err := os.RemoveAll(".regolith")
 	if err != nil {
-		return wrapError("Failed to remove .regolith folder", err)
+		return WrapError("Failed to remove .regolith folder", err)
 	}
 	err = os.Mkdir(".regolith", 0666)
 	if err != nil {
-		return wrapError("Failed to recreate .regolith folder", err)
+		return WrapError("Failed to recreate .regolith folder", err)
 	}
 	Logger.Infof("Cache cleaned.")
 	return nil
