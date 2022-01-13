@@ -231,7 +231,7 @@ type Filter struct {
 // Returns whether the filter is a remote filter or not.
 // A remote filter requires installation
 func (filter *Filter) IsRemote() bool {
-	return filter.Filter != ""
+	return filter.Script == ""
 }
 
 // Returns whether the filter is currently installed or not.
@@ -285,9 +285,22 @@ func (filter *Filter) RecursiveInstall(isForced bool) error {
 		if err != nil {
 			return wrapError("Could not download filter: ", err)
 		}
+		// Create fake profile from filter.json file to check for nested
+		// dependencies
+		profile, err := LoadFiltersFromPath(filterDirectory)
+		if err != nil {
+			return fmt.Errorf(
+				"could not load \"filter.json\" from path %q, while checking"+
+					" for recursive dependencies", filterDirectory,
+			)
+		}
+		profile.Install(isForced)
 	}
 
 	// Install dependencies
+	if filter.RunWith == "" {
+		return nil // No dependencies to install
+	}
 	err = filter.DownloadDependencies(filterDirectory)
 	if err != nil {
 		return wrapError("Could not download dependencies: ", err)
