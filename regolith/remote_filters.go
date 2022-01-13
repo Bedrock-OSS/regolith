@@ -32,14 +32,9 @@ func InstallFilters(isForced bool, updateFilters bool) error {
 	CreateDirectoryIfNotExists(".regolith/cache/filters", true)
 	CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
 
-	workingDirectory, err := os.Getwd()
-	if err != nil {
-		return wrapError("Could not get working directory", err)
-	}
-
 	for profileName, profile := range project.Profiles {
 		Logger.Infof("Installing profile %s...", profileName)
-		err := profile.Install(isForced, workingDirectory)
+		err := profile.Install(isForced)
 		if err != nil {
 			return wrapError("Could not install profile!", err)
 		}
