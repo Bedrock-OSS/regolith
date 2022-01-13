@@ -137,6 +137,7 @@ func (profile *Profile) Install(isForced bool) error {
 			return err
 		}
 	}
+	return nil
 }
 
 // This function will loop over every filter in the profile, and recursively download it
@@ -146,16 +147,17 @@ func (profile *Profile) Install_OLD(isForced bool, profilePath string) error {
 		filter := &profile.Filters[filter] // Using pointer is faster than creating copies in the loop and gives more options
 
 		// If filter is remote, download it
+		var err error
 		downloadPath := UrlToPath(filter.GetDownloadUrl())
 		if filter.IsRemote() {
-			err := filter.Download(isForced)
+			downloadPath, err = filter.Download(isForced)
 			if err != nil {
 				Logger.Fatal(wrapError("Could not download filter: ", err))
 			}
 		}
 
 		// Install dependencies
-		err := filter.DownloadDependencies(downloadPath)
+		err = filter.DownloadDependencies(downloadPath)
 
 		// Move filters 'data' folder contents into 'data'
 		filterName := filter.GetIdName()
@@ -275,17 +277,18 @@ func (filter *Filter) IsFilterOutdated() bool {
 // - Copies the filter's data to the data folder
 // - Handles additional filters within the 'filters.json' file
 func (filter *Filter) RecursiveInstall(isForced bool) error {
+	var err error
 	filterDirectory := ""
 
 	if filter.IsRemote() {
-		filterDirectory, err := filter.Download(isForced)
+		filterDirectory, err = filter.Download(isForced)
 		if err != nil {
 			return wrapError("Could not download filter: ", err)
 		}
 	}
 
 	// Install dependencies
-	err := filter.DownloadDependencies(filterDirectory)
+	err = filter.DownloadDependencies(filterDirectory)
 	if err != nil {
 		return wrapError("Could not download dependencies: ", err)
 	}
