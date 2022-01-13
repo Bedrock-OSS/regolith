@@ -83,13 +83,13 @@ func LoadFiltersFromPath(path string) (*Profile, error) {
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, WrapError(fmt.Sprintf("Couldn't find %s! Consider running 'regolith install'", path), err)
+		return nil, wrapError(fmt.Sprintf("Couldn't find %s! Consider running 'regolith install'", path), err)
 	}
 
 	var result *Profile
 	err = json.Unmarshal(file, &result)
 	if err != nil {
-		return nil, WrapError(fmt.Sprintf("Couldn't load %s: ", path), err)
+		return nil, wrapError(fmt.Sprintf("Couldn't load %s: ", path), err)
 	}
 	// Replace nil filter settings with empty map
 	for fk := range result.Filters {
@@ -110,14 +110,14 @@ func LoadFilterJsonProfile(
 	// Open file
 	file, err := ioutil.ReadFile(filterJsonPath)
 	if err != nil {
-		return nil, WrapError(fmt.Sprintf(
+		return nil, wrapError(fmt.Sprintf(
 			"Couldn't find %s", filterJsonPath), err)
 	}
 	// Load data into Profile struct
 	var remoteProfile Profile
 	err = json.Unmarshal(file, &remoteProfile)
 	if err != nil {
-		return nil, WrapError(fmt.Sprintf(
+		return nil, wrapError(fmt.Sprintf(
 			"Couldn't load %s: ", filterJsonPath), err)
 	}
 	// Propagate venvSlot property
@@ -150,7 +150,7 @@ func (profile *Profile) Install_OLD(isForced bool, profilePath string) error {
 		if filter.IsRemote() {
 			err := filter.Download(isForced)
 			if err != nil {
-				Logger.Fatal(WrapError("Could not download filter: ", err))
+				Logger.Fatal(wrapError("Could not download filter: ", err))
 			}
 		}
 
@@ -194,19 +194,19 @@ func (profile *Profile) Install_OLD(isForced bool, profilePath string) error {
 		// Create profile from filter.json file
 		filterPath, err := filepath.Abs(path.Join(downloadPath, "filter.json"))
 		if err != nil {
-			return WrapError("Could not find filter.json", err)
+			return wrapError("Could not find filter.json", err)
 		}
 
 		remoteProfile, err := LoadFilterJsonProfile(filterPath, *filter, *profile)
 		if err != nil {
-			return WrapError("Could not read filter.json. Is the json valid?", err)
+			return wrapError("Could not read filter.json. Is the json valid?", err)
 		}
 
 		// Install dependencies of remote filters. Recursion ends when there
 		// is no more nested remote dependencies.
 		err = remoteProfile.Install_OLD(isForced, filterPath)
 		if err != nil {
-			return WrapError("Could not install recursive profile", err)
+			return wrapError("Could not install recursive profile", err)
 		}
 	}
 	return nil
@@ -280,14 +280,14 @@ func (filter *Filter) RecursiveInstall(isForced bool) error {
 	if filter.IsRemote() {
 		filterDirectory, err := filter.Download(isForced)
 		if err != nil {
-			return WrapError("Could not download filter: ", err)
+			return wrapError("Could not download filter: ", err)
 		}
 	}
 
 	// Install dependencies
 	err := filter.DownloadDependencies(filterDirectory)
 	if err != nil {
-		return WrapError("Could not download dependencies: ", err)
+		return wrapError("Could not download dependencies: ", err)
 	}
 
 	return nil
@@ -340,7 +340,7 @@ func (filter *Filter) GetFriendlyName() string {
 func (filter *Filter) Uninstall() {
 	err := os.RemoveAll(filter.GetDownloadPath())
 	if err != nil {
-		Logger.Error(WrapError(fmt.Sprintf("Could not remove installed filter %s.", filter.GetFriendlyName()), err))
+		Logger.Error(wrapError(fmt.Sprintf("Could not remove installed filter %s.", filter.GetFriendlyName()), err))
 	}
 }
 
@@ -352,13 +352,13 @@ func (filter *Filter) DownloadDependencies(installLocation string) error {
 	if filterDefinition, ok := FilterTypes[filter.RunWith]; ok {
 		scriptPath, err := filepath.Abs(filepath.Join(installLocation, filter.Script))
 		if err != nil {
-			return WrapError(fmt.Sprintf(
+			return wrapError(fmt.Sprintf(
 				"Unable to resolve path of %s script",
 				filter.GetFriendlyName()), err)
 		}
 		err = filterDefinition.installDependencies(*filter, filepath.Dir(scriptPath))
 		if err != nil {
-			return WrapError(fmt.Sprintf(
+			return wrapError(fmt.Sprintf(
 				"Couldn't install filter dependencies %s",
 				filter.GetFriendlyName()), err)
 		}
@@ -398,7 +398,7 @@ func (filter *Filter) Download(isForced bool) (string, error) {
 	// the repo/folder not existing?
 	err := getter.Get(downloadPath, url)
 	if err != nil {
-		return "", WrapError(fmt.Sprintf("Could not download filter from %s. \n	Is git installed? \n	Does that filter exist?", url), err)
+		return "", wrapError(fmt.Sprintf("Could not download filter from %s. \n	Is git installed? \n	Does that filter exist?", url), err)
 	}
 
 	// Remove 'test' folder, which we never want to use (saves space on disk)
@@ -466,13 +466,13 @@ func InitializeRegolithProject(isForced bool) error {
 		jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
 		err := ioutil.WriteFile(ManifestName, jsonBytes, 0666)
 		if err != nil {
-			return WrapError("Failed to write project file contents", err)
+			return wrapError("Failed to write project file contents", err)
 		}
 
 		// Create default gitignore file
 		err = ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
 		if err != nil {
-			return WrapError("Failed to write .gitignore file contents", err)
+			return wrapError("Failed to write .gitignore file contents", err)
 		}
 
 		foldersToCreate := []string{
@@ -502,11 +502,11 @@ func CleanCache() error {
 	Logger.Infof("Cleaning cache...")
 	err := os.RemoveAll(".regolith")
 	if err != nil {
-		return WrapError("Failed to remove .regolith folder", err)
+		return wrapError("Failed to remove .regolith folder", err)
 	}
 	err = os.Mkdir(".regolith", 0666)
 	if err != nil {
-		return WrapError("Failed to recreate .regolith folder", err)
+		return wrapError("Failed to recreate .regolith folder", err)
 	}
 	Logger.Infof("Cache cleaned.")
 	return nil
