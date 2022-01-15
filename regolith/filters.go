@@ -39,7 +39,7 @@ In case of local filters it's a root path of the project.
 */
 func (filter *Filter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
-	if filter.Disabled == true {
+	if filter.Disabled {
 		Logger.Infof("Filter '%s' is disabled, skipping.", filter.GetFriendlyName())
 		return nil
 	}
