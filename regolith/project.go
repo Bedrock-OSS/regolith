@@ -160,13 +160,8 @@ func (p *Profile) installFilters(isForced bool, filters []Filter) error {
 func (p *Profile) installFilter(isForced bool, filter Filter) error {
 	var err error
 
-	// TODO - WTF is filterDirectory and downloadPath?! Why are they different?
-	// Why is downloadPath created from URL?
-	filterDirectory := ""
-	downloadPath := UrlToPath(filter.GetDownloadUrl())
 	if filter.IsRemote() {
-		filterDirectory, err = filter.Download(isForced)
-		downloadPath = filterDirectory
+		filterDirectory, err := filter.Download(isForced)
 		if err != nil {
 			return wrapError("could not download filter: ", err)
 		}
@@ -180,14 +175,25 @@ func (p *Profile) installFilter(isForced bool, filter Filter) error {
 		}
 		p.installFilters(isForced, filterCollection.Filters)
 	}
-	// Move filters 'data' folder contents into 'data'
-	filterName := filter.GetIdName()
-	localDataPath := path.Join(p.DataPath, filterName)
-	remoteDataPath := path.Join(downloadPath, "data")
 
-	// If the filterDataPath already exists, we must not overwrite
+	p.copyFilterData(filter)
+	err = filter.DownloadDependencies()
+	if err != nil {
+		return wrapError("Could not download dependencies: ", err)
+	}
+
+	return nil
+}
+
+// copyFilterData copies the filter's data to the data folder.
+func (p *Profile) copyFilterData(filter Filter) {
+	// Move filters 'data' folder contents into 'data'
+	// If the localDataPath already exists, we must not overwrite
 	// Additionally, if the remote data path doesn't exist, we don't need
 	// to do anything
+	filterName := filter.GetIdName()
+	remoteDataPath := path.Join(filter.GetDownloadPath(), "data")
+	localDataPath := path.Join(p.DataPath, filterName)
 	if _, err := os.Stat(localDataPath); err == nil {
 		Logger.Warnf("Filter %s already has data in the 'data' folder. \n"+
 			"You may manually delete this data and reinstall if you "+
@@ -213,17 +219,6 @@ func (p *Profile) installFilter(isForced bool, filter Filter) error {
 				"dataPath is not set. Skipping.", filterName)
 		}
 	}
-
-	// Install dependencies
-	if filter.RunWith == "" {
-		return nil // No dependencies to install
-	}
-	err = filter.DownloadDependencies(filterDirectory)
-	if err != nil {
-		return wrapError("Could not download dependencies: ", err)
-	}
-
-	return nil
 }
 
 type Filter struct {
@@ -337,7 +332,15 @@ func (f *Filter) Uninstall() {
 
 // DownloadDependencies installs all dependencies of the filter.
 // The profile directory is the location in which the filter is installed
-func (f *Filter) DownloadDependencies(installLocation string) error {
+func (f *Filter) DownloadDependencies() error {
+	installLocation := ""
+	if f.IsRemote() {
+		installLocation = f.GetDownloadPath()
+	}
+	// Install dependencies
+	if f.RunWith == "" {
+		return nil // No dependencies to install
+	}
 	Logger.Infof("Downloading dependencies for %s...", f.GetFriendlyName())
 
 	if filterDefinition, ok := FilterTypes[f.RunWith]; ok {
