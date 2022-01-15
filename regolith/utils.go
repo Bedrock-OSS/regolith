@@ -2,7 +2,6 @@ package regolith
 
 import (
 	"bufio"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/google/go-github/v39/github"
 )
 
 func StringArrayContains(arr []string, str string) bool {
@@ -113,22 +111,11 @@ func CompareSemanticVersion(ver1 string, ver2 string) int {
 	}
 }
 
-type UpdateStatus struct {
-	ShouldUpdate bool
-	Url          *string
-	Err          *error
-}
-
-func CheckUpdate(version string, status chan UpdateStatus) {
-	client := github.NewClient(nil)
-	// Ignore the error, since it's not critical to regolith
-	release, _, err := client.Repositories.GetLatestRelease(context.Background(), "Bedrock-OSS", "regolith")
-	if err != nil {
-		status <- UpdateStatus{Err: &err}
-		return
-	}
-	status <- UpdateStatus{
-		ShouldUpdate: CompareSemanticVersion(*release.TagName, version) == 1,
-		Url:          release.HTMLURL,
-	}
+// UrlToPath returns regolith cache path for given URL.
+// Version is ignored, implying that all versions of a filter are installed
+// into the same location
+func UrlToPath(url string) string {
+	// Strip version from url
+	url = strings.Split(url, "?")[0]
+	return ".regolith/cache/filters/" + url
 }
