@@ -46,8 +46,12 @@ type RegolithProject struct {
 }
 
 // List of filter definitions
+type FilterCollection struct {
+	Filters []Filter `json:"filters,omitempty"`
+}
+
 type Profile struct {
-	Filters      []Filter     `json:"filters,omitempty"`
+	FilterCollection
 	ExportTarget ExportTarget `json:"export,omitempty"`
 	DataPath     string       `json:"dataPath,omitempty"`
 }
@@ -75,18 +79,19 @@ func LoadConfig() *Config {
 	return result
 }
 
-// LoadFiltersFromPath returns a Profile with list of filters loaded from
-// filters.json from input file path. The path should point at a directory
-// with filters.json file in it, not at the file itself.
-func LoadFiltersFromPath(path string) (*Profile, error) {
-	path = path + "/filter.json"
+// FilterCollectionFromFilterJson returns a collection of filters from a
+// "filter.json" file of a remote filter.
+func FilterCollectionFromFilterJson(path string) (*FilterCollection, error) {
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, wrapError(fmt.Sprintf("Couldn't find %s! Consider running 'regolith install'", path), err)
+		return nil, wrapError(
+			fmt.Sprintf("Couldn't read %q", path),
+			err,
+		)
 	}
 
-	var result *Profile
+	var result *FilterCollection
 	err = json.Unmarshal(file, &result)
 	if err != nil {
 		return nil, wrapError(fmt.Sprintf("Couldn't load %s: ", path), err)
@@ -129,14 +134,95 @@ func LoadFilterJsonProfile(
 	return &remoteProfile, nil
 }
 
-// Installs a profile, by looping over and installing every filter
+// Install installs all of the filters in the profile including the nested ones
 func (profile *Profile) Install(isForced bool) error {
-	for _, filter := range profile.Filters {
-		err := filter.RecursiveInstall(isForced)
+	return profile.installFilters(isForced, profile.Filters)
+}
+
+// installFilters provides a recursive function to install all filters in the
+// profile. This function is not exposed outside of the regolith package. Use
+// Install() instead.
+func (p *Profile) installFilters(isForced bool, filters []Filter) error {
+	for _, filter := range filters {
+		err := p.installFilter(isForced, filter)
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
+
+// installFilter installs a single filter.
+// - Downloads the filter if it is remote
+// - Installs dependencies
+// - Copies the filter's data to the data folder
+// - Handles additional filters within the 'filters.json' file
+func (p Profile) installFilter(isForced bool, filter Filter) error {
+	var err error
+
+	// TODO - WTF is filterDirectory and downloadPath?! Why are they different?
+	// Why is downloadPath created from URL?
+	filterDirectory := ""
+	downloadPath := UrlToPath(filter.GetDownloadUrl())
+	if filter.IsRemote() {
+		filterDirectory, err = filter.Download(isForced)
+		downloadPath = filterDirectory
+		if err != nil {
+			return wrapError("could not download filter: ", err)
+		}
+		filterCollection, err := FilterCollectionFromFilterJson(
+			filepath.Join(filterDirectory, "filter.json"))
+		if err != nil {
+			return fmt.Errorf(
+				"could not load \"filter.json\" from path %q, while checking"+
+					" for recursive dependencies", filterDirectory,
+			)
+		}
+		p.installFilters(isForced, filterCollection.Filters)
+	}
+	// Move filters 'data' folder contents into 'data'
+	filterName := filter.GetIdName()
+	localDataPath := path.Join(p.DataPath, filterName)
+	remoteDataPath := path.Join(downloadPath, "data")
+
+	// If the filterDataPath already exists, we must not overwrite
+	// Additionally, if the remote data path doesn't exist, we don't need
+	// to do anything
+	if _, err := os.Stat(localDataPath); err == nil {
+		Logger.Warnf("Filter %s already has data in the 'data' folder. \n"+
+			"You may manually delete this data and reinstall if you "+
+			"would like these configuration files to be updated.",
+			filterName)
+	} else if _, err := os.Stat(remoteDataPath); err == nil {
+		// Ensure folder exists
+		err = os.MkdirAll(localDataPath, 0666)
+		if err != nil {
+			Logger.Error("Could not create filter data folder", err) // TODO - I don't think this should break the entire install
+		}
+
+		// Copy 'data' to dataPath
+		if p.DataPath != "" {
+			err = copy.Copy(
+				remoteDataPath, localDataPath,
+				copy.Options{PreserveTimes: false, Sync: false})
+			if err != nil {
+				Logger.Error("Could not initialize filter data", err) // TODO - I don't think this should break the entire install
+			}
+		} else {
+			Logger.Warnf("Filter %s has installation data, but the "+
+				"dataPath is not set. Skipping.", filterName)
+		}
+	}
+
+	// Install dependencies
+	if filter.RunWith == "" {
+		return nil // No dependencies to install
+	}
+	err = filter.DownloadDependencies(filterDirectory)
+	if err != nil {
+		return wrapError("Could not download dependencies: ", err)
+	}
+
 	return nil
 }
 
@@ -157,7 +243,7 @@ func (profile *Profile) Install_OLD(isForced bool, profilePath string) error {
 		}
 
 		// Install dependencies
-		err = filter.DownloadDependencies(downloadPath)
+		// err = filter.DownloadDependencies(downloadPath)
 
 		// Move filters 'data' folder contents into 'data'
 		filterName := filter.GetIdName()
@@ -269,44 +355,6 @@ func (filter *Filter) IsFilterOutdated() bool {
 		}
 	}
 	return false
-}
-
-// Recursively installs a filter:
-// - Downloads the filter if it is remote
-// - Installs dependencies
-// - Copies the filter's data to the data folder
-// - Handles additional filters within the 'filters.json' file
-func (filter *Filter) RecursiveInstall(isForced bool) error {
-	var err error
-	filterDirectory := ""
-
-	if filter.IsRemote() {
-		filterDirectory, err = filter.Download(isForced)
-		if err != nil {
-			return wrapError("Could not download filter: ", err)
-		}
-		// Create fake profile from filter.json file to check for nested
-		// dependencies
-		profile, err := LoadFiltersFromPath(filterDirectory)
-		if err != nil {
-			return fmt.Errorf(
-				"could not load \"filter.json\" from path %q, while checking"+
-					" for recursive dependencies", filterDirectory,
-			)
-		}
-		profile.Install(isForced)
-	}
-
-	// Install dependencies
-	if filter.RunWith == "" {
-		return nil // No dependencies to install
-	}
-	err = filter.DownloadDependencies(filterDirectory)
-	if err != nil {
-		return wrapError("Could not download dependencies: ", err)
-	}
-
-	return nil
 }
 
 // Returns the path location where the filter can be found.
@@ -466,10 +514,8 @@ func InitializeRegolithProject(isForced bool) error {
 				Profiles: map[string]Profile{
 					"dev": {
 						DataPath: "./packs/data",
-						Filters: []Filter{
-							{
-								Filter: "hello_world",
-							},
+						FilterCollection: FilterCollection{
+							[]Filter{{Filter: "hello_world"}},
 						},
 						ExportTarget: ExportTarget{
 							Target:   "development",

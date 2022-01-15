@@ -135,11 +135,11 @@ func RunRemoteFilter(url string, parentFilter Filter) error {
 
 	path := UrlToPath(url)
 	absolutePath, _ := filepath.Abs(path)
-	profile, err := LoadFiltersFromPath(path)
+	filterCollection, err := FilterCollectionFromFilterJson(path)
 	if err != nil {
 		return err
 	}
-	for _, filter := range profile.Filters {
+	for _, filter := range filterCollection.Filters {
 		// Overwrite the venvSlot with the parent value
 		filter.VenvSlot = parentFilter.VenvSlot
 		filter.Arguments = append(filter.Arguments, parentFilter.Arguments...)
