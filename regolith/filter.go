@@ -58,6 +58,13 @@ func RunHelloWorldFilter(filter *Filter) error {
 	return nil
 }
 
+// IsRemoteFilterCached checks whether the filter of given URL is already saved
+// in cache.
+func IsRemoteFilterCached(url string) bool {
+	_, err := os.Stat(UrlToPath(url))
+	return err == nil
+}
+
 // RunRemoteFilter loads and runs the content of filter.json from in
 // regolith cache. The url is the URL of the filter from which the filter
 // was downloaded (used to specify its path in the cache). The parentFilter
@@ -67,7 +74,7 @@ func RunRemoteFilter(url string, parentFilter Filter) error {
 	settings := parentFilter.Settings
 	Logger.Debugf("RunRemoteFilter '%s'", url)
 	if !IsRemoteFilterCached(url) {
-		return errors.New("Filter is not downloaded! Please run 'regolith install'.")
+		return errors.New("filter is not downloaded! Please run 'regolith install'")
 	}
 
 	path := UrlToPath(url)
@@ -226,7 +233,7 @@ func (f *Filter) GetDownloadPath() string {
 func (f *Filter) GetDownloadUrl() string {
 	repoUrl := ""
 	if f.Url == "" {
-		repoUrl = STANDARD_LIBRARY_URL
+		repoUrl = StandardLibraryUrl
 	} else {
 		repoUrl = f.Url
 	}
