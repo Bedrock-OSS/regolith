@@ -45,7 +45,7 @@ type RegolithProject struct {
 	Profiles map[string]Profile `json:"profiles,omitempty"`
 }
 
-// List of filter definitions
+// FilterCollection is a list of filters
 type FilterCollection struct {
 	Filters []Filter `json:"filters,omitempty"`
 }
@@ -135,8 +135,8 @@ func LoadFilterJsonProfile(
 }
 
 // Install installs all of the filters in the profile including the nested ones
-func (profile *Profile) Install(isForced bool) error {
-	return profile.installFilters(isForced, profile.Filters)
+func (p *Profile) Install(isForced bool) error {
+	return p.installFilters(isForced, p.Filters)
 }
 
 // installFilters provides a recursive function to install all filters in the
@@ -157,7 +157,7 @@ func (p *Profile) installFilters(isForced bool, filters []Filter) error {
 // - Installs dependencies
 // - Copies the filter's data to the data folder
 // - Handles additional filters within the 'filters.json' file
-func (p Profile) installFilter(isForced bool, filter Filter) error {
+func (p *Profile) installFilter(isForced bool, filter Filter) error {
 	var err error
 
 	// TODO - WTF is filterDirectory and downloadPath?! Why are they different?
@@ -240,79 +240,80 @@ type Filter struct {
 	VenvSlot  int                    `json:"venvSlot,omitempty"`
 }
 
-// Returns whether the filter is a remote filter or not.
+// IsRemote returns whether the filter is a remote filter or not.
 // A remote filter requires installation
-func (filter *Filter) IsRemote() bool {
-	return filter.Script == ""
+func (f *Filter) IsRemote() bool {
+	return f.Script == ""
 }
 
-// Returns whether the filter is currently installed or not.
-func (filter *Filter) IsInstalled() bool {
-	if _, err := os.Stat(filter.GetDownloadPath()); err == nil {
+// IsInstalled eturns whether the filter is currently installed or not.
+func (f *Filter) IsInstalled() bool {
+	if _, err := os.Stat(f.GetDownloadPath()); err == nil {
 		return true
 	}
 	return false
 }
 
-// Returns the currently installed version, or "" for a filter that isn't installed
-func (filter *Filter) InstalledVersion() string {
-	if filter.IsInstalled() {
+// InstalledVersion returns the currently installed version, or "" for a
+// filter that isn't installed
+func (f *Filter) InstalledVersion() string {
+	if f.IsInstalled() {
 
 		// TODO THIS IS WRONG
 		// We need to store the current version into the actual download, somehow
-		return filter.Version
+		return f.Version
 	}
 	return ""
 }
 
-func (filter *Filter) GetLatestVersion() string {
+func (f *Filter) GetLatestVersion() string {
 	// TODO This function needs to be created
 	return ""
 }
 
-// Returns whether the downloaded filter it out of date or not.
-func (filter *Filter) IsFilterOutdated() bool {
-	if filter.IsInstalled() {
+// IsFilterOutdated returns whether the downloaded filter it out of date or not.
+func (f *Filter) IsFilterOutdated() bool {
+	if f.IsInstalled() {
 
 		// TODO THIS IS WRONG
 		// We need to ping the remote repo to test for latest version
-		if filter.InstalledVersion() != filter.Version {
+		if f.InstalledVersion() != f.Version {
 			return true
 		}
 	}
 	return false
 }
 
-// Returns the path location where the filter can be found.
-func (filter *Filter) GetDownloadPath() string {
-	return UrlToPath(filter.Url)
+// GetDownloadPath returns the path location where the filter can be found.
+func (f *Filter) GetDownloadPath() string {
+	return UrlToPath(f.Url)
 }
 
-// Creates a download URL, based on the filter definition.
-func (filter *Filter) GetDownloadUrl() string {
+// GetDownloadUrl creates a download URL, based on the filter definition.
+func (f *Filter) GetDownloadUrl() string {
 	repoUrl := ""
-	if filter.Url == "" {
+	if f.Url == "" {
 		repoUrl = STANDARD_LIBRARY_URL
 	} else {
-		repoUrl = filter.Url
+		repoUrl = f.Url
 	}
 
 	repoVersion := ""
-	if filter.Version != "" {
-		repoVersion = "?ref=" + filter.Version
+	if f.Version != "" {
+		repoVersion = "?ref=" + f.Version
 	}
 
-	return fmt.Sprintf("%s//%s%s", repoUrl, filter.Filter, repoVersion)
+	return fmt.Sprintf("%s//%s%s", repoUrl, f.Filter, repoVersion)
 }
 
 // GetIdName returns the name that identifies the filter. This name is used to
 // create and access the data folder for the filter. This property only makes
 // sense for remote filters. Non-remote filters return empty string.
-func (filter *Filter) GetIdName() string {
-	if filter.Filter != "" {
-		return filter.Filter
-	} else if filter.Url != "" {
-		splitUrl := strings.Split(filter.Url, "/")
+func (f *Filter) GetIdName() string {
+	if f.Filter != "" {
+		return f.Filter
+	} else if f.Url != "" {
+		splitUrl := strings.Split(f.Url, "/")
 		return splitUrl[len(splitUrl)-1]
 	}
 	return ""
@@ -320,67 +321,68 @@ func (filter *Filter) GetIdName() string {
 
 // GetFriendlyName returns the friendly name of the filter that can be used for
 // logging.
-func (filter *Filter) GetFriendlyName() string {
-	if filter.Name != "" {
-		return filter.Name
+func (f *Filter) GetFriendlyName() string {
+	if f.Name != "" {
+		return f.Name
 	}
-	return filter.Filter
+	return f.Filter
 }
 
-func (filter *Filter) Uninstall() {
-	err := os.RemoveAll(filter.GetDownloadPath())
+func (f *Filter) Uninstall() {
+	err := os.RemoveAll(f.GetDownloadPath())
 	if err != nil {
-		Logger.Error(wrapError(fmt.Sprintf("Could not remove installed filter %s.", filter.GetFriendlyName()), err))
+		Logger.Error(wrapError(fmt.Sprintf("Could not remove installed filter %s.", f.GetFriendlyName()), err))
 	}
 }
 
-// Installs all dependencies of the filter.
+// DownloadDependencies installs all dependencies of the filter.
 // The profile directory is the location in which the filter is installed
-func (filter *Filter) DownloadDependencies(installLocation string) error {
-	Logger.Infof("Downloading dependencies for %s...", filter.GetFriendlyName())
+func (f *Filter) DownloadDependencies(installLocation string) error {
+	Logger.Infof("Downloading dependencies for %s...", f.GetFriendlyName())
 
-	if filterDefinition, ok := FilterTypes[filter.RunWith]; ok {
-		scriptPath, err := filepath.Abs(filepath.Join(installLocation, filter.Script))
+	if filterDefinition, ok := FilterTypes[f.RunWith]; ok {
+		scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
 		if err != nil {
 			return wrapError(fmt.Sprintf(
 				"Unable to resolve path of %s script",
-				filter.GetFriendlyName()), err)
+				f.GetFriendlyName()), err)
 		}
-		err = filterDefinition.installDependencies(*filter, filepath.Dir(scriptPath))
+		err = filterDefinition.installDependencies(*f, filepath.Dir(scriptPath))
 		if err != nil {
 			return wrapError(fmt.Sprintf(
 				"Couldn't install filter dependencies %s",
-				filter.GetFriendlyName()), err)
+				f.GetFriendlyName()), err)
 		}
 	} else {
 		Logger.Warnf(
-			"Filter type '%s' not supported", filter.RunWith)
+			"Filter type '%s' not supported", f.RunWith)
 	}
 
-	Logger.Infof("Dependencies for %s installed successfully", filter.GetFriendlyName())
+	Logger.Infof("Dependencies for %s installed successfully", f.GetFriendlyName())
 	return nil
 }
 
-// Downloads the filter into its own directory and returns the download path of the directory.
-func (filter *Filter) Download(isForced bool) (string, error) {
-	url := filter.GetDownloadUrl()
-	downloadPath := filter.GetDownloadPath()
+// Download ownloads the filter into its own directory and returns the
+// download path of the directory.
+func (f *Filter) Download(isForced bool) (string, error) {
+	url := f.GetDownloadUrl()
+	downloadPath := f.GetDownloadPath()
 
-	if filter.IsInstalled() {
+	if f.IsInstalled() {
 		if !isForced {
 			Logger.Warnf("Filter %s already installed, skipping. Run "+
-				"with '-f' to force.", filter.GetFriendlyName())
+				"with '-f' to force.", f.GetFriendlyName())
 			return "", nil
 		} else {
 			// TODO should we print version information here?
 			// like "version 1.4.2 uninstalled, version 1.4.3 installed"
 			Logger.Warnf("Filter %s already installed, but force mode is enabled.\n"+
-				"Filter will be installed, erasing prior contents.", filter.GetFriendlyName())
-			filter.Uninstall()
+				"Filter will be installed, erasing prior contents.", f.GetFriendlyName())
+			f.Uninstall()
 		}
 	}
 
-	Logger.Infof("Downloading filter %s...", filter.GetFriendlyName())
+	Logger.Infof("Downloading filter %s...", f.GetFriendlyName())
 
 	// Download the filter using Git Getter
 	// TODO:
@@ -397,7 +399,7 @@ func (filter *Filter) Download(isForced bool) (string, error) {
 		os.RemoveAll(testFolder)
 	}
 
-	Logger.Infof("Filter %s downloaded successfully.", filter.GetFriendlyName())
+	Logger.Infof("Filter %s downloaded successfully.", f.GetFriendlyName())
 	return downloadPath, nil
 }
 
