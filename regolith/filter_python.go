@@ -24,7 +24,9 @@ func PythonFilterFromObject(obj map[string]interface{}) *PythonFilter {
 
 	script, ok := obj["script"].(string)
 	if !ok {
-		Logger.Fatalf("Could filter %q", filter.GetFriendlyName())
+		Logger.Fatalf(
+			"python filter %q is missing \"script\" field",
+			filter.GetFriendlyName())
 	}
 	filter.Script = script
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0

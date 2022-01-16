@@ -13,13 +13,6 @@ import (
 	"github.com/otiai10/copy"
 )
 
-// IsRemoteFilterCached checks whether the filter of given URL is already saved
-// in cache.
-func IsRemoteFilterCached(url string) bool {
-	_, err := os.Stat(UrlToPath(url))
-	return err == nil
-}
-
 type RemoteFilter struct {
 	Filter
 
@@ -34,7 +27,12 @@ type RemoteFilter struct {
 
 func RemoteFilterFromObject(obj map[string]interface{}) *RemoteFilter {
 	filter := &RemoteFilter{Filter: *FilterFromObject(obj)}
-	id, _ := obj["filter"].(string) // filter property is optional
+	id, ok := obj["filter"].(string) // filter property is optional
+	if !ok {
+		Logger.Fatalf(
+			"remote filter %q is missing \"filter\" field",
+			filter.GetFriendlyName())
+	}
 	filter.Id = id
 
 	url, ok := obj["url"].(string)
@@ -66,11 +64,11 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 
 	Logger.Debugf("RunRemoteFilter '%s'", f.Url)
-	if !IsRemoteFilterCached(f.Url) {
+	if !f.IsCached() {
 		return errors.New("filter is not downloaded! Please run 'regolith install'")
 	}
 
-	path := UrlToPath(f.Url)
+	path := f.GetDownloadPath()
 	absolutePath, _ := filepath.Abs(path)
 	filterCollection, err := FilterCollectionFromFilterJson(
 		filepath.Join(path, "filter.json"))
@@ -199,7 +197,7 @@ func (f *RemoteFilter) IsInstalled() bool {
 
 // GetDownloadPath returns the path location where the filter can be found.
 func (f *RemoteFilter) GetDownloadPath() string {
-	return UrlToPath(f.Url)
+	return filepath.Join(".regolith/cache/filters", f.Url, f.Id)
 }
 
 // GetDownloadUrl creates a download URL, based on the filter definition.
@@ -239,11 +237,9 @@ func (f *RemoteFilter) Uninstall() {
 	}
 }
 
-// UrlToPath returns regolith cache path for given URL.
-// Version is ignored, implying that all versions of a filter are installed
-// into the same location
-func UrlToPath(url string) string {
-	// Strip version from url
-	url = strings.Split(url, "?")[0]
-	return ".regolith/cache/filters/" + url
+// IsCached checks whether the filter of given URL is already saved
+// in cache.
+func (f *RemoteFilter) IsCached() bool {
+	_, err := os.Stat(f.GetDownloadPath())
+	return err == nil
 }
