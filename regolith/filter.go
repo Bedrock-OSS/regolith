@@ -47,22 +47,12 @@ func RunnableFilterFromObject(obj map[string]interface{}) FilterRunner {
 	case "shell":
 		return ShellFilterFromObject(obj)
 	case "":
+		filter, err := BuildInFilterFromObject(obj)
+		if err == nil {
+			return filter
+		}
 		return RemoteFilterFromObject(obj)
 	}
 	Logger.Fatalf("Unknown runWith '%s'", runWith)
-	return nil
-}
-
-func RunHelloWorldFilter(filter *Filter) error {
-	Logger.Info(
-		"Hello world!\n" +
-			"===========================================================\n" +
-			" Welcome to Regolith!\n" +
-			"\n" +
-			" This message is generated from the 'hello_world' filter.\n" +
-			" You can delete this filter when you're ready, and replace it with" +
-			" Something more useful!\n" +
-			"===========================================================\n",
-	)
 	return nil
 }
