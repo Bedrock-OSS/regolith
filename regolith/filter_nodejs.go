@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-const nodeJSFilterName = "nodejs"
-
 type NodeJSFilter struct {
 	Filter
 
@@ -39,7 +37,34 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 	Logger.Infof("Running filter %s", f.GetFriendlyName())
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
-	return runNodeJSFilter(*f, f.Settings, absoluteLocation)
+	// Run filter
+	if len(f.Settings) == 0 {
+		err := RunSubProcess(
+			"node",
+			append([]string{
+				absoluteLocation + string(os.PathSeparator) + f.Script},
+				f.Arguments...),
+			absoluteLocation,
+			GetAbsoluteWorkingDirectory(),
+		)
+		if err != nil {
+			return wrapError("Failed to run NodeJS script", err)
+		}
+	} else {
+		jsonSettings, _ := json.Marshal(f.Settings)
+		err := RunSubProcess(
+			"node",
+			append([]string{
+				absoluteLocation + string(os.PathSeparator) + f.Script,
+				string(jsonSettings)}, f.Arguments...),
+			absoluteLocation,
+			GetAbsoluteWorkingDirectory(),
+		)
+		if err != nil {
+			return wrapError("Failed to run NodeJS script", err)
+		}
+	}
+	return nil
 }
 
 func (f *NodeJSFilter) InstallDependencies(parent *RemoteFilter) error {
@@ -55,19 +80,36 @@ func (f *NodeJSFilter) InstallDependencies(parent *RemoteFilter) error {
 			"Unable to resolve path of %s script",
 			f.GetFriendlyName()), err)
 	}
-	err = installNodeJSFilter(*f, filepath.Dir(scriptPath))
-	if err != nil {
-		return wrapError(fmt.Sprintf(
-			"Couldn't install filter dependencies %s",
-			f.GetFriendlyName()), err)
-	}
 
+	filterPath := filepath.Dir(scriptPath)
+	if hasPackageJson(filterPath) {
+		Logger.Info("Installing npm dependencies...")
+		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath, filterPath)
+		if err != nil {
+			return wrapError(
+				fmt.Sprintf(
+					"Failed to run npm and install dependencies of %s",
+					f.GetFriendlyName()),
+				err,
+			)
+		}
+	}
 	Logger.Infof("Dependencies for %s installed successfully", f.GetFriendlyName())
 	return nil
 }
 
 func (f *NodeJSFilter) Check() error {
-	return checkNodeJSRequirements()
+	_, err := exec.LookPath("node")
+	if err != nil {
+		Logger.Fatal("NodeJS not found. Download and install it from https://nodejs.org/en/")
+	}
+	cmd, err := exec.Command("node", "--version").Output()
+	if err != nil {
+		return wrapError("Failed to check NodeJS version", err)
+	}
+	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
+	Logger.Debugf("Found NodeJS version %s", a)
+	return nil
 }
 
 func (f *NodeJSFilter) CopyArguments(parent *RemoteFilter) {
@@ -82,48 +124,7 @@ func (f *NodeJSFilter) GetFriendlyName() string {
 	return "Unnamed NodeJS filter"
 }
 
-func runNodeJSFilter(filter NodeJSFilter, settings map[string]interface{}, absoluteLocation string) error {
-	if len(settings) == 0 {
-		err := RunSubProcess("node", append([]string{absoluteLocation + string(os.PathSeparator) + filter.Script}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
-		if err != nil {
-			return wrapError("Failed to run NodeJS script", err)
-		}
-	} else {
-		jsonSettings, _ := json.Marshal(settings)
-		err := RunSubProcess("node", append([]string{absoluteLocation + string(os.PathSeparator) + filter.Script, string(jsonSettings)}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
-		if err != nil {
-			return wrapError("Failed to run NodeJS script", err)
-		}
-	}
-	return nil
-}
-
-func installNodeJSFilter(filter NodeJSFilter, filterPath string) error {
-	if hasPackageJson(filterPath) {
-		Logger.Info("Installing npm dependencies...")
-		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath, filterPath)
-		if err != nil {
-			return wrapError("Failed to run npm", err)
-		}
-	}
-	return nil
-}
-
 func hasPackageJson(filterPath string) bool {
 	_, err := os.Stat(path.Join(filterPath, "package.json"))
 	return err == nil
-}
-
-func checkNodeJSRequirements() error {
-	_, err := exec.LookPath("node")
-	if err != nil {
-		Logger.Fatal("NodeJS not found. Download and install it from https://nodejs.org/en/")
-	}
-	cmd, err := exec.Command("node", "--version").Output()
-	if err != nil {
-		return wrapError("Failed to check NodeJS version", err)
-	}
-	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
-	Logger.Debugf("Found NodeJS version %s", a)
-	return nil
 }

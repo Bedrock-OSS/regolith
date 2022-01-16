@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-const javaFilterName = "java"
-
 type JavaFilter struct {
 	Filter
 
@@ -36,7 +34,41 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 	Logger.Infof("Running filter %s", f.GetFriendlyName())
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
-	return runJavaFilter(*f, f.Settings, absoluteLocation)
+
+	// Run the filter
+	if len(f.Settings) == 0 {
+		err := RunSubProcess(
+			"java",
+			append(
+				[]string{
+					"-jar", absoluteLocation + string(os.PathSeparator) +
+						f.Script},
+				f.Arguments...,
+			),
+			absoluteLocation,
+			GetAbsoluteWorkingDirectory(),
+		)
+		if err != nil {
+			return wrapError("Failed to run Java filter", err)
+		}
+	} else {
+		jsonSettings, _ := json.Marshal(f.Settings)
+		err := RunSubProcess(
+			"java",
+			append(
+				[]string{
+					"-jar", absoluteLocation + string(os.PathSeparator) +
+						f.Script, string(jsonSettings)},
+				f.Arguments...,
+			),
+			absoluteLocation,
+			GetAbsoluteWorkingDirectory(),
+		)
+		if err != nil {
+			return wrapError("Failed to run Java filter", err)
+		}
+	}
+	return nil
 }
 
 func (f *JavaFilter) InstallDependencies(parent *RemoteFilter) error {
@@ -44,38 +76,6 @@ func (f *JavaFilter) InstallDependencies(parent *RemoteFilter) error {
 }
 
 func (f *JavaFilter) Check() error {
-	return checkJavaRequirements()
-}
-
-func (f *JavaFilter) CopyArguments(parent *RemoteFilter) {
-	f.Arguments = parent.Arguments
-	f.Settings = parent.Settings
-}
-
-func (f *JavaFilter) GetFriendlyName() string {
-	if f.Name != "" {
-		return f.Name
-	}
-	return "Unnamed Java filter"
-}
-
-func runJavaFilter(filter JavaFilter, settings map[string]interface{}, absoluteLocation string) error {
-	if len(settings) == 0 {
-		err := RunSubProcess("java", append([]string{"-jar", absoluteLocation + string(os.PathSeparator) + filter.Script}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
-		if err != nil {
-			return wrapError("Failed to run Java filter", err)
-		}
-	} else {
-		jsonSettings, _ := json.Marshal(settings)
-		err := RunSubProcess("java", append([]string{"-jar", absoluteLocation + string(os.PathSeparator) + filter.Script, string(jsonSettings)}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
-		if err != nil {
-			return wrapError("Failed to run Java filter", err)
-		}
-	}
-	return nil
-}
-
-func checkJavaRequirements() error {
 	_, err := exec.LookPath("java")
 	if err != nil {
 		Logger.Fatal("Java not found. Download and install it from https://adoptopenjdk.net/")
@@ -91,4 +91,16 @@ func checkJavaRequirements() error {
 		Logger.Debugf("Failed to parse Java version")
 	}
 	return nil
+}
+
+func (f *JavaFilter) CopyArguments(parent *RemoteFilter) {
+	f.Arguments = parent.Arguments
+	f.Settings = parent.Settings
+}
+
+func (f *JavaFilter) GetFriendlyName() string {
+	if f.Name != "" {
+		return f.Name
+	}
+	return "Unnamed Java filter"
 }

@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-const pythonFilterName = "python"
-
 type PythonFilter struct {
 	Filter
 
@@ -43,7 +41,37 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 	Logger.Infof("Running filter %s", f.GetFriendlyName())
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
-	return runPythonFilter(*f, f.Settings, absoluteLocation)
+
+	// Run filter
+	command := "python"
+	scriptPath := filepath.Join(absoluteLocation, f.Script)
+	if needsVenv(filepath.Dir(scriptPath)) {
+		venvPath, err := f.resolveVenvPath()
+		if err != nil {
+			return wrapError("Failed to resolve venv path", err)
+		}
+		Logger.Debug("Running Python filter using venv: ", venvPath)
+		suffix := ""
+		if runtime.GOOS == "windows" {
+			suffix = ".exe"
+		}
+		command = filepath.Join(venvPath, "Scripts/python"+suffix)
+	}
+	var args []string
+	if len(f.Settings) == 0 {
+		args = append([]string{"-u", scriptPath}, f.Arguments...)
+	} else {
+		jsonSettings, _ := json.Marshal(f.Settings)
+		args = append(
+			[]string{"-u", scriptPath, string(jsonSettings)},
+			f.Arguments...)
+	}
+	err := RunSubProcess(
+		command, args, absoluteLocation, GetAbsoluteWorkingDirectory())
+	if err != nil {
+		return wrapError("Failed to run Python script", err)
+	}
+	return nil
 }
 
 func (f *PythonFilter) InstallDependencies(parent *RemoteFilter) error {
@@ -59,72 +87,11 @@ func (f *PythonFilter) InstallDependencies(parent *RemoteFilter) error {
 			"Unable to resolve path of %s script",
 			f.GetFriendlyName()), err)
 	}
-	err = installPythonFilter(*f, filepath.Dir(scriptPath))
-	if err != nil {
-		return wrapError(fmt.Sprintf(
-			"Couldn't install filter dependencies %s",
-			f.GetFriendlyName()), err)
-	}
 
-	Logger.Infof("Dependencies for %s installed successfully", f.GetFriendlyName())
-	return nil
-}
-
-func (f *PythonFilter) Check() error {
-	return checkPythonRequirements()
-}
-
-func (f *PythonFilter) CopyArguments(parent *RemoteFilter) {
-	f.Arguments = parent.Arguments
-	f.Settings = parent.Settings
-	f.VenvSlot = parent.VenvSlot
-}
-
-func (f *PythonFilter) GetFriendlyName() string {
-	if f.Name != "" {
-		return f.Name
-	}
-	return "Unnamed Python filter"
-}
-
-func runPythonFilter(
-	filter PythonFilter, settings map[string]interface{}, absoluteLocation string,
-) error {
-	command := "python"
-	scriptPath := filepath.Join(absoluteLocation, filter.Script)
-
-	if needsVenv(filepath.Dir(scriptPath)) {
-		venvPath, err := resolveVenvPath(filter)
-		if err != nil {
-			return wrapError("Failed to resolve venv path", err)
-		}
-		Logger.Debug("Running Python filter using venv: ", venvPath)
-		suffix := ""
-		if runtime.GOOS == "windows" {
-			suffix = ".exe"
-		}
-		command = filepath.Join(venvPath, "Scripts/python"+suffix)
-	}
-	var args []string
-	if len(settings) == 0 {
-		args = append([]string{"-u", scriptPath}, filter.Arguments...)
-	} else {
-		jsonSettings, _ := json.Marshal(settings)
-		args = append(
-			[]string{"-u", scriptPath, string(jsonSettings)},
-			filter.Arguments...)
-	}
-	err := RunSubProcess(
-		command, args, absoluteLocation, GetAbsoluteWorkingDirectory())
-	if err != nil {
-		return wrapError("Failed to run Python script", err)
-	}
-	return nil
-}
-
-func installPythonFilter(filter PythonFilter, filterPath string) error {
+	// Install the filter dependencies
+	filterPath := filepath.Dir(scriptPath)
 	if needsVenv(filterPath) {
-		venvPath, err := resolveVenvPath(filter)
+		venvPath, err := f.resolveVenvPath()
 		if err != nil {
 			return wrapError("Failed to resolve venv path", err)
 		}
@@ -142,10 +109,50 @@ func installPythonFilter(filter PythonFilter, filterPath string) error {
 			filepath.Join(venvPath, "Scripts/pip"+suffix),
 			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"couldn't run pip to install dependencies of %s",
+				f.GetFriendlyName(),
+			)
 		}
 	}
+	Logger.Infof("Dependencies for %s installed successfully", f.GetFriendlyName())
 	return nil
+}
+
+func (f *PythonFilter) Check() error {
+	_, err := exec.LookPath("python")
+	if err != nil {
+		return errors.New("python not found. Download and install it from https://www.python.org/downloads/")
+	}
+	cmd, err := exec.Command("python", "--version").Output()
+	if err != nil {
+		return wrapError("Python version check failed", err)
+	}
+	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "Python ")
+	Logger.Debugf("Found Python version %s", a)
+	return nil
+}
+
+func (f *PythonFilter) CopyArguments(parent *RemoteFilter) {
+	f.Arguments = parent.Arguments
+	f.Settings = parent.Settings
+	f.VenvSlot = parent.VenvSlot
+}
+
+func (f *PythonFilter) GetFriendlyName() string {
+	if f.Name != "" {
+		return f.Name
+	}
+	return "Unnamed Python filter"
+}
+
+func (f *PythonFilter) resolveVenvPath() (string, error) {
+	resolvedPath, err := filepath.Abs(
+		filepath.Join(".regolith/cache/venvs", strconv.Itoa(f.VenvSlot)))
+	if err != nil {
+		return "", wrapError(fmt.Sprintf("VenvSlot %v: Unable to create venv", f.VenvSlot), err)
+	}
+	return resolvedPath, nil
 }
 
 func needsVenv(filterPath string) bool {
@@ -155,27 +162,4 @@ func needsVenv(filterPath string) bool {
 		return !stats.IsDir()
 	}
 	return false
-}
-
-func resolveVenvPath(filter PythonFilter) (string, error) {
-	resolvedPath, err := filepath.Abs(
-		filepath.Join(".regolith/cache/venvs", strconv.Itoa(filter.VenvSlot)))
-	if err != nil {
-		return "", wrapError(fmt.Sprintf("VenvSlot %v: Unable to create venv", filter.VenvSlot), err)
-	}
-	return resolvedPath, nil
-}
-
-func checkPythonRequirements() error {
-	_, err := exec.LookPath("python")
-	if err != nil {
-		return errors.New("Python not found. Download and install it from https://www.python.org/downloads/")
-	}
-	cmd, err := exec.Command("python", "--version").Output()
-	if err != nil {
-		return wrapError("Python version check failed", err)
-	}
-	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "Python ")
-	Logger.Debugf("Found Python version %s", a)
-	return nil
 }

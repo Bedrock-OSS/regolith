@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-const nimFilterName = "nim"
-
 type NimFilter struct {
 	Filter
 
@@ -38,7 +36,39 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 	Logger.Infof("Running filter %s", f.GetFriendlyName())
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
-	return runNimFilter(*f, f.Settings, absoluteLocation)
+
+	// Run filter
+	if len(f.Settings) == 0 {
+		err := RunSubProcess(
+			"nim",
+			append([]string{
+				"-r", "c", "--hints:off", "--warnings:off",
+				absoluteLocation + string(os.PathSeparator) + f.Script},
+				f.Arguments...,
+			),
+			absoluteLocation,
+			GetAbsoluteWorkingDirectory(),
+		)
+		if err != nil {
+			return wrapError("Failed to run Nim script", err)
+		}
+	} else {
+		jsonSettings, _ := json.Marshal(f.Settings)
+		err := RunSubProcess(
+			"nim",
+			append([]string{
+				"-r", "c", "--hints:off", "--warnings:off",
+				absoluteLocation + string(os.PathSeparator) + f.Script,
+				string(jsonSettings)},
+				f.Arguments...),
+			absoluteLocation,
+			GetAbsoluteWorkingDirectory(),
+		)
+		if err != nil {
+			return wrapError("Failed to run Nim script", err)
+		}
+	}
+	return nil
 }
 
 func (f *NimFilter) InstallDependencies(parent *RemoteFilter) error {
@@ -54,19 +84,37 @@ func (f *NimFilter) InstallDependencies(parent *RemoteFilter) error {
 			"Unable to resolve path of %s script",
 			f.GetFriendlyName()), err)
 	}
-	err = installNimFilter(*f, filepath.Dir(scriptPath))
-	if err != nil {
-		return wrapError(fmt.Sprintf(
-			"Couldn't install filter dependencies %s",
-			f.GetFriendlyName()), err)
+	filterPath := filepath.Dir(scriptPath)
+	if hasNimble(filterPath) {
+		Logger.Info("Installing nim dependencies...")
+		err := RunSubProcess(
+			"nimble", []string{"install"}, filterPath, filterPath)
+		if err != nil {
+			return wrapError(
+				fmt.Sprintf(
+					"Failed to run nimble to install dependencies of %s",
+					f.GetFriendlyName(),
+				),
+				err,
+			)
+		}
 	}
-
 	Logger.Infof("Dependencies for %s installed successfully", f.GetFriendlyName())
 	return nil
 }
 
 func (f *NimFilter) Check() error {
-	return checkNimRequirements()
+	_, err := exec.LookPath("nim")
+	if err != nil {
+		Logger.Fatal("Nim not found. Download and install it from https://nim-lang.org/")
+	}
+	cmd, err := exec.Command("nim", "--version").Output()
+	if err != nil {
+		return wrapError("Failed to check Nim version", err)
+	}
+	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
+	Logger.Debugf("Found Nim version %s", a)
+	return nil
 }
 
 func (f *NimFilter) CopyArguments(parent *RemoteFilter) {
@@ -81,33 +129,6 @@ func (f *NimFilter) GetFriendlyName() string {
 	return "Unnamed Nim filter"
 }
 
-func runNimFilter(filter NimFilter, settings map[string]interface{}, absoluteLocation string) error {
-	if len(settings) == 0 {
-		err := RunSubProcess("nim", append([]string{"-r", "c", "--hints:off", "--warnings:off", absoluteLocation + string(os.PathSeparator) + filter.Script}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
-		if err != nil {
-			return wrapError("Failed to run Nim script", err)
-		}
-	} else {
-		jsonSettings, _ := json.Marshal(settings)
-		err := RunSubProcess("nim", append([]string{"-r", "c", "--hints:off", "--warnings:off", absoluteLocation + string(os.PathSeparator) + filter.Script, string(jsonSettings)}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
-		if err != nil {
-			return wrapError("Failed to run Nim script", err)
-		}
-	}
-	return nil
-}
-
-func installNimFilter(filter NimFilter, filterPath string) error {
-	if hasNimble(filterPath) {
-		Logger.Info("Installing nim dependencies...")
-		err := RunSubProcess("nimble", []string{"install"}, filterPath, filterPath)
-		if err != nil {
-			return wrapError("Failed to run nimble", err)
-		}
-	}
-	return nil
-}
-
 func hasNimble(filterPath string) bool {
 	nimble := false
 	filepath.Walk(filterPath, func(path string, info os.FileInfo, err error) error {
@@ -120,18 +141,4 @@ func hasNimble(filterPath string) bool {
 		return nil
 	})
 	return nimble
-}
-
-func checkNimRequirements() error {
-	_, err := exec.LookPath("nim")
-	if err != nil {
-		Logger.Fatal("Nim not found. Download and install it from https://nim-lang.org/")
-	}
-	cmd, err := exec.Command("nim", "--version").Output()
-	if err != nil {
-		return wrapError("Failed to check Nim version", err)
-	}
-	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
-	Logger.Debugf("Found Nim version %s", a)
-	return nil
 }
