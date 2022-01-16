@@ -135,7 +135,7 @@ func RunProfile(profileName string) error {
 // FilterCollectionFromFilterJson returns a collection of filters from a
 // "filter.json" file of a remote filter.
 func FilterCollectionFromFilterJson(path string) (*FilterCollection, error) {
-	result := &FilterCollection{}
+	result := &FilterCollection{Filters: []FilterRunner{}}
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {

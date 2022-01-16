@@ -72,7 +72,8 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 
 	path := UrlToPath(f.Url)
 	absolutePath, _ := filepath.Abs(path)
-	filterCollection, err := FilterCollectionFromFilterJson(path)
+	filterCollection, err := FilterCollectionFromFilterJson(
+		filepath.Join(path, "filter.json"))
 	if err != nil {
 		return err
 	}
