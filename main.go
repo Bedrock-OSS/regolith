@@ -131,5 +131,4 @@ func main() {
 func initRegolith(debug bool) {
 	//goland:noinspection GoBoolExpressions
 	regolith.InitLogging(debug)
-	regolith.RegisterFilters()
 }

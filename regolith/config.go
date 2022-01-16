@@ -45,20 +45,95 @@ func LoadConfig() *Config {
 		Logger.Fatal("Couldn't find %s! Consider running 'regolith init'.", ManifestName, err)
 	}
 
-	var result *Config
-	err = json.Unmarshal(file, &result)
+	var configJson map[string]interface{}
+	err = json.Unmarshal(file, &configJson)
 	if err != nil {
 		Logger.Fatal("Couldn't load %s! Does the file contain correct json?", ManifestName, err)
 	}
+	result := ConfigFromObject(configJson)
+	return result
+}
 
-	// If settings is nil replace it with empty map.
-	for _, profile := range result.Profiles {
-		for fk := range profile.Filters {
-			if profile.Filters[fk].Settings == nil {
-				profile.Filters[fk].Settings = make(map[string]interface{})
-			}
-		}
+func ConfigFromObject(obj map[string]interface{}) *Config {
+	result := &Config{}
+	// Name
+	name, ok := obj["name"].(string)
+	if !ok {
+		Logger.Fatal("Could not find name in config.json")
 	}
+	result.Name = name
+	// Author
+	author, ok := obj["author"].(string)
+	if !ok {
+		Logger.Fatal("Could not find author in config.json")
+	}
+	result.Author = author
+	// Packs
+	packs, ok := obj["packs"].(map[string]interface{})
+	if !ok {
+		Logger.Fatal("Could not find packs in config.json")
+	}
+	result.Packs = PacksFromObject(packs)
+	// Regolith
+	regolith, ok := obj["regolith"].(map[string]interface{})
+	if !ok {
+		Logger.Fatal("Could not find regolith in config.json")
+	}
+	result.RegolithProject = RegolithProjectFromObject(regolith)
+	return result
+}
+
+func PacksFromObject(obj map[string]interface{}) Packs {
+	result := Packs{}
+	// BehaviorPack
+	behaviorPack, _ := obj["behaviorPack"].(string)
+	result.BehaviorFolder = behaviorPack
+	// ResourcePack
+	resourcePack, _ := obj["resourcePack"].(string)
+	result.ResourceFolder = resourcePack
+	return result
+}
+
+func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
+	result := RegolithProject{Profiles: make(map[string]Profile)}
+	profiles, ok := obj["profiles"].(map[string]interface{})
+	if !ok {
+		Logger.Fatal("Could not find profiles in config.json")
+	}
+	for profileName, profile := range profiles {
+		profileMap, ok := profile.(map[string]interface{})
+		if !ok {
+			Logger.Fatal("Could not find profile in config.json")
+		}
+		result.Profiles[profileName] = ProfileFromObject(profileName, profileMap)
+	}
+	return result
+}
+
+func ExportTargetFromObject(obj map[string]interface{}) ExportTarget {
+	// TODO - implement in a proper way
+	result := ExportTarget{}
+	// Target
+	target, ok := obj["target"].(string)
+	if !ok {
+		Logger.Fatal("Could not find target in config.json")
+	}
+	result.Target = target
+	// RpPath
+	rpPath, _ := obj["rpPath"].(string)
+	result.RpPath = rpPath
+	// BpPath
+	bpPath, _ := obj["bpPath"].(string)
+	result.BpPath = bpPath
+	// WorldName
+	worldName, _ := obj["worldName"].(string)
+	result.WorldName = worldName
+	// WorldPath
+	worldPath, _ := obj["worldPath"].(string)
+	result.WorldPath = worldPath
+	// ReadOnly
+	readOnly, _ := obj["readOnly"].(bool)
+	result.ReadOnly = readOnly
 	return result
 }
 
@@ -102,7 +177,9 @@ func InitializeRegolithProject(isForced bool) error {
 					"dev": {
 						DataPath: "./packs/data",
 						FilterCollection: FilterCollection{
-							[]Filter{{Filter: "hello_world"}},
+							Filters: []FilterRunner{
+								&RemoteFilter{Id: "hello_world"},
+							},
 						},
 						ExportTarget: ExportTarget{
 							Target:   "development",

@@ -10,26 +10,91 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const pythonFilterName = "python"
 
-func RegisterPythonFilter(filters map[string]filterDefinition) {
-	filters[pythonFilterName] = filterDefinition{
-		filter:              RunPythonFilter,
-		installDependencies: InstallPythonFilter,
-		check:               CheckPythonRequirements,
-	}
+type PythonFilter struct {
+	Filter
+
+	Script   string `json:"script,omitempty"`
+	VenvSlot int    `json:"venvSlot,omitempty"`
 }
 
-func RunPythonFilter(
-	filter Filter, settings map[string]interface{}, absoluteLocation string,
+func PythonFilterFromObject(obj map[string]interface{}) *PythonFilter {
+	filter := &PythonFilter{Filter: *FilterFromObject(obj)}
+
+	script, ok := obj["script"].(string)
+	if !ok {
+		Logger.Fatalf("Could filter %q", filter.GetFriendlyName())
+	}
+	filter.Script = script
+	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+	return filter
+}
+
+func (f *PythonFilter) Run(absoluteLocation string) error {
+	// Disabled filters are skipped
+	if f.Disabled {
+		Logger.Infof("Filter '%s' is disabled, skipping.", f.GetFriendlyName())
+		return nil
+	}
+	Logger.Infof("Running filter %s", f.GetFriendlyName())
+	start := time.Now()
+	defer Logger.Debugf("Executed in %s", time.Since(start))
+	return runPythonFilter(*f, f.Settings, absoluteLocation)
+}
+
+func (f *PythonFilter) InstallDependencies(parent *RemoteFilter) error {
+	installLocation := ""
+	// Install dependencies
+	if parent != nil {
+		installLocation = parent.GetDownloadPath()
+	}
+	Logger.Infof("Downloading dependencies for %s...", f.GetFriendlyName())
+	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
+	if err != nil {
+		return wrapError(fmt.Sprintf(
+			"Unable to resolve path of %s script",
+			f.GetFriendlyName()), err)
+	}
+	err = installPythonFilter(*f, filepath.Dir(scriptPath))
+	if err != nil {
+		return wrapError(fmt.Sprintf(
+			"Couldn't install filter dependencies %s",
+			f.GetFriendlyName()), err)
+	}
+
+	Logger.Infof("Dependencies for %s installed successfully", f.GetFriendlyName())
+	return nil
+}
+
+func (f *PythonFilter) Check() error {
+	return checkPythonRequirements()
+}
+
+func (f *PythonFilter) CopyArguments(parent *RemoteFilter) {
+	f.Arguments = parent.Arguments
+	f.Settings = parent.Settings
+	f.VenvSlot = parent.VenvSlot
+}
+
+func (f *PythonFilter) GetFriendlyName() string {
+	if f.Name != "" {
+		return f.Name
+	}
+	return "Unnamed Python filter"
+}
+
+func runPythonFilter(
+	filter PythonFilter, settings map[string]interface{}, absoluteLocation string,
 ) error {
 	command := "python"
 	scriptPath := filepath.Join(absoluteLocation, filter.Script)
 
-	if NeedsVenv(filepath.Dir(scriptPath)) {
-		venvPath, err := ResolveVenvPath(filter)
+	if needsVenv(filepath.Dir(scriptPath)) {
+		venvPath, err := resolveVenvPath(filter)
 		if err != nil {
 			return wrapError("Failed to resolve venv path", err)
 		}
@@ -57,9 +122,9 @@ func RunPythonFilter(
 	return nil
 }
 
-func InstallPythonFilter(filter Filter, filterPath string) error {
-	if NeedsVenv(filterPath) {
-		venvPath, err := ResolveVenvPath(filter)
+func installPythonFilter(filter PythonFilter, filterPath string) error {
+	if needsVenv(filterPath) {
+		venvPath, err := resolveVenvPath(filter)
 		if err != nil {
 			return wrapError("Failed to resolve venv path", err)
 		}
@@ -83,7 +148,7 @@ func InstallPythonFilter(filter Filter, filterPath string) error {
 	return nil
 }
 
-func NeedsVenv(filterPath string) bool {
+func needsVenv(filterPath string) bool {
 	Logger.Info(filepath.Join(filterPath, "requirements.txt"))
 	stats, err := os.Stat(filepath.Join(filterPath, "requirements.txt"))
 	if err == nil {
@@ -92,7 +157,7 @@ func NeedsVenv(filterPath string) bool {
 	return false
 }
 
-func ResolveVenvPath(filter Filter) (string, error) {
+func resolveVenvPath(filter PythonFilter) (string, error) {
 	resolvedPath, err := filepath.Abs(
 		filepath.Join(".regolith/cache/venvs", strconv.Itoa(filter.VenvSlot)))
 	if err != nil {
@@ -101,7 +166,7 @@ func ResolveVenvPath(filter Filter) (string, error) {
 	return resolvedPath, nil
 }
 
-func CheckPythonRequirements() error {
+func checkPythonRequirements() error {
 	_, err := exec.LookPath("python")
 	if err != nil {
 		return errors.New("Python not found. Download and install it from https://www.python.org/downloads/")

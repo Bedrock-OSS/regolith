@@ -2,23 +2,87 @@ package regolith
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 const nodeJSFilterName = "nodejs"
 
-func RegisterNodeJSFilter(filters map[string]filterDefinition) {
-	filters[nodeJSFilterName] = filterDefinition{
-		filter:              runNodeJSFilter,
-		installDependencies: installNodeJSFilter,
-		check:               checkNodeJSRequirements,
-	}
+type NodeJSFilter struct {
+	Filter
+
+	Script string `json:"script,omitempty"`
 }
 
-func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) error {
+func NodeJSFilterFromObject(obj map[string]interface{}) *NodeJSFilter {
+	filter := &NodeJSFilter{Filter: *FilterFromObject(obj)}
+
+	script, ok := obj["script"].(string)
+	if !ok {
+		Logger.Fatalf("Could filter %q", filter.GetFriendlyName())
+	}
+	filter.Script = script
+	return filter
+}
+
+func (f *NodeJSFilter) Run(absoluteLocation string) error {
+	// Disabled filters are skipped
+	if f.Disabled {
+		Logger.Infof("Filter '%s' is disabled, skipping.", f.GetFriendlyName())
+		return nil
+	}
+	Logger.Infof("Running filter %s", f.GetFriendlyName())
+	start := time.Now()
+	defer Logger.Debugf("Executed in %s", time.Since(start))
+	return runNodeJSFilter(*f, f.Settings, absoluteLocation)
+}
+
+func (f *NodeJSFilter) InstallDependencies(parent *RemoteFilter) error {
+	installLocation := ""
+	// Install dependencies
+	if parent != nil {
+		installLocation = parent.GetDownloadPath()
+	}
+	Logger.Infof("Downloading dependencies for %s...", f.GetFriendlyName())
+	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
+	if err != nil {
+		return wrapError(fmt.Sprintf(
+			"Unable to resolve path of %s script",
+			f.GetFriendlyName()), err)
+	}
+	err = installNodeJSFilter(*f, filepath.Dir(scriptPath))
+	if err != nil {
+		return wrapError(fmt.Sprintf(
+			"Couldn't install filter dependencies %s",
+			f.GetFriendlyName()), err)
+	}
+
+	Logger.Infof("Dependencies for %s installed successfully", f.GetFriendlyName())
+	return nil
+}
+
+func (f *NodeJSFilter) Check() error {
+	return checkNodeJSRequirements()
+}
+
+func (f *NodeJSFilter) CopyArguments(parent *RemoteFilter) {
+	f.Arguments = parent.Arguments
+	f.Settings = parent.Settings
+}
+
+func (f *NodeJSFilter) GetFriendlyName() string {
+	if f.Name != "" {
+		return f.Name
+	}
+	return "Unnamed NodeJS filter"
+}
+
+func runNodeJSFilter(filter NodeJSFilter, settings map[string]interface{}, absoluteLocation string) error {
 	if len(settings) == 0 {
 		err := RunSubProcess("node", append([]string{absoluteLocation + string(os.PathSeparator) + filter.Script}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
 		if err != nil {
@@ -34,7 +98,7 @@ func runNodeJSFilter(filter Filter, settings map[string]interface{}, absoluteLoc
 	return nil
 }
 
-func installNodeJSFilter(filter Filter, filterPath string) error {
+func installNodeJSFilter(filter NodeJSFilter, filterPath string) error {
 	if hasPackageJson(filterPath) {
 		Logger.Info("Installing npm dependencies...")
 		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath, filterPath)
