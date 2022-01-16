@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-const shellFilterName = "shell"
-
 type ShellFilter struct {
 	Filter
 

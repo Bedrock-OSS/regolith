@@ -110,12 +110,3 @@ func CompareSemanticVersion(ver1 string, ver2 string) int {
 		}
 	}
 }
-
-// UrlToPath returns regolith cache path for given URL.
-// Version is ignored, implying that all versions of a filter are installed
-// into the same location
-func UrlToPath(url string) string {
-	// Strip version from url
-	url = strings.Split(url, "?")[0]
-	return ".regolith/cache/filters/" + url
-}

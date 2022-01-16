@@ -57,14 +57,34 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	// All other filters require safe mode to be turned off
 	if f.Url != StandardLibraryUrl && !IsUnlocked() {
 		return errors.New(
-			"Safe mode is on, which protects you from potentially unsafe " +
-				"code.\nYou may turn it off using 'regolith unlock'.",
+			"safe mode is on, which protects you from potentially unsafe " +
+				"code.\nYou may turn it off using 'regolith unlock'",
 		)
 	}
 	Logger.Infof("Running filter %s", f.GetFriendlyName())
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
-	return RunRemoteFilter(f.Url, f)
+
+	Logger.Debugf("RunRemoteFilter '%s'", f.Url)
+	if !IsRemoteFilterCached(f.Url) {
+		return errors.New("filter is not downloaded! Please run 'regolith install'")
+	}
+
+	path := UrlToPath(f.Url)
+	absolutePath, _ := filepath.Abs(path)
+	filterCollection, err := FilterCollectionFromFilterJson(path)
+	if err != nil {
+		return err
+	}
+	for _, filter := range filterCollection.Filters {
+		// Overwrite the venvSlot with the parent value
+		filter.CopyArguments(f)
+		err := filter.Run(absolutePath)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (f *RemoteFilter) InstallDependencies(parent *RemoteFilter) error {
@@ -91,8 +111,49 @@ func (f *RemoteFilter) GetFriendlyName() string {
 	return end
 }
 
-// copyFilterData copies the filter's data to the data folder.
-func (f *RemoteFilter) copyFilterData(profile *Profile) {
+// Download ownloads the filter into its own directory and returns the
+// download path of the directory.
+func (f *RemoteFilter) Download(isForced bool) (string, error) {
+	url := f.GetDownloadUrl()
+	downloadPath := f.GetDownloadPath()
+
+	if f.IsInstalled() {
+		if !isForced {
+			Logger.Warnf("Filter %s already installed, skipping. Run "+
+				"with '-f' to force.", f.GetFriendlyName())
+			return "", nil
+		} else {
+			// TODO should we print version information here?
+			// like "version 1.4.2 uninstalled, version 1.4.3 installed"
+			Logger.Warnf("Filter %s already installed, but force mode is enabled.\n"+
+				"Filter will be installed, erasing prior contents.", f.GetFriendlyName())
+			f.Uninstall()
+		}
+	}
+
+	Logger.Infof("Downloading filter %s...", f.GetFriendlyName())
+
+	// Download the filter using Git Getter
+	// TODO:
+	// Can we somehow detect whether this is a failure from git being not installed, or a failure from
+	// the repo/folder not existing?
+	err := getter.Get(downloadPath, url)
+	if err != nil {
+		return "", wrapError(fmt.Sprintf("Could not download filter from %s. \n	Is git installed? \n	Does that filter exist?", url), err)
+	}
+
+	// Remove 'test' folder, which we never want to use (saves space on disk)
+	testFolder := path.Join(downloadPath, "test")
+	if _, err := os.Stat(testFolder); err == nil {
+		os.RemoveAll(testFolder)
+	}
+
+	Logger.Infof("Filter %s downloaded successfully.", f.GetFriendlyName())
+	return downloadPath, nil
+}
+
+// CopyFilterData copies the filter's data to the data folder.
+func (f *RemoteFilter) CopyFilterData(profile *Profile) {
 	// Move filters 'data' folder contents into 'data'
 	// If the localDataPath already exists, we must not overwrite
 	// Additionally, if the remote data path doesn't exist, we don't need
@@ -125,34 +186,6 @@ func (f *RemoteFilter) copyFilterData(profile *Profile) {
 				"dataPath is not set. Skipping.", filterName)
 		}
 	}
-}
-
-// RunRemoteFilter loads and runs the content of filter.json from in
-// regolith cache. The url is the URL of the filter from which the filter
-// was downloaded (used to specify its path in the cache). The parentFilter
-// is a filter that caused the downloading. Some properties of
-// parentFilter are propagated to its children.
-func RunRemoteFilter(url string, parentFilter *RemoteFilter) error {
-	Logger.Debugf("RunRemoteFilter '%s'", url)
-	if !IsRemoteFilterCached(url) {
-		return errors.New("filter is not downloaded! Please run 'regolith install'")
-	}
-
-	path := UrlToPath(url)
-	absolutePath, _ := filepath.Abs(path)
-	filterCollection, err := FilterCollectionFromFilterJson(path)
-	if err != nil {
-		return err
-	}
-	for _, filter := range filterCollection.Filters {
-		// Overwrite the venvSlot with the parent value
-		filter.CopyArguments(parentFilter)
-		err := filter.Run(absolutePath)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // IsInstalled eturns whether the filter is currently installed or not.
@@ -205,43 +238,11 @@ func (f *RemoteFilter) Uninstall() {
 	}
 }
 
-// Download ownloads the filter into its own directory and returns the
-// download path of the directory.
-func (f *RemoteFilter) Download(isForced bool) (string, error) {
-	url := f.GetDownloadUrl()
-	downloadPath := f.GetDownloadPath()
-
-	if f.IsInstalled() {
-		if !isForced {
-			Logger.Warnf("Filter %s already installed, skipping. Run "+
-				"with '-f' to force.", f.GetFriendlyName())
-			return "", nil
-		} else {
-			// TODO should we print version information here?
-			// like "version 1.4.2 uninstalled, version 1.4.3 installed"
-			Logger.Warnf("Filter %s already installed, but force mode is enabled.\n"+
-				"Filter will be installed, erasing prior contents.", f.GetFriendlyName())
-			f.Uninstall()
-		}
-	}
-
-	Logger.Infof("Downloading filter %s...", f.GetFriendlyName())
-
-	// Download the filter using Git Getter
-	// TODO:
-	// Can we somehow detect whether this is a failure from git being not installed, or a failure from
-	// the repo/folder not existing?
-	err := getter.Get(downloadPath, url)
-	if err != nil {
-		return "", wrapError(fmt.Sprintf("Could not download filter from %s. \n	Is git installed? \n	Does that filter exist?", url), err)
-	}
-
-	// Remove 'test' folder, which we never want to use (saves space on disk)
-	testFolder := path.Join(downloadPath, "test")
-	if _, err := os.Stat(testFolder); err == nil {
-		os.RemoveAll(testFolder)
-	}
-
-	Logger.Infof("Filter %s downloaded successfully.", f.GetFriendlyName())
-	return downloadPath, nil
+// UrlToPath returns regolith cache path for given URL.
+// Version is ignored, implying that all versions of a filter are installed
+// into the same location
+func UrlToPath(url string) string {
+	// Strip version from url
+	url = strings.Split(url, "?")[0]
+	return ".regolith/cache/filters/" + url
 }

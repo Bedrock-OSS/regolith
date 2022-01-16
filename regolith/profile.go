@@ -253,7 +253,7 @@ func (p *Profile) installFilter(
 			)
 		}
 		p.installFilters(isForced, filterCollection.Filters, rf)
-		rf.copyFilterData(p)
+		rf.CopyFilterData(p)
 	}
 	filter.InstallDependencies(parentFilter)
 	if err != nil {
