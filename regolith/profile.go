@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -94,21 +93,10 @@ func RunProfile(profileName string) error {
 	profile := config.Profiles[profileName]
 
 	// Check whether every filter, uses a supported filter type
-	checked := make(map[string]struct{})
-	exists := struct{}{}
-	for _, filter := range profile.Filters {
-		if filter.RunWith != "" {
-			if _, ok := checked[filter.RunWith]; !ok {
-				if f, ok := FilterTypes[filter.RunWith]; ok {
-					checked[filter.RunWith] = exists
-					err := f.check()
-					if err != nil {
-						return err
-					}
-				} else {
-					Logger.Warnf("Filter type '%s' not supported", filter.RunWith)
-				}
-			}
+	for _, f := range profile.Filters {
+		err := f.Check()
+		if err != nil {
+			return err
 		}
 	}
 
@@ -147,6 +135,7 @@ func RunProfile(profileName string) error {
 // FilterCollectionFromFilterJson returns a collection of filters from a
 // "filter.json" file of a remote filter.
 func FilterCollectionFromFilterJson(path string) (*FilterCollection, error) {
+	result := &FilterCollection{}
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
@@ -156,23 +145,31 @@ func FilterCollectionFromFilterJson(path string) (*FilterCollection, error) {
 		)
 	}
 
-	var result *FilterCollection
-	err = json.Unmarshal(file, &result)
+	var filterCollection map[string]interface{}
+	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
-		return nil, wrapError(fmt.Sprintf("Couldn't load %s: ", path), err)
+		Logger.Fatal("Couldn't load %s! Does the file contain correct json?", path, err)
 	}
-	// Replace nil filter settings with empty map
-	for fk := range result.Filters {
-		if result.Filters[fk].Settings == nil {
-			result.Filters[fk].Settings = make(map[string]interface{})
+	// Filters
+	filters, ok := filterCollection["filters"].([]interface{})
+	if !ok {
+		Logger.Fatalf("Could not parse filters of %q", path)
+	}
+	for i, filter := range filters {
+		filter, ok := filter.(map[string]interface{})
+		if !ok {
+			Logger.Fatalf(
+				"Could not parse filter %s of %q", i, path,
+			)
 		}
+		result.Filters = append(result.Filters, RunnableFilterFromObject(filter))
 	}
 	return result, nil
 }
 
 // FilterCollection is a list of filters
 type FilterCollection struct {
-	Filters []Filter `json:"filters,omitempty"`
+	Filters []FilterRunner `json:"filters,omitempty"`
 }
 
 type Profile struct {
@@ -181,46 +178,50 @@ type Profile struct {
 	DataPath     string       `json:"dataPath,omitempty"`
 }
 
-// LoadFilterJsonProfile loads a profile from path to filter.json file of
-// a remote filter and propagates the properties of the parent filter (the
-// filter in config.json or other remote filter that caused creation of this
-// profile).and the parent profile to the returned profile.
-func LoadFilterJsonProfile(
-	filterJsonPath string, parentFilter Filter, parentProfile Profile,
-) (*Profile, error) {
-	// Open file
-	file, err := ioutil.ReadFile(filterJsonPath)
-	if err != nil {
-		return nil, wrapError(fmt.Sprintf(
-			"Couldn't find %s", filterJsonPath), err)
+func ProfileFromObject(profileName string, obj map[string]interface{}) Profile {
+	result := Profile{}
+	// Filters
+	filters, ok := obj["filters"].([]interface{})
+	if !ok {
+		Logger.Fatalf("Could not parse filters of profile %q", profileName)
 	}
-	// Load data into Profile struct
-	var remoteProfile Profile
-	err = json.Unmarshal(file, &remoteProfile)
-	if err != nil {
-		return nil, wrapError(fmt.Sprintf(
-			"Couldn't load %s: ", filterJsonPath), err)
+	for i, filter := range filters {
+		filter, ok := filter.(map[string]interface{})
+		if !ok {
+			Logger.Fatalf(
+				"Could not parse filter %s of profile %q", i, profileName,
+			)
+		}
+		result.Filters = append(result.Filters, RunnableFilterFromObject(filter))
 	}
-	// Propagate venvSlot property
-	for subfilter := range remoteProfile.Filters {
-		remoteProfile.Filters[subfilter].VenvSlot = parentFilter.VenvSlot
+	// ExportTarget
+	export, ok := obj["export"].(map[string]interface{})
+	if !ok {
+		Logger.Fatalf("Could not parse export property of profile %q", profileName)
 	}
-	remoteProfile.DataPath = parentProfile.DataPath
-	remoteProfile.ExportTarget = parentProfile.ExportTarget
-	return &remoteProfile, nil
+	result.ExportTarget = ExportTargetFromObject(export)
+	// DataPath
+	dataPath, ok := obj["dataPath"].(string)
+	if !ok {
+		Logger.Fatalf("Could not parse dataPath property of profile %q", profileName)
+	}
+	result.DataPath = dataPath
+	return result
 }
 
 // Install installs all of the filters in the profile including the nested ones
 func (p *Profile) Install(isForced bool) error {
-	return p.installFilters(isForced, p.Filters)
+	return p.installFilters(isForced, p.Filters, nil)
 }
 
 // installFilters provides a recursive function to install all filters in the
 // profile. This function is not exposed outside of the regolith package. Use
 // Install() instead.
-func (p *Profile) installFilters(isForced bool, filters []Filter) error {
+func (p *Profile) installFilters(
+	isForced bool, filters []FilterRunner, parentFilter *RemoteFilter,
+) error {
 	for _, filter := range filters {
-		err := p.installFilter(isForced, filter)
+		err := p.installFilter(isForced, filter, parentFilter)
 		if err != nil {
 			return err
 		}
@@ -233,11 +234,13 @@ func (p *Profile) installFilters(isForced bool, filters []Filter) error {
 // - Installs dependencies
 // - Copies the filter's data to the data folder
 // - Handles additional filters within the 'filters.json' file
-func (p *Profile) installFilter(isForced bool, filter Filter) error {
+func (p *Profile) installFilter(
+	isForced bool, filter FilterRunner, parentFilter *RemoteFilter,
+) error {
 	var err error
 
-	if filter.IsRemote() {
-		filterDirectory, err := filter.Download(isForced)
+	if rf, ok := filter.(*RemoteFilter); ok {
+		filterDirectory, err := rf.Download(isForced)
 		if err != nil {
 			return wrapError("could not download filter: ", err)
 		}
@@ -249,50 +252,13 @@ func (p *Profile) installFilter(isForced bool, filter Filter) error {
 					" for recursive dependencies", filterDirectory,
 			)
 		}
-		p.installFilters(isForced, filterCollection.Filters)
+		p.installFilters(isForced, filterCollection.Filters, rf)
+		rf.copyFilterData(p)
 	}
-
-	p.copyFilterData(filter)
-	err = filter.DownloadDependencies()
+	filter.InstallDependencies(parentFilter)
 	if err != nil {
 		return wrapError("Could not download dependencies: ", err)
 	}
 
 	return nil
-}
-
-// copyFilterData copies the filter's data to the data folder.
-func (p *Profile) copyFilterData(filter Filter) {
-	// Move filters 'data' folder contents into 'data'
-	// If the localDataPath already exists, we must not overwrite
-	// Additionally, if the remote data path doesn't exist, we don't need
-	// to do anything
-	filterName := filter.GetIdName()
-	remoteDataPath := path.Join(filter.GetDownloadPath(), "data")
-	localDataPath := path.Join(p.DataPath, filterName)
-	if _, err := os.Stat(localDataPath); err == nil {
-		Logger.Warnf("Filter %s already has data in the 'data' folder. \n"+
-			"You may manually delete this data and reinstall if you "+
-			"would like these configuration files to be updated.",
-			filterName)
-	} else if _, err := os.Stat(remoteDataPath); err == nil {
-		// Ensure folder exists
-		err = os.MkdirAll(localDataPath, 0666)
-		if err != nil {
-			Logger.Error("Could not create filter data folder", err) // TODO - I don't think this should break the entire install
-		}
-
-		// Copy 'data' to dataPath
-		if p.DataPath != "" {
-			err = copy.Copy(
-				remoteDataPath, localDataPath,
-				copy.Options{PreserveTimes: false, Sync: false})
-			if err != nil {
-				Logger.Error("Could not initialize filter data", err) // TODO - I don't think this should break the entire install
-			}
-		} else {
-			Logger.Warnf("Filter %s has installation data, but the "+
-				"dataPath is not set. Skipping.", filterName)
-		}
-	}
 }
