@@ -17,6 +17,8 @@ const localRequirementsPath = "testdata/local_requirements"
 const doubleRemoteProjectPath = "testdata/double_remote_project"
 const doubleRemoteProjectInstalledPath = "testdata/double_remote_project_installed"
 const runMissingRpProjectPath = "testdata/run_missing_rp_project"
+const versionedRemoteFilterProject = "testdata/versioned_remote_filter_project"
+const versionedRemoteFilterProjectAfterRun = "testdata/versioned_remote_filter_project_after_run"
 
 // listPaths returns a dictionary with paths of the files from 'path' directory
 // relative to 'root' directory used as keys, and with md5 hashes paths as
@@ -30,7 +32,7 @@ func listPaths(path string, root string) (map[string]string, error) {
 			if err != nil {
 				return err
 			}
-			if data.Name() == ".ignoreme" { // Ignored file
+			if data.Name() == ".ignoreme" || data.Name() == "lockfile.txt" { // Ignored file
 				return nil
 			}
 			relPath, err := filepath.Rel(root, path)

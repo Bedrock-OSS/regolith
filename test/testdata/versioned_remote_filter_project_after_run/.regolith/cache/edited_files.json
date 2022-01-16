@@ -1,0 +1,13 @@
+{
+	"rp": {
+		"build/RP/": [
+			"anifest.json"
+		]
+	},
+	"bp": {
+		"build/BP/": [
+			"ello_version.txt",
+			"anifest.json"
+		]
+	}
+}
