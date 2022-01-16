@@ -10,7 +10,8 @@
       "dev": {
         "filters": [
           {
-            "url": "github.com/Bedrock-OSS/regolith-test-filters/nested-remote-filter"
+            "filter": "nested-remote-filter",
+            "url": "github.com/Bedrock-OSS/regolith-test-filters"
           }
         ],
         "export": {
