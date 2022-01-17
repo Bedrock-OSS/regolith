@@ -11,6 +11,8 @@ const ManifestName = "config.json"
 const GitIgnore = `/build
 /.regolith`
 
+var installationsMap map[string]Installation = nil
+
 // The full configuration file of Regolith, as saved in config.json
 type Config struct {
 	Name            string `json:"name,omitempty"`
@@ -36,7 +38,14 @@ type Packs struct {
 
 // Regolith namespace within the Minecraft Project Schema
 type RegolithProject struct {
-	Profiles map[string]Profile `json:"profiles,omitempty"`
+	Profiles      map[string]Profile      `json:"profiles,omitempty"`
+	Installations map[string]Installation `json:"installations,omitempty"`
+}
+
+type Installation struct {
+	Filter  string `json:"-"`
+	Url     string `json:"url,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 func LoadConfig() *Config {
@@ -100,13 +109,46 @@ func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 	if !ok {
 		Logger.Fatal("Could not find profiles in config.json")
 	}
+	installations, ok := obj["installations"].(map[string]interface{})
+	if ok { // Installations are optional
+		for installationName, installation := range installations {
+			installationMap, ok := installation.(map[string]interface{})
+			if !ok {
+				Logger.Fatal("invalid format of installation %s in config.json", installationName)
+			}
+			result.Installations[installationName] = InstallationFromObject(
+				installationName, installationMap)
+		}
+	}
+	publishInstallations(result.Installations) // TODO: This is a hack
 	for profileName, profile := range profiles {
 		profileMap, ok := profile.(map[string]interface{})
 		if !ok {
 			Logger.Fatal("Could not find profile in config.json")
 		}
 		result.Profiles[profileName] = ProfileFromObject(profileName, profileMap)
+
 	}
+	return result
+}
+
+func publishInstallations(installations map[string]Installation) {
+	installationsMap = installations
+}
+
+func InstallationFromObject(name string, obj map[string]interface{}) Installation {
+	result := Installation{}
+	result.Filter = name
+	url, ok := obj["url"].(string)
+	if !ok {
+		Logger.Fatal("could not find url in installation %s in config.json", name)
+	}
+	result.Url = url
+	version, ok := obj["version"].(string)
+	if !ok {
+		Logger.Fatal("could not find version in installation %s in config.json", name)
+	}
+	result.Version = version
 	return result
 }
 
