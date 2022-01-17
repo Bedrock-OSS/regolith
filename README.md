@@ -52,10 +52,10 @@
 ### 2. Build
 
 There are a few ways to build:
- - `./scripts/build-local.sh` (no clue)
- - `go build` (creates exe)
+ - `./scripts/build-local.sh` (¯\_(ツ)_/¯)
+ - `go build` (creates a `.exe` file)
  - `go install` (installs to gopath)
 
-## Running Tests
+## :test_tube: Running Tests
 
-`go test ./...`
+- `go test ./...`
