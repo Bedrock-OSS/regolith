@@ -9,6 +9,7 @@ import (
 
 // Returns true if safe mode is unlocked
 func IsUnlocked() bool {
+	// TODO - maybe consider caching this result to avoid reading the file every time
 	id, err := GetMachineId()
 	if err != nil {
 		Logger.Info("Failed to get machine ID.", err)

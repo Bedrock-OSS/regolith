@@ -2,7 +2,6 @@ package regolith
 
 import (
 	"bufio"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/go-github/v39/github"
+	"github.com/fatih/color"
 )
 
 func StringArrayContains(arr []string, str string) bool {
@@ -26,7 +25,7 @@ func StringArrayContains(arr []string, str string) bool {
 
 func wrapError(text string, err error) error {
 	if err != nil {
-		return errors.New(fmt.Sprintf("%s\nCaused by: %s", text, err.Error()))
+		return errors.New(fmt.Sprintf("%s\n[%s]: %s", text, color.RedString("+"), err.Error()))
 	}
 	return errors.New(text)
 }
@@ -109,25 +108,5 @@ func CompareSemanticVersion(ver1 string, ver2 string) int {
 				return 0
 			}
 		}
-	}
-}
-
-type UpdateStatus struct {
-	ShouldUpdate bool
-	Url          *string
-	Err          *error
-}
-
-func CheckUpdate(version string, status chan UpdateStatus) {
-	client := github.NewClient(nil)
-	// Ignore the error, since it's not critical to regolith
-	release, _, err := client.Repositories.GetLatestRelease(context.Background(), "Bedrock-OSS", "regolith")
-	if err != nil {
-		status <- UpdateStatus{Err: &err}
-		return
-	}
-	status <- UpdateStatus{
-		ShouldUpdate: CompareSemanticVersion(*release.TagName, version) == 1,
-		Url:          release.HTMLURL,
 	}
 }
