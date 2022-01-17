@@ -7,27 +7,61 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
-const shellFilterName = "shell"
+type ShellFilter struct {
+	Filter
+
+	Command string `json:"command,omitempty"`
+}
+
+func ShellFilterFromObject(obj map[string]interface{}) *ShellFilter {
+	filter := &ShellFilter{Filter: *FilterFromObject(obj)}
+
+	command, ok := obj["command"].(string)
+	if !ok {
+		Logger.Fatalf("Could filter %q", filter.GetFriendlyName())
+	}
+	filter.Command = command
+	return filter
+}
+
+func (f *ShellFilter) Run(absoluteLocation string) error {
+	// Disabled filters are skipped
+	if f.Disabled {
+		Logger.Infof("Filter '%s' is disabled, skipping.", f.GetFriendlyName())
+		return nil
+	}
+	Logger.Infof("Running filter %s", f.GetFriendlyName())
+	start := time.Now()
+	defer Logger.Debugf("Executed in %s", time.Since(start))
+	return runShellFilter(*f, f.Settings, absoluteLocation)
+}
+
+func (f *ShellFilter) InstallDependencies(parent *RemoteFilter) error {
+	return nil
+}
+
+func (f *ShellFilter) Check() error {
+	return checkShellRequirements()
+}
+
+func (f *ShellFilter) CopyArguments(parent *RemoteFilter) {
+	f.Arguments = parent.Arguments
+	f.Settings = parent.Settings
+}
+
+func (f *ShellFilter) GetFriendlyName() string {
+	if f.Name != "" {
+		return f.Name
+	}
+	return "Unnamed Shell filter"
+}
 
 var shells = [][]string{{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"}, {"sh", "-c"}}
 
-func RegisterShellFilter(filters map[string]filterDefinition) {
-	filters[shellFilterName] = filterDefinition{
-		filter:  runShellFilter,
-		install: func(filter Filter, path string) error { return nil },
-		check:   checkShellRequirements,
-		validateDefinition: func(filter Filter) error {
-			if filter.Command == "" {
-				return errors.New("Missing 'command' field in filter definition")
-			}
-			return nil
-		},
-	}
-}
-
-func runShellFilter(filter Filter, settings map[string]interface{}, absoluteLocation string) error {
+func runShellFilter(filter ShellFilter, settings map[string]interface{}, absoluteLocation string) error {
 	var err error = nil
 	if len(settings) == 0 {
 		err = executeCommand(filter.Command, filter.Arguments, absoluteLocation, GetAbsoluteWorkingDirectory())
