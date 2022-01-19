@@ -40,7 +40,7 @@ func RemoteFilterFromObject(
 		filter.Version = installation.Version
 	} else {
 		filter.Url = StandardLibraryUrl
-		filter.Version = "lastest"
+		filter.Version = "latest"
 	}
 
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
@@ -205,8 +205,8 @@ func (f *RemoteFilter) GetDownloadPath() string {
 // GetDownloadUrl creates a download URL, based on the filter definition.
 func (f *RemoteFilter) GetDownloadUrl() string {
 	repoVersion := ""
-	if f.Version != "lastest" {
-		// TOOD - implement getting the lastest version
+	if f.Version != "latest" {
+		// TODO - implement getting the latest version
 		repoVersion = "?ref=" + f.Version
 	} else {
 		repoVersion = "?ref=" + f.Version
