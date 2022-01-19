@@ -162,7 +162,9 @@ func FilterCollectionFromFilterJson(path string) (*FilterCollection, error) {
 				"Could not parse filter %s of %q", i, path,
 			)
 		}
-		result.Filters = append(result.Filters, RunnableFilterFromObject(filter))
+		result.Filters = append(
+			result.Filters,
+			LocalFilterFromObject(filter))
 	}
 	return result, nil
 }
@@ -178,7 +180,10 @@ type Profile struct {
 	DataPath     string       `json:"dataPath,omitempty"`
 }
 
-func ProfileFromObject(profileName string, obj map[string]interface{}) Profile {
+func ProfileFromObject(
+	profileName string, obj map[string]interface{},
+	installations map[string]Installation,
+) Profile {
 	result := Profile{}
 	// Filters
 	filters, ok := obj["filters"].([]interface{})
@@ -192,7 +197,8 @@ func ProfileFromObject(profileName string, obj map[string]interface{}) Profile {
 				"Could not parse filter %s of profile %q", i, profileName,
 			)
 		}
-		result.Filters = append(result.Filters, RunnableFilterFromObject(filter))
+		result.Filters = append(
+			result.Filters, RunnableFilterFromObject(filter, installations))
 	}
 	// ExportTarget
 	export, ok := obj["export"].(map[string]interface{})
@@ -252,7 +258,10 @@ func (p *Profile) installFilter(
 					" for recursive dependencies", filterDirectory,
 			)
 		}
-		p.installFilters(isForced, filterCollection.Filters, rf)
+		err = p.installFilters(isForced, filterCollection.Filters, rf)
+		if err != nil {
+			return err
+		}
 		rf.CopyFilterData(p)
 	}
 	filter.InstallDependencies(parentFilter)

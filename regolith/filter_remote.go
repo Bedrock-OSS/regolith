@@ -15,22 +15,33 @@ import (
 type RemoteFilter struct {
 	Filter
 
-	Id string `json:"filter,omitempty"`
-
+	Id      string `json:"filter,omitempty"`
+	Url     string `json:"-"`
+	Version string `json:"-"`
 	// RemoteFilters can propagate some of the properties unique to other types
 	// of filers (like Python's venvSlot).
 	VenvSlot int `json:"venvSlot,omitempty"`
 }
 
-func RemoteFilterFromObject(obj map[string]interface{}) *RemoteFilter {
+func RemoteFilterFromObject(
+	obj map[string]interface{}, installations map[string]Installation,
+) *RemoteFilter {
 	filter := &RemoteFilter{Filter: *FilterFromObject(obj)}
-	id, ok := obj["filter"].(string) // filter property is optional
+	id, ok := obj["filter"].(string)
 	if !ok {
 		Logger.Fatalf(
 			"remote filter %q is missing \"filter\" field",
 			filter.GetFriendlyName())
 	}
 	filter.Id = id
+	installation, ok := installations[id]
+	if ok {
+		filter.Url = installation.Url
+		filter.Version = installation.Version
+	} else {
+		filter.Url = StandardLibraryUrl
+		filter.Version = "lastest"
+	}
 
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
 	return filter
@@ -43,7 +54,7 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 		return nil
 	}
 	// All other filters require safe mode to be turned off
-	if f.GetUrl() != StandardLibraryUrl && !IsUnlocked() {
+	if f.Url != StandardLibraryUrl && !IsUnlocked() {
 		return errors.New(
 			"safe mode is on, which protects you from potentially unsafe " +
 				"code.\nYou may turn it off using 'regolith unlock'",
@@ -53,9 +64,10 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 
-	Logger.Debugf("RunRemoteFilter '%s'", f.GetUrl())
+	Logger.Debugf("RunRemoteFilter '%s'", f.Url)
 	if !f.IsCached() {
-		return errors.New("filter is not downloaded! Please run 'regolith install'")
+		return errors.New(
+			"filter is not downloaded! Please run 'regolith install'")
 	}
 
 	path := f.GetDownloadPath()
@@ -96,7 +108,7 @@ func (f *RemoteFilter) GetFriendlyName() string {
 	} else if f.Id != "" {
 		return f.Id
 	}
-	_, end := path.Split(f.GetUrl()) // Return the last part of the URL
+	_, end := path.Split(f.Url) // Return the last part of the URL
 	return end
 }
 
@@ -192,19 +204,14 @@ func (f *RemoteFilter) GetDownloadPath() string {
 
 // GetDownloadUrl creates a download URL, based on the filter definition.
 func (f *RemoteFilter) GetDownloadUrl() string {
-	repoUrl := ""
-	if f.GetUrl() == "" {
-		repoUrl = StandardLibraryUrl
-	} else {
-		repoUrl = f.GetUrl()
-	}
-
 	repoVersion := ""
-	if f.GetVersion() != "" {
-		repoVersion = "?ref=" + f.GetVersion()
+	if f.Version != "lastest" {
+		// TOOD - implement getting the lastest version
+		repoVersion = "?ref=" + f.Version
+	} else {
+		repoVersion = "?ref=" + f.Version
 	}
-
-	return fmt.Sprintf("%s//%s%s", repoUrl, f.Id, repoVersion)
+	return fmt.Sprintf("%s//%s%s", f.Url, f.Id, repoVersion)
 }
 
 // GetIdName returns the name that identifies the filter. This name is used to
@@ -229,23 +236,4 @@ func (f *RemoteFilter) Uninstall() {
 func (f *RemoteFilter) IsCached() bool {
 	_, err := os.Stat(f.GetDownloadPath())
 	return err == nil
-}
-
-func (f *RemoteFilter) GetUrl() string {
-	installation, ok := installationsMap[f.Id] // evil global variable
-	if !ok {
-		return StandardLibraryUrl
-	}
-	return installation.Url
-}
-
-func (f *RemoteFilter) GetVersion() string {
-	installation, ok := installationsMap[f.Id] // evil global variable
-	// If not ok then this means it's a standard filter. Other filters are
-	// obligated to have a version or use the "lastest" keyword. This condition
-	// is checked when we parse the config.json definition.
-	if !ok {
-		return "lastest"
-	}
-	return installation.Version
 }
