@@ -25,7 +25,7 @@ func StringArrayContains(arr []string, str string) bool {
 
 func wrapError(text string, err error) error {
 	if err != nil {
-		return errors.New(fmt.Sprintf("%s\n[%s]: %s", text, color.RedString("+"), err.Error()))
+		return fmt.Errorf("%s\n[%s]: %s", text, color.RedString("+"), err.Error())
 	}
 	return errors.New(text)
 }

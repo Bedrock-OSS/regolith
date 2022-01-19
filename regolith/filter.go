@@ -33,7 +33,9 @@ type FilterRunner interface {
 	GetFriendlyName() string
 }
 
-func RunnableFilterFromObject(obj map[string]interface{}) FilterRunner {
+func RunnableFilterFromObject(
+	obj map[string]interface{}, installations map[string]Installation,
+) FilterRunner {
 	runWith, _ := obj["runWith"].(string)
 	switch runWith {
 	case "java":
@@ -51,7 +53,31 @@ func RunnableFilterFromObject(obj map[string]interface{}) FilterRunner {
 		if err == nil {
 			return filter
 		}
-		return RemoteFilterFromObject(obj)
+		return RemoteFilterFromObject(obj, installations)
+	}
+	Logger.Fatalf("Unknown runWith '%s'", runWith)
+	return nil
+}
+
+func LocalFilterFromObject(obj map[string]interface{}) FilterRunner {
+	runWith, _ := obj["runWith"].(string)
+	switch runWith {
+	case "java":
+		return JavaFilterFromObject(obj)
+	case "nim":
+		return NimFilterFromObject(obj)
+	case "nodejs":
+		return NodeJSFilterFromObject(obj)
+	case "python":
+		return PythonFilterFromObject(obj)
+	case "shell":
+		return ShellFilterFromObject(obj)
+	case "":
+		filter, err := BuildInFilterFromObject(obj)
+		if err != nil {
+			Logger.Fatal(err.Error())
+		}
+		return filter
 	}
 	Logger.Fatalf("Unknown runWith '%s'", runWith)
 	return nil

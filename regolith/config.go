@@ -11,8 +11,6 @@ const ManifestName = "config.json"
 const GitIgnore = `/build
 /.regolith`
 
-var installationsMap map[string]Installation = nil
-
 // The full configuration file of Regolith, as saved in config.json
 type Config struct {
 	Name            string `json:"name,omitempty"`
@@ -104,7 +102,10 @@ func PacksFromObject(obj map[string]interface{}) Packs {
 }
 
 func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
-	result := RegolithProject{Profiles: make(map[string]Profile)}
+	result := RegolithProject{
+		Profiles:      make(map[string]Profile),
+		Installations: make(map[string]Installation),
+	}
 	profiles, ok := obj["profiles"].(map[string]interface{})
 	if !ok {
 		Logger.Fatal("Could not find profiles in config.json")
@@ -120,20 +121,16 @@ func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 				installationName, installationMap)
 		}
 	}
-	publishInstallations(result.Installations) // TODO: This is a hack
 	for profileName, profile := range profiles {
 		profileMap, ok := profile.(map[string]interface{})
 		if !ok {
 			Logger.Fatal("Could not find profile in config.json")
 		}
-		result.Profiles[profileName] = ProfileFromObject(profileName, profileMap)
+		result.Profiles[profileName] = ProfileFromObject(
+			profileName, profileMap, result.Installations)
 
 	}
 	return result
-}
-
-func publishInstallations(installations map[string]Installation) {
-	installationsMap = installations
 }
 
 func InstallationFromObject(name string, obj map[string]interface{}) Installation {
