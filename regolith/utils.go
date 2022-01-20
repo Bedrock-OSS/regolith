@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -68,45 +67,5 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
 		logFunc("[Filter] %s", scanner.Text())
-	}
-}
-
-func ParseSemanticVersion(semver string) (major int, minor int, patch int) {
-	split := strings.Split(semver, ".")
-	length := len(split)
-	if length > 0 {
-		major, _ = strconv.Atoi(split[0])
-	}
-	if length > 1 {
-		minor, _ = strconv.Atoi(split[1])
-	}
-	if length > 2 {
-		patch, _ = strconv.Atoi(split[2])
-	}
-	return major, minor, patch
-}
-
-// Returns 1 if first version is newer, -1 if older, 0 if the same
-func CompareSemanticVersion(ver1 string, ver2 string) int {
-	major1, minor1, patch1 := ParseSemanticVersion(ver1)
-	major2, minor2, patch2 := ParseSemanticVersion(ver2)
-	if major1 > major2 {
-		return 1
-	} else if major1 < major2 {
-		return -1
-	} else {
-		if minor1 > minor2 {
-			return 1
-		} else if minor1 < minor2 {
-			return -1
-		} else {
-			if patch1 > patch2 {
-				return 1
-			} else if patch1 < patch2 {
-				return -1
-			} else {
-				return 0
-			}
-		}
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/go-getter"
 	"github.com/otiai10/copy"
+	"golang.org/x/mod/semver"
 )
 
 type RemoteFilter struct {
@@ -209,7 +210,11 @@ func (f *RemoteFilter) GetDownloadUrl() string {
 		// TODO - implement getting the latest version
 		repoVersion = "?ref=" + f.Version
 	} else {
-		repoVersion = "?ref=" + f.Version
+		if semver.IsValid(f.Version) {
+			repoVersion = "?ref=" + f.Id + "-" + f.Version
+		} else {
+			repoVersion = "?ref=" + f.Version
+		}
 	}
 	return fmt.Sprintf("%s//%s%s", f.Url, f.Id, repoVersion)
 }

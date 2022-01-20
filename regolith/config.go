@@ -46,19 +46,22 @@ type Installation struct {
 	Version string `json:"version,omitempty"`
 }
 
-func LoadConfig() *Config {
+// LoadConfigAsMap loads the config.json file as a map[string]interface{}
+func LoadConfigAsMap() map[string]interface{} {
 	file, err := ioutil.ReadFile(ManifestName)
 	if err != nil {
-		Logger.Fatal("Couldn't find %s! Consider running 'regolith init'.", ManifestName, err)
+		Logger.Fatalf(
+			"Couldn't find %s! Consider running 'regolith init'.",
+			ManifestName)
 	}
-
 	var configJson map[string]interface{}
 	err = json.Unmarshal(file, &configJson)
 	if err != nil {
-		Logger.Fatal("Couldn't load %s! Does the file contain correct json?", ManifestName, err)
+		Logger.Fatalf(
+			"Couldn't load %s! Does the file contain correct json?",
+			ManifestName)
 	}
-	result := ConfigFromObject(configJson)
-	return result
+	return configJson
 }
 
 func ConfigFromObject(obj map[string]interface{}) *Config {
@@ -281,7 +284,7 @@ func CleanCache() error {
 //  - Force mode will overwrite existing dependencies.
 //  - Non-force mode will only install dependencies that are not already installed.
 func InstallFilters(isForced bool, updateFilters bool) error {
-	project := LoadConfig()
+	project := ConfigFromObject(LoadConfigAsMap())
 
 	CreateDirectoryIfNotExists(".regolith/cache/filters", true)
 	CreateDirectoryIfNotExists(".regolith/cache/venvs", true)

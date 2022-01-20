@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/go-github/v39/github"
+	"golang.org/x/mod/semver"
 )
 
 type UpdateStatus struct {
@@ -20,8 +21,9 @@ func CheckUpdate(version string, status chan UpdateStatus) {
 		status <- UpdateStatus{Err: &err}
 		return
 	}
+
 	status <- UpdateStatus{
-		ShouldUpdate: CompareSemanticVersion(*release.TagName, version) == 1,
+		ShouldUpdate: semver.Compare(*release.TagName, version) == 1,
 		Url:          release.HTMLURL,
 	}
 }
