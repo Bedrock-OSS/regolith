@@ -88,7 +88,7 @@ func SetupTmpFiles(config Config, profile Profile) error {
 // is the name of the profile which should be loaded from the configuration.
 func RunProfile(profileName string) error {
 	Logger.Info("Running profile: ", profileName)
-	config := LoadConfig()
+	config := ConfigFromObject(LoadConfigAsMap())
 
 	profile := config.Profiles[profileName]
 
