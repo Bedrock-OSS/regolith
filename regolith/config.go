@@ -40,12 +40,6 @@ type RegolithProject struct {
 	Installations map[string]Installation `json:"installations,omitempty"`
 }
 
-type Installation struct {
-	Filter  string `json:"-"`
-	Url     string `json:"url,omitempty"`
-	Version string `json:"version,omitempty"`
-}
-
 // LoadConfigAsMap loads the config.json file as a map[string]interface{}
 func LoadConfigAsMap() map[string]interface{} {
 	file, err := ioutil.ReadFile(ManifestName)
@@ -133,22 +127,6 @@ func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 			profileName, profileMap, result.Installations)
 
 	}
-	return result
-}
-
-func InstallationFromObject(name string, obj map[string]interface{}) Installation {
-	result := Installation{}
-	result.Filter = name
-	url, ok := obj["url"].(string)
-	if !ok {
-		Logger.Fatal("could not find url in installation %s in config.json", name)
-	}
-	result.Url = url
-	version, ok := obj["version"].(string)
-	if !ok {
-		Logger.Fatal("could not find version in installation %s in config.json", name)
-	}
-	result.Version = version
 	return result
 }
 
