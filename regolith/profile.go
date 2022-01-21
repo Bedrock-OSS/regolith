@@ -246,7 +246,7 @@ func (p *Profile) installFilter(
 	var err error
 
 	if rf, ok := filter.(*RemoteFilter); ok {
-		filterDirectory, err := rf.Download(isForced)
+		filterDirectory := rf.GetDownloadPath()
 		if err != nil {
 			return wrapError("could not download filter: ", err)
 		}
@@ -257,6 +257,16 @@ func (p *Profile) installFilter(
 				"could not load \"filter.json\" from path %q, while checking"+
 					" for recursive dependencies", filterDirectory,
 			)
+		}
+		for subfilter := range filterCollection.Filters {
+			subfilter := filterCollection.Filters[subfilter]
+			if _, ok := subfilter.(*RemoteFilter); ok {
+				return fmt.Errorf(
+					"nesting of remote filters is not supported, filter %q"+
+						" is nested in filter %q",
+					subfilter.GetFriendlyName(), filter.GetFriendlyName(),
+				)
+			}
 		}
 		err = p.installFilters(isForced, filterCollection.Filters, rf)
 		if err != nil {

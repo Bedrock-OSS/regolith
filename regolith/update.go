@@ -23,7 +23,7 @@ func CheckUpdate(version string, status chan UpdateStatus) {
 	}
 
 	status <- UpdateStatus{
-		ShouldUpdate: semver.Compare(*release.TagName, version) == 1,
+		ShouldUpdate: semver.Compare("v"+(*release.TagName), "v"+version) == 1,
 		Url:          release.HTMLURL,
 	}
 }

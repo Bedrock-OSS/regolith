@@ -67,9 +67,12 @@ func main() {
 					initRegolith(debug)
 					if regolith.StringArrayContains(c.FlagNames(), "add") {
 						regolith.AddFilters(c.StringSlice("add"), c.Bool("force"))
+					} else {
+						config := regolith.ConfigFromObject(regolith.LoadConfigAsMap())
+						return config.InstallFilters(
+							c.Bool("force"), c.Bool("update"))
 					}
-					return regolith.InstallFilters(
-						c.Bool("force"), c.Bool("update"))
+					return nil
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{

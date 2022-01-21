@@ -53,7 +53,8 @@ func TestDoubleRemoteFilter(t *testing.T) {
 	os.Chdir(workingDir)
 	// Run InstallDependencies
 	regolith.InitLogging(true)
-	regolith.InstallFilters(false, false)
+	config := regolith.ConfigFromObject(regolith.LoadConfigAsMap())
+	config.InstallFilters(false, false)
 	// Load created paths for comparison with expected output
 	createdPaths, err := listPaths(".", ".")
 	if err != nil {
@@ -104,7 +105,8 @@ func TestVersionedRemoteFilter(t *testing.T) {
 	os.Chdir(workingDir)
 	// Run InstallDependencies
 	regolith.InitLogging(true)
-	err = regolith.InstallFilters(false, false)
+	config := regolith.ConfigFromObject(regolith.LoadConfigAsMap())
+	err = config.InstallFilters(false, false)
 	if err != nil {
 		t.Fatal("Unable to install filters:", err)
 	}
