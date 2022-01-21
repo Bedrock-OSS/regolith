@@ -68,6 +68,10 @@ func addFilter(filter string, force bool) {
 	if err != nil {
 		Logger.Fatal(err)
 	}
+	err = installation.Download(force)
+	if err != nil {
+		Logger.Fatal(err)
+	}
 	installations[filterName] = installation
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
@@ -114,55 +118,74 @@ func parseInstallFilterArg(arg string) (url, name, version string) {
 // InstallationFromTheInternet downloads a filter from the internet and returns
 // the installation data.
 func InstallationFromTheInternet(url, name, version string) (Installation, error) {
-	type vg []func(string, string) (string, error)
-	var versionGetters vg
-	if version == "" {
-		versionGetters = vg{GetLastFilterTag, GetHeadSha}
-	} else if version == "latest" {
-		versionGetters = vg{GetLastFilterTag}
-	} else if version == "HEAD" {
-		versionGetters = vg{GetHeadSha}
-	} else {
+	version, err := GetRemoteFilterDownloadRef(url, name, version, false)
+	if err == nil {
 		return Installation{
 			Filter:  name,
 			Version: version,
 			Url:     url,
 		}, nil
 	}
-	for _, versionGetter := range versionGetters {
-		version, err := versionGetter(url, name)
-		if err == nil {
-			return Installation{
-				Filter:  name,
-				Version: version,
-				Url:     url,
-			}, nil
-		}
-	}
 	return Installation{}, fmt.Errorf(
 		"no valid version found for filter %q", name)
 }
 
-// GetLastFilterTag returns the most up-to-date tag of the remote filter
+func GetRemoteFilterDownloadRef(
+	url, name, version string, filterNamePrefix bool,
+) (string, error) {
+	// The custom type and a function is just to reduce the amount of code by
+	// changing the function signature. In order to pass it in the 'vg' list.
+	type vg []func(string, string) (string, error)
+	var versionGetters vg
+	getLatestRemoteFilterTag := func(url, name string) (string, error) {
+		return GetLatestRemoteFilterTag(url, name, filterNamePrefix)
+	}
+	if version == "" {
+		versionGetters = vg{getLatestRemoteFilterTag, GetHeadSha}
+	} else if version == "latest" {
+		versionGetters = vg{getLatestRemoteFilterTag}
+	} else if version == "HEAD" {
+		versionGetters = vg{GetHeadSha}
+	} else {
+		if semver.IsValid("v"+version) && filterNamePrefix {
+			version = name + "-" + version
+		}
+		return version, nil
+	}
+	for _, versionGetter := range versionGetters {
+		version, err := versionGetter(url, name)
+		if err == nil {
+			return version, nil
+		}
+	}
+	return "", fmt.Errorf(
+		"no valid version found for filter %q", name)
+}
+
+// GetLatestRemoteFilterTag returns the most up-to-date tag of the remote filter
 // specified by the filter name and URL.
-func GetLastFilterTag(url, name string) (string, error) {
-	tags, err := ListFilterTags(url, name)
+func GetLatestRemoteFilterTag(
+	url, name string, filterNamePrefix bool,
+) (string, error) {
+	tags, err := ListRemoteFilterTags(url, name)
 	if err == nil {
 		if len(tags) > 0 {
-			semver.Sort(tags)
-			return tags[len(tags)-1], nil
+			lastTag := tags[len(tags)-1]
+			if filterNamePrefix {
+				lastTag = name + "-" + lastTag
+			}
+			return lastTag, nil
 		}
 		return "", fmt.Errorf("no tags found for filter %q", name)
 	}
 	return "", err
 }
 
-// ListFilterTags returns the list tags of the remote filter specified by the
+// ListRemoteFilterTags returns the list tags of the remote filter specified by the
 // filter name and URL.
-func ListFilterTags(url, name string) ([]string, error) {
+func ListRemoteFilterTags(url, name string) ([]string, error) {
 	output, err := exec.Command(
-		"git", "ls-remote", "--sort=committerdate", "--tags",
-		"https://"+url,
+		"git", "ls-remote", "--tags", "https://"+url,
 	).Output()
 	if err != nil {
 		return nil, wrapError(
@@ -179,11 +202,12 @@ func ListFilterTags(url, name string) ([]string, error) {
 				continue
 			}
 			tag = tag[len(name)+1:]
-			if semver.IsValid(tag) {
+			if semver.IsValid("v" + tag) {
 				tags = append(tags, tag)
 			}
 		}
 	}
+	semver.Sort(tags)
 	return tags, nil
 }
 
