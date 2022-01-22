@@ -34,7 +34,7 @@ type FilterRunner interface {
 }
 
 func RunnableFilterFromObject(
-	obj map[string]interface{}, installations map[string]Installation,
+	obj map[string]interface{}, filterDefinitions map[string]FilterDefinition,
 ) FilterRunner {
 	runWith, _ := obj["runWith"].(string)
 	switch runWith {
@@ -53,7 +53,7 @@ func RunnableFilterFromObject(
 		if err == nil {
 			return filter
 		}
-		return RemoteFilterFromObject(obj, installations)
+		return RemoteFilterFromObject(obj, filterDefinitions)
 	}
 	Logger.Fatalf("Unknown runWith '%s'", runWith)
 	return nil
