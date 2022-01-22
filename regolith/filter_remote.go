@@ -22,7 +22,7 @@ type RemoteFilter struct {
 }
 
 func RemoteFilterFromObject(
-	obj map[string]interface{}, installations map[string]Installation,
+	obj map[string]interface{}, filterDefinitions map[string]FilterDefinition,
 ) *RemoteFilter {
 	filter := &RemoteFilter{Filter: *FilterFromObject(obj)}
 	id, ok := obj["filter"].(string)
@@ -32,10 +32,10 @@ func RemoteFilterFromObject(
 			filter.GetFriendlyName())
 	}
 	filter.Id = id
-	installation, ok := installations[id]
+	filterDefinition, ok := filterDefinitions[id]
 	if ok {
-		filter.Url = installation.Url
-		filter.Version = installation.Version
+		filter.Url = filterDefinition.Url
+		filter.Version = filterDefinition.Version
 	} else {
 		filter.Url = StandardLibraryUrl
 		filter.Version = "latest"
@@ -141,8 +141,9 @@ func (f *RemoteFilter) CopyFilterData(profile *Profile, dataPath string) {
 				Logger.Error("Could not initialize filter data", err) // TODO - I don't think this should break the entire install
 			}
 		} else {
-			Logger.Warnf("Filter %s has installation data, but the "+
-				"dataPath is not set. Skipping.", f.Id)
+			Logger.Warnf(
+				"Filter %s has installation data, but the "+
+					"dataPath is not set. Skipping.", f.Id)
 		}
 	}
 }

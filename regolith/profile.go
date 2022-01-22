@@ -181,7 +181,7 @@ type Profile struct {
 
 func ProfileFromObject(
 	profileName string, obj map[string]interface{},
-	installations map[string]Installation,
+	filterDefinitions map[string]FilterDefinition,
 ) Profile {
 	result := Profile{}
 	// Filters
@@ -197,7 +197,7 @@ func ProfileFromObject(
 			)
 		}
 		result.Filters = append(
-			result.Filters, RunnableFilterFromObject(filter, installations))
+			result.Filters, RunnableFilterFromObject(filter, filterDefinitions))
 	}
 	// ExportTarget
 	export, ok := obj["export"].(map[string]interface{})

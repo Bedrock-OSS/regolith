@@ -21,12 +21,12 @@ func AddFilters(args []string, force bool) error {
 	return nil
 }
 
-// addFilter downloads a filter and adds it to the installations list in
+// addFilter downloads a filter and adds it to the filter definitions list in
 // config and installs it.
 func addFilter(filter string, force bool) {
 	// Load the config file as a map. Loading as Config object could break some
 	// of the custom data that could potentially be in the config file.
-	// Open the installations map.
+	// Open the filter definitions map.
 	config := LoadConfigAsMap()
 	var regolithProject map[string]interface{}
 	if _, ok := config["regolith"]; !ok {
@@ -40,15 +40,15 @@ func addFilter(filter string, force bool) {
 					"config file to a map.")
 		}
 	}
-	var installations map[string]interface{}
-	if _, ok := regolithProject["installations"]; !ok {
-		installations = make(map[string]interface{})
-		regolithProject["installations"] = installations
+	var filterDefinitions map[string]interface{}
+	if _, ok := regolithProject["filters"]; !ok {
+		filterDefinitions = make(map[string]interface{})
+		regolithProject["filters"] = filterDefinitions
 	} else {
-		installations, ok = regolithProject["installations"].(map[string]interface{})
+		filterDefinitions, ok = regolithProject["filters"].(map[string]interface{})
 		if !ok {
 			Logger.Fatal(
-				"Unable to convert the 'regolith->installations' property " +
+				"Unable to convert the 'regolith->filters' property " +
 					"of the config file to a map.")
 		}
 	}
@@ -56,23 +56,23 @@ func addFilter(filter string, force bool) {
 	filterUrl, filterName, version := parseInstallFilterArg(filter)
 
 	// Check if the filter is already installed
-	if _, ok := installations[filterName]; ok && !force {
+	if _, ok := filterDefinitions[filterName]; ok && !force {
 		Logger.Fatalf(
-			"The filter %q is already on the installations list."+
+			"The filter %q is already on the filter definitions list."+
 				"Please remove it first before installing it again or use "+
 				"the --force option.", filterName)
 	}
-	// Add the filter info to Installations
-	installation, err := InstallationFromTheInternet(
+	// Add the filter info to filter definitions
+	filterDefinition, err := FilterDefinitionFromTheInternet(
 		filterUrl, filterName, version)
 	if err != nil {
 		Logger.Fatal(err)
 	}
-	err = installation.Download(force)
+	err = filterDefinition.Download(force)
 	if err != nil {
 		Logger.Fatal(err)
 	}
-	installations[filterName] = installation
+	filterDefinitions[filterName] = filterDefinition
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
 	err = ioutil.WriteFile(ManifestName, jsonBytes, 0666)
@@ -115,18 +115,20 @@ func parseInstallFilterArg(arg string) (url, name, version string) {
 	return
 }
 
-// InstallationFromTheInternet downloads a filter from the internet and returns
-// the installation data.
-func InstallationFromTheInternet(url, name, version string) (Installation, error) {
+// FilterDefinitionFromTheInternet downloads a filter from the internet and
+// returns its data.
+func FilterDefinitionFromTheInternet(
+	url, name, version string,
+) (FilterDefinition, error) {
 	version, err := GetRemoteFilterDownloadRef(url, name, version, false)
 	if err == nil {
-		return Installation{
+		return FilterDefinition{
 			Filter:  name,
 			Version: version,
 			Url:     url,
 		}, nil
 	}
-	return Installation{}, fmt.Errorf(
+	return FilterDefinition{}, fmt.Errorf(
 		"no valid version found for filter %q", name)
 }
 
