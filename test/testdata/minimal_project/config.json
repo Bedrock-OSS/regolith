@@ -6,14 +6,14 @@
     "resourcePack": "./packs/RP"
   },
   "regolith": {
+    "dataPath": "./packs/data",
     "profiles": {
       "dev": {
         "unsafe": false,
         "filters": [],
         "export": {
           "target": "development"
-        },
-        "dataPath": "./packs/data"
+        }
       }
     }
   }

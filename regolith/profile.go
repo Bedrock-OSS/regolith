@@ -75,7 +75,7 @@ func SetupTmpFiles(config Config, profile Profile) error {
 	if err != nil {
 		return err
 	}
-	err = setup_tmp_directory(profile.DataPath, "data", "data folder")
+	err = setup_tmp_directory(config.DataPath, "data", "data folder")
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func RunProfile(profileName string) error {
 	// Export files
 	Logger.Info("Moving files to target directory")
 	start := time.Now()
-	err = ExportProject(profile, config.Name)
+	err = ExportProject(profile, config.Name, config.DataPath)
 	if err != nil {
 		return wrapError("Exporting project failed", err)
 	}
@@ -177,7 +177,6 @@ type FilterCollection struct {
 type Profile struct {
 	FilterCollection
 	ExportTarget ExportTarget `json:"export,omitempty"`
-	DataPath     string       `json:"dataPath,omitempty"`
 }
 
 func ProfileFromObject(
@@ -206,18 +205,12 @@ func ProfileFromObject(
 		Logger.Fatalf("Could not parse export property of profile %q", profileName)
 	}
 	result.ExportTarget = ExportTargetFromObject(export)
-	// DataPath
-	dataPath, ok := obj["dataPath"].(string)
-	if !ok {
-		Logger.Fatalf("Could not parse dataPath property of profile %q", profileName)
-	}
-	result.DataPath = dataPath
 	return result
 }
 
 // Install installs all of the filters in the profile including the nested ones
-func (p *Profile) Install(isForced bool) error {
-	return p.installFilters(isForced, p.Filters, nil)
+func (p *Profile) Install(isForced bool, dataPath string) error {
+	return p.installFilters(isForced, p.Filters, nil, dataPath)
 }
 
 // installFilters provides a recursive function to install all filters in the
@@ -225,9 +218,10 @@ func (p *Profile) Install(isForced bool) error {
 // Install() instead.
 func (p *Profile) installFilters(
 	isForced bool, filters []FilterRunner, parentFilter *RemoteFilter,
+	dataPath string,
 ) error {
 	for _, filter := range filters {
-		err := p.installFilter(isForced, filter, parentFilter)
+		err := p.installFilter(isForced, filter, parentFilter, dataPath)
 		if err != nil {
 			return err
 		}
@@ -242,6 +236,7 @@ func (p *Profile) installFilters(
 // - Handles additional filters within the 'filters.json' file
 func (p *Profile) installFilter(
 	isForced bool, filter FilterRunner, parentFilter *RemoteFilter,
+	dataPath string,
 ) error {
 	var err error
 
@@ -268,11 +263,11 @@ func (p *Profile) installFilter(
 				)
 			}
 		}
-		err = p.installFilters(isForced, filterCollection.Filters, rf)
+		err = p.installFilters(isForced, filterCollection.Filters, rf, dataPath)
 		if err != nil {
 			return err
 		}
-		rf.CopyFilterData(p)
+		rf.CopyFilterData(p, dataPath)
 	}
 	filter.InstallDependencies(parentFilter)
 	if err != nil {

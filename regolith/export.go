@@ -29,7 +29,7 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 	} else if exportTarget.Target == "world" {
 		if exportTarget.WorldPath != "" {
 			if exportTarget.WorldName != "" {
-				return "", "", errors.New("Using both \"worldName\" and \"worldPath\" is not allowed.")
+				return "", "", errors.New("using both \"worldName\" and \"worldPath\" is not allowed")
 			}
 			bpPath = filepath.Join(exportTarget.WorldPath, "behavior_packs", name+"_bp")
 			rpPath = filepath.Join(exportTarget.WorldPath, "resource_packs", name+"_rp")
@@ -49,20 +49,20 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 				}
 			}
 		} else {
-			err = errors.New("The \"world\" export target requires either a \"worldName\" or \"worldPath\" property")
+			err = errors.New("the \"world\" export target requires either a \"worldName\" or \"worldPath\" property")
 		}
 	} else if exportTarget.Target == "local" {
 		bpPath = "build/BP/"
 		rpPath = "build/RP/"
 	} else {
-		err = errors.New(fmt.Sprintf("Export '%s' target not valid", exportTarget.Target))
+		err = fmt.Errorf("export '%s' target not valid", exportTarget.Target)
 	}
 	return
 }
 
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export target. The paths are generated with GetExportPaths.
-func ExportProject(profile Profile, name string) error {
+func ExportProject(profile Profile, name string, dataPath string) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
 	if err != nil {
@@ -93,28 +93,27 @@ func ExportProject(profile Profile, name string) error {
 	if err != nil {
 		return wrapError("Failed to clear resource pack build output", err)
 	}
-	err = os.RemoveAll(profile.DataPath)
+	// TODO - this code is dangerous. You can put any dataPath into the config
+	// file and regolith will delete it
+	err = os.RemoveAll(dataPath)
 	if err != nil {
 		return wrapError("Failed to clear filter data path", err)
 	}
-
 	Logger.Info("Exporting project to ", bpPath)
 	err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
 	if err != nil {
 		return err
 	}
-
 	Logger.Info("Exporting project to ", rpPath)
 	err = MoveOrCopy(".regolith/tmp/RP", rpPath, exportTarget.ReadOnly, true)
 	if err != nil {
 		return err
 	}
 
-	err = MoveOrCopy(".regolith/tmp/data", profile.DataPath, false, false)
+	err = MoveOrCopy(".regolith/tmp/data", dataPath, false, false)
 	if err != nil {
 		return err
 	}
-
 	// Update or create edited_files.json
 	err = editedFiles.UpdateFromPaths(rpPath, bpPath)
 	if err != nil {

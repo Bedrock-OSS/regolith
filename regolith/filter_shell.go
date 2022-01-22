@@ -103,7 +103,7 @@ func findShell() (string, string, error) {
 			return shell[0], shell[1], nil
 		}
 	}
-	return "", "", errors.New("Unable to find a valid shell")
+	return "", "", errors.New("unable to find a valid shell")
 }
 
 func checkShellRequirements() error {

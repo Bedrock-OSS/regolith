@@ -16,9 +16,9 @@
         "export": {
           "target": "development",
           "readOnly": false
-        },
-        "dataPath": "./packs/data"
+        }
       }
-    }
+    },
+    "dataPath": "./packs/data"
   }
 }
