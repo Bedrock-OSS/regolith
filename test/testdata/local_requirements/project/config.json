@@ -6,6 +6,7 @@
 		"resourcePack": "./packs/RP"
 	},
 	"regolith": {
+		"dataPath": "./packs/data",
 		"profiles": {
 			"dev": {
 				"filters": [
@@ -17,8 +18,7 @@
 				"export": {
 					"target": "local",
 					"readOnly": true
-				},
-				"dataPath": "./packs/data"
+				}
 			}
 		}
 	}

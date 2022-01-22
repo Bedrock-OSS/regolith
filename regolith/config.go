@@ -39,6 +39,7 @@ type Packs struct {
 type RegolithProject struct {
 	Profiles      map[string]Profile      `json:"profiles,omitempty"`
 	Installations map[string]Installation `json:"installations,omitempty"`
+	DataPath      string                  `json:"dataPath,omitempty"`
 }
 
 // LoadConfigAsMap loads the config.json file as a map[string]interface{}
@@ -104,10 +105,13 @@ func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 		Profiles:      make(map[string]Profile),
 		Installations: make(map[string]Installation),
 	}
-	profiles, ok := obj["profiles"].(map[string]interface{})
+	// DataPath
+	dataPath, ok := obj["dataPath"].(string)
 	if !ok {
-		Logger.Fatal("Could not find profiles in config.json")
+		Logger.Fatal("Could not parse dataPath property from 'regolith' in config.json")
 	}
+	result.DataPath = dataPath
+	// Installations
 	installations, ok := obj["installations"].(map[string]interface{})
 	if ok { // Installations are optional
 		for installationName, installation := range installations {
@@ -118,6 +122,11 @@ func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 			result.Installations[installationName] = InstallationFromObject(
 				installationName, installationMap)
 		}
+	}
+	// Profiles
+	profiles, ok := obj["profiles"].(map[string]interface{})
+	if !ok {
+		Logger.Fatal("Could not find profiles in config.json")
 	}
 	for profileName, profile := range profiles {
 		profileMap, ok := profile.(map[string]interface{})
@@ -194,9 +203,9 @@ func InitializeRegolithProject(isForced bool) error {
 				ResourceFolder: "./packs/RP",
 			},
 			RegolithProject: RegolithProject{
+				DataPath: "./packs/data",
 				Profiles: map[string]Profile{
 					"dev": {
-						DataPath: "./packs/data",
 						FilterCollection: FilterCollection{
 							Filters: []FilterRunner{
 								&RemoteFilter{Id: "hello_world"},
@@ -269,7 +278,7 @@ func (c *Config) InstallFilters(isForced bool, updateFilters bool) error {
 	c.DownloadInstallations(isForced, updateFilters)
 	for profileName, profile := range c.Profiles {
 		Logger.Infof("Installing profile %s...", profileName)
-		err := profile.Install(isForced)
+		err := profile.Install(isForced, c.DataPath)
 		if err != nil {
 			return wrapError("Could not install profile!", err)
 		}

@@ -6,6 +6,7 @@
     "resourcePack": "./packs/RP"
   },
   "regolith": {
+    "dataPath": "./packs/data",
     "profiles": {
       "exact_export_A": {
         "filters": [],
@@ -13,8 +14,7 @@
           "target": "exact",
           "rpPath": "../target-a/RP",
           "bpPath": "../target-a/BP"
-        },
-        "dataPath": "./packs/data"
+        }
       },
       "exact_export_B": {
         "filters": [],
@@ -22,8 +22,7 @@
           "target": "exact",
           "rpPath": "../target-b/RP",
           "bpPath": "../target-b/BP"
-        },
-        "dataPath": "./packs/data"
+        }
       }
     }
   }

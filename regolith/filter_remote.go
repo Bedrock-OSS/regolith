@@ -113,13 +113,13 @@ func (f *RemoteFilter) GetFriendlyName() string {
 }
 
 // CopyFilterData copies the filter's data to the data folder.
-func (f *RemoteFilter) CopyFilterData(profile *Profile) {
+func (f *RemoteFilter) CopyFilterData(profile *Profile, dataPath string) {
 	// Move filters 'data' folder contents into 'data'
 	// If the localDataPath already exists, we must not overwrite
 	// Additionally, if the remote data path doesn't exist, we don't need
 	// to do anything
 	remoteDataPath := path.Join(f.GetDownloadPath(), "data")
-	localDataPath := path.Join(profile.DataPath, f.Id)
+	localDataPath := path.Join(dataPath, f.Id)
 	if _, err := os.Stat(localDataPath); err == nil {
 		Logger.Warnf("Filter %s already has data in the 'data' folder. \n"+
 			"You may manually delete this data and reinstall if you "+
@@ -133,7 +133,7 @@ func (f *RemoteFilter) CopyFilterData(profile *Profile) {
 		}
 
 		// Copy 'data' to dataPath
-		if profile.DataPath != "" {
+		if dataPath != "" {
 			err = copy.Copy(
 				remoteDataPath, localDataPath,
 				copy.Options{PreserveTimes: false, Sync: false})
