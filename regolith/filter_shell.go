@@ -10,20 +10,31 @@ import (
 	"time"
 )
 
-type ShellFilter struct {
-	Filter
-
+type ShellFilterDefinition struct {
+	FilterDefinition
 	Command string `json:"command,omitempty"`
 }
 
-func ShellFilterFromObject(obj map[string]interface{}) *ShellFilter {
-	filter := &ShellFilter{Filter: *FilterFromObject(obj)}
+type ShellFilter struct {
+	Filter
+	Definition ShellFilterDefinition `json:"definition,omitempty"`
+}
 
+func ShellFilterDefinitionFromObject(id string, obj map[string]interface{}) *ShellFilterDefinition {
+	filter := &ShellFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	command, ok := obj["command"].(string)
 	if !ok {
-		Logger.Fatalf("Could filter %q", filter.GetFriendlyName())
+		Logger.Fatalf("Could find command in filter defnition %q", filter.Id)
 	}
 	filter.Command = command
+	return filter
+}
+
+func ShellFilterFromObject(obj map[string]interface{}, definition ShellFilterDefinition) *ShellFilter {
+	filter := &ShellFilter{
+		Filter:     *FilterFromObject(obj),
+		Definition: definition,
+	}
 	return filter
 }
 
@@ -39,11 +50,15 @@ func (f *ShellFilter) Run(absoluteLocation string) error {
 	return runShellFilter(*f, f.Settings, absoluteLocation)
 }
 
-func (f *ShellFilter) InstallDependencies(parent *RemoteFilter) error {
+func (f *ShellFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
+	return ShellFilterFromObject(runConfiguration, f)
+}
+
+func (f *ShellFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
 	return nil
 }
 
-func (f *ShellFilter) Check() error {
+func (f *ShellFilterDefinition) Check() error {
 	return checkShellRequirements()
 }
 

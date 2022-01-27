@@ -9,45 +9,23 @@ import (
 	"github.com/hashicorp/go-getter"
 )
 
-type FilterDefinition struct {
-	Filter  string `json:"-"`
-	Url     string `json:"url,omitempty"`
-	Version string `json:"version,omitempty"`
-}
-
-func FilterDefinitionFromObject(name string, obj map[string]interface{}) FilterDefinition {
-	result := FilterDefinition{}
-	result.Filter = name
-	url, ok := obj["url"].(string)
-	if !ok {
-		Logger.Fatal("could not find url in filter definition %s", name)
-	}
-	result.Url = url
-	version, ok := obj["version"].(string)
-	if !ok {
-		Logger.Fatal("could not find version in filter definition %s", name)
-	}
-	result.Version = version
-	return result
-}
-
 // Download
-func (i *FilterDefinition) Download(isForced bool) error {
+func (i *RemoteFilterDefinition) Download(isForced bool) error {
 	if i.IsInstalled() {
 		if !isForced {
 			Logger.Warnf("Filter %q already installed, skipping. Run "+
-				"with '-f' to force.", i.Filter)
+				"with '-f' to force.", i.Id)
 			return nil
 		} else {
 			// TODO should we print version information here?
 			// like "version 1.4.2 uninstalled, version 1.4.3 installed"
 			Logger.Warnf("Filter %q already installed, but force mode is enabled.\n"+
-				"Filter will be installed, erasing prior contents.", i.Filter)
+				"Filter will be installed, erasing prior contents.", i.Id)
 			i.Uninstall()
 		}
 	}
 
-	Logger.Infof("Downloading filter %s...", i.Filter)
+	Logger.Infof("Downloading filter %s...", i.Id)
 
 	// Download the filter using Git Getter
 	// TODO:
@@ -70,34 +48,34 @@ func (i *FilterDefinition) Download(isForced bool) error {
 		os.RemoveAll(testFolder)
 	}
 
-	Logger.Infof("Filter %s downloaded successfully.", i.Filter)
+	Logger.Infof("Filter %s downloaded successfully.", i.Id)
 	return nil
 }
 
 // GetDownloadUrl creates a download URL, based on the filter definition
-func (i *FilterDefinition) GetDownloadUrl() string {
+func (i *RemoteFilterDefinition) GetDownloadUrl() string {
 	repoVersion, err := GetRemoteFilterDownloadRef(
-		i.Url, i.Filter, i.Version, true)
+		i.Url, i.Id, i.Version, true)
 	if err != nil {
 		Logger.Fatal(err)
 	}
-	return fmt.Sprintf("%s//%s?ref=%s", i.Url, i.Filter, repoVersion)
+	return fmt.Sprintf("%s//%s?ref=%s", i.Url, i.Id, repoVersion)
 }
 
 // GetDownloadPath returns the path location where the filter can be found.
-func (i *FilterDefinition) GetDownloadPath() string {
-	return filepath.Join(".regolith/cache/filters", i.Filter)
+func (i *RemoteFilterDefinition) GetDownloadPath() string {
+	return filepath.Join(".regolith/cache/filters", i.Id)
 }
 
-func (i *FilterDefinition) Uninstall() {
+func (i *RemoteFilterDefinition) Uninstall() {
 	err := os.RemoveAll(i.GetDownloadPath())
 	if err != nil {
-		Logger.Error(wrapError(fmt.Sprintf("Could not remove installed filter %s.", i.Filter), err))
+		Logger.Error(wrapError(fmt.Sprintf("Could not remove installed filter %s.", i.Id), err))
 	}
 }
 
 // IsInstalled eturns whether the filter is currently installed or not.
-func (i *FilterDefinition) IsInstalled() bool {
+func (i *RemoteFilterDefinition) IsInstalled() bool {
 	if _, err := os.Stat(i.GetDownloadPath()); err == nil {
 		return true
 	}

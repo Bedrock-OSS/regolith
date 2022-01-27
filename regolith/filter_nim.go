@@ -10,20 +10,31 @@ import (
 	"time"
 )
 
-type NimFilter struct {
-	Filter
-
+type NimFilterDefinition struct {
+	FilterDefinition
 	Script string `json:"script,omitempty"`
 }
 
-func NimFilterFromObject(obj map[string]interface{}) *NimFilter {
-	filter := &NimFilter{Filter: *FilterFromObject(obj)}
+type NimFilter struct {
+	Filter
+	Definition NimFilterDefinition `json:"-"`
+}
 
+func NimFilterDefinitionFromObject(id string, obj map[string]interface{}) *NimFilterDefinition {
+	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		Logger.Fatalf("Could filter %q", filter.GetFriendlyName())
+		Logger.Fatalf("Could find script in filter defnition %q", filter.Id)
 	}
 	filter.Script = script
+	return filter
+}
+
+func NimFilterFromObject(obj map[string]interface{}, definition NimFilterDefinition) *NimFilter {
+	filter := &NimFilter{
+		Filter:     *FilterFromObject(obj),
+		Definition: definition,
+	}
 	return filter
 }
 
@@ -71,18 +82,22 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 	return nil
 }
 
-func (f *NimFilter) InstallDependencies(parent *RemoteFilter) error {
+func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
+	return NimFilterFromObject(runConfiguration, *f)
+}
+
+func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
 	installLocation := ""
 	// Install dependencies
 	if parent != nil {
 		installLocation = parent.GetDownloadPath()
 	}
-	Logger.Infof("Downloading dependencies for %s...", f.GetFriendlyName())
+	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
 	if err != nil {
 		return wrapError(fmt.Sprintf(
 			"Unable to resolve path of %s script",
-			f.GetFriendlyName()), err)
+			f.Id), err)
 	}
 	filterPath := filepath.Dir(scriptPath)
 	if hasNimble(filterPath) {
@@ -93,17 +108,17 @@ func (f *NimFilter) InstallDependencies(parent *RemoteFilter) error {
 			return wrapError(
 				fmt.Sprintf(
 					"Failed to run nimble to install dependencies of %s",
-					f.GetFriendlyName(),
+					f.Id,
 				),
 				err,
 			)
 		}
 	}
-	Logger.Infof("Dependencies for %s installed successfully", f.GetFriendlyName())
+	Logger.Infof("Dependencies for %s installed successfully", f.Id)
 	return nil
 }
 
-func (f *NimFilter) Check() error {
+func (f *NimFilterDefinition) Check() error {
 	_, err := exec.LookPath("nim")
 	if err != nil {
 		Logger.Fatal("Nim not found. Download and install it from https://nim-lang.org/")

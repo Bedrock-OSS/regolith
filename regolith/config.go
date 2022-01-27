@@ -37,9 +37,9 @@ type Packs struct {
 
 // Regolith namespace within the Minecraft Project Schema
 type RegolithProject struct {
-	Profiles          map[string]Profile          `json:"profiles,omitempty"`
-	FilterDefinitions map[string]FilterDefinition `json:"filters,omitempty"`
-	DataPath          string                      `json:"dataPath,omitempty"`
+	Profiles          map[string]Profile         `json:"profiles,omitempty"`
+	FilterDefinitions map[string]FilterInstaller `json:"filters,omitempty"`
+	DataPath          string                     `json:"dataPath,omitempty"`
 }
 
 // LoadConfigAsMap loads the config.json file as a map[string]interface{}
@@ -103,7 +103,7 @@ func PacksFromObject(obj map[string]interface{}) Packs {
 func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 	result := RegolithProject{
 		Profiles:          make(map[string]Profile),
-		FilterDefinitions: make(map[string]FilterDefinition),
+		FilterDefinitions: make(map[string]FilterInstaller),
 	}
 	// DataPath
 	dataPath, ok := obj["dataPath"].(string)
@@ -121,7 +121,7 @@ func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 					"invalid format of filter definition %s",
 					filterDefinitionName)
 			}
-			result.FilterDefinitions[filterDefinitionName] = FilterDefinitionFromObject(
+			result.FilterDefinitions[filterDefinitionName] = FilterInstallerFromObject(
 				filterDefinitionName, filterDefinitionMap)
 		}
 	}
@@ -210,7 +210,9 @@ func InitializeRegolithProject(isForced bool) error {
 					"dev": {
 						FilterCollection: FilterCollection{
 							Filters: []FilterRunner{
-								&RemoteFilter{Id: "hello_world"},
+								&RemoteFilter{
+									Filter: Filter{Id: "hello_world"},
+								},
 							},
 						},
 						ExportTarget: ExportTarget{
