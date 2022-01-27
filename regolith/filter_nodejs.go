@@ -11,20 +11,31 @@ import (
 	"time"
 )
 
-type NodeJSFilter struct {
-	Filter
-
+type NodeJSFilterDefinition struct {
+	FilterDefinition
 	Script string `json:"script,omitempty"`
 }
 
-func NodeJSFilterFromObject(obj map[string]interface{}) *NodeJSFilter {
-	filter := &NodeJSFilter{Filter: *FilterFromObject(obj)}
+type NodeJSFilter struct {
+	Filter
+	Definition NodeJSFilterDefinition `json:"-"`
+}
 
+func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) *NodeJSFilterDefinition {
+	filter := &NodeJSFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		Logger.Fatalf("Could filter %q", filter.GetFriendlyName())
+		Logger.Fatalf("Could find script in filter defnition %q", filter.Id)
 	}
 	filter.Script = script
+	return filter
+}
+
+func NodeJSFilterFromObject(obj map[string]interface{}, definition NodeJSFilterDefinition) *NodeJSFilter {
+	filter := &NodeJSFilter{
+		Filter:     *FilterFromObject(obj),
+		Definition: definition,
+	}
 	return filter
 }
 
@@ -67,18 +78,22 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 	return nil
 }
 
-func (f *NodeJSFilter) InstallDependencies(parent *RemoteFilter) error {
+func (f *NodeJSFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
+	return NodeJSFilterFromObject(runConfiguration, *f)
+}
+
+func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
 	installLocation := ""
 	// Install dependencies
 	if parent != nil {
 		installLocation = parent.GetDownloadPath()
 	}
-	Logger.Infof("Downloading dependencies for %s...", f.GetFriendlyName())
+	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
 	if err != nil {
 		return wrapError(fmt.Sprintf(
 			"Unable to resolve path of %s script",
-			f.GetFriendlyName()), err)
+			f.Id), err)
 	}
 
 	filterPath := filepath.Dir(scriptPath)
@@ -89,16 +104,16 @@ func (f *NodeJSFilter) InstallDependencies(parent *RemoteFilter) error {
 			return wrapError(
 				fmt.Sprintf(
 					"Failed to run npm and install dependencies of %s",
-					f.GetFriendlyName()),
+					f.Id),
 				err,
 			)
 		}
 	}
-	Logger.Infof("Dependencies for %s installed successfully", f.GetFriendlyName())
+	Logger.Infof("Dependencies for %s installed successfully", f.Id)
 	return nil
 }
 
-func (f *NodeJSFilter) Check() error {
+func (f *NodeJSFilterDefinition) Check() error {
 	_, err := exec.LookPath("node")
 	if err != nil {
 		Logger.Fatal("NodeJS not found. Download and install it from https://nodejs.org/en/")

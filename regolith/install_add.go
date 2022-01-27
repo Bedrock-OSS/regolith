@@ -52,7 +52,6 @@ func addFilter(filter string, force bool) {
 					"of the config file to a map.")
 		}
 	}
-
 	filterUrl, filterName, version := parseInstallFilterArg(filter)
 
 	// Check if the filter is already installed
@@ -119,16 +118,16 @@ func parseInstallFilterArg(arg string) (url, name, version string) {
 // returns its data.
 func FilterDefinitionFromTheInternet(
 	url, name, version string,
-) (FilterDefinition, error) {
+) (*RemoteFilterDefinition, error) {
 	version, err := GetRemoteFilterDownloadRef(url, name, version, false)
 	if err == nil {
-		return FilterDefinition{
-			Filter:  name,
-			Version: version,
-			Url:     url,
+		return &RemoteFilterDefinition{
+			FilterDefinition: FilterDefinition{Id: name},
+			Version:          version,
+			Url:              url,
 		}, nil
 	}
-	return FilterDefinition{}, fmt.Errorf(
+	return nil, fmt.Errorf(
 		"no valid version found for filter %q", name)
 }
 

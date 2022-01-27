@@ -12,24 +12,33 @@ import (
 	"time"
 )
 
-type PythonFilter struct {
-	Filter
-
+type PythonFilterDefinition struct {
+	FilterDefinition
 	Script   string `json:"script,omitempty"`
 	VenvSlot int    `json:"venvSlot,omitempty"`
 }
 
-func PythonFilterFromObject(obj map[string]interface{}) *PythonFilter {
-	filter := &PythonFilter{Filter: *FilterFromObject(obj)}
+type PythonFilter struct {
+	Filter
+	Definition PythonFilterDefinition `json:"-"`
+}
 
+func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) *PythonFilterDefinition {
+	filter := &PythonFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		Logger.Fatalf(
-			"python filter %q is missing \"script\" field",
-			filter.GetFriendlyName())
+		Logger.Fatalf("Could find script in filter defnition %q", filter.Id)
 	}
 	filter.Script = script
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+	return filter
+}
+
+func PythonFilterFromObject(obj map[string]interface{}, definition PythonFilterDefinition) *PythonFilter {
+	filter := &PythonFilter{
+		Filter:     *FilterFromObject(obj),
+		Definition: definition,
+	}
 	return filter
 }
 
@@ -80,18 +89,22 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 	return nil
 }
 
-func (f *PythonFilter) InstallDependencies(parent *RemoteFilter) error {
+func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
+	return PythonFilterFromObject(runConfiguration, *f)
+}
+
+func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
 	installLocation := ""
 	// Install dependencies
 	if parent != nil {
 		installLocation = parent.GetDownloadPath()
 	}
-	Logger.Infof("Downloading dependencies for %s...", f.GetFriendlyName())
+	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
 	if err != nil {
 		return wrapError(fmt.Sprintf(
 			"Unable to resolve path of %s script",
-			f.GetFriendlyName()), err)
+			f.Id), err)
 	}
 
 	// Install the filter dependencies
@@ -117,15 +130,15 @@ func (f *PythonFilter) InstallDependencies(parent *RemoteFilter) error {
 		if err != nil {
 			return fmt.Errorf(
 				"couldn't run pip to install dependencies of %s",
-				f.GetFriendlyName(),
+				f.Id,
 			)
 		}
 	}
-	Logger.Infof("Dependencies for %s installed successfully", f.GetFriendlyName())
+	Logger.Infof("Dependencies for %s installed successfully", f.Id)
 	return nil
 }
 
-func (f *PythonFilter) Check() error {
+func (f *PythonFilterDefinition) Check() error {
 	python := ""
 	var err error
 	for _, c := range []string{"python", "python3"} {
@@ -160,7 +173,7 @@ func (f *PythonFilter) GetFriendlyName() string {
 	return "Unnamed Python filter"
 }
 
-func (f *PythonFilter) resolveVenvPath() (string, error) {
+func (f *PythonFilterDefinition) resolveVenvPath() (string, error) {
 	resolvedPath, err := filepath.Abs(
 		filepath.Join(".regolith/cache/venvs", strconv.Itoa(f.VenvSlot)))
 	if err != nil {

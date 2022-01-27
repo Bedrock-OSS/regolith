@@ -10,38 +10,43 @@ import (
 	"github.com/otiai10/copy"
 )
 
-type RemoteFilter struct {
-	Filter
-
-	Id      string `json:"filter,omitempty"`
-	Url     string `json:"-"`
-	Version string `json:"-"`
+type RemoteFilterDefinition struct {
+	FilterDefinition
+	Url     string `json:"url,omitempty"`
+	Version string `json:"version,omitempty"`
 	// RemoteFilters can propagate some of the properties unique to other types
 	// of filers (like Python's venvSlot).
 	VenvSlot int `json:"venvSlot,omitempty"`
 }
 
-func RemoteFilterFromObject(
-	obj map[string]interface{}, filterDefinitions map[string]FilterDefinition,
-) *RemoteFilter {
-	filter := &RemoteFilter{Filter: *FilterFromObject(obj)}
-	id, ok := obj["filter"].(string)
-	if !ok {
-		Logger.Fatalf(
-			"remote filter %q is missing \"filter\" field",
-			filter.GetFriendlyName())
-	}
-	filter.Id = id
-	filterDefinition, ok := filterDefinitions[id]
-	if ok {
-		filter.Url = filterDefinition.Url
-		filter.Version = filterDefinition.Version
-	} else {
-		filter.Url = StandardLibraryUrl
-		filter.Version = "latest"
-	}
+type RemoteFilter struct {
+	Filter
+	Definition RemoteFilterDefinition `json:"-"`
+}
 
-	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) *RemoteFilterDefinition {
+	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
+	url, ok := obj["url"].(string)
+	if !ok {
+		Logger.Fatal("could not find url in filter definition %s", id)
+	}
+	result.Url = url
+	version, ok := obj["version"].(string)
+	if !ok {
+		Logger.Fatal("could not find version in filter definition %s", id)
+	}
+	result.Version = version
+	result.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+	return result
+}
+
+func RemoteFilterFromObject(
+	obj map[string]interface{}, definition RemoteFilterDefinition,
+) *RemoteFilter {
+	filter := &RemoteFilter{
+		Filter:     *FilterFromObject(obj),
+		Definition: definition,
+	}
 	return filter
 }
 
@@ -86,11 +91,15 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	return nil
 }
 
-func (f *RemoteFilter) InstallDependencies(parent *RemoteFilter) error {
+func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
+	return RemoteFilterFromObject(runConfiguration, *f)
+}
+
+func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
 	return nil // Remote filters don't install any dependencies
 }
 
-func (f *RemoteFilter) Check() error {
+func (f *RemoteFilterDefinition) Check() error {
 	return nil
 }
 

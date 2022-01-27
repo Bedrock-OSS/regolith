@@ -1,10 +1,19 @@
 package regolith
 
+type FilterDefinition struct {
+	Id string `json:"-"`
+}
+
 type Filter struct {
+	Id        string                 `json:"filter,omitempty"`
 	Name      string                 `json:"name,omitempty"`
 	Disabled  bool                   `json:"disabled,omitempty"`
 	Arguments []string               `json:"arguments,omitempty"`
 	Settings  map[string]interface{} `json:"settings,omitempty"`
+}
+
+func FilterDefinitionFromObject(id string) *FilterDefinition {
+	return &FilterDefinition{Id: id}
 }
 
 func FilterFromObject(obj map[string]interface{}) *Filter {
@@ -24,61 +33,50 @@ func FilterFromObject(obj map[string]interface{}) *Filter {
 	return filter
 }
 
+type FilterInstaller interface {
+	InstallDependencies(parent *RemoteFilterDefinition) error
+	// CopyArguments(parent *RemoteFilter)  // TODO - where should I move it?
+	Check() error
+	CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner
+}
+
 type FilterRunner interface {
 	Run(absoluteLocation string) error
-	InstallDependencies(parent *RemoteFilter) error
-	Check() error
-
-	CopyArguments(parent *RemoteFilter)
 	GetFriendlyName() string
 }
 
-func RunnableFilterFromObject(
-	obj map[string]interface{}, filterDefinitions map[string]FilterDefinition,
-) FilterRunner {
+func FilterInstallerFromObject(id string, obj map[string]interface{}) FilterInstaller {
 	runWith, _ := obj["runWith"].(string)
 	switch runWith {
 	case "java":
-		return JavaFilterFromObject(obj)
+		return JavaFilterDefinitionFromObject(id, obj)
 	case "nim":
-		return NimFilterFromObject(obj)
+		return NimFilterDefinitionFromObject(id, obj)
 	case "nodejs":
-		return NodeJSFilterFromObject(obj)
+		return NodeJSFilterDefinitionFromObject(id, obj)
 	case "python":
-		return PythonFilterFromObject(obj)
+		return PythonFilterDefinitionFromObject(id, obj)
 	case "shell":
-		return ShellFilterFromObject(obj)
+		return ShellFilterDefinitionFromObject(id, obj)
 	case "":
-		filter, err := BuildInFilterFromObject(obj)
+		filter, err := BuildInFilterDefinitionFromObject(id, obj)
 		if err == nil {
 			return filter
 		}
-		return RemoteFilterFromObject(obj, filterDefinitions)
+		return RemoteFilterDefinitionFromObject(id, obj)
 	}
-	Logger.Fatalf("Unknown runWith '%s'", runWith)
+	Logger.Fatalf("Unknown runWith %q in filter definition %q", runWith, id)
 	return nil
 }
 
-func LocalFilterFromObject(obj map[string]interface{}) FilterRunner {
-	runWith, _ := obj["runWith"].(string)
-	switch runWith {
-	case "java":
-		return JavaFilterFromObject(obj)
-	case "nim":
-		return NimFilterFromObject(obj)
-	case "nodejs":
-		return NodeJSFilterFromObject(obj)
-	case "python":
-		return PythonFilterFromObject(obj)
-	case "shell":
-		return ShellFilterFromObject(obj)
-	case "":
-		filter, err := BuildInFilterFromObject(obj)
-		if err != nil {
-			Logger.Fatal(err.Error())
-		}
-		return filter
+func FilterRunnerFromObjectAndDefinitions(
+	obj map[string]interface{}, filterDefinitions map[string]FilterInstaller,
+) FilterRunner {
+	filter, _ := obj["filter"].(string)
+	if filterDefinition, ok := filterDefinitions[filter]; ok {
+		return filterDefinition.CreateFilterRunner(obj)
+	} else {
+		Logger.Fatalf("unable to find %q filter in filter definitions", filter)
 	}
-	Logger.Fatalf("Unknown runWith '%s'", runWith)
 	return nil
 }
