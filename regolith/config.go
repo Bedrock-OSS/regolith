@@ -279,30 +279,29 @@ func (c *Config) InstallFilters(isForced bool, updateFilters bool) error {
 	CreateDirectoryIfNotExists(".regolith/cache/filters", true)
 	CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
 
-	c.DownloadFilterDefinitions(isForced, updateFilters)
-	for profileName, profile := range c.Profiles {
-		Logger.Infof("Installing profile %s...", profileName)
-		err := profile.Install(isForced, c.DataPath)
-		if err != nil {
-			return wrapError("Could not install profile!", err)
-		}
+	c.DownloadRemoteFilters(isForced, updateFilters)
+	for _, filterDefinition := range c.FilterDefinitions {
+		filterDefinition.InstallDependencies(nil)
 	}
 	Logger.Infof("All filters installed.")
 	return nil
 }
 
-func (c *Config) DownloadFilterDefinitions(isForced bool, updateFilters bool) error {
+func (c *Config) DownloadRemoteFilters(isForced bool, updateFilters bool) error {
 	CreateDirectoryIfNotExists(".regolith/cache/filters", true)
 	CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
 
 	for name := range c.FilterDefinitions {
-		item := c.FilterDefinitions[name]
+		filterDefinition := c.FilterDefinitions[name]
 		Logger.Infof("Downloading %q...", name)
-		err := item.Download(isForced)
-		if err != nil {
-			return wrapError(
-				fmt.Sprintf("Could not download %q!", name),
-				err)
+		switch remoteFilter := filterDefinition.(type) {
+		case *RemoteFilterDefinition:
+			err := remoteFilter.Download(isForced)
+			if err != nil {
+				return wrapError(
+					fmt.Sprintf("Could not download %q!", name),
+					err)
+			}
 		}
 	}
 	Logger.Infof("All remote filters installed.")

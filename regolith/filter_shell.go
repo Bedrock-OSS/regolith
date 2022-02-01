@@ -51,7 +51,7 @@ func (f *ShellFilter) Run(absoluteLocation string) error {
 }
 
 func (f *ShellFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
-	return ShellFilterFromObject(runConfiguration, f)
+	return ShellFilterFromObject(runConfiguration, *f)
 }
 
 func (f *ShellFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
@@ -60,6 +60,10 @@ func (f *ShellFilterDefinition) InstallDependencies(parent *RemoteFilterDefiniti
 
 func (f *ShellFilterDefinition) Check() error {
 	return checkShellRequirements()
+}
+
+func (f *ShellFilter) Check() error {
+	return f.Definition.Check()
 }
 
 func (f *ShellFilter) CopyArguments(parent *RemoteFilter) {
@@ -79,10 +83,15 @@ var shells = [][]string{{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"
 func runShellFilter(filter ShellFilter, settings map[string]interface{}, absoluteLocation string) error {
 	var err error = nil
 	if len(settings) == 0 {
-		err = executeCommand(filter.Command, filter.Arguments, absoluteLocation, GetAbsoluteWorkingDirectory())
+		err = executeCommand(
+			filter.Definition.Command, filter.Arguments, absoluteLocation,
+			GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		err = executeCommand(filter.Command, append([]string{string(jsonSettings)}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
+		err = executeCommand(
+			filter.Definition.Command,
+			append([]string{string(jsonSettings)}, filter.Arguments...),
+			absoluteLocation, GetAbsoluteWorkingDirectory())
 	}
 	return err
 }

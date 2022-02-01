@@ -35,13 +35,14 @@ func FilterFromObject(obj map[string]interface{}) *Filter {
 
 type FilterInstaller interface {
 	InstallDependencies(parent *RemoteFilterDefinition) error
-	// CopyArguments(parent *RemoteFilter)  // TODO - where should I move it?
 	Check() error
 	CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner
 }
 
 type FilterRunner interface {
+	CopyArguments(parent *RemoteFilter)
 	Run(absoluteLocation string) error
+	Check() error
 	GetFriendlyName() string
 }
 

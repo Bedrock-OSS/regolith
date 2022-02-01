@@ -56,8 +56,12 @@ func (f *BuildInFilterDefinition) Check() error {
 	return nil
 }
 
+func (f *BuildInFilter) Check() error {
+	return f.Definition.Check()
+}
+
 func (f *BuildInFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
-	return BuildInFilterFromObject(runConfiguration, f)
+	return BuildInFilterFromObject(runConfiguration, *f)
 }
 
 func (f *BuildInFilter) CopyArguments(parent *RemoteFilter) {

@@ -53,7 +53,8 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			append(
 				[]string{
 					"-jar", absoluteLocation + string(os.PathSeparator) +
-						f.Script},
+						f.Definition.Script,
+				},
 				f.Arguments...,
 			),
 			absoluteLocation,
@@ -69,7 +70,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			append(
 				[]string{
 					"-jar", absoluteLocation + string(os.PathSeparator) +
-						f.Script, string(jsonSettings)},
+						f.Definition.Script, string(jsonSettings)},
 				f.Arguments...,
 			),
 			absoluteLocation,
@@ -106,6 +107,10 @@ func (f *JavaFilterDefinition) Check() error {
 		Logger.Debugf("Failed to parse Java version")
 	}
 	return nil
+}
+
+func (f *JavaFilter) Check() error {
+	return f.Definition.Check()
 }
 
 func (f *JavaFilter) CopyArguments(parent *RemoteFilter) {
