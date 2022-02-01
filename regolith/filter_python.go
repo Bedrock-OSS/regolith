@@ -56,9 +56,9 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 	// command is a list of strings that can possibly run python (it's python3
 	// on some OSs)
 	command := []string{"python", "python3"}
-	scriptPath := filepath.Join(absoluteLocation, f.Script)
+	scriptPath := filepath.Join(absoluteLocation, f.Definition.Script)
 	if needsVenv(filepath.Dir(scriptPath)) {
-		venvPath, err := f.resolveVenvPath()
+		venvPath, err := f.Definition.resolveVenvPath()
 		if err != nil {
 			return wrapError("Failed to resolve venv path", err)
 		}
@@ -160,10 +160,14 @@ func (f *PythonFilterDefinition) Check() error {
 	return nil
 }
 
+func (f *PythonFilter) Check() error {
+	return f.Definition.Check()
+}
+
 func (f *PythonFilter) CopyArguments(parent *RemoteFilter) {
 	f.Arguments = parent.Arguments
 	f.Settings = parent.Settings
-	f.VenvSlot = parent.VenvSlot
+	f.Definition.VenvSlot = parent.Definition.VenvSlot
 }
 
 func (f *PythonFilter) GetFriendlyName() string {

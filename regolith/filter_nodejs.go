@@ -53,7 +53,8 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 		err := RunSubProcess(
 			"node",
 			append([]string{
-				absoluteLocation + string(os.PathSeparator) + f.Script},
+				absoluteLocation + string(os.PathSeparator) +
+					f.Definition.Script},
 				f.Arguments...),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
@@ -66,7 +67,8 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 		err := RunSubProcess(
 			"node",
 			append([]string{
-				absoluteLocation + string(os.PathSeparator) + f.Script,
+				absoluteLocation + string(os.PathSeparator) +
+					f.Definition.Script,
 				string(jsonSettings)}, f.Arguments...),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
@@ -125,6 +127,10 @@ func (f *NodeJSFilterDefinition) Check() error {
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
 	Logger.Debugf("Found NodeJS version %s", a)
 	return nil
+}
+
+func (f *NodeJSFilter) Check() error {
+	return f.Definition.Check()
 }
 
 func (f *NodeJSFilter) CopyArguments(parent *RemoteFilter) {

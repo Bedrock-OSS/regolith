@@ -21,6 +21,7 @@ func AddFilters(args []string, force bool) error {
 	return nil
 }
 
+// TODO - proper error handling (propagate error)
 // addFilter downloads a filter and adds it to the filter definitions list in
 // config and installs it.
 func addFilter(filter string, force bool) {
@@ -77,6 +78,13 @@ func addFilter(filter string, force bool) {
 	err = ioutil.WriteFile(ManifestName, jsonBytes, 0666)
 	if err != nil {
 		Logger.Fatal("Unable to save the config file: ", err)
+	}
+	// Install the dependencies of the filter
+	err = filterDefinition.InstallDependencies(nil)
+	if err != nil {
+		Logger.Fatalf(
+			"unable to instsall dependencies of filter %q due to an error: %v",
+			filterDefinition.Id, err.Error())
 	}
 }
 

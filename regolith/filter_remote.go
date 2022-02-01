@@ -1,7 +1,10 @@
 package regolith
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -57,7 +60,7 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 		return nil
 	}
 	// All other filters require safe mode to be turned off
-	if f.Url != StandardLibraryUrl && !IsUnlocked() {
+	if f.Definition.Url != StandardLibraryUrl && !IsUnlocked() {
 		return errors.New(
 			"safe mode is on, which protects you from potentially unsafe " +
 				"code.\nYou may turn it off using 'regolith unlock'",
@@ -67,7 +70,7 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 
-	Logger.Debugf("RunRemoteFilter '%s'", f.Url)
+	Logger.Debugf("RunRemoteFilter '%s'", f.Definition.Url)
 	if !f.IsCached() {
 		return errors.New(
 			"filter is not downloaded! Please run 'regolith install'")
@@ -75,14 +78,12 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 
 	path := f.GetDownloadPath()
 	absolutePath, _ := filepath.Abs(path)
-	filterCollection, err := FilterCollectionFromFilterJson(
-		filepath.Join(path, "filter.json"))
+	filterCollection, err := f.SubfilterCollection()
 	if err != nil {
 		return err
 	}
 	for _, filter := range filterCollection.Filters {
 		// Overwrite the venvSlot with the parent value
-		filter.CopyArguments(f)
 		err := filter.Run(absolutePath)
 		if err != nil {
 			return err
@@ -95,12 +96,57 @@ func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]
 	return RemoteFilterFromObject(runConfiguration, *f)
 }
 
+// TODO - this code is almost a duplicate of the code in the
+// (f *RemoteFilter) SubfilterCollection()
 func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
-	return nil // Remote filters don't install any dependencies
+	path := filepath.Join(f.GetDownloadPath(), "filter.json")
+	file, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		return wrapError(
+			fmt.Sprintf("couldn't read %q", path),
+			err,
+		)
+	}
+
+	var filterCollection map[string]interface{}
+	err = json.Unmarshal(file, &filterCollection)
+	if err != nil {
+		return wrapError(
+			fmt.Sprintf(
+				"couldn't load %s! Does the file contain correct json?", path),
+			err)
+	}
+	// Filters
+	filters, ok := filterCollection["filters"].([]interface{})
+	if !ok {
+		return fmt.Errorf("could not parse filters of %q", path)
+	}
+	for i, filter := range filters {
+		filter, ok := filter.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("could not parse filter %v of %q", i, path)
+		}
+		filterInstaller := FilterInstallerFromObject(
+			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
+		err = filterInstaller.InstallDependencies(f)
+		if err != nil {
+			return wrapError(
+				fmt.Sprintf(
+					"could not install dependencies for filter "+
+						"%q, subfilter %v", f.Id, i),
+				err)
+		}
+	}
+	return nil
 }
 
 func (f *RemoteFilterDefinition) Check() error {
 	return nil
+}
+
+func (f *RemoteFilter) Check() error {
+	return f.Definition.Check()
 }
 
 func (f *RemoteFilter) CopyArguments(parent *RemoteFilter) {
@@ -108,7 +154,7 @@ func (f *RemoteFilter) CopyArguments(parent *RemoteFilter) {
 	// never called.
 	f.Arguments = parent.Arguments
 	f.Settings = parent.Settings
-	f.VenvSlot = parent.VenvSlot
+	f.Definition.VenvSlot = parent.Definition.VenvSlot
 }
 
 func (f *RemoteFilter) GetFriendlyName() string {
@@ -117,7 +163,7 @@ func (f *RemoteFilter) GetFriendlyName() string {
 	} else if f.Id != "" {
 		return f.Id
 	}
-	_, end := path.Split(f.Url) // Return the last part of the URL
+	_, end := path.Split(f.Definition.Url) // Return the last part of the URL
 	return end
 }
 

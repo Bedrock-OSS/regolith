@@ -132,9 +132,10 @@ func RunProfile(profileName string) error {
 	return nil
 }
 
-// FilterCollectionFromFilterJson returns a collection of filters from a
+// SubfilterCollection returns a collection of filters from a
 // "filter.json" file of a remote filter.
-func FilterCollectionFromFilterJson(path string) (*FilterCollection, error) {
+func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
+	path := filepath.Join(f.GetDownloadPath(), "filter.json")
 	result := &FilterCollection{Filters: []FilterRunner{}}
 	file, err := ioutil.ReadFile(path)
 
@@ -148,23 +149,34 @@ func FilterCollectionFromFilterJson(path string) (*FilterCollection, error) {
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
-		Logger.Fatal("Couldn't load %s! Does the file contain correct json?", path, err)
+		return nil, wrapError(
+			fmt.Sprintf(
+				"couldn't load %s! Does the file contain correct json?", path),
+			err)
 	}
 	// Filters
 	filters, ok := filterCollection["filters"].([]interface{})
 	if !ok {
-		Logger.Fatalf("Could not parse filters of %q", path)
+		return nil, fmt.Errorf("could not parse filters of %q", path)
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		if !ok {
-			Logger.Fatalf(
-				"Could not parse filter %s of %q", i, path,
-			)
+			return nil, fmt.Errorf("could not parse filter %v of %q", i, path)
 		}
-		result.Filters = append(
-			result.Filters,
-			LocalFilterFromObject(filter))
+		// Using the same JSON data to create both the filter
+		// definiton (installer) and the filter (runner)
+		filterInstaller := FilterInstallerFromObject(
+			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
+		filterRunner := filterInstaller.CreateFilterRunner(filter)
+		if _, ok := filterRunner.(*RemoteFilter); ok {
+			// TODO - we could possibly implement recursive filters here
+			return nil, fmt.Errorf(
+				"remote filters are not allowed in subfilters. Remote filter"+
+					" %q subfilter %v", f.Id, i)
+		}
+		filterRunner.CopyArguments(f)
+		result.Filters = append(result.Filters, filterRunner)
 	}
 	return result, nil
 }
@@ -206,73 +218,4 @@ func ProfileFromObject(
 	}
 	result.ExportTarget = ExportTargetFromObject(export)
 	return result
-}
-
-// Install installs all of the filters in the profile including the nested ones
-func (p *Profile) Install(isForced bool, dataPath string) error {
-	return p.installFilters(isForced, p.Filters, nil, dataPath)
-}
-
-// installFilters provides a recursive function to install all filters in the
-// profile. This function is not exposed outside of the regolith package. Use
-// Install() instead.
-func (p *Profile) installFilters(
-	isForced bool, filters []FilterRunner, parentFilter *RemoteFilter,
-	dataPath string,
-) error {
-	for _, filter := range filters {
-		err := p.installFilter(isForced, filter, parentFilter, dataPath)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// installFilter installs a single filter.
-// - Downloads the filter if it is remote
-// - Installs dependencies
-// - Copies the filter's data to the data folder
-// - Handles additional filters within the 'filters.json' file
-func (p *Profile) installFilter(
-	isForced bool, filter FilterRunner, parentFilter *RemoteFilter,
-	dataPath string,
-) error {
-	var err error
-
-	if rf, ok := filter.(*RemoteFilter); ok {
-		filterDirectory := rf.GetDownloadPath()
-		if err != nil {
-			return wrapError("could not download filter: ", err)
-		}
-		filterCollection, err := FilterCollectionFromFilterJson(
-			filepath.Join(filterDirectory, "filter.json"))
-		if err != nil {
-			return fmt.Errorf(
-				"could not load \"filter.json\" from path %q, while checking"+
-					" for recursive dependencies", filterDirectory,
-			)
-		}
-		for subfilter := range filterCollection.Filters {
-			subfilter := filterCollection.Filters[subfilter]
-			if _, ok := subfilter.(*RemoteFilter); ok {
-				return fmt.Errorf(
-					"nesting of remote filters is not supported, filter %q"+
-						" is nested in filter %q",
-					subfilter.GetFriendlyName(), filter.GetFriendlyName(),
-				)
-			}
-		}
-		err = p.installFilters(isForced, filterCollection.Filters, rf, dataPath)
-		if err != nil {
-			return err
-		}
-		rf.CopyFilterData(p, dataPath)
-	}
-	filter.InstallDependencies(parentFilter)
-	if err != nil {
-		return wrapError("Could not download dependencies: ", err)
-	}
-
-	return nil
 }

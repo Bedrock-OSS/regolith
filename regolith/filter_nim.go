@@ -54,7 +54,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			"nim",
 			append([]string{
 				"-r", "c", "--hints:off", "--warnings:off",
-				absoluteLocation + string(os.PathSeparator) + f.Script},
+				absoluteLocation + string(os.PathSeparator) + f.Definition.Script},
 				f.Arguments...,
 			),
 			absoluteLocation,
@@ -69,7 +69,8 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			"nim",
 			append([]string{
 				"-r", "c", "--hints:off", "--warnings:off",
-				absoluteLocation + string(os.PathSeparator) + f.Script,
+				absoluteLocation + string(os.PathSeparator) +
+					f.Definition.Script,
 				string(jsonSettings)},
 				f.Arguments...),
 			absoluteLocation,
@@ -130,6 +131,10 @@ func (f *NimFilterDefinition) Check() error {
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
 	Logger.Debugf("Found Nim version %s", a)
 	return nil
+}
+
+func (f *NimFilter) Check() error {
+	return f.Definition.Check()
 }
 
 func (f *NimFilter) CopyArguments(parent *RemoteFilter) {
