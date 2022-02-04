@@ -7,12 +7,17 @@
 	},
 	"regolith": {
 		"dataPath": "./packs/data",
+		"filters": {
+			"some_script": {
+				"runWith": "python",
+				"script": "../scripts/some_script.py"
+			}
+		},
 		"profiles": {
 			"dev": {
 				"filters": [
 					{
-						"runWith": "python",
-						"script": "../scripts/some_script.py"
+						"filter": "some_script"
 					}
 				],
 				"export": {

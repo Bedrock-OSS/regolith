@@ -168,7 +168,7 @@ func (f *RemoteFilter) GetFriendlyName() string {
 }
 
 // CopyFilterData copies the filter's data to the data folder.
-func (f *RemoteFilter) CopyFilterData(profile *Profile, dataPath string) {
+func (f *RemoteFilterDefinition) CopyFilterData(dataPath string) {
 	// Move filters 'data' folder contents into 'data'
 	// If the localDataPath already exists, we must not overwrite
 	// Additionally, if the remote data path doesn't exist, we don't need

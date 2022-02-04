@@ -166,8 +166,13 @@ func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
 		}
 		// Using the same JSON data to create both the filter
 		// definiton (installer) and the filter (runner)
-		filterInstaller := FilterInstallerFromObject(
-			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
+		filterId := fmt.Sprintf("%v:subfilter%v", f.Id, i)
+		filterInstaller := FilterInstallerFromObject(filterId, filter)
+		// Remote filters don't have the "filter" key but this would break the
+		// code as it's required by local filters. Adding it here to make the
+		// code work.
+		// TODO - this is a hack, fix it!
+		filter["filter"] = filterId
 		filterRunner := filterInstaller.CreateFilterRunner(filter)
 		if _, ok := filterRunner.(*RemoteFilter); ok {
 			// TODO - we could possibly implement recursive filters here

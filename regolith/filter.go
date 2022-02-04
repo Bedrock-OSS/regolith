@@ -30,6 +30,17 @@ func FilterFromObject(obj map[string]interface{}) *Filter {
 	// Settings
 	settings, _ := obj["settings"].(map[string]interface{})
 	filter.Settings = settings
+	// Id
+	// TODO - this property is redundant. You can find it in Filter and
+	// FilterDefinition. This could cause hard to find bugs. There should
+	// be a mechanism that ensures that the two are consistent. The filters
+	// defined in "filter.json" don't have an id but its required by the
+	// other filters.
+	id, ok := obj["filter"].(string)
+	if !ok {
+		Logger.Fatal("missing \"filter\" property in filter")
+	}
+	filter.Id = id
 	return filter
 }
 
@@ -73,7 +84,10 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) FilterInst
 func FilterRunnerFromObjectAndDefinitions(
 	obj map[string]interface{}, filterDefinitions map[string]FilterInstaller,
 ) FilterRunner {
-	filter, _ := obj["filter"].(string)
+	filter, ok := obj["filter"].(string)
+	if !ok {
+		Logger.Fatal("missing \"filter\" property in filter runner")
+	}
 	if filterDefinition, ok := filterDefinitions[filter]; ok {
 		return filterDefinition.CreateFilterRunner(obj)
 	} else {

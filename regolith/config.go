@@ -297,6 +297,7 @@ func (c *Config) DownloadRemoteFilters(isForced bool, updateFilters bool) error 
 		switch remoteFilter := filterDefinition.(type) {
 		case *RemoteFilterDefinition:
 			err := remoteFilter.Download(isForced)
+			remoteFilter.CopyFilterData(c.DataPath)
 			if err != nil {
 				return wrapError(
 					fmt.Sprintf("Could not download %q!", name),
