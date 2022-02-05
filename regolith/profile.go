@@ -188,7 +188,7 @@ func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
 
 // FilterCollection is a list of filters
 type FilterCollection struct {
-	Filters []FilterRunner `json:"filters,omitempty"`
+	Filters []FilterRunner `json:"filters"`
 }
 
 type Profile struct {

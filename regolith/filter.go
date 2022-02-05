@@ -71,10 +71,6 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) FilterInst
 	case "shell":
 		return ShellFilterDefinitionFromObject(id, obj)
 	case "":
-		filter, err := BuildInFilterDefinitionFromObject(id, obj)
-		if err == nil {
-			return filter
-		}
 		return RemoteFilterDefinitionFromObject(id, obj)
 	}
 	Logger.Fatalf("Unknown runWith %q in filter definition %q", runWith, id)
