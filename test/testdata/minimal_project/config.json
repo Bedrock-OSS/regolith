@@ -12,9 +12,9 @@
         "filters": [],
         "export": {
           "target": "development"
-        },
-        "dataPath": "./packs/data"
+        }
       }
-    }
+    },
+    "dataPath": "./packs/data"
   }
 }

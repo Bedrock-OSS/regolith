@@ -6,19 +6,23 @@
     "resourcePack": "./packs/RP"
   },
   "regolith": {
+    "dataPath": "./packs/data",
+    "filterDefinitions": {
+      "hello-version-python-filter": {
+        "url": "github.com/Bedrock-OSS/regolith-test-filters",
+        "version": "hello-version-python-filter-1.0.0"
+      }
+    },
     "profiles": {
       "dev": {
         "filters": [
           {
-            "url": "github.com/Bedrock-OSS/regolith-test-filters",
-            "filter": "hello-version-python-filter",
-            "version": "hello-version-python-filter-1.0.0"
+            "filter": "hello-version-python-filter"
           }
         ],
         "export": {
           "target": "local"
-        },
-        "dataPath": "./packs/data"
+        }
       }
     }
   }

@@ -75,7 +75,7 @@ func SetupTmpFiles(config Config, profile Profile) error {
 	if err != nil {
 		return err
 	}
-	err = setup_tmp_directory(profile.DataPath, "data", "data folder")
+	err = setup_tmp_directory(config.DataPath, "data", "data folder")
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func SetupTmpFiles(config Config, profile Profile) error {
 // is the name of the profile which should be loaded from the configuration.
 func RunProfile(profileName string) error {
 	Logger.Info("Running profile: ", profileName)
-	config := LoadConfig()
+	config := ConfigFromObject(LoadConfigAsMap())
 
 	profile := config.Profiles[profileName]
 
@@ -119,7 +119,7 @@ func RunProfile(profileName string) error {
 	// Export files
 	Logger.Info("Moving files to target directory")
 	start := time.Now()
-	err = ExportProject(profile, config.Name)
+	err = ExportProject(profile, config.Name, config.DataPath)
 	if err != nil {
 		return wrapError("Exporting project failed", err)
 	}
@@ -132,9 +132,10 @@ func RunProfile(profileName string) error {
 	return nil
 }
 
-// FilterCollectionFromFilterJson returns a collection of filters from a
+// SubfilterCollection returns a collection of filters from a
 // "filter.json" file of a remote filter.
-func FilterCollectionFromFilterJson(path string) (*FilterCollection, error) {
+func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
+	path := filepath.Join(f.GetDownloadPath(), "filter.json")
 	result := &FilterCollection{Filters: []FilterRunner{}}
 	file, err := ioutil.ReadFile(path)
 
@@ -148,37 +149,57 @@ func FilterCollectionFromFilterJson(path string) (*FilterCollection, error) {
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
-		Logger.Fatal("Couldn't load %s! Does the file contain correct json?", path, err)
+		return nil, wrapError(
+			fmt.Sprintf(
+				"couldn't load %s! Does the file contain correct json?", path),
+			err)
 	}
 	// Filters
 	filters, ok := filterCollection["filters"].([]interface{})
 	if !ok {
-		Logger.Fatalf("Could not parse filters of %q", path)
+		return nil, fmt.Errorf("could not parse filters of %q", path)
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		if !ok {
-			Logger.Fatalf(
-				"Could not parse filter %s of %q", i, path,
-			)
+			return nil, fmt.Errorf("could not parse filter %v of %q", i, path)
 		}
-		result.Filters = append(result.Filters, RunnableFilterFromObject(filter))
+		// Using the same JSON data to create both the filter
+		// definiton (installer) and the filter (runner)
+		filterId := fmt.Sprintf("%v:subfilter%v", f.Id, i)
+		filterInstaller := FilterInstallerFromObject(filterId, filter)
+		// Remote filters don't have the "filter" key but this would break the
+		// code as it's required by local filters. Adding it here to make the
+		// code work.
+		// TODO - this is a hack, fix it!
+		filter["filter"] = filterId
+		filterRunner := filterInstaller.CreateFilterRunner(filter)
+		if _, ok := filterRunner.(*RemoteFilter); ok {
+			// TODO - we could possibly implement recursive filters here
+			return nil, fmt.Errorf(
+				"remote filters are not allowed in subfilters. Remote filter"+
+					" %q subfilter %v", f.Id, i)
+		}
+		filterRunner.CopyArguments(f)
+		result.Filters = append(result.Filters, filterRunner)
 	}
 	return result, nil
 }
 
 // FilterCollection is a list of filters
 type FilterCollection struct {
-	Filters []FilterRunner `json:"filters,omitempty"`
+	Filters []FilterRunner `json:"filters"`
 }
 
 type Profile struct {
 	FilterCollection
 	ExportTarget ExportTarget `json:"export,omitempty"`
-	DataPath     string       `json:"dataPath,omitempty"`
 }
 
-func ProfileFromObject(profileName string, obj map[string]interface{}) Profile {
+func ProfileFromObject(
+	profileName string, obj map[string]interface{},
+	filterDefinitions map[string]FilterInstaller,
+) Profile {
 	result := Profile{}
 	// Filters
 	filters, ok := obj["filters"].([]interface{})
@@ -192,7 +213,8 @@ func ProfileFromObject(profileName string, obj map[string]interface{}) Profile {
 				"Could not parse filter %s of profile %q", i, profileName,
 			)
 		}
-		result.Filters = append(result.Filters, RunnableFilterFromObject(filter))
+		result.Filters = append(
+			result.Filters, FilterRunnerFromObjectAndDefinitions(filter, filterDefinitions))
 	}
 	// ExportTarget
 	export, ok := obj["export"].(map[string]interface{})
@@ -200,65 +222,5 @@ func ProfileFromObject(profileName string, obj map[string]interface{}) Profile {
 		Logger.Fatalf("Could not parse export property of profile %q", profileName)
 	}
 	result.ExportTarget = ExportTargetFromObject(export)
-	// DataPath
-	dataPath, ok := obj["dataPath"].(string)
-	if !ok {
-		Logger.Fatalf("Could not parse dataPath property of profile %q", profileName)
-	}
-	result.DataPath = dataPath
 	return result
-}
-
-// Install installs all of the filters in the profile including the nested ones
-func (p *Profile) Install(isForced bool) error {
-	return p.installFilters(isForced, p.Filters, nil)
-}
-
-// installFilters provides a recursive function to install all filters in the
-// profile. This function is not exposed outside of the regolith package. Use
-// Install() instead.
-func (p *Profile) installFilters(
-	isForced bool, filters []FilterRunner, parentFilter *RemoteFilter,
-) error {
-	for _, filter := range filters {
-		err := p.installFilter(isForced, filter, parentFilter)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// installFilter installs a single filter.
-// - Downloads the filter if it is remote
-// - Installs dependencies
-// - Copies the filter's data to the data folder
-// - Handles additional filters within the 'filters.json' file
-func (p *Profile) installFilter(
-	isForced bool, filter FilterRunner, parentFilter *RemoteFilter,
-) error {
-	var err error
-
-	if rf, ok := filter.(*RemoteFilter); ok {
-		filterDirectory, err := rf.Download(isForced)
-		if err != nil {
-			return wrapError("could not download filter: ", err)
-		}
-		filterCollection, err := FilterCollectionFromFilterJson(
-			filepath.Join(filterDirectory, "filter.json"))
-		if err != nil {
-			return fmt.Errorf(
-				"could not load \"filter.json\" from path %q, while checking"+
-					" for recursive dependencies", filterDirectory,
-			)
-		}
-		p.installFilters(isForced, filterCollection.Filters, rf)
-		rf.CopyFilterData(p)
-	}
-	filter.InstallDependencies(parentFilter)
-	if err != nil {
-		return wrapError("Could not download dependencies: ", err)
-	}
-
-	return nil
 }

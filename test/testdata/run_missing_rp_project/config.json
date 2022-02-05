@@ -5,14 +5,14 @@
 		"behaviorPack": "./packs/BP"
 	},
 	"regolith": {
+		"dataPath": "./data",
 		"profiles": {
 			"dev": {
 				"filters": [],
 				"export": {
 					"target": "local",
 					"readOnly": true
-				},
-				"dataPath": "./data"
+				}
 			}
 		}
 	}

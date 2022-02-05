@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -36,22 +37,27 @@ type Packs struct {
 
 // Regolith namespace within the Minecraft Project Schema
 type RegolithProject struct {
-	Profiles map[string]Profile `json:"profiles,omitempty"`
+	Profiles          map[string]Profile         `json:"profiles,omitempty"`
+	FilterDefinitions map[string]FilterInstaller `json:"filterDefinitions"`
+	DataPath          string                     `json:"dataPath,omitempty"`
 }
 
-func LoadConfig() *Config {
+// LoadConfigAsMap loads the config.json file as a map[string]interface{}
+func LoadConfigAsMap() map[string]interface{} {
 	file, err := ioutil.ReadFile(ManifestName)
 	if err != nil {
-		Logger.Fatal("Couldn't find %s! Consider running 'regolith init'.", ManifestName, err)
+		Logger.Fatalf(
+			"Couldn't find %s! Consider running 'regolith init'.",
+			ManifestName)
 	}
-
 	var configJson map[string]interface{}
 	err = json.Unmarshal(file, &configJson)
 	if err != nil {
-		Logger.Fatal("Couldn't load %s! Does the file contain correct json?", ManifestName, err)
+		Logger.Fatalf(
+			"Couldn't load %s! Does the file contain correct json?",
+			ManifestName)
 	}
-	result := ConfigFromObject(configJson)
-	return result
+	return configJson
 }
 
 func ConfigFromObject(obj map[string]interface{}) *Config {
@@ -95,7 +101,31 @@ func PacksFromObject(obj map[string]interface{}) Packs {
 }
 
 func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
-	result := RegolithProject{Profiles: make(map[string]Profile)}
+	result := RegolithProject{
+		Profiles:          make(map[string]Profile),
+		FilterDefinitions: make(map[string]FilterInstaller),
+	}
+	// DataPath
+	dataPath, ok := obj["dataPath"].(string)
+	if !ok {
+		Logger.Fatal("Could not parse dataPath property from 'regolith' in config.json")
+	}
+	result.DataPath = dataPath
+	// Filter definitions
+	filterDefinitions, ok := obj["filterDefinitions"].(map[string]interface{})
+	if ok { // filter definitions are optional
+		for filterDefinitionName, filterDefinition := range filterDefinitions {
+			filterDefinitionMap, ok := filterDefinition.(map[string]interface{})
+			if !ok {
+				Logger.Fatal(
+					"invalid format of filter definition %s",
+					filterDefinitionName)
+			}
+			result.FilterDefinitions[filterDefinitionName] = FilterInstallerFromObject(
+				filterDefinitionName, filterDefinitionMap)
+		}
+	}
+	// Profiles
 	profiles, ok := obj["profiles"].(map[string]interface{})
 	if !ok {
 		Logger.Fatal("Could not find profiles in config.json")
@@ -105,7 +135,9 @@ func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 		if !ok {
 			Logger.Fatal("Could not find profile in config.json")
 		}
-		result.Profiles[profileName] = ProfileFromObject(profileName, profileMap)
+		result.Profiles[profileName] = ProfileFromObject(
+			profileName, profileMap, result.FilterDefinitions)
+
 	}
 	return result
 }
@@ -173,13 +205,12 @@ func InitializeRegolithProject(isForced bool) error {
 				ResourceFolder: "./packs/RP",
 			},
 			RegolithProject: RegolithProject{
+				DataPath:          "./packs/data",
+				FilterDefinitions: map[string]FilterInstaller{},
 				Profiles: map[string]Profile{
 					"dev": {
-						DataPath: "./packs/data",
 						FilterCollection: FilterCollection{
-							Filters: []FilterRunner{
-								&RemoteFilter{Id: "hello_world"},
-							},
+							Filters: []FilterRunner{},
 						},
 						ExportTarget: ExportTarget{
 							Target:   "development",
@@ -241,20 +272,36 @@ func CleanCache() error {
 // Recursively install dependencies for the entire config.
 //  - Force mode will overwrite existing dependencies.
 //  - Non-force mode will only install dependencies that are not already installed.
-func InstallFilters(isForced bool, updateFilters bool) error {
-	project := LoadConfig()
-
+func (c *Config) InstallFilters(isForced bool, updateFilters bool) error {
 	CreateDirectoryIfNotExists(".regolith/cache/filters", true)
 	CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
 
-	for profileName, profile := range project.Profiles {
-		Logger.Infof("Installing profile %s...", profileName)
-		err := profile.Install(isForced)
-		if err != nil {
-			return wrapError("Could not install profile!", err)
+	c.DownloadRemoteFilters(isForced, updateFilters)
+	for _, filterDefinition := range c.FilterDefinitions {
+		filterDefinition.InstallDependencies(nil)
+	}
+	Logger.Infof("All filters installed.")
+	return nil
+}
+
+func (c *Config) DownloadRemoteFilters(isForced bool, updateFilters bool) error {
+	CreateDirectoryIfNotExists(".regolith/cache/filters", true)
+	CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
+
+	for name := range c.FilterDefinitions {
+		filterDefinition := c.FilterDefinitions[name]
+		Logger.Infof("Downloading %q...", name)
+		switch remoteFilter := filterDefinition.(type) {
+		case *RemoteFilterDefinition:
+			err := remoteFilter.Download(isForced)
+			remoteFilter.CopyFilterData(c.DataPath)
+			if err != nil {
+				return wrapError(
+					fmt.Sprintf("Could not download %q!", name),
+					err)
+			}
 		}
 	}
-
-	Logger.Infof("Profile installation complete.")
+	Logger.Infof("All remote filters installed.")
 	return nil
 }

@@ -128,7 +128,8 @@ func TestLocalRequirementsInstallAndRun(t *testing.T) {
 	os.Chdir(filepath.Join(tmpDir, "project"))
 	regolith.InitLogging(true)
 	t.Log("Installing the dependencies")
-	if err := regolith.InstallFilters(true, false); err != nil {
+	config := regolith.ConfigFromObject(regolith.LoadConfigAsMap())
+	if err := config.InstallFilters(true, false); err != nil {
 		t.Fatal("'regolith install' failed:", err)
 	}
 	if err := regolith.Unlock(); err != nil {
