@@ -7,7 +7,7 @@
 	},
 	"regolith": {
 		"dataPath": "./packs/data",
-		"filters": {
+		"filterDefinitions": {
 			"some_script": {
 				"runWith": "python",
 				"script": "../scripts/some_script.py"
