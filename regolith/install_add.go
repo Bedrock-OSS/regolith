@@ -42,15 +42,15 @@ func addFilter(filter string, force bool) {
 		}
 	}
 	var filterDefinitions map[string]interface{}
-	if _, ok := regolithProject["filters"]; !ok {
+	if _, ok := regolithProject["filterDefinitions"]; !ok {
 		filterDefinitions = make(map[string]interface{})
-		regolithProject["filters"] = filterDefinitions
+		regolithProject["filterDefinitions"] = filterDefinitions
 	} else {
-		filterDefinitions, ok = regolithProject["filters"].(map[string]interface{})
+		filterDefinitions, ok = regolithProject["filterDefinitions"].(map[string]interface{})
 		if !ok {
 			Logger.Fatal(
-				"Unable to convert the 'regolith->filters' property " +
-					"of the config file to a map.")
+				"Unable to convert the 'regolith->filterDefinitions' " +
+					"property of the config file to a map.")
 		}
 	}
 	filterUrl, filterName, version := parseInstallFilterArg(filter)

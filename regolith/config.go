@@ -112,7 +112,7 @@ func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 	}
 	result.DataPath = dataPath
 	// Filter definitions
-	filterDefinitions, ok := obj["filters"].(map[string]interface{})
+	filterDefinitions, ok := obj["filterDefinitions"].(map[string]interface{})
 	if ok { // filter definitions are optional
 		for filterDefinitionName, filterDefinition := range filterDefinitions {
 			filterDefinitionMap, ok := filterDefinition.(map[string]interface{})
