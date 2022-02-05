@@ -8,17 +8,14 @@
   "regolith": {
     "profiles": {
       "dev": {
-        "filters": [
-          {
-            "filter": "hello_world"
-          }
-        ],
+        "filters": [],
         "export": {
           "target": "development",
           "readOnly": false
         }
       }
     },
+    "filterDefinitions": {},
     "dataPath": "./packs/data"
   }
 }

@@ -38,7 +38,7 @@ type Packs struct {
 // Regolith namespace within the Minecraft Project Schema
 type RegolithProject struct {
 	Profiles          map[string]Profile         `json:"profiles,omitempty"`
-	FilterDefinitions map[string]FilterInstaller `json:"filters,omitempty"`
+	FilterDefinitions map[string]FilterInstaller `json:"filterDefinitions"`
 	DataPath          string                     `json:"dataPath,omitempty"`
 }
 
@@ -205,15 +205,12 @@ func InitializeRegolithProject(isForced bool) error {
 				ResourceFolder: "./packs/RP",
 			},
 			RegolithProject: RegolithProject{
-				DataPath: "./packs/data",
+				DataPath:          "./packs/data",
+				FilterDefinitions: map[string]FilterInstaller{},
 				Profiles: map[string]Profile{
 					"dev": {
 						FilterCollection: FilterCollection{
-							Filters: []FilterRunner{
-								&RemoteFilter{
-									Filter: Filter{Id: "hello_world"},
-								},
-							},
+							Filters: []FilterRunner{},
 						},
 						ExportTarget: ExportTarget{
 							Target:   "development",
