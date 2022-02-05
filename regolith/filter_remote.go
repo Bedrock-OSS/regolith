@@ -215,3 +215,20 @@ func (f *RemoteFilter) IsCached() bool {
 	_, err := os.Stat(f.GetDownloadPath())
 	return err == nil
 }
+
+// FilterDefinitionFromTheInternet downloads a filter from the internet and
+// returns its data.
+func FilterDefinitionFromTheInternet(
+	url, name, version string,
+) (*RemoteFilterDefinition, error) {
+	version, err := GetRemoteFilterDownloadRef(url, name, version, false)
+	if err == nil {
+		return &RemoteFilterDefinition{
+			FilterDefinition: FilterDefinition{Id: name},
+			Version:          version,
+			Url:              url,
+		}, nil
+	}
+	return nil, fmt.Errorf(
+		"no valid version found for filter %q", name)
+}

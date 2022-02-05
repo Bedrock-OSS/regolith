@@ -72,6 +72,9 @@ func addFilter(filter string, force bool) {
 	if err != nil {
 		Logger.Fatal(err)
 	}
+	if filterDefinition.Url == StandardLibraryUrl {
+		filterDefinition.Url = ""
+	}
 	filterDefinitions[filterName] = filterDefinition
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
@@ -113,30 +116,11 @@ func parseInstallFilterArg(arg string) (url, name, version string) {
 		name = splitStr[len(splitStr)-1]
 		url = strings.Join(splitStr[:len(splitStr)-1], "/")
 	} else {
-		Logger.Fatalf(
-			"Unable to parse argument %q as filter data. "+
-				"The argument should contain an URL and optionally a "+
-				"version number separated by '=='.",
-			arg)
+		// Example inputs: "name_ninja==HEAD", "name_ninja"
+		name = url
+		url = StandardLibraryUrl
 	}
 	return
-}
-
-// FilterDefinitionFromTheInternet downloads a filter from the internet and
-// returns its data.
-func FilterDefinitionFromTheInternet(
-	url, name, version string,
-) (*RemoteFilterDefinition, error) {
-	version, err := GetRemoteFilterDownloadRef(url, name, version, false)
-	if err == nil {
-		return &RemoteFilterDefinition{
-			FilterDefinition: FilterDefinition{Id: name},
-			Version:          version,
-			Url:              url,
-		}, nil
-	}
-	return nil, fmt.Errorf(
-		"no valid version found for filter %q", name)
 }
 
 func GetRemoteFilterDownloadRef(
