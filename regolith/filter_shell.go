@@ -10,20 +10,31 @@ import (
 	"time"
 )
 
-type ShellFilter struct {
-	Filter
-
+type ShellFilterDefinition struct {
+	FilterDefinition
 	Command string `json:"command,omitempty"`
 }
 
-func ShellFilterFromObject(obj map[string]interface{}) *ShellFilter {
-	filter := &ShellFilter{Filter: *FilterFromObject(obj)}
+type ShellFilter struct {
+	Filter
+	Definition ShellFilterDefinition `json:"definition,omitempty"`
+}
 
+func ShellFilterDefinitionFromObject(id string, obj map[string]interface{}) *ShellFilterDefinition {
+	filter := &ShellFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	command, ok := obj["command"].(string)
 	if !ok {
-		Logger.Fatalf("Could filter %q", filter.GetFriendlyName())
+		Logger.Fatalf("Could find command in filter defnition %q", filter.Id)
 	}
 	filter.Command = command
+	return filter
+}
+
+func ShellFilterFromObject(obj map[string]interface{}, definition ShellFilterDefinition) *ShellFilter {
+	filter := &ShellFilter{
+		Filter:     *FilterFromObject(obj),
+		Definition: definition,
+	}
 	return filter
 }
 
@@ -39,12 +50,20 @@ func (f *ShellFilter) Run(absoluteLocation string) error {
 	return runShellFilter(*f, f.Settings, absoluteLocation)
 }
 
-func (f *ShellFilter) InstallDependencies(parent *RemoteFilter) error {
+func (f *ShellFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
+	return ShellFilterFromObject(runConfiguration, *f)
+}
+
+func (f *ShellFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
 	return nil
 }
 
-func (f *ShellFilter) Check() error {
+func (f *ShellFilterDefinition) Check() error {
 	return checkShellRequirements()
+}
+
+func (f *ShellFilter) Check() error {
+	return f.Definition.Check()
 }
 
 func (f *ShellFilter) CopyArguments(parent *RemoteFilter) {
@@ -64,10 +83,15 @@ var shells = [][]string{{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"
 func runShellFilter(filter ShellFilter, settings map[string]interface{}, absoluteLocation string) error {
 	var err error = nil
 	if len(settings) == 0 {
-		err = executeCommand(filter.Command, filter.Arguments, absoluteLocation, GetAbsoluteWorkingDirectory())
+		err = executeCommand(
+			filter.Definition.Command, filter.Arguments, absoluteLocation,
+			GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		err = executeCommand(filter.Command, append([]string{string(jsonSettings)}, filter.Arguments...), absoluteLocation, GetAbsoluteWorkingDirectory())
+		err = executeCommand(
+			filter.Definition.Command,
+			append([]string{string(jsonSettings)}, filter.Arguments...),
+			absoluteLocation, GetAbsoluteWorkingDirectory())
 	}
 	return err
 }
@@ -103,7 +127,7 @@ func findShell() (string, string, error) {
 			return shell[0], shell[1], nil
 		}
 	}
-	return "", "", errors.New("Unable to find a valid shell")
+	return "", "", errors.New("unable to find a valid shell")
 }
 
 func checkShellRequirements() error {

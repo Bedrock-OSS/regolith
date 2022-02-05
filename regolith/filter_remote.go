@@ -1,48 +1,56 @@
 package regolith
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/hashicorp/go-getter"
 	"github.com/otiai10/copy"
 )
 
-type RemoteFilter struct {
-	Filter
-
-	Id      string `json:"filter,omitempty"`
+type RemoteFilterDefinition struct {
+	FilterDefinition
 	Url     string `json:"url,omitempty"`
 	Version string `json:"version,omitempty"`
-
 	// RemoteFilters can propagate some of the properties unique to other types
 	// of filers (like Python's venvSlot).
 	VenvSlot int `json:"venvSlot,omitempty"`
 }
 
-func RemoteFilterFromObject(obj map[string]interface{}) *RemoteFilter {
-	filter := &RemoteFilter{Filter: *FilterFromObject(obj)}
-	id, ok := obj["filter"].(string) // filter property is optional
-	if !ok {
-		Logger.Fatalf(
-			"remote filter %q is missing \"filter\" field",
-			filter.GetFriendlyName())
-	}
-	filter.Id = id
+type RemoteFilter struct {
+	Filter
+	Definition RemoteFilterDefinition `json:"-"`
+}
 
+func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) *RemoteFilterDefinition {
+	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	url, ok := obj["url"].(string)
 	if !ok {
-		filter.Url = StandardLibraryUrl
+		result.Url = StandardLibraryUrl
 	} else {
-		filter.Url = url
+		result.Url = url
 	}
-	filter.Version, _ = obj["version"].(string) // Version is optional
-	filter.VenvSlot, _ = obj["venvSlot"].(int)  // default venvSlot is 0
+	version, ok := obj["version"].(string)
+	if !ok {
+		Logger.Fatal("could not find version in filter definition %s", id)
+	}
+	result.Version = version
+	result.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+	return result
+}
+
+func RemoteFilterFromObject(
+	obj map[string]interface{}, definition RemoteFilterDefinition,
+) *RemoteFilter {
+	filter := &RemoteFilter{
+		Filter:     *FilterFromObject(obj),
+		Definition: definition,
+	}
 	return filter
 }
 
@@ -53,7 +61,7 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 		return nil
 	}
 	// All other filters require safe mode to be turned off
-	if f.Url != StandardLibraryUrl && !IsUnlocked() {
+	if f.Definition.Url != StandardLibraryUrl && !IsUnlocked() {
 		return errors.New(
 			"safe mode is on, which protects you from potentially unsafe " +
 				"code.\nYou may turn it off using 'regolith unlock'",
@@ -63,21 +71,20 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 
-	Logger.Debugf("RunRemoteFilter '%s'", f.Url)
+	Logger.Debugf("RunRemoteFilter '%s'", f.Definition.Url)
 	if !f.IsCached() {
-		return errors.New("filter is not downloaded! Please run 'regolith install'")
+		return errors.New(
+			"filter is not downloaded! Please run 'regolith install'")
 	}
 
 	path := f.GetDownloadPath()
 	absolutePath, _ := filepath.Abs(path)
-	filterCollection, err := FilterCollectionFromFilterJson(
-		filepath.Join(path, "filter.json"))
+	filterCollection, err := f.SubfilterCollection()
 	if err != nil {
 		return err
 	}
 	for _, filter := range filterCollection.Filters {
 		// Overwrite the venvSlot with the parent value
-		filter.CopyArguments(f)
 		err := filter.Run(absolutePath)
 		if err != nil {
 			return err
@@ -86,18 +93,69 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	return nil
 }
 
-func (f *RemoteFilter) InstallDependencies(parent *RemoteFilter) error {
-	return nil // Remote filters don't install any dependencies
+func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
+	return RemoteFilterFromObject(runConfiguration, *f)
 }
 
-func (f *RemoteFilter) Check() error {
+// TODO - this code is almost a duplicate of the code in the
+// (f *RemoteFilter) SubfilterCollection()
+func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
+	path := filepath.Join(f.GetDownloadPath(), "filter.json")
+	file, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		return wrapError(
+			fmt.Sprintf("couldn't read %q", path),
+			err,
+		)
+	}
+
+	var filterCollection map[string]interface{}
+	err = json.Unmarshal(file, &filterCollection)
+	if err != nil {
+		return wrapError(
+			fmt.Sprintf(
+				"couldn't load %s! Does the file contain correct json?", path),
+			err)
+	}
+	// Filters
+	filters, ok := filterCollection["filters"].([]interface{})
+	if !ok {
+		return fmt.Errorf("could not parse filters of %q", path)
+	}
+	for i, filter := range filters {
+		filter, ok := filter.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("could not parse filter %v of %q", i, path)
+		}
+		filterInstaller := FilterInstallerFromObject(
+			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
+		err = filterInstaller.InstallDependencies(f)
+		if err != nil {
+			return wrapError(
+				fmt.Sprintf(
+					"could not install dependencies for filter "+
+						"%q, subfilter %v", f.Id, i),
+				err)
+		}
+	}
 	return nil
 }
 
+func (f *RemoteFilterDefinition) Check() error {
+	return nil
+}
+
+func (f *RemoteFilter) Check() error {
+	return f.Definition.Check()
+}
+
 func (f *RemoteFilter) CopyArguments(parent *RemoteFilter) {
+	// We don't support nested remote filters anymore so this function is
+	// never called.
 	f.Arguments = parent.Arguments
 	f.Settings = parent.Settings
-	f.VenvSlot = parent.VenvSlot
+	f.Definition.VenvSlot = parent.Definition.VenvSlot
 }
 
 func (f *RemoteFilter) GetFriendlyName() string {
@@ -106,65 +164,23 @@ func (f *RemoteFilter) GetFriendlyName() string {
 	} else if f.Id != "" {
 		return f.Id
 	}
-	_, end := path.Split(f.Url) // Return the last part of the URL
+	_, end := path.Split(f.Definition.Url) // Return the last part of the URL
 	return end
 }
 
-// Download ownloads the filter into its own directory and returns the
-// download path of the directory.
-func (f *RemoteFilter) Download(isForced bool) (string, error) {
-	url := f.GetDownloadUrl()
-	downloadPath := f.GetDownloadPath()
-
-	if f.IsInstalled() {
-		if !isForced {
-			Logger.Warnf("Filter %s already installed, skipping. Run "+
-				"with '-f' to force.", f.GetFriendlyName())
-			return "", nil
-		} else {
-			// TODO should we print version information here?
-			// like "version 1.4.2 uninstalled, version 1.4.3 installed"
-			Logger.Warnf("Filter %s already installed, but force mode is enabled.\n"+
-				"Filter will be installed, erasing prior contents.", f.GetFriendlyName())
-			f.Uninstall()
-		}
-	}
-
-	Logger.Infof("Downloading filter %s...", f.GetFriendlyName())
-
-	// Download the filter using Git Getter
-	// TODO:
-	// Can we somehow detect whether this is a failure from git being not installed, or a failure from
-	// the repo/folder not existing?
-	err := getter.Get(downloadPath, url)
-	if err != nil {
-		return "", wrapError(fmt.Sprintf("Could not download filter from %s. \n	Is git installed? \n	Does that filter exist?", url), err)
-	}
-
-	// Remove 'test' folder, which we never want to use (saves space on disk)
-	testFolder := path.Join(downloadPath, "test")
-	if _, err := os.Stat(testFolder); err == nil {
-		os.RemoveAll(testFolder)
-	}
-
-	Logger.Infof("Filter %s downloaded successfully.", f.GetFriendlyName())
-	return downloadPath, nil
-}
-
 // CopyFilterData copies the filter's data to the data folder.
-func (f *RemoteFilter) CopyFilterData(profile *Profile) {
+func (f *RemoteFilterDefinition) CopyFilterData(dataPath string) {
 	// Move filters 'data' folder contents into 'data'
 	// If the localDataPath already exists, we must not overwrite
 	// Additionally, if the remote data path doesn't exist, we don't need
 	// to do anything
-	filterName := f.GetIdName()
 	remoteDataPath := path.Join(f.GetDownloadPath(), "data")
-	localDataPath := path.Join(profile.DataPath, filterName)
+	localDataPath := path.Join(dataPath, f.Id)
 	if _, err := os.Stat(localDataPath); err == nil {
 		Logger.Warnf("Filter %s already has data in the 'data' folder. \n"+
 			"You may manually delete this data and reinstall if you "+
 			"would like these configuration files to be updated.",
-			filterName)
+			f.Id)
 	} else if _, err := os.Stat(remoteDataPath); err == nil {
 		// Ensure folder exists
 		err = os.MkdirAll(localDataPath, 0666)
@@ -173,7 +189,7 @@ func (f *RemoteFilter) CopyFilterData(profile *Profile) {
 		}
 
 		// Copy 'data' to dataPath
-		if profile.DataPath != "" {
+		if dataPath != "" {
 			err = copy.Copy(
 				remoteDataPath, localDataPath,
 				copy.Options{PreserveTimes: false, Sync: false})
@@ -181,60 +197,16 @@ func (f *RemoteFilter) CopyFilterData(profile *Profile) {
 				Logger.Error("Could not initialize filter data", err) // TODO - I don't think this should break the entire install
 			}
 		} else {
-			Logger.Warnf("Filter %s has installation data, but the "+
-				"dataPath is not set. Skipping.", filterName)
+			Logger.Warnf(
+				"Filter %s has installation data, but the "+
+					"dataPath is not set. Skipping.", f.Id)
 		}
 	}
 }
 
-// IsInstalled eturns whether the filter is currently installed or not.
-func (f *RemoteFilter) IsInstalled() bool {
-	if _, err := os.Stat(f.GetDownloadPath()); err == nil {
-		return true
-	}
-	return false
-}
-
 // GetDownloadPath returns the path location where the filter can be found.
 func (f *RemoteFilter) GetDownloadPath() string {
-	return filepath.Join(".regolith/cache/filters", f.Url, f.Id)
-}
-
-// GetDownloadUrl creates a download URL, based on the filter definition.
-func (f *RemoteFilter) GetDownloadUrl() string {
-	repoUrl := ""
-	if f.Url == "" {
-		repoUrl = StandardLibraryUrl
-	} else {
-		repoUrl = f.Url
-	}
-
-	repoVersion := ""
-	if f.Version != "" {
-		repoVersion = "?ref=" + f.Version
-	}
-
-	return fmt.Sprintf("%s//%s%s", repoUrl, f.Id, repoVersion)
-}
-
-// GetIdName returns the name that identifies the filter. This name is used to
-// create and access the data folder for the filter. This property only makes
-// sense for remote filters. Non-remote filters return empty string.
-func (f *RemoteFilter) GetIdName() string {
-	if f.Id != "" {
-		return f.Id
-	} else if f.Url != "" {
-		splitUrl := strings.Split(f.Url, "/")
-		return splitUrl[len(splitUrl)-1]
-	}
-	return ""
-}
-
-func (f *RemoteFilter) Uninstall() {
-	err := os.RemoveAll(f.GetDownloadPath())
-	if err != nil {
-		Logger.Error(wrapError(fmt.Sprintf("Could not remove installed filter %s.", f.GetFriendlyName()), err))
-	}
+	return filepath.Join(".regolith/cache/filters", f.Id)
 }
 
 // IsCached checks whether the filter of given URL is already saved
@@ -242,4 +214,21 @@ func (f *RemoteFilter) Uninstall() {
 func (f *RemoteFilter) IsCached() bool {
 	_, err := os.Stat(f.GetDownloadPath())
 	return err == nil
+}
+
+// FilterDefinitionFromTheInternet downloads a filter from the internet and
+// returns its data.
+func FilterDefinitionFromTheInternet(
+	url, name, version string,
+) (*RemoteFilterDefinition, error) {
+	version, err := GetRemoteFilterDownloadRef(url, name, version, false)
+	if err == nil {
+		return &RemoteFilterDefinition{
+			FilterDefinition: FilterDefinition{Id: name},
+			Version:          version,
+			Url:              url,
+		}, nil
+	}
+	return nil, fmt.Errorf(
+		"no valid version found for filter %q", name)
 }

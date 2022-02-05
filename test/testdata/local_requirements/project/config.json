@@ -6,19 +6,24 @@
 		"resourcePack": "./packs/RP"
 	},
 	"regolith": {
+		"dataPath": "./packs/data",
+		"filterDefinitions": {
+			"some_script": {
+				"runWith": "python",
+				"script": "../scripts/some_script.py"
+			}
+		},
 		"profiles": {
 			"dev": {
 				"filters": [
 					{
-						"runWith": "python",
-						"script": "../scripts/some_script.py"
+						"filter": "some_script"
 					}
 				],
 				"export": {
 					"target": "local",
 					"readOnly": true
-				},
-				"dataPath": "./packs/data"
+				}
 			}
 		}
 	}

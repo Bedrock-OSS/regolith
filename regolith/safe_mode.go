@@ -1,7 +1,7 @@
 package regolith
 
 import (
-	"fmt"
+	"errors"
 	"io/ioutil"
 
 	"github.com/denisbrodbeck/machineid"
@@ -43,7 +43,7 @@ func GetMachineId() (string, error) {
 func Unlock() error {
 
 	if !IsProjectInitialized() {
-		return fmt.Errorf("This does not appear to be a Regolith project.")
+		return errors.New("this does not appear to be a Regolith project")
 	}
 
 	id, err := GetMachineId()

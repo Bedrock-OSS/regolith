@@ -8,20 +8,31 @@ import (
 	"time"
 )
 
-type JavaFilter struct {
-	Filter
-
+type JavaFilterDefinition struct {
+	FilterDefinition
 	Script string `json:"script,omitempty"`
 }
 
-func JavaFilterFromObject(obj map[string]interface{}) *JavaFilter {
-	filter := &JavaFilter{Filter: *FilterFromObject(obj)}
+type JavaFilter struct {
+	Filter
+	Definition JavaFilterDefinition `json:"-"`
+}
 
+func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) *JavaFilterDefinition {
+	filter := &JavaFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		Logger.Fatalf("Could filter %q", filter.GetFriendlyName())
+		Logger.Fatalf("Could find script in filter defnition %q", filter.Id)
 	}
 	filter.Script = script
+	return filter
+}
+
+func JavaFilterFromObject(obj map[string]interface{}, definition JavaFilterDefinition) *JavaFilter {
+	filter := &JavaFilter{
+		Filter:     *FilterFromObject(obj),
+		Definition: definition,
+	}
 	return filter
 }
 
@@ -42,7 +53,8 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			append(
 				[]string{
 					"-jar", absoluteLocation + string(os.PathSeparator) +
-						f.Script},
+						f.Definition.Script,
+				},
 				f.Arguments...,
 			),
 			absoluteLocation,
@@ -58,7 +70,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			append(
 				[]string{
 					"-jar", absoluteLocation + string(os.PathSeparator) +
-						f.Script, string(jsonSettings)},
+						f.Definition.Script, string(jsonSettings)},
 				f.Arguments...,
 			),
 			absoluteLocation,
@@ -71,11 +83,15 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 	return nil
 }
 
-func (f *JavaFilter) InstallDependencies(parent *RemoteFilter) error {
+func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
+	return JavaFilterFromObject(runConfiguration, *f)
+}
+
+func (f *JavaFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
 	return nil
 }
 
-func (f *JavaFilter) Check() error {
+func (f *JavaFilterDefinition) Check() error {
 	_, err := exec.LookPath("java")
 	if err != nil {
 		Logger.Fatal("Java not found. Download and install it from https://adoptopenjdk.net/")
@@ -91,6 +107,10 @@ func (f *JavaFilter) Check() error {
 		Logger.Debugf("Failed to parse Java version")
 	}
 	return nil
+}
+
+func (f *JavaFilter) Check() error {
+	return f.Definition.Check()
 }
 
 func (f *JavaFilter) CopyArguments(parent *RemoteFilter) {

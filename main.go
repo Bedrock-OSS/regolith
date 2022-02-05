@@ -65,7 +65,14 @@ func main() {
 				Usage: "Installs dependencies into the .regolith folder.",
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
-					return regolith.InstallFilters(regolith.StringArrayContains(c.FlagNames(), "force"), regolith.StringArrayContains(c.FlagNames(), "update"))
+					if regolith.StringArrayContains(c.FlagNames(), "add") {
+						regolith.AddFilters(c.StringSlice("add"), c.Bool("force"))
+					} else {
+						config := regolith.ConfigFromObject(regolith.LoadConfigAsMap())
+						return config.InstallFilters(
+							c.Bool("force"), c.Bool("update"))
+					}
+					return nil
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -77,6 +84,11 @@ func main() {
 						Name:    "update",
 						Aliases: []string{"u"},
 						Usage:   "Updates out of date filters.",
+					},
+					&cli.StringSliceFlag{
+						Name:    "add",
+						Aliases: []string{"a"},
+						Usage:   "Specify a remote filter to add to the project and install it.",
 					},
 				},
 			},
