@@ -31,9 +31,10 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) *Re
 	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	url, ok := obj["url"].(string)
 	if !ok {
-		Logger.Fatal("could not find url in filter definition %s", id)
+		result.Url = StandardLibraryUrl
+	} else {
+		result.Url = url
 	}
-	result.Url = url
 	version, ok := obj["version"].(string)
 	if !ok {
 		Logger.Fatal("could not find version in filter definition %s", id)
