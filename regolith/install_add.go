@@ -72,8 +72,14 @@ func addFilter(filter string, force bool) {
 	if err != nil {
 		Logger.Fatal(err)
 	}
+	// The default URL don't need to be added to the config file
 	if filterDefinition.Url == StandardLibraryUrl {
 		filterDefinition.Url = ""
+	}
+	// The "HEAD" and "latest" keywords should be the same in the config file
+	// don't lock them to the actual versions
+	if version == "HEAD" || version == "latest" {
+		filterDefinition.Version = version
 	}
 	filterDefinitions[filterName] = filterDefinition
 	// Save the config file
