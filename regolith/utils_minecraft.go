@@ -23,7 +23,7 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 	worldsPath := path.Join(mojangDir, "minecraftWorlds")
 	files, err := ioutil.ReadDir(worldsPath)
 	if err != nil {
-		return nil, wrapError(err, "Failed to list files inside worlds dir")
+		return nil, WrapError(err, "Failed to list files inside worlds dir")
 	}
 	for _, f := range files {
 		if f.IsDir() {
@@ -62,9 +62,9 @@ func FindMojangDir() (string, error) {
 	result := filepath.Join(os.Getenv("LOCALAPPDATA"), "Packages", "Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games", "com.mojang")
 	if _, err := os.Stat(result); err != nil {
 		if os.IsNotExist(err) {
-			return "", wrapErrorf(err, "Failed to find file %s", result)
+			return "", WrapErrorf(err, "Failed to find file %s", result)
 		}
-		return "", wrapErrorf(err, "Failed to access stats of %s", result)
+		return "", WrapErrorf(err, "Failed to access stats of %s", result)
 	}
 	return result, nil
 }

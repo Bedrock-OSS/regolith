@@ -62,7 +62,14 @@ func TestMoveFilesAcl(t *testing.T) {
 	// Switch wd to wrokingDir
 	os.Chdir(workingDir)
 	// Get the name of the config from config
-	config := regolith.ConfigFromObject(regolith.LoadConfigAsMap())
+	configJson, err := regolith.LoadConfigAsMap()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	config, err := regolith.ConfigFromObject(configJson)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	bpPath := filepath.Join(
 		mojangDir, "development_behavior_packs", config.Name+"_bp")

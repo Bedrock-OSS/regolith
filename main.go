@@ -68,8 +68,18 @@ func main() {
 					if regolith.StringArrayContains(c.FlagNames(), "add") {
 						regolith.AddFilters(c.StringSlice("add"), c.Bool("force"))
 					} else {
-						config := regolith.ConfigFromObject(regolith.LoadConfigAsMap())
-						return config.InstallFilters(c.Bool("force"))
+						configJson, err := regolith.LoadConfigAsMap()
+						if err != nil {
+							return regolith.WrapError(err, "could not load config.json")
+						}
+						config, err := regolith.ConfigFromObject(configJson)
+						if err != nil {
+							return regolith.WrapError(err, "could not load config.json")
+						}
+						err = config.InstallFilters(c.Bool("force"))
+						if err != nil {
+							return regolith.WrapError(err, "could not install filters")
+						}
 					}
 					return nil
 				},

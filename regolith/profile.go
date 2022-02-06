@@ -88,8 +88,14 @@ func SetupTmpFiles(config Config, profile Profile) error {
 // is the name of the profile which should be loaded from the configuration.
 func RunProfile(profileName string) error {
 	Logger.Info("Running profile: ", profileName)
-	config := ConfigFromObject(LoadConfigAsMap())
-
+	configJson, err := LoadConfigAsMap()
+	if err != nil {
+		return WrapError(err, "could not load config.json")
+	}
+	config, err := ConfigFromObject(configJson)
+	if err != nil {
+		return WrapError(err, "could not load 'config.json'")
+	}
 	profile := config.Profiles[profileName]
 
 	// Check whether every filter, uses a supported filter type
@@ -101,9 +107,9 @@ func RunProfile(profileName string) error {
 	}
 
 	// Prepare tmp files
-	err := SetupTmpFiles(*config, profile)
+	err = SetupTmpFiles(*config, profile)
 	if err != nil {
-		return wrapError(err, "Unable to setup profile")
+		return WrapError(err, "Unable to setup profile")
 	}
 
 	// Run the filters!
@@ -112,7 +118,7 @@ func RunProfile(profileName string) error {
 		path, _ := filepath.Abs(".")
 		err := filter.Run(path)
 		if err != nil {
-			return wrapErrorf(err, "%s failed", filter.GetFriendlyName())
+			return WrapErrorf(err, "%s failed", filter.GetFriendlyName())
 		}
 	}
 
@@ -121,13 +127,13 @@ func RunProfile(profileName string) error {
 	start := time.Now()
 	err = ExportProject(profile, config.Name, config.DataPath)
 	if err != nil {
-		return wrapError(err, "Exporting project failed")
+		return WrapError(err, "Exporting project failed")
 	}
 	Logger.Debug("Done in ", time.Since(start))
 	// Clear the tmp/data path
 	err = os.RemoveAll(".regolith/tmp/data")
 	if err != nil {
-		return wrapError(err, "Unable to clean .regolith/tmp/data directory")
+		return WrapError(err, "Unable to clean .regolith/tmp/data directory")
 	}
 	return nil
 }
@@ -140,13 +146,13 @@ func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, wrapErrorf(err, "Couldn't read %q", path)
+		return nil, WrapErrorf(err, "Couldn't read %q", path)
 	}
 
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
-		return nil, wrapErrorf(
+		return nil, WrapErrorf(
 			err, "couldn't load %s! Does the file contain correct json?", path)
 	}
 	// Filters
@@ -192,30 +198,41 @@ type Profile struct {
 }
 
 func ProfileFromObject(
-	profileName string, obj map[string]interface{},
-	filterDefinitions map[string]FilterInstaller,
-) Profile {
+	obj map[string]interface{}, filterDefinitions map[string]FilterInstaller,
+) (Profile, error) {
 	result := Profile{}
 	// Filters
+	if _, ok := obj["filters"]; !ok {
+		return result, WrapError(nil, "missing 'filters' property")
+	}
 	filters, ok := obj["filters"].([]interface{})
 	if !ok {
-		Logger.Fatalf("Could not parse filters of profile %q", profileName)
+		return result, WrapError(nil, "could not parse 'filters'")
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		if !ok {
-			Logger.Fatalf(
-				"Could not parse filter %s of profile %q", i, profileName,
-			)
+			return result, WrapErrorf(
+				nil, "the %s filter from the list is a %T instead of a map",
+				nth(i), filters[i])
 		}
 		result.Filters = append(
-			result.Filters, FilterRunnerFromObjectAndDefinitions(filter, filterDefinitions))
+			result.Filters,
+			FilterRunnerFromObjectAndDefinitions(filter, filterDefinitions))
 	}
 	// ExportTarget
+	if _, ok := obj["export"]; !ok {
+		return result, WrapError(nil, "missing 'export' property")
+	}
 	export, ok := obj["export"].(map[string]interface{})
 	if !ok {
-		Logger.Fatalf("Could not parse export property of profile %q", profileName)
+		return result, WrapErrorf(
+			nil, "'export' property is a %T, not a map", obj["export"])
 	}
-	result.ExportTarget = ExportTargetFromObject(export)
-	return result
+	exportTarget, err := ExportTargetFromObject(export)
+	if err != nil {
+		return result, WrapError(err, "could not parse 'export'")
+	}
+	result.ExportTarget = exportTarget
+	return result, nil
 }

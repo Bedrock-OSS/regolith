@@ -34,7 +34,7 @@ func IsUnlocked() bool {
 func GetMachineId() (string, error) {
 	id, err := machineid.ProtectedID("regolith")
 	if err != nil {
-		return "", wrapError(err, "Failed to create unique machine ID.")
+		return "", WrapError(err, "Failed to create unique machine ID.")
 	}
 	return id, nil
 }
@@ -53,7 +53,7 @@ func Unlock() error {
 
 	err = ioutil.WriteFile(".regolith/cache/lockfile.txt", []byte(id), 0666)
 	if err != nil {
-		return wrapError(err, "Failed to write lock file.")
+		return WrapError(err, "Failed to write lock file.")
 	}
 
 	return nil

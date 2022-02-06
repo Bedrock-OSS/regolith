@@ -28,7 +28,11 @@ func addFilter(filter string, force bool) {
 	// Load the config file as a map. Loading as Config object could break some
 	// of the custom data that could potentially be in the config file.
 	// Open the filter definitions map.
-	config := LoadConfigAsMap()
+	config, err := LoadConfigAsMap()
+	if err != nil {
+		Logger.Fatalf(
+			"Unable to load config file: %v", err)
+	}
 	var regolithProject map[string]interface{}
 	if _, ok := config["regolith"]; !ok {
 		regolithProject = make(map[string]interface{})
@@ -187,7 +191,7 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 		"git", "ls-remote", "--tags", "https://"+url,
 	).Output()
 	if err != nil {
-		return nil, wrapErrorf(
+		return nil, WrapErrorf(
 			err, "unable to list tags for filter %q: ", name)
 	}
 	// Go line by line though the output
@@ -217,7 +221,7 @@ func GetHeadSha(url, name string) (string, error) {
 		"git", "ls-remote", "--symref", "https://"+url, "HEAD",
 	).Output()
 	if err != nil {
-		return "", wrapErrorf(
+		return "", WrapErrorf(
 			err, "Unable to get head SHA for filter %q: ", name)
 	}
 	// The result is on the second line.
