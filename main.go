@@ -66,7 +66,7 @@ func main() {
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
 					if regolith.StringArrayContains(c.FlagNames(), "add") {
-						regolith.AddFilters(c.StringSlice("add"), c.Bool("force"))
+						return regolith.AddFilters(c.StringSlice("add"), c.Bool("force"))
 					} else {
 						configJson, err := regolith.LoadConfigAsMap()
 						if err != nil {
