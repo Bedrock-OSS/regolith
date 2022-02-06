@@ -1,7 +1,6 @@
 package regolith
 
 import (
-	"errors"
 	"io/ioutil"
 
 	"github.com/denisbrodbeck/machineid"
@@ -41,9 +40,8 @@ func GetMachineId() (string, error) {
 
 // Unlocks safe mode, by signing the machine ID into lockfile.txt
 func Unlock() error {
-
 	if !IsProjectInitialized() {
-		return errors.New("this does not appear to be a Regolith project")
+		return WrapError(nil, "this does not appear to be a Regolith project")
 	}
 
 	id, err := GetMachineId()

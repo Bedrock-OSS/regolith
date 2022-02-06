@@ -67,9 +67,8 @@ func CreateDirectoryIfNotExists(directory string, mustSucceed bool) error {
 		err = os.MkdirAll(directory, 0666)
 		if err != nil {
 			if mustSucceed {
-				return fmt.Errorf(
-					"failed to create directory %s: %s", directory,
-					err.Error())
+				return WrapErrorf(
+					err, "failed to create directory %s", directory)
 			} else {
 				Logger.Warnf("failed to create directory %s: %s", directory, err.Error())
 				return nil
