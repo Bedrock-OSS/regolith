@@ -60,7 +60,7 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 	if needsVenv(filepath.Dir(scriptPath)) {
 		venvPath, err := f.Definition.resolveVenvPath()
 		if err != nil {
-			return wrapError(err, "Failed to resolve venv path")
+			return WrapError(err, "Failed to resolve venv path")
 		}
 		Logger.Debug("Running Python filter using venv: ", venvPath)
 		command = []string{
@@ -84,7 +84,7 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 		}
 	}
 	if err != nil {
-		return wrapError(err, "Failed to run Python script")
+		return WrapError(err, "Failed to run Python script")
 	}
 	return nil
 }
@@ -102,7 +102,7 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
 	if err != nil {
-		return wrapErrorf(err, "Unable to resolve path of %s script", f.Id)
+		return WrapErrorf(err, "Unable to resolve path of %s script", f.Id)
 	}
 
 	// Install the filter dependencies
@@ -110,7 +110,7 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	if needsVenv(filterPath) {
 		venvPath, err := f.resolveVenvPath()
 		if err != nil {
-			return wrapError(err, "Failed to resolve venv path")
+			return WrapError(err, "Failed to resolve venv path")
 		}
 		Logger.Info("Creating venv...")
 		// it's sometimes python3 on some OSs
@@ -151,7 +151,7 @@ func (f *PythonFilterDefinition) Check() error {
 	}
 	cmd, err := exec.Command(python, "--version").Output()
 	if err != nil {
-		return wrapError(err, "Python version check failed")
+		return WrapError(err, "Python version check failed")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "Python ")
 	Logger.Debugf("Found Python version %s", a)
@@ -179,7 +179,7 @@ func (f *PythonFilterDefinition) resolveVenvPath() (string, error) {
 	resolvedPath, err := filepath.Abs(
 		filepath.Join(".regolith/cache/venvs", strconv.Itoa(f.VenvSlot)))
 	if err != nil {
-		return "", wrapErrorf(
+		return "", WrapErrorf(
 			err, "VenvSlot %v: Unable to create venv", f.VenvSlot)
 	}
 	return resolvedPath, nil

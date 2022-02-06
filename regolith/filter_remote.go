@@ -104,13 +104,13 @@ func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return wrapErrorf(err, "couldn't read %q", path)
+		return WrapErrorf(err, "couldn't read %q", path)
 	}
 
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
-		return wrapErrorf(
+		return WrapErrorf(
 			err, "couldn't load %s! Does the file contain correct json?", path)
 	}
 	// Filters
@@ -127,7 +127,7 @@ func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
 		err = filterInstaller.InstallDependencies(f)
 		if err != nil {
-			return wrapErrorf(
+			return WrapErrorf(
 				err,
 				"could not install dependencies for filter %q, subfilter %v",
 				f.Id, i)
@@ -179,7 +179,7 @@ func (f *RemoteFilterDefinition) CopyFilterData(dataPath string) {
 		// Ensure folder exists
 		err = os.MkdirAll(localDataPath, 0666)
 		if err != nil {
-			Logger.Error("Could not create filter data folder", err) // TODO - I don't think this should break the entire install
+			Logger.Error("Could not create filter data folder", err)
 		}
 
 		// Copy 'data' to dataPath
@@ -188,7 +188,7 @@ func (f *RemoteFilterDefinition) CopyFilterData(dataPath string) {
 				remoteDataPath, localDataPath,
 				copy.Options{PreserveTimes: false, Sync: false})
 			if err != nil {
-				Logger.Error("Could not initialize filter data", err) // TODO - I don't think this should break the entire install
+				Logger.Error("Could not initialize filter data", err)
 			}
 		} else {
 			Logger.Warnf(

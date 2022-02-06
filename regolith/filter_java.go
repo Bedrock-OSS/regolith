@@ -61,7 +61,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return wrapError(err, "Failed to run Java filter")
+			return WrapError(err, "Failed to run Java filter")
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -77,7 +77,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return wrapError(err, "Failed to run Java filter")
+			return WrapError(err, "Failed to run Java filter")
 		}
 	}
 	return nil
@@ -98,7 +98,7 @@ func (f *JavaFilterDefinition) Check() error {
 	}
 	cmd, err := exec.Command("java", "--version").Output()
 	if err != nil {
-		return wrapError(err, "Failed to check Java version")
+		return WrapError(err, "Failed to check Java version")
 	}
 	a := strings.Split(strings.Trim(string(cmd), " \n\t"), " ")
 	if len(a) > 1 {

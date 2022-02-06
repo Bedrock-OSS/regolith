@@ -17,7 +17,7 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 	if exportTarget.Target == "development" {
 		comMojang, err := FindMojangDir()
 		if err != nil {
-			return "", "", wrapError(err, "Failed to find com.mojang directory")
+			return "", "", WrapError(err, "Failed to find com.mojang directory")
 		}
 		// TODO - I don't like the _rp and _bp sufixes. Can we get rid of that?
 		// I for example always name my packs "0".
@@ -36,11 +36,11 @@ func GetExportPaths(exportTarget ExportTarget, name string) (bpPath string, rpPa
 		} else if exportTarget.WorldName != "" {
 			dir, err := FindMojangDir()
 			if err != nil {
-				return "", "", wrapError(err, "Failed to find com.mojang directory")
+				return "", "", WrapError(err, "Failed to find com.mojang directory")
 			}
 			worlds, err := ListWorlds(dir)
 			if err != nil {
-				return "", "", wrapError(err, "Failed to list worlds")
+				return "", "", WrapError(err, "Failed to list worlds")
 			}
 			for _, world := range worlds {
 				if world.Name == exportTarget.WorldName {
@@ -87,17 +87,17 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	// Spooky, I hope file protection works, and it won't do any damage
 	err = os.RemoveAll(bpPath)
 	if err != nil {
-		return wrapError(err, "Failed to clear behavior pack build output")
+		return WrapError(err, "Failed to clear behavior pack build output")
 	}
 	err = os.RemoveAll(rpPath)
 	if err != nil {
-		return wrapError(err, "Failed to clear resource pack build output")
+		return WrapError(err, "Failed to clear resource pack build output")
 	}
 	// TODO - this code is dangerous. You can put any dataPath into the config
 	// file and regolith will delete it
 	err = os.RemoveAll(dataPath)
 	if err != nil {
-		return wrapError(err, "Failed to clear filter data path")
+		return WrapError(err, "Failed to clear filter data path")
 	}
 	Logger.Info("Exporting project to ", bpPath)
 	err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
@@ -133,7 +133,7 @@ func MoveOrCopy(
 		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
 		err := copy.Copy(source, destination, copyOptions)
 		if err != nil {
-			return wrapErrorf(err, "Couldn't copy data files to %s, aborting.", destination)
+			return WrapErrorf(err, "Couldn't copy data files to %s, aborting.", destination)
 		}
 	} else if copyParentAcl { // No errors with moving files but needs ACL copy
 		parent := filepath.Dir(destination)
@@ -142,7 +142,7 @@ func MoveOrCopy(
 		}
 		err = copyFileSecurityInfo(parent, destination)
 		if err != nil {
-			return wrapErrorf(
+			return WrapErrorf(
 				err,
 				"Counldn't set ACL to the target file %s, aborting.",
 				destination,
