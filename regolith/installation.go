@@ -32,9 +32,12 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 	// Can we somehow detect whether this is a failure from git being not
 	// installed, or a failure from
 	// the repo/folder not existing?
-	url := i.GetDownloadUrl()
+	url, err := i.GetDownloadUrl()
+	if err != nil {
+		return WrapError(err, "unable to get download URL")
+	}
 	downloadPath := i.GetDownloadPath()
-	err := getter.Get(downloadPath, url)
+	err = getter.Get(downloadPath, url)
 	if err != nil {
 		return WrapErrorf(
 			err,
@@ -54,13 +57,14 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 }
 
 // GetDownloadUrl creates a download URL, based on the filter definition
-func (i *RemoteFilterDefinition) GetDownloadUrl() string {
+func (i *RemoteFilterDefinition) GetDownloadUrl() (string, error) {
 	repoVersion, err := GetRemoteFilterDownloadRef(
 		i.Url, i.Id, i.Version, true)
 	if err != nil {
-		Logger.Fatal(err)
+		return "", WrapErrorf(
+			err, "unable to get download URL for filter %q", i.Id)
 	}
-	return fmt.Sprintf("%s//%s?ref=%s", i.Url, i.Id, repoVersion)
+	return fmt.Sprintf("%s//%s?ref=%s", i.Url, i.Id, repoVersion), nil
 }
 
 // GetDownloadPath returns the path location where the filter can be found.
