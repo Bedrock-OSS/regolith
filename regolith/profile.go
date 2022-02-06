@@ -158,26 +158,36 @@ func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
 	// Filters
 	filters, ok := filterCollection["filters"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("could not parse filters of %q", path)
+		return nil, WrapErrorf(nil, "could not parse filters of %q", path)
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("could not parse filter %v of %q", i, path)
+			return nil, WrapErrorf(
+				nil, "could not parse filter %v of %q", i, path)
 		}
 		// Using the same JSON data to create both the filter
 		// definiton (installer) and the filter (runner)
 		filterId := fmt.Sprintf("%v:subfilter%v", f.Id, i)
-		filterInstaller := FilterInstallerFromObject(filterId, filter)
+		filterInstaller, err := FilterInstallerFromObject(filterId, filter)
+		if err != nil {
+			return nil, WrapErrorf(
+				err, "could not parse filter %v of %q", i, path)
+		}
 		// Remote filters don't have the "filter" key but this would break the
 		// code as it's required by local filters. Adding it here to make the
 		// code work.
 		// TODO - this is a hack, fix it!
 		filter["filter"] = filterId
-		filterRunner := filterInstaller.CreateFilterRunner(filter)
+		filterRunner, err := filterInstaller.CreateFilterRunner(filter)
+		if err != nil {
+			return nil, WrapErrorf(
+				err, "could not parse filter %v of %q", i, path)
+		}
 		if _, ok := filterRunner.(*RemoteFilter); ok {
 			// TODO - we could possibly implement recursive filters here
-			return nil, fmt.Errorf(
+			return nil, WrapErrorf(
+				nil,
 				"remote filters are not allowed in subfilters. Remote filter"+
 					" %q subfilter %v", f.Id, i)
 		}
@@ -216,9 +226,13 @@ func ProfileFromObject(
 				nil, "the %s filter from the list is a %T instead of a map",
 				nth(i), filters[i])
 		}
-		result.Filters = append(
-			result.Filters,
-			FilterRunnerFromObjectAndDefinitions(filter, filterDefinitions))
+		filterRunner, err := FilterRunnerFromObjectAndDefinitions(
+			filter, filterDefinitions)
+		if err != nil {
+			return result, WrapErrorf(
+				err, "could not parse the %v filter of the profile", nth(i))
+		}
+		result.Filters = append(result.Filters, filterRunner)
 	}
 	// ExportTarget
 	if _, ok := obj["export"]; !ok {

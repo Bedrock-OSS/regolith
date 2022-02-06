@@ -18,22 +18,15 @@ type JavaFilter struct {
 	Definition JavaFilterDefinition `json:"-"`
 }
 
-func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) *JavaFilterDefinition {
+func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*JavaFilterDefinition, error) {
 	filter := &JavaFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		Logger.Fatalf("Could find script in filter defnition %q", filter.Id)
+		return nil, WrapErrorf(
+			nil, "missing 'script' property in filter definition %q", filter.Id)
 	}
 	filter.Script = script
-	return filter
-}
-
-func JavaFilterFromObject(obj map[string]interface{}, definition JavaFilterDefinition) *JavaFilter {
-	filter := &JavaFilter{
-		Filter:     *FilterFromObject(obj),
-		Definition: definition,
-	}
-	return filter
+	return filter, nil
 }
 
 func (f *JavaFilter) Run(absoluteLocation string) error {
@@ -61,7 +54,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return WrapError(err, "Failed to run Java filter")
+			return WrapError(err, "failed to run Java filter")
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -77,14 +70,22 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return WrapError(err, "Failed to run Java filter")
+			return WrapError(err, "failed to run Java filter")
 		}
 	}
 	return nil
 }
 
-func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
-	return JavaFilterFromObject(runConfiguration, *f)
+func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
+	basicFilter, err := FilterFromObject(runConfiguration)
+	if err != nil {
+		return nil, WrapError(err, "failed to create Java filter")
+	}
+	filter := &JavaFilter{
+		Filter:     *basicFilter,
+		Definition: *f,
+	}
+	return filter, nil
 }
 
 func (f *JavaFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
@@ -94,11 +95,14 @@ func (f *JavaFilterDefinition) InstallDependencies(parent *RemoteFilterDefinitio
 func (f *JavaFilterDefinition) Check() error {
 	_, err := exec.LookPath("java")
 	if err != nil {
-		Logger.Fatal("Java not found. Download and install it from https://adoptopenjdk.net/")
+		return WrapError(
+			err,
+			"Java not found, download and install it"+
+				" from https://adoptopenjdk.net/")
 	}
 	cmd, err := exec.Command("java", "--version").Output()
 	if err != nil {
-		return WrapError(err, "Failed to check Java version")
+		return WrapError(err, "failed to check Java version")
 	}
 	a := strings.Split(strings.Trim(string(cmd), " \n\t"), " ")
 	if len(a) > 1 {

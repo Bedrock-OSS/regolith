@@ -150,14 +150,19 @@ func RegolithProjectFromObject(
 					nil, "filter definition %q is a %T not a map",
 					filterDefinitionName, filterDefinitions[filterDefinitionName])
 			}
-			result.FilterDefinitions[filterDefinitionName] = FilterInstallerFromObject(
+			filterInstaller, err := FilterInstallerFromObject(
 				filterDefinitionName, filterDefinitionMap)
+			if err != nil {
+				return result, WrapError(
+					err, "could not parse filter definition")
+			}
+			result.FilterDefinitions[filterDefinitionName] = filterInstaller
 		}
 	}
 	// Profiles
 	profiles, ok := obj["profiles"].(map[string]interface{})
 	if !ok {
-		Logger.Fatal("Could not find profiles in config.json")
+		return result, WrapError(nil, "missing 'profiles' property")
 	}
 	for profileName, profile := range profiles {
 		profileMap, ok := profile.(map[string]interface{})

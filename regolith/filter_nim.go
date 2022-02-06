@@ -19,22 +19,17 @@ type NimFilter struct {
 	Definition NimFilterDefinition `json:"-"`
 }
 
-func NimFilterDefinitionFromObject(id string, obj map[string]interface{}) *NimFilterDefinition {
+func NimFilterDefinitionFromObject(
+	id string, obj map[string]interface{},
+) (*NimFilterDefinition, error) {
 	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		Logger.Fatalf("Could find script in filter defnition %q", filter.Id)
+		return nil, WrapErrorf(
+			nil, "missing 'script' property in filter definition %q", filter.Id)
 	}
 	filter.Script = script
-	return filter
-}
-
-func NimFilterFromObject(obj map[string]interface{}, definition NimFilterDefinition) *NimFilter {
-	filter := &NimFilter{
-		Filter:     *FilterFromObject(obj),
-		Definition: definition,
-	}
-	return filter
+	return filter, nil
 }
 
 func (f *NimFilter) Run(absoluteLocation string) error {
@@ -82,8 +77,16 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 	return nil
 }
 
-func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
-	return NimFilterFromObject(runConfiguration, *f)
+func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
+	basicFilter, err := FilterFromObject(runConfiguration)
+	if err != nil {
+		return nil, WrapError(err, "failed to create Java filter")
+	}
+	filter := &NimFilter{
+		Filter:     *basicFilter,
+		Definition: *f,
+	}
+	return filter, nil
 }
 
 func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
@@ -115,7 +118,10 @@ func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 func (f *NimFilterDefinition) Check() error {
 	_, err := exec.LookPath("nim")
 	if err != nil {
-		Logger.Fatal("Nim not found. Download and install it from https://nim-lang.org/")
+		return WrapError(
+			err,
+			"Nim not found, download and install it from"+
+				" https://nim-lang.org/")
 	}
 	cmd, err := exec.Command("nim", "--version").Output()
 	if err != nil {
