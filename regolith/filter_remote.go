@@ -2,7 +2,6 @@ package regolith
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -27,7 +26,7 @@ type RemoteFilter struct {
 	Definition RemoteFilterDefinition `json:"-"`
 }
 
-func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) *RemoteFilterDefinition {
+func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*RemoteFilterDefinition, error) {
 	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	url, ok := obj["url"].(string)
 	if !ok {
@@ -37,21 +36,12 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) *Re
 	}
 	version, ok := obj["version"].(string)
 	if !ok {
-		Logger.Fatal("could not find version in filter definition %s", id)
+		return nil, WrapErrorf(
+			nil, "missing 'version' property in filter definition %s", id)
 	}
 	result.Version = version
 	result.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
-	return result
-}
-
-func RemoteFilterFromObject(
-	obj map[string]interface{}, definition RemoteFilterDefinition,
-) *RemoteFilter {
-	filter := &RemoteFilter{
-		Filter:     *FilterFromObject(obj),
-		Definition: definition,
-	}
-	return filter
+	return result, nil
 }
 
 func (f *RemoteFilter) Run(absoluteLocation string) error {
@@ -62,8 +52,9 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	}
 	// All other filters require safe mode to be turned off
 	if f.Definition.Url != StandardLibraryUrl && !IsUnlocked() {
-		return errors.New(
-			"safe mode is on, which protects you from potentially unsafe " +
+		return WrapError(
+			nil,
+			"Safe mode is on, which protects you from potentially unsafe "+
 				"code.\nYou may turn it off using 'regolith unlock'",
 		)
 	}
@@ -73,8 +64,8 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 
 	Logger.Debugf("RunRemoteFilter '%s'", f.Definition.Url)
 	if !f.IsCached() {
-		return errors.New(
-			"filter is not downloaded! Please run 'regolith install'")
+		return WrapError(
+			nil, "Filter is not downloaded. Please run 'regolith install'")
 	}
 
 	path := f.GetDownloadPath()
@@ -93,8 +84,16 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	return nil
 }
 
-func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
-	return RemoteFilterFromObject(runConfiguration, *f)
+func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
+	basicFilter, err := FilterFromObject(runConfiguration)
+	if err != nil {
+		return nil, WrapError(err, "failed to create Java filter")
+	}
+	filter := &RemoteFilter{
+		Filter:     *basicFilter,
+		Definition: *f,
+	}
+	return filter, nil
 }
 
 // TODO - this code is almost a duplicate of the code in the
@@ -116,15 +115,19 @@ func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	// Filters
 	filters, ok := filterCollection["filters"].([]interface{})
 	if !ok {
-		return fmt.Errorf("could not parse filters of %q", path)
+		return WrapErrorf(nil, "could not parse filters of %q", path)
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("could not parse filter %v of %q", i, path)
+			return WrapErrorf(nil, "could not parse filter %v of %q", i, path)
 		}
-		filterInstaller := FilterInstallerFromObject(
+		filterInstaller, err := FilterInstallerFromObject(
 			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
+		if err != nil {
+			return WrapErrorf(
+				err, "could not parse filter %q, subfioter %v", f.Id, i)
+		}
 		err = filterInstaller.InstallDependencies(f)
 		if err != nil {
 			return WrapErrorf(
@@ -223,6 +226,6 @@ func FilterDefinitionFromTheInternet(
 			Url:              url,
 		}, nil
 	}
-	return nil, fmt.Errorf(
-		"no valid version found for filter %q", name)
+	return nil, WrapErrorf(
+		nil, "no valid version found for filter %q", name)
 }
