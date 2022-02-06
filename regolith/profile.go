@@ -53,8 +53,8 @@ func SetupTmpFiles(config Config, profile Profile) error {
 					return err
 				}
 			} else { // The folder paths leads to a file
-				return fmt.Errorf(
-					"%s path %q is not a directory",
+				return WrapErrorf(
+					nil, "%s path %q is not a directory",
 					descriptive_name, path)
 			}
 		} else {

@@ -1,7 +1,6 @@
 package regolith
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -57,7 +56,7 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 
 func FindMojangDir() (string, error) {
 	if runtime.GOOS != "windows" {
-		return "", fmt.Errorf("unsupported OS '%s'", runtime.GOOS)
+		return "", WrapErrorf(nil, "unsupported OS '%s'", runtime.GOOS)
 	}
 	result := filepath.Join(os.Getenv("LOCALAPPDATA"), "Packages", "Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games", "com.mojang")
 	if _, err := os.Stat(result); err != nil {
