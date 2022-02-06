@@ -187,9 +187,8 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 		"git", "ls-remote", "--tags", "https://"+url,
 	).Output()
 	if err != nil {
-		return nil, wrapError(
-			fmt.Sprintf("unable to list tags for filter %q: ", name),
-			err)
+		return nil, wrapErrorf(
+			err, "unable to list tags for filter %q: ", name)
 	}
 	// Go line by line though the output
 	var tags []string
@@ -218,9 +217,8 @@ func GetHeadSha(url, name string) (string, error) {
 		"git", "ls-remote", "--symref", "https://"+url, "HEAD",
 	).Output()
 	if err != nil {
-		return "", wrapError(
-			fmt.Sprintf("Unable to get head SHA for filter %q: ", name),
-			err)
+		return "", wrapErrorf(
+			err, "Unable to get head SHA for filter %q: ", name)
 	}
 	// The result is on the second line.
 	lines := strings.Split(string(output), "\n")

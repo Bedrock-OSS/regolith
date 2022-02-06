@@ -2,7 +2,6 @@ package regolith
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -61,7 +60,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return wrapError("Failed to run Nim script", err)
+			return wrapError(err, "Failed to run Nim script")
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -77,7 +76,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return wrapError("Failed to run Nim script", err)
+			return wrapError(err, "Failed to run Nim script")
 		}
 	}
 	return nil
@@ -96,9 +95,7 @@ func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
 	if err != nil {
-		return wrapError(fmt.Sprintf(
-			"Unable to resolve path of %s script",
-			f.Id), err)
+		return wrapErrorf(err, "Unable to resolve path of %s script", f.Id)
 	}
 	filterPath := filepath.Dir(scriptPath)
 	if hasNimble(filterPath) {
@@ -106,13 +103,9 @@ func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 		err := RunSubProcess(
 			"nimble", []string{"install"}, filterPath, filterPath)
 		if err != nil {
-			return wrapError(
-				fmt.Sprintf(
-					"Failed to run nimble to install dependencies of %s",
-					f.Id,
-				),
-				err,
-			)
+			return wrapErrorf(
+				err, "Failed to run nimble to install dependencies of %s",
+				f.Id)
 		}
 	}
 	Logger.Infof("Dependencies for %s installed successfully", f.Id)
@@ -126,7 +119,7 @@ func (f *NimFilterDefinition) Check() error {
 	}
 	cmd, err := exec.Command("nim", "--version").Output()
 	if err != nil {
-		return wrapError("Failed to check Nim version", err)
+		return wrapError(err, "Failed to check Nim version")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
 	Logger.Debugf("Found Nim version %s", a)

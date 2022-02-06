@@ -2,7 +2,6 @@ package regolith
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -238,13 +237,13 @@ func InitializeRegolithProject(isForced bool) error {
 		jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
 		err := ioutil.WriteFile(ManifestName, jsonBytes, 0666)
 		if err != nil {
-			return wrapError("Failed to write project file contents", err)
+			return wrapError(err, "Failed to write project file contents")
 		}
 
 		// Create default gitignore file
 		err = ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
 		if err != nil {
-			return wrapError("Failed to write .gitignore file contents", err)
+			return wrapError(err, "Failed to write .gitignore file contents")
 		}
 
 		foldersToCreate := []string{
@@ -274,11 +273,11 @@ func CleanCache() error {
 	Logger.Infof("Cleaning cache...")
 	err := os.RemoveAll(".regolith")
 	if err != nil {
-		return wrapError("Failed to remove .regolith folder", err)
+		return wrapError(err, "Failed to remove .regolith folder")
 	}
 	err = os.Mkdir(".regolith", 0666)
 	if err != nil {
-		return wrapError("Failed to recreate .regolith folder", err)
+		return wrapError(err, "Failed to recreate .regolith folder")
 	}
 	Logger.Infof("Cache cleaned.")
 	return nil
@@ -317,9 +316,8 @@ func (c *Config) DownloadRemoteFilters(isForced bool) error {
 			err := remoteFilter.Download(isForced)
 			remoteFilter.CopyFilterData(c.DataPath)
 			if err != nil {
-				return wrapError(
-					fmt.Sprintf("Could not download %q!", name),
-					err)
+				return wrapErrorf(
+					err, "Could not download %q!", name)
 			}
 		}
 	}

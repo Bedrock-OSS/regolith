@@ -36,10 +36,11 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 	downloadPath := i.GetDownloadPath()
 	err := getter.Get(downloadPath, url)
 	if err != nil {
-		return wrapError(fmt.Sprintf(
+		return wrapErrorf(
+			err,
 			"Could not download filter from %s.\n"+
 				"	Is git installed?\n"+
-				"	Does that filter exist?", url), err)
+				"	Does that filter exist?", url)
 	}
 
 	// Remove 'test' folder, which we never want to use (saves space on disk)
@@ -70,7 +71,8 @@ func (i *RemoteFilterDefinition) GetDownloadPath() string {
 func (i *RemoteFilterDefinition) Uninstall() {
 	err := os.RemoveAll(i.GetDownloadPath())
 	if err != nil {
-		Logger.Error(wrapError(fmt.Sprintf("Could not remove installed filter %s.", i.Id), err))
+		Logger.Error(
+			wrapErrorf(err, "Could not remove installed filter %s.", i.Id))
 	}
 }
 

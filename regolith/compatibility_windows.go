@@ -4,8 +4,6 @@
 package regolith
 
 import (
-	"fmt"
-
 	"golang.org/x/sys/windows"
 )
 
@@ -24,13 +22,13 @@ func copyFileSecurityInfo(source string, target string) error {
 		windows.SE_FILE_OBJECT,
 		windows.DACL_SECURITY_INFORMATION)
 	if err != nil {
-		return wrapError(
-			fmt.Sprintf("Unable to get security info of %q.", source), err)
+		return wrapErrorf(
+			err, "Unable to get security info of %q.", source)
 	}
 	dacl, _, err := securityInfo.DACL()
 	if err != nil {
-		return wrapError(
-			fmt.Sprintf("Unable to get DACL of %q.", source), err)
+		return wrapErrorf(
+			err, "Unable to get DACL of %q.", source)
 	}
 	err = windows.SetNamedSecurityInfo(
 		target,
@@ -38,8 +36,8 @@ func copyFileSecurityInfo(source string, target string) error {
 		windows.DACL_SECURITY_INFORMATION, nil, nil, dacl, nil,
 	)
 	if err != nil {
-		return wrapError(
-			fmt.Sprintf("Unable to set DACL of %q.", target), err)
+		return wrapErrorf(
+			err, "Unable to set DACL of %q.", target)
 	}
 	return nil
 }

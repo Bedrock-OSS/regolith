@@ -103,7 +103,7 @@ func RunProfile(profileName string) error {
 	// Prepare tmp files
 	err := SetupTmpFiles(*config, profile)
 	if err != nil {
-		return wrapError("Unable to setup profile", err)
+		return wrapError(err, "Unable to setup profile")
 	}
 
 	// Run the filters!
@@ -112,7 +112,7 @@ func RunProfile(profileName string) error {
 		path, _ := filepath.Abs(".")
 		err := filter.Run(path)
 		if err != nil {
-			return wrapError(fmt.Sprintf("%s failed", filter.GetFriendlyName()), err)
+			return wrapErrorf(err, "%s failed", filter.GetFriendlyName())
 		}
 	}
 
@@ -121,13 +121,13 @@ func RunProfile(profileName string) error {
 	start := time.Now()
 	err = ExportProject(profile, config.Name, config.DataPath)
 	if err != nil {
-		return wrapError("Exporting project failed", err)
+		return wrapError(err, "Exporting project failed")
 	}
 	Logger.Debug("Done in ", time.Since(start))
 	// Clear the tmp/data path
 	err = os.RemoveAll(".regolith/tmp/data")
 	if err != nil {
-		return wrapError("Unable to clean .regolith/tmp/data directory", err)
+		return wrapError(err, "Unable to clean .regolith/tmp/data directory")
 	}
 	return nil
 }
@@ -140,19 +140,14 @@ func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, wrapError(
-			fmt.Sprintf("Couldn't read %q", path),
-			err,
-		)
+		return nil, wrapErrorf(err, "Couldn't read %q", path)
 	}
 
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
-		return nil, wrapError(
-			fmt.Sprintf(
-				"couldn't load %s! Does the file contain correct json?", path),
-			err)
+		return nil, wrapErrorf(
+			err, "couldn't load %s! Does the file contain correct json?", path)
 	}
 	// Filters
 	filters, ok := filterCollection["filters"].([]interface{})
