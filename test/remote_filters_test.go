@@ -106,7 +106,7 @@ func TestVersionedRemoteFilter(t *testing.T) {
 	// Run InstallDependencies
 	regolith.InitLogging(true)
 	config := regolith.ConfigFromObject(regolith.LoadConfigAsMap())
-	err = config.InstallFilters(false, false)
+	err = config.InstallFilters(false)
 	if err != nil {
 		t.Fatal("Unable to install filters:", err)
 	}

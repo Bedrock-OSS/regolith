@@ -12,7 +12,8 @@ const ManifestName = "config.json"
 const GitIgnore = `/build
 /.regolith`
 
-// The full configuration file of Regolith, as saved in config.json
+// Config represents the full configuration file of Regolith, as saved in
+// "config.json".
 type Config struct {
 	Name            string `json:"name,omitempty"`
 	Author          string `json:"author,omitempty"`
@@ -20,7 +21,8 @@ type Config struct {
 	RegolithProject `json:"regolith,omitempty"`
 }
 
-// The export information for a profile, which denotes where compiled files will go
+// ExportTarget is a part of "config.json" that contains export information
+// for a profile, which denotes where compiled files will go.
 type ExportTarget struct {
 	Target    string `json:"target,omitempty"` // The mode of exporting. "develop" or "exact"
 	RpPath    string `json:"rpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
@@ -30,19 +32,22 @@ type ExportTarget struct {
 	ReadOnly  bool   `json:"readOnly"` // Whether the exported files should be read-only
 }
 
+// Packs is a part of "config.json" that points to the source behavior and
+// resource packs.
 type Packs struct {
 	BehaviorFolder string `json:"behaviorPack,omitempty"`
 	ResourceFolder string `json:"resourcePack,omitempty"`
 }
 
-// Regolith namespace within the Minecraft Project Schema
+// RegolithProject is a part of "config.json" whith the regolith namespace
+// within the Minecraft Project Schema
 type RegolithProject struct {
 	Profiles          map[string]Profile         `json:"profiles,omitempty"`
 	FilterDefinitions map[string]FilterInstaller `json:"filterDefinitions"`
 	DataPath          string                     `json:"dataPath,omitempty"`
 }
 
-// LoadConfigAsMap loads the config.json file as a map[string]interface{}
+// LoadConfigAsMap loads the config.json file as map[string]interface{}
 func LoadConfigAsMap() map[string]interface{} {
 	file, err := ioutil.ReadFile(ManifestName)
 	if err != nil {
@@ -60,6 +65,7 @@ func LoadConfigAsMap() map[string]interface{} {
 	return configJson
 }
 
+// ConfigFromObject creates a "Config" object from map[string]interface{}
 func ConfigFromObject(obj map[string]interface{}) *Config {
 	result := &Config{}
 	// Name
@@ -89,6 +95,7 @@ func ConfigFromObject(obj map[string]interface{}) *Config {
 	return result
 }
 
+// ProfileFromObject creates a "Profile" object from map[string]interface{}
 func PacksFromObject(obj map[string]interface{}) Packs {
 	result := Packs{}
 	// BehaviorPack
@@ -100,6 +107,8 @@ func PacksFromObject(obj map[string]interface{}) Packs {
 	return result
 }
 
+// RegolithProjectFromObject creates a "RegolithProject" object from
+// map[string]interface{}
 func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 	result := RegolithProject{
 		Profiles:          make(map[string]Profile),
@@ -142,6 +151,8 @@ func RegolithProjectFromObject(obj map[string]interface{}) RegolithProject {
 	return result
 }
 
+// ExportTargetFromObject creates a "ExportTarget" object from
+// map[string]interface{}
 func ExportTargetFromObject(obj map[string]interface{}) ExportTarget {
 	// TODO - implement in a proper way
 	result := ExportTarget{}
@@ -169,6 +180,8 @@ func ExportTargetFromObject(obj map[string]interface{}) ExportTarget {
 	return result
 }
 
+// IsProjectInitialized checks if the project is initialized by testing if
+// the config.json exists.
 func IsProjectInitialized() bool {
 	info, err := os.Stat(ManifestName)
 	if os.IsNotExist(err) {
@@ -177,6 +190,8 @@ func IsProjectInitialized() bool {
 	return !info.IsDir()
 }
 
+// InitializeRegolithProject handles the "regolith init" command. It creates
+// "config.json", ".gitignore" and required folders.
 func InitializeRegolithProject(isForced bool) error {
 	// Do not attempt to initialize if project is already initialized (can be forced)
 	if !isForced && IsProjectInitialized() {
@@ -254,7 +269,7 @@ func InitializeRegolithProject(isForced bool) error {
 	}
 }
 
-// CleanCache removes all contents of .regolith folder.
+// CleanCache removes all contents of ".regolith" folder.
 func CleanCache() error {
 	Logger.Infof("Cleaning cache...")
 	err := os.RemoveAll(".regolith")
@@ -269,14 +284,17 @@ func CleanCache() error {
 	return nil
 }
 
-// Recursively install dependencies for the entire config.
-//  - Force mode will overwrite existing dependencies.
-//  - Non-force mode will only install dependencies that are not already installed.
-func (c *Config) InstallFilters(isForced bool, updateFilters bool) error {
+// InstallFilters handles the "regolith install" command (without the --add
+// flag). It downloads all of the filters from "filter_definitions"
+// of the Config and/or installs their dependencies.
+// isForced toggles the force mode. The force mode overwrites existing
+// dependencies. Non-force mode only installs dependencies that are not
+// already installed.
+func (c *Config) InstallFilters(isForced bool) error {
 	CreateDirectoryIfNotExists(".regolith/cache/filters", true)
 	CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
 
-	c.DownloadRemoteFilters(isForced, updateFilters)
+	c.DownloadRemoteFilters(isForced)
 	for _, filterDefinition := range c.FilterDefinitions {
 		filterDefinition.InstallDependencies(nil)
 	}
@@ -284,7 +302,10 @@ func (c *Config) InstallFilters(isForced bool, updateFilters bool) error {
 	return nil
 }
 
-func (c *Config) DownloadRemoteFilters(isForced bool, updateFilters bool) error {
+// DownloadRemoteFilters downloads all of the remote filters from
+// "filter_definitions" of the Confing.
+// isForced toggles the force mode described in InstallFilters.
+func (c *Config) DownloadRemoteFilters(isForced bool) error {
 	CreateDirectoryIfNotExists(".regolith/cache/filters", true)
 	CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
 

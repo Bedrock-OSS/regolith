@@ -69,8 +69,7 @@ func main() {
 						regolith.AddFilters(c.StringSlice("add"), c.Bool("force"))
 					} else {
 						config := regolith.ConfigFromObject(regolith.LoadConfigAsMap())
-						return config.InstallFilters(
-							c.Bool("force"), c.Bool("update"))
+						return config.InstallFilters(c.Bool("force"))
 					}
 					return nil
 				},
@@ -79,11 +78,6 @@ func main() {
 						Name:    "force",
 						Aliases: []string{"f"},
 						Usage:   "Force the operation, overriding potential safeguards.",
-					},
-					&cli.BoolFlag{
-						Name:    "update",
-						Aliases: []string{"u"},
-						Usage:   "Updates out of date filters.",
 					},
 					&cli.StringSliceFlag{
 						Name:    "add",
