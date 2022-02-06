@@ -104,19 +104,14 @@ func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return wrapError(
-			fmt.Sprintf("couldn't read %q", path),
-			err,
-		)
+		return wrapErrorf(err, "couldn't read %q", path)
 	}
 
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
-		return wrapError(
-			fmt.Sprintf(
-				"couldn't load %s! Does the file contain correct json?", path),
-			err)
+		return wrapErrorf(
+			err, "couldn't load %s! Does the file contain correct json?", path)
 	}
 	// Filters
 	filters, ok := filterCollection["filters"].([]interface{})
@@ -132,11 +127,10 @@ func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
 		err = filterInstaller.InstallDependencies(f)
 		if err != nil {
-			return wrapError(
-				fmt.Sprintf(
-					"could not install dependencies for filter "+
-						"%q, subfilter %v", f.Id, i),
-				err)
+			return wrapErrorf(
+				err,
+				"could not install dependencies for filter %q, subfilter %v",
+				f.Id, i)
 		}
 	}
 	return nil

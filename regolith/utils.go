@@ -22,11 +22,16 @@ func StringArrayContains(arr []string, str string) bool {
 	return false
 }
 
-func wrapError(text string, err error) error {
+func wrapError(err error, text string) error {
 	if err != nil {
-		return fmt.Errorf("%s\n[%s]: %s", text, color.RedString("+"), err.Error())
+		return fmt.Errorf(
+			"%s\n[%s]: %s", text, color.RedString("+"), err.Error())
 	}
 	return errors.New(text)
+}
+
+func wrapErrorf(err error, text string, args ...interface{}) error {
+	return wrapError(err, fmt.Sprintf(text, args...))
 }
 
 func CreateDirectoryIfNotExists(directory string, mustSucceed bool) {

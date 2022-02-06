@@ -115,7 +115,7 @@ func executeCommand(command string, args []string, absoluteLocation string, work
 	err = cmd.Run()
 
 	if err != nil {
-		return wrapError("Failed to run shell script", err)
+		return wrapError(err, "Failed to run shell script")
 	}
 	return nil
 }
