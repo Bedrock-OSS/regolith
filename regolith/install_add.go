@@ -95,7 +95,7 @@ func addFilter(filter string, force bool) error {
 	filterDefinitions[filterName] = filterDefinition
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
-	err = ioutil.WriteFile(ManifestName, jsonBytes, 0666)
+	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
 	if err != nil {
 		return WrapError(err, "unable to save the config file")
 	}
