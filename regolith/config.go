@@ -7,7 +7,7 @@ import (
 )
 
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
-const ManifestName = "config.json"
+const ConfigFilePath = "config.json"
 const GitIgnore = `/build
 /.regolith`
 
@@ -48,18 +48,18 @@ type RegolithProject struct {
 
 // LoadConfigAsMap loads the config.json file as map[string]interface{}
 func LoadConfigAsMap() (map[string]interface{}, error) {
-	file, err := ioutil.ReadFile(ManifestName)
+	file, err := ioutil.ReadFile(ConfigFilePath)
 	if err != nil {
 		return nil, WrapErrorf(
 			err,
 			"%q not found (use 'regolith init' to initialize the project)",
-			ManifestName)
+			ConfigFilePath)
 	}
 	var configJson map[string]interface{}
 	err = json.Unmarshal(file, &configJson)
 	if err != nil {
 		return nil, WrapErrorf(
-			err, "could not load %s as a JSON file", ManifestName)
+			err, "could not load %s as a JSON file", ConfigFilePath)
 	}
 	return configJson, nil
 }
@@ -214,7 +214,7 @@ func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
 // IsProjectInitialized checks if the project is initialized by testing if
 // the config.json exists.
 func IsProjectInitialized() bool {
-	info, err := os.Stat(ManifestName)
+	info, err := os.Stat(ConfigFilePath)
 	if os.IsNotExist(err) {
 		return false
 	}
@@ -224,29 +224,28 @@ func IsProjectInitialized() bool {
 // InitializeRegolithProject handles the "regolith init" command. It creates
 // "config.json", ".gitignore" and required folders.
 func InitializeRegolithProject(isForced bool) error {
-	// Do not attempt to initialize if project is already initialized (can be forced)
+	Logger.Info("Initializing Regolith project...")
+
 	if !isForced && IsProjectInitialized() {
 		return WrapErrorf(
 			nil,
-			"Could not initialize Regolith project. File %s already exists.",
-			ManifestName)
+			"%q already exists, suggesting this project is already initialized. You may use --force to override this check.",
+			ConfigFilePath)
 	} else {
-		Logger.Info("Initializing Regolith project...")
-
 		if isForced {
 			Logger.Warn("Initialization forced. Data may be lost.")
 		}
 
 		// Delete old configuration if it exists
-		if err := os.Remove(ManifestName); !os.IsNotExist(err) {
+		if err := os.Remove(ConfigFilePath); !os.IsNotExist(err) {
 			if err != nil {
-				return WrapError(err, "Could not remove old config.json")
+				return WrapErrorf(err, "Failed to remove old %q", ConfigFilePath)
 			}
 		}
 
-		// Create new configuration
+		// Create new default configuration
 		jsonData := Config{
-			Name:   "Project Name",
+			Name:   "Project name",
 			Author: "Your name",
 			Packs: Packs{
 				BehaviorFolder: "./packs/BP",
@@ -268,17 +267,15 @@ func InitializeRegolithProject(isForced bool) error {
 				},
 			},
 		}
+
 		jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
-		err := ioutil.WriteFile(ManifestName, jsonBytes, 0666)
+
+		err := ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
 		if err != nil {
-			return WrapError(err, "Failed to write project file contents")
+			return WrapErrorf(err, "Failed to write data to %q", ConfigFilePath)
 		}
 
-		// Create default gitignore file
-		err = ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
-		if err != nil {
-			return WrapError(err, "Failed to write .gitignore file contents")
-		}
+		ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
 
 		foldersToCreate := []string{
 			"packs",
