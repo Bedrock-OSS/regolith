@@ -17,8 +17,9 @@ func GetExportPaths(
 	if exportTarget.Target == "development" {
 		comMojang, err := FindMojangDir()
 		if err != nil {
-			return "", "", WrapError(err, "failed to find com.mojang directory")
+			return "", "", WrapError(err, "failed to find com.mojang directory.")
 		}
+
 		// TODO - I don't like the _rp and _bp sufixes. Can we get rid of that?
 		// I for example always name my packs "0".
 		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
@@ -76,7 +77,7 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
 	if err != nil {
-		return WrapError(err, "failed to get export paths")
+		return WrapError(err, "Failed to get generate export paths. Is your export target correct?")
 	}
 
 	// Loading edited_files.json or creating empty object
@@ -96,21 +97,22 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	err = os.RemoveAll(bpPath)
 	if err != nil {
 		return WrapErrorf(
-			err, "failed to clear behavior pack build output path: %q", bpPath)
+			err, "Failed to clear behavior pack from build path %q. Are user permissions correct?", bpPath)
 	}
 	err = os.RemoveAll(rpPath)
 	if err != nil {
 		return WrapErrorf(
-			err, "failed to clear resource pack build output path: %q", rpPath)
+			err, "Failed to clear resource pack from build path %q. Are user permissions correct?", rpPath)
 	}
 	// TODO - this code is dangerous. You can put any dataPath into the config
 	// file and regolith will delete it
 	err = os.RemoveAll(dataPath)
 	if err != nil {
 		return WrapErrorf(
-			err, "failed to clear filter data path: %q", dataPath)
+			err, "failed to clear filter data path to %q", dataPath)
 	}
-	Logger.Info("Exporting project to ", bpPath)
+
+	Logger.Infof("Exporting behavior pack to %q", bpPath)
 	err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
 	if err != nil {
 		return WrapError(err, "failed to export behavior pack")
@@ -120,13 +122,13 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	if err != nil {
 		return WrapError(err, "failed to export resource pack")
 	}
-
 	err = MoveOrCopy(".regolith/tmp/data", dataPath, false, false)
 	if err != nil {
 		return WrapError(
 			err,
 			"failed to move the filter data back to the project's data folder")
 	}
+
 	// Update or create edited_files.json
 	err = editedFiles.UpdateFromPaths(rpPath, bpPath)
 	if err != nil {
