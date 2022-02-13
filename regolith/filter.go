@@ -16,7 +16,7 @@ func FilterDefinitionFromObject(id string) *FilterDefinition {
 	return &FilterDefinition{Id: id}
 }
 
-func FilterFromObject(obj map[string]interface{}) *Filter {
+func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
 	filter := &Filter{}
 	// Name
 	name, _ := obj["name"].(string)
@@ -38,16 +38,16 @@ func FilterFromObject(obj map[string]interface{}) *Filter {
 	// other filters.
 	id, ok := obj["filter"].(string)
 	if !ok {
-		Logger.Fatal("missing \"filter\" property in filter")
+		return nil, WrapError(nil, "missing \"filter\" property in filter")
 	}
 	filter.Id = id
-	return filter
+	return filter, nil
 }
 
 type FilterInstaller interface {
 	InstallDependencies(parent *RemoteFilterDefinition) error
 	Check() error
-	CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner
+	CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error)
 }
 
 type FilterRunner interface {
@@ -57,37 +57,80 @@ type FilterRunner interface {
 	GetFriendlyName() string
 }
 
-func FilterInstallerFromObject(id string, obj map[string]interface{}) FilterInstaller {
+func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterInstaller, error) {
 	runWith, _ := obj["runWith"].(string)
 	switch runWith {
 	case "java":
-		return JavaFilterDefinitionFromObject(id, obj)
+		filter, err := JavaFilterDefinitionFromObject(id, obj)
+		if err != nil {
+			return nil, WrapErrorf(
+				err,
+				"unable to create Java filter from %q filter definition", id)
+		}
+		return filter, nil
 	case "nim":
-		return NimFilterDefinitionFromObject(id, obj)
+		filter, err := NimFilterDefinitionFromObject(id, obj)
+		if err != nil {
+			return nil, WrapErrorf(
+				err,
+				"unable to create Nim filter from %q filter definition", id)
+		}
+		return filter, nil
 	case "nodejs":
-		return NodeJSFilterDefinitionFromObject(id, obj)
+		filter, err := NodeJSFilterDefinitionFromObject(id, obj)
+		if err != nil {
+			return nil, WrapErrorf(
+				err,
+				"unable to create NodeJs filter from %q filter definition", id)
+		}
+		return filter, nil
 	case "python":
-		return PythonFilterDefinitionFromObject(id, obj)
+		filter, err := PythonFilterDefinitionFromObject(id, obj)
+		if err != nil {
+			return nil, WrapErrorf(
+				err,
+				"unable to create Python filter from %q filter definition", id)
+		}
+		return filter, nil
 	case "shell":
-		return ShellFilterDefinitionFromObject(id, obj)
+		filter, err := ShellFilterDefinitionFromObject(id, obj)
+		if err != nil {
+			return nil, WrapErrorf(
+				err,
+				"unable to create shell filter from %q filter definition", id)
+		}
+		return filter, nil
 	case "":
-		return RemoteFilterDefinitionFromObject(id, obj)
+		filter, err := RemoteFilterDefinitionFromObject(id, obj)
+		if err != nil {
+			return nil, WrapErrorf(
+				err,
+				"unable to create remote filter from %q filter definition", id)
+		}
+		return filter, nil
 	}
-	Logger.Fatalf("Unknown runWith %q in filter definition %q", runWith, id)
-	return nil
+	return nil, WrapErrorf(
+		nil, "unknown runWith %q in filter definition %q", runWith, id)
 }
 
 func FilterRunnerFromObjectAndDefinitions(
 	obj map[string]interface{}, filterDefinitions map[string]FilterInstaller,
-) FilterRunner {
+) (FilterRunner, error) {
 	filter, ok := obj["filter"].(string)
 	if !ok {
-		Logger.Fatal("missing \"filter\" property in filter runner")
+		return nil, WrapError(
+			nil, "missing \"filter\" property in filter runner")
 	}
 	if filterDefinition, ok := filterDefinitions[filter]; ok {
-		return filterDefinition.CreateFilterRunner(obj)
-	} else {
-		Logger.Fatalf("unable to find %q filter in filter definitions", filter)
+		filterRunner, err := filterDefinition.CreateFilterRunner(obj)
+		if err != nil {
+			return nil, WrapErrorf(
+				err,
+				"unable to create filter runner from %q filter definition",
+				filter)
+		}
+		return filterRunner, nil
 	}
-	return nil
+	return nil, WrapErrorf(
+		nil, "unable to find %q filter in filter definitions", filter)
 }

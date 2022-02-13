@@ -2,8 +2,6 @@ package regolith
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,23 +21,16 @@ type PythonFilter struct {
 	Definition PythonFilterDefinition `json:"-"`
 }
 
-func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) *PythonFilterDefinition {
+func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*PythonFilterDefinition, error) {
 	filter := &PythonFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		Logger.Fatalf("Could find script in filter defnition %q", filter.Id)
+		return nil, WrapErrorf(
+			nil, "missing 'script' property in filter definition %q", filter.Id)
 	}
 	filter.Script = script
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
-	return filter
-}
-
-func PythonFilterFromObject(obj map[string]interface{}, definition PythonFilterDefinition) *PythonFilter {
-	filter := &PythonFilter{
-		Filter:     *FilterFromObject(obj),
-		Definition: definition,
-	}
-	return filter
+	return filter, nil
 }
 
 func (f *PythonFilter) Run(absoluteLocation string) error {
@@ -60,7 +51,7 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 	if needsVenv(filepath.Dir(scriptPath)) {
 		venvPath, err := f.Definition.resolveVenvPath()
 		if err != nil {
-			return wrapError("Failed to resolve venv path", err)
+			return WrapError(err, "failed to resolve venv path")
 		}
 		Logger.Debug("Running Python filter using venv: ", venvPath)
 		command = []string{
@@ -84,13 +75,21 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 		}
 	}
 	if err != nil {
-		return wrapError("Failed to run Python script", err)
+		return WrapError(err, "failed to run Python script")
 	}
 	return nil
 }
 
-func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
-	return PythonFilterFromObject(runConfiguration, *f)
+func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
+	basicFilter, err := FilterFromObject(runConfiguration)
+	if err != nil {
+		return nil, WrapError(err, "failed to create Java filter")
+	}
+	filter := &PythonFilter{
+		Filter:     *basicFilter,
+		Definition: *f,
+	}
+	return filter, nil
 }
 
 func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
@@ -102,9 +101,7 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
 	if err != nil {
-		return wrapError(fmt.Sprintf(
-			"Unable to resolve path of %s script",
-			f.Id), err)
+		return WrapErrorf(err, "Unable to resolve path of %s script", f.Id)
 	}
 
 	// Install the filter dependencies
@@ -112,7 +109,7 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	if needsVenv(filterPath) {
 		venvPath, err := f.resolveVenvPath()
 		if err != nil {
-			return wrapError("Failed to resolve venv path", err)
+			return WrapError(err, "Failed to resolve venv path")
 		}
 		Logger.Info("Creating venv...")
 		// it's sometimes python3 on some OSs
@@ -128,8 +125,8 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 			filepath.Join(venvPath, venvScriptsPath, "pip"+exeSuffix),
 			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath)
 		if err != nil {
-			return fmt.Errorf(
-				"couldn't run pip to install dependencies of %s",
+			return WrapErrorf(
+				err, "couldn't run pip to install dependencies of %s",
 				f.Id,
 			)
 		}
@@ -149,11 +146,14 @@ func (f *PythonFilterDefinition) Check() error {
 		}
 	}
 	if err != nil {
-		return errors.New("python not found. Download and install it from https://www.python.org/downloads/")
+		return WrapError(
+			nil, // the error woud say something like "python3" doesn't exist but we don't care
+			"Python not found, download and install it from "+
+				"https://www.python.org/downloads/")
 	}
 	cmd, err := exec.Command(python, "--version").Output()
 	if err != nil {
-		return wrapError("Python version check failed", err)
+		return WrapError(err, "Python version check failed")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "Python ")
 	Logger.Debugf("Found Python version %s", a)
@@ -181,7 +181,8 @@ func (f *PythonFilterDefinition) resolveVenvPath() (string, error) {
 	resolvedPath, err := filepath.Abs(
 		filepath.Join(".regolith/cache/venvs", strconv.Itoa(f.VenvSlot)))
 	if err != nil {
-		return "", wrapError(fmt.Sprintf("VenvSlot %v: Unable to create venv", f.VenvSlot), err)
+		return "", WrapErrorf(
+			err, "unable to create venv for VenvSlot %v", f.VenvSlot)
 	}
 	return resolvedPath, nil
 }

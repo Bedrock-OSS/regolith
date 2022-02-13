@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+var printStackTraces = true
+
 var Logger *zap.SugaredLogger
 var LoggerLevel zap.AtomicLevel
 
@@ -29,6 +31,7 @@ func InitLogging(dev bool) {
 	if Logger != nil {
 		return
 	}
+	// printStackTraces = dev
 	err := zap.RegisterSink("color", func(url *url.URL) (zap.Sink, error) {
 		if url.Host == "stderr" {
 			return colorWriter{color.Output}, nil

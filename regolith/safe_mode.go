@@ -1,7 +1,6 @@
 package regolith
 
 import (
-	"errors"
 	"io/ioutil"
 
 	"github.com/denisbrodbeck/machineid"
@@ -34,16 +33,15 @@ func IsUnlocked() bool {
 func GetMachineId() (string, error) {
 	id, err := machineid.ProtectedID("regolith")
 	if err != nil {
-		return "", wrapError("Failed to create unique machine ID.", err)
+		return "", WrapError(err, "Failed to create unique machine ID.")
 	}
 	return id, nil
 }
 
 // Unlocks safe mode, by signing the machine ID into lockfile.txt
 func Unlock() error {
-
 	if !IsProjectInitialized() {
-		return errors.New("this does not appear to be a Regolith project")
+		return WrapError(nil, "this does not appear to be a Regolith project")
 	}
 
 	id, err := GetMachineId()
@@ -53,7 +51,7 @@ func Unlock() error {
 
 	err = ioutil.WriteFile(".regolith/cache/lockfile.txt", []byte(id), 0666)
 	if err != nil {
-		return wrapError("Failed to write lock file.", err)
+		return WrapError(err, "Failed to write lock file.")
 	}
 
 	return nil

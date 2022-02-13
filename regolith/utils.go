@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/fatih/color"
@@ -22,24 +23,59 @@ func StringArrayContains(arr []string, str string) bool {
 	return false
 }
 
-func wrapError(text string, err error) error {
+// nth returns the ordinal numeral of the index of a table. For example:
+// nth(0) returns "1st", nth(1) returns "2nd", etc.
+func nth(i int) string {
+	i += 1
+	j := i % 100
+	if j > 10 && j < 20 {
+		return fmt.Sprintf("%dth", i)
+	}
+	switch j % 10 {
+	case 1:
+		return fmt.Sprintf("%dst", i)
+	case 2:
+		return fmt.Sprintf("%dnd", i)
+	case 3:
+		return fmt.Sprintf("%drd", i)
+	}
+	return fmt.Sprintf("%dth", i)
+}
+
+func wrapErrorStackTrace(err error, text string) error {
 	if err != nil {
-		return fmt.Errorf("%s\n[%s]: %s", text, color.RedString("+"), err.Error())
+		text = fmt.Sprintf(
+			"%s\n[%s]: %s", text, color.RedString("+"), err.Error())
+	}
+	if printStackTraces {
+		pc, fn, line, _ := runtime.Caller(2)
+		text = fmt.Sprintf("%s\n    %s; %s:%d", text, runtime.FuncForPC(pc).Name(), fn, line)
 	}
 	return errors.New(text)
 }
 
-func CreateDirectoryIfNotExists(directory string, mustSucceed bool) {
+func WrapError(err error, text string) error {
+	return wrapErrorStackTrace(err, text)
+}
+
+func WrapErrorf(err error, text string, args ...interface{}) error {
+	return wrapErrorStackTrace(err, fmt.Sprintf(text, args...))
+}
+
+func CreateDirectoryIfNotExists(directory string, mustSucceed bool) error {
 	if _, err := os.Stat(directory); os.IsNotExist(err) {
 		err = os.MkdirAll(directory, 0666)
 		if err != nil {
 			if mustSucceed {
-				Logger.Fatalf("Failed to create directory %s: %s", directory, err.Error())
+				return WrapErrorf(
+					err, "Failed to create directory %s", directory)
 			} else {
 				Logger.Warnf("Failed to create directory %s: %s", directory, err.Error())
+				return nil
 			}
 		}
 	}
+	return nil
 }
 
 // GetAbsoluteWorkingDirectory returns an absolute path to .regolith/tmp
