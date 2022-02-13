@@ -45,7 +45,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "run",
-				Usage: "Runs Regolith, and generates cooked RP and BP, which will be exported per the config.",
+				Usage: "Runs Regolith, and generates compiled RP and BP, which will be exported to the destination specified in the config.",
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
 					args := c.Args().Slice()
@@ -57,20 +57,37 @@ func main() {
 						profile = args[0]
 					}
 
-					return regolith.RunProfile(profile)
+					err := regolith.RunProfile(profile)
+					if err != nil {
+						return regolith.WrapErrorf(err, "Failed to run profile '%s'", profile)
+					}
+					return nil
 				},
 			},
 			{
-				Name:  "install",
-				Usage: "Installs dependencies into the .regolith folder.",
+				Name: "install",
+				Usage: `Installs the filters defined in the 'filter_definitions' of the config file. 
+						The '--add' flag can be used to specify a filter by name, which will add the filter to the config file and install it.`,
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
-					if regolith.StringArrayContains(c.FlagNames(), "add") {
-						regolith.AddFilters(c.StringSlice("add"), c.Bool("force"))
+
+					if c.Bool("add") {
+						filterNames := c.StringSlice("add")
+						err := regolith.AddFilters(filterNames, c.Bool("force"))
+						if err != nil {
+							return regolith.WrapErrorf(err, "Failed to install filters with 'add': '%v'", filterNames)
+						}
 					} else {
-						config := regolith.ConfigFromObject(regolith.LoadConfigAsMap())
-						return config.InstallFilters(
-							c.Bool("force"), c.Bool("update"))
+						configJson, err := regolith.LoadConfigAsMap()
+						config, err := regolith.ConfigFromObject(configJson)
+
+						if err != nil {
+							return regolith.WrapError(err, "Failed to parse 'config.json' file")
+						}
+						err = config.InstallFilters(c.Bool("force"))
+						if err != nil {
+							return regolith.WrapError(err, "could not install filters")
+						}
 					}
 					return nil
 				},
@@ -79,11 +96,6 @@ func main() {
 						Name:    "force",
 						Aliases: []string{"f"},
 						Usage:   "Force the operation, overriding potential safeguards.",
-					},
-					&cli.BoolFlag{
-						Name:    "update",
-						Aliases: []string{"u"},
-						Usage:   "Updates out of date filters.",
 					},
 					&cli.StringSliceFlag{
 						Name:    "add",
@@ -97,7 +109,11 @@ func main() {
 				Usage: "Initialize a Regolith project in the current directory.",
 				Action: func(c *cli.Context) error {
 					initRegolith(debug)
-					return regolith.InitializeRegolithProject(regolith.StringArrayContains(c.FlagNames(), "force"))
+					err := regolith.InitializeRegolithProject(regolith.StringArrayContains(c.FlagNames(), "force"))
+					if err != nil {
+						return regolith.WrapError(err, "Failed to initialize project.")
+					}
+					return nil
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{

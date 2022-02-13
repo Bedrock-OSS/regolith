@@ -2,7 +2,6 @@ package regolith
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,22 +19,17 @@ type NimFilter struct {
 	Definition NimFilterDefinition `json:"-"`
 }
 
-func NimFilterDefinitionFromObject(id string, obj map[string]interface{}) *NimFilterDefinition {
+func NimFilterDefinitionFromObject(
+	id string, obj map[string]interface{},
+) (*NimFilterDefinition, error) {
 	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		Logger.Fatalf("Could find script in filter defnition %q", filter.Id)
+		return nil, WrapErrorf(
+			nil, "missing 'script' property in filter definition %q", filter.Id)
 	}
 	filter.Script = script
-	return filter
-}
-
-func NimFilterFromObject(obj map[string]interface{}, definition NimFilterDefinition) *NimFilter {
-	filter := &NimFilter{
-		Filter:     *FilterFromObject(obj),
-		Definition: definition,
-	}
-	return filter
+	return filter, nil
 }
 
 func (f *NimFilter) Run(absoluteLocation string) error {
@@ -61,7 +55,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return wrapError("Failed to run Nim script", err)
+			return WrapError(err, "Failed to run Nim script")
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -77,14 +71,22 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return wrapError("Failed to run Nim script", err)
+			return WrapError(err, "Failed to run Nim script")
 		}
 	}
 	return nil
 }
 
-func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) FilterRunner {
-	return NimFilterFromObject(runConfiguration, *f)
+func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
+	basicFilter, err := FilterFromObject(runConfiguration)
+	if err != nil {
+		return nil, WrapError(err, "failed to create Java filter")
+	}
+	filter := &NimFilter{
+		Filter:     *basicFilter,
+		Definition: *f,
+	}
+	return filter, nil
 }
 
 func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
@@ -96,9 +98,7 @@ func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
 	if err != nil {
-		return wrapError(fmt.Sprintf(
-			"Unable to resolve path of %s script",
-			f.Id), err)
+		return WrapErrorf(err, "Unable to resolve path of %s script", f.Id)
 	}
 	filterPath := filepath.Dir(scriptPath)
 	if hasNimble(filterPath) {
@@ -106,13 +106,9 @@ func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 		err := RunSubProcess(
 			"nimble", []string{"install"}, filterPath, filterPath)
 		if err != nil {
-			return wrapError(
-				fmt.Sprintf(
-					"Failed to run nimble to install dependencies of %s",
-					f.Id,
-				),
-				err,
-			)
+			return WrapErrorf(
+				err, "Failed to run nimble to install dependencies of %s",
+				f.Id)
 		}
 	}
 	Logger.Infof("Dependencies for %s installed successfully", f.Id)
@@ -122,11 +118,14 @@ func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 func (f *NimFilterDefinition) Check() error {
 	_, err := exec.LookPath("nim")
 	if err != nil {
-		Logger.Fatal("Nim not found. Download and install it from https://nim-lang.org/")
+		return WrapError(
+			err,
+			"Nim not found, download and install it from"+
+				" https://nim-lang.org/")
 	}
 	cmd, err := exec.Command("nim", "--version").Output()
 	if err != nil {
-		return wrapError("Failed to check Nim version", err)
+		return WrapError(err, "Failed to check Nim version")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
 	Logger.Debugf("Found Nim version %s", a)

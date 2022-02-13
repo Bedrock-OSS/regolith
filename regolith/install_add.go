@@ -3,7 +3,6 @@ package regolith
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"strings"
@@ -15,20 +14,24 @@ import (
 // specified filters to the config.json file and installs them.
 func AddFilters(args []string, force bool) error {
 	for _, filter := range args {
-		addFilter(filter, force)
+		if err := addFilter(filter, force); err != nil {
+			return WrapErrorf(err, "unable to add filter %q", filter)
+		}
 	}
-	// TODO - how do we handle errors? With Logger.Fattal or by return statemets?
 	return nil
 }
 
 // TODO - proper error handling (propagate error)
 // addFilter downloads a filter and adds it to the filter definitions list in
 // config and installs it.
-func addFilter(filter string, force bool) {
+func addFilter(filter string, force bool) error {
 	// Load the config file as a map. Loading as Config object could break some
 	// of the custom data that could potentially be in the config file.
 	// Open the filter definitions map.
-	config := LoadConfigAsMap()
+	config, err := LoadConfigAsMap()
+	if err != nil {
+		return WrapError(err, "unable to load config file")
+	}
 	var regolithProject map[string]interface{}
 	if _, ok := config["regolith"]; !ok {
 		regolithProject = make(map[string]interface{})
@@ -36,9 +39,10 @@ func addFilter(filter string, force bool) {
 	} else {
 		regolithProject, ok = config["regolith"].(map[string]interface{})
 		if !ok {
-			Logger.Fatal(
-				"Unable to convert the 'regolith' property of the " +
-					"config file to a map.")
+			return WrapErrorf(
+				nil,
+				"'regolith' property of the config file is a %T not a map",
+				config["regolith"])
 		}
 	}
 	var filterDefinitions map[string]interface{}
@@ -48,17 +52,22 @@ func addFilter(filter string, force bool) {
 	} else {
 		filterDefinitions, ok = regolithProject["filterDefinitions"].(map[string]interface{})
 		if !ok {
-			Logger.Fatal(
-				"Unable to convert the 'regolith->filterDefinitions' " +
-					"property of the config file to a map.")
+			return WrapErrorf(
+				nil,
+				"'filterDefinitions' property of the config file is a %T not a map",
+				regolithProject["filterDefinitions"])
 		}
 	}
-	filterUrl, filterName, version := parseInstallFilterArg(filter)
-
+	filterUrl, filterName, version, err := parseInstallFilterArg(filter)
+	if err != nil {
+		return WrapErrorf(
+			err, "unable to parse filter name and version from %q", filter)
+	}
 	// Check if the filter is already installed
 	if _, ok := filterDefinitions[filterName]; ok && !force {
-		Logger.Fatalf(
-			"The filter %q is already on the filter definitions list."+
+		return WrapErrorf(
+			nil,
+			"The filter %q is already on the filter definitions list.\n"+
 				"Please remove it first before installing it again or use "+
 				"the --force option.", filterName)
 	}
@@ -66,11 +75,13 @@ func addFilter(filter string, force bool) {
 	filterDefinition, err := FilterDefinitionFromTheInternet(
 		filterUrl, filterName, version)
 	if err != nil {
-		Logger.Fatal(err)
+		return WrapErrorf(
+			err, "unable to get filter definition %q", filter)
 	}
 	err = filterDefinition.Download(force)
 	if err != nil {
-		Logger.Fatal(err)
+		return WrapErrorf(
+			err, "unable to download filter definition %q", filter)
 	}
 	// The default URL don't need to be added to the config file
 	if filterDefinition.Url == StandardLibraryUrl {
@@ -84,32 +95,35 @@ func addFilter(filter string, force bool) {
 	filterDefinitions[filterName] = filterDefinition
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
-	err = ioutil.WriteFile(ManifestName, jsonBytes, 0666)
+	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
 	if err != nil {
-		Logger.Fatal("Unable to save the config file: ", err)
+		return WrapError(err, "unable to save the config file")
 	}
 	// Install the dependencies of the filter
 	err = filterDefinition.InstallDependencies(nil)
 	if err != nil {
-		Logger.Fatalf(
-			"unable to instsall dependencies of filter %q due to an error: %v",
-			filterDefinition.Id, err.Error())
+		return WrapErrorf(
+			err, "unable to instsall dependencies of filter %q",
+			filterDefinition.Id)
 	}
+	return nil
 }
 
 // parseInstallFilterArg parses a single argument of the
 // "regolith install --add" command and returns the name, the url and
 // the version of the filter.
-func parseInstallFilterArg(arg string) (url, name, version string) {
+func parseInstallFilterArg(arg string) (url, name, version string, err error) {
 	// Parse the filter argument
 	if strings.Contains(arg, "==") {
 		splitStr := strings.Split(arg, "==")
 		if len(splitStr) != 2 {
-			Logger.Fatalf(
+			err = WrapErrorf(
+				nil,
 				"Unable to parse argument %q as filter data. "+
 					"The argument should contain an URL and optionally a "+
 					"version number separated by '=='.",
 				arg)
+			return "", "", "", err
 		}
 		url, version = splitStr[0], splitStr[1]
 	} else {
@@ -157,8 +171,8 @@ func GetRemoteFilterDownloadRef(
 			return version, nil
 		}
 	}
-	return "", fmt.Errorf(
-		"no valid version found for filter %q", name)
+	return "", WrapErrorf(
+		nil, "no valid version found for filter %q", name)
 }
 
 // GetLatestRemoteFilterTag returns the most up-to-date tag of the remote filter
@@ -175,7 +189,7 @@ func GetLatestRemoteFilterTag(
 			}
 			return lastTag, nil
 		}
-		return "", fmt.Errorf("no tags found for filter %q", name)
+		return "", WrapErrorf(nil, "no tags found for filter %q", name)
 	}
 	return "", err
 }
@@ -187,9 +201,8 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 		"git", "ls-remote", "--tags", "https://"+url,
 	).Output()
 	if err != nil {
-		return nil, wrapError(
-			fmt.Sprintf("unable to list tags for filter %q: ", name),
-			err)
+		return nil, WrapErrorf(
+			err, "unable to list tags for filter %q: ", name)
 	}
 	// Go line by line though the output
 	var tags []string
@@ -218,9 +231,8 @@ func GetHeadSha(url, name string) (string, error) {
 		"git", "ls-remote", "--symref", "https://"+url, "HEAD",
 	).Output()
 	if err != nil {
-		return "", wrapError(
-			fmt.Sprintf("Unable to get head SHA for filter %q: ", name),
-			err)
+		return "", WrapErrorf(
+			err, "Unable to get head SHA for filter %q: ", name)
 	}
 	// The result is on the second line.
 	lines := strings.Split(string(output), "\n")

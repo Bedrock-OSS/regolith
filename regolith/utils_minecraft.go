@@ -1,7 +1,6 @@
 package regolith
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -23,7 +22,7 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 	worldsPath := path.Join(mojangDir, "minecraftWorlds")
 	files, err := ioutil.ReadDir(worldsPath)
 	if err != nil {
-		return nil, wrapError("Failed to list files inside worlds dir", err)
+		return nil, WrapError(err, "Failed to list files inside worlds dir")
 	}
 	for _, f := range files {
 		if f.IsDir() {
@@ -57,14 +56,14 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 
 func FindMojangDir() (string, error) {
 	if runtime.GOOS != "windows" {
-		return "", fmt.Errorf("unsupported OS '%s'", runtime.GOOS)
+		return "", WrapErrorf(nil, "Unsupported operating system: '%s'", runtime.GOOS)
 	}
 	result := filepath.Join(os.Getenv("LOCALAPPDATA"), "Packages", "Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games", "com.mojang")
 	if _, err := os.Stat(result); err != nil {
 		if os.IsNotExist(err) {
-			return "", wrapError(fmt.Sprintf("Failed to find file %s", result), err)
+			return "", WrapErrorf(err, "Failed to find com.mojang path at '%s'. Does your system have multiple user accounts?", result)
 		}
-		return "", wrapError(fmt.Sprintf("Failed to access stats of %s", result), err)
+		return "", WrapErrorf(err, "Something went wrong accessing '%s'. Are your user permissions correct?", result)
 	}
 	return result, nil
 }
