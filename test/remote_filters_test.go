@@ -48,27 +48,19 @@ func TestVersionedRemoteFilter(t *testing.T) {
 	}
 	// Switch to the working directory
 	os.Chdir(workingDir)
+	// THE TEST
 	// Run InstallDependencies
-	regolith.InitLogging(true)
-	configJson, err := regolith.LoadConfigAsMap()
+	err = regolith.InstallAll(false, true)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal("'regolith install-all' failed:", err)
 	}
-	config, err := regolith.ConfigFromObject(configJson)
+	err = regolith.Unlock(true)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal("'regolith unlock' failed:", err)
 	}
-	err = config.InstallFilters(false)
+	err = regolith.Run("dev", true)
 	if err != nil {
-		t.Fatal("Unable to install filters:", err)
-	}
-	err = regolith.Unlock()
-	if err != nil {
-		t.Fatal("Unable to unlock:", err)
-	}
-	err = regolith.RunProfile("dev")
-	if err != nil {
-		t.Fatal("Unable to run profile:", err)
+		t.Fatal("'regolith run' failed:", err)
 	}
 	// Load created paths for comparison with expected output
 	createdPaths, err := listPaths(".", ".")

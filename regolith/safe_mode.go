@@ -37,22 +37,3 @@ func GetMachineId() (string, error) {
 	}
 	return id, nil
 }
-
-// Unlocks safe mode, by signing the machine ID into lockfile.txt
-func Unlock() error {
-	if !IsProjectInitialized() {
-		return WrapError(nil, "this does not appear to be a Regolith project")
-	}
-
-	id, err := GetMachineId()
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(".regolith/cache/lockfile.txt", []byte(id), 0666)
-	if err != nil {
-		return WrapError(err, "Failed to write lock file.")
-	}
-
-	return nil
-}
