@@ -47,49 +47,37 @@ func main() {
 				Name:  "run",
 				Usage: "Runs Regolith, and generates compiled RP and BP, which will be exported to the destination specified in the config.",
 				Action: func(c *cli.Context) error {
-					initRegolith(debug)
 					args := c.Args().Slice()
 					var profile string
-
-					if len(args) == 0 {
-						profile = "dev"
-					} else {
+					if len(args) != 0 {
 						profile = args[0]
 					}
-
-					err := regolith.RunProfile(profile)
-					if err != nil {
-						return regolith.WrapErrorf(err, "Failed to run profile '%s'", profile)
-					}
-					return nil
+					return regolith.Run(profile, debug)
 				},
 			},
 			{
-				Name: "install",
-				Usage: `Installs the filters defined in the 'filter_definitions' of the config file. 
-						The '--add' flag can be used to specify a filter by name, which will add the filter to the config file and install it.`,
+				Name: "update",
+				Usage: `It updates filters listed in "filters" parameter. The
+				names of the filters must be already present in the
+				filtersDefinitions list in the config.json file.`,
 				Action: func(c *cli.Context) error {
-					initRegolith(debug)
-
-					if c.Bool("add") {
-						filterNames := c.StringSlice("add")
-						err := regolith.AddFilters(filterNames, c.Bool("force"))
-						if err != nil {
-							return regolith.WrapErrorf(err, "Failed to install filters with 'add': '%v'", filterNames)
-						}
-					} else {
-						configJson, err := regolith.LoadConfigAsMap()
-						config, err := regolith.ConfigFromObject(configJson)
-
-						if err != nil {
-							return regolith.WrapError(err, "Failed to parse 'config.json' file")
-						}
-						err = config.InstallFilters(c.Bool("force"))
-						if err != nil {
-							return regolith.WrapError(err, "could not install filters")
-						}
-					}
-					return nil
+					return regolith.Update(c.Args().Slice(), debug)
+				},
+			},
+			{
+				Name: "update-all",
+				Usage: `It updates all of the filters listed in the
+				filtersDefinitions which aren't version locked.`,
+				Action: func(c *cli.Context) error {
+					return regolith.Update(c.Args().Slice(), debug)
+				},
+			},
+			{
+				Name:  "install-all",
+				Usage: `Installs all of the filters from filtersDefintions of config.json file and their dependencies.`,
+				Action: func(c *cli.Context) error {
+					force := c.Bool("force")
+					return regolith.InstallAll(force, debug)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -97,10 +85,28 @@ func main() {
 						Aliases: []string{"f"},
 						Usage:   "Force the operation, overriding potential safeguards.",
 					},
-					&cli.StringSliceFlag{
-						Name:    "add",
-						Aliases: []string{"a"},
-						Usage:   "Specify a remote filter to add to the project and install it.",
+				},
+			},
+			{
+				Name:  "install",
+				Usage: `Installs specific filters from the Internet and adds them to the filtersDefinitions list in the config.json file.`,
+				Action: func(c *cli.Context) error {
+					force := c.Bool("force")
+					filters := c.Args().Slice()
+					// Filter out the --force flag
+					for i, f := range filters {
+						if f == "--force" {
+							filters = append(filters[:i], filters[i+1:]...)
+							break
+						}
+					}
+					return regolith.Install(filters, force, debug)
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "force",
+						Aliases: []string{"f"},
+						Usage:   "Force the operation, overriding potential safeguards.",
 					},
 				},
 			},
@@ -108,12 +114,8 @@ func main() {
 				Name:  "init",
 				Usage: "Initialize a Regolith project in the current directory.",
 				Action: func(c *cli.Context) error {
-					initRegolith(debug)
-					err := regolith.InitializeRegolithProject(regolith.StringArrayContains(c.FlagNames(), "force"))
-					if err != nil {
-						return regolith.WrapError(err, "Failed to initialize project.")
-					}
-					return nil
+					force := c.Bool("force")
+					return regolith.Init(force, debug)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -127,16 +129,14 @@ func main() {
 				Name:  "clean",
 				Usage: "Cleans cache from the .regolith folder.",
 				Action: func(c *cli.Context) error {
-					initRegolith(debug)
-					return regolith.CleanCache()
+					return regolith.Clean(debug)
 				},
 			},
 			{
 				Name:  "unlock",
 				Usage: "Unlocks Regolith, to enable use of Remote and Local filters.",
 				Action: func(c *cli.Context) error {
-					initRegolith(debug)
-					return regolith.Unlock()
+					return regolith.Unlock(debug)
 				},
 			},
 		},
@@ -154,9 +154,4 @@ func main() {
 		_, _ = fmt.Fprintln(color.Output, color.GreenString("New version available!"))
 		_, _ = fmt.Fprintln(color.Output, color.GreenString(*result.Url))
 	}
-}
-
-func initRegolith(debug bool) {
-	//goland:noinspection GoBoolExpressions
-	regolith.InitLogging(debug)
 }

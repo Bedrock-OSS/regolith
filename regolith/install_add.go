@@ -10,17 +10,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// AddFilters handles the "regolith install --add" command. It adds the
-// specified filters to the config.json file and installs them.
-func AddFilters(args []string, force bool) error {
-	for _, filter := range args {
-		if err := addFilter(filter, force); err != nil {
-			return WrapErrorf(err, "unable to add filter %q", filter)
-		}
-	}
-	return nil
-}
-
 // TODO - proper error handling (propagate error)
 // addFilter downloads a filter and adds it to the filter definitions list in
 // config and installs it.
