@@ -48,18 +48,18 @@ func TestSwitchingExportTargets(t *testing.T) {
 	}
 	// Switch to the working directory
 	os.Chdir(workingDir)
+	// THE TEST
 	// Run Regolith with targets: A, B, A
-	regolith.InitLogging(true)
-	err = regolith.RunProfile("exact_export_A")
+	err = regolith.Run("exact_export_A", true)
 	if err != nil {
 		t.Fatal(
 			"Unable RunProfile failed on first attempt to export to A:", err)
 	}
-	err = regolith.RunProfile("exact_export_B")
+	err = regolith.Run("exact_export_B", true)
 	if err != nil {
 		t.Fatal("Unable RunProfile failed on attempt to export to B:", err)
 	}
-	err = regolith.RunProfile("exact_export_A")
+	err = regolith.Run("exact_export_A", true)
 	if err != nil {
 		t.Fatal(
 			"Unable RunProfile failed on second attempt to export to A:", err)
@@ -104,9 +104,9 @@ func TestTriggerFileProtection(t *testing.T) {
 	}
 	// Switch to the working directory
 	os.Chdir(workingDir)
-	// 1. Run Regolith (export to A)
-	regolith.InitLogging(true)
-	err = regolith.RunProfile("exact_export_A")
+	// THE TEST
+	// Run Regolith (export to A)
+	err = regolith.Run("exact_export_A", true)
 	if err != nil {
 		t.Fatal(
 			"Unable RunProfile failed on first attempt to export to A:", err)
@@ -118,7 +118,7 @@ func TestTriggerFileProtection(t *testing.T) {
 	}
 	file.Close()
 	// 3. Run Regolith (export to A)
-	err = regolith.RunProfile("exact_export_A")
+	err = regolith.Run("exact_export_A", true)
 	if err == nil {
 		t.Fatal("Expected RunProfile to fail on second attempt to export to A")
 	}

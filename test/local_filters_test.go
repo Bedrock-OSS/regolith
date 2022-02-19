@@ -39,9 +39,11 @@ func TestRegolithInit(t *testing.T) {
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatal("Unable to change working directory:", err.Error())
 	}
-	// Test regolith init
-	regolith.InitLogging(true)
-	regolith.InitializeRegolithProject(false)
+	// THE TEST
+	err = regolith.Init(false, true)
+	if err != nil {
+		t.Fatal("'regolith init' failed:", err.Error())
+	}
 	createdPaths, err := listPaths(".", ".")
 	if err != nil {
 		t.Fatal("Unable to get list of created paths:", err)
@@ -83,14 +85,10 @@ func TestRegolithRunMissingRp(t *testing.T) {
 	}
 	// Switch to the working directory
 	os.Chdir(tmpDir)
-
 	// THE TEST
-	// 1. Run Regolith (export to A)
-	regolith.InitLogging(true)
-	err = regolith.RunProfile("dev")
+	err = regolith.Run("dev", true)
 	if err != nil {
-		t.Fatal(
-			"RunProfile failed:", err)
+		t.Fatal("'regolith run' failed:", err)
 	}
 }
 
@@ -126,25 +124,15 @@ func TestLocalRequirementsInstallAndRun(t *testing.T) {
 	}
 	// Switch to the working directory
 	os.Chdir(filepath.Join(tmpDir, "project"))
-	regolith.InitLogging(true)
-	t.Log("Installing the dependencies")
-	configJson, err := regolith.LoadConfigAsMap()
+	// THE TEST
+	err = regolith.InstallAll(false, true)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal("'regolith install-all' failed", err.Error())
 	}
-	config, err := regolith.ConfigFromObject(configJson)
-	if err != nil {
-		t.Fatal(err.Error())
+	if err := regolith.Unlock(true); err != nil {
+		t.Fatal("'regolith unlock' failed:", err.Error())
 	}
-	if err := config.InstallFilters(true); err != nil {
-		t.Fatal("'regolith install' failed:", err)
-	}
-	if err := regolith.Unlock(); err != nil {
-		t.Fatal("'regolith unlock' failed:", err)
-	}
-	// Run the profile
-	t.Log("Running the profile")
-	if err := regolith.RunProfile("dev"); err != nil {
-		t.Fatal("'regolith run' failed:", err)
+	if err := regolith.Run("dev", true); err != nil {
+		t.Fatal("'regolith run' failed:", err.Error())
 	}
 }

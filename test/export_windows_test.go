@@ -75,14 +75,12 @@ func TestMoveFilesAcl(t *testing.T) {
 		mojangDir, "development_behavior_packs", config.Name+"_bp")
 	rpPath := filepath.Join(
 		mojangDir, "development_resource_packs", config.Name+"_rp")
-	// Run regolith project
 	os.Chdir(workingDir)
-	regolith.InitLogging(true)
-	err = regolith.RunProfile("dev")
+	// THE TEST
+	err = regolith.Run("dev", true)
 	if err != nil {
-		t.Fatal("RunProfile function failed:", err)
+		t.Fatal("'regolith init' failed:", err)
 	}
-
 	// Test if the RP and BP were created in the right paths
 	assertDirExists := func(dir string) {
 		if stats, err := os.Stat(dir); err != nil {

@@ -1,5 +1,5 @@
 {
-  "name": "Project Name",
+  "name": "Project name",
   "author": "Your name",
   "packs": {
     "behaviorPack": "./packs/BP",

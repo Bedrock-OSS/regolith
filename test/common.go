@@ -20,6 +20,17 @@ const runMissingRpProjectPath = "testdata/run_missing_rp_project"
 const versionedRemoteFilterProject = "testdata/versioned_remote_filter_project"
 const versionedRemoteFilterProjectAfterRun = "testdata/versioned_remote_filter_project_after_run"
 
+// firstErr returns the first error in a list of errors. If the list is empty
+// or all errors are nil, nil is returned.
+func firstErr(errors ...error) error {
+	for _, err := range errors {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // listPaths returns a dictionary with paths of the files from 'path' directory
 // relative to 'root' directory used as keys, and with md5 hashes paths as
 // values. The directory paths use empty strings instead of MD5. The function
