@@ -148,29 +148,18 @@ func Run(profile string, debug bool) error {
 // Init handles the "regolith init" command. It initializes a new Regolith
 // project in the current directory.
 //
-// The "force" parameter is a boolean that determines if the initialization
-// overriding potential safeguards.
-//
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Init(force, debug bool) error {
+func Init(debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Initializing Regolith project...")
-	if !force && IsProjectInitialized() {
-		return WrapErrorf(
-			nil,
-			"%q already exists, suggesting this project is already initialized. You may use --force to override this check.",
-			ConfigFilePath)
-	}
-	if force {
-		Logger.Warn("Initialization forced. Data may be lost.")
-	}
 
-	// Delete old configuration if it exists
-	if err := os.Remove(ConfigFilePath); !os.IsNotExist(err) {
-		if err != nil {
-			return WrapErrorf(err, "Failed to remove old %q", ConfigFilePath)
-		}
+	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
+
+	if IsProjectInitialized() {
+		return WrapError(nil, "This folder already contains a regolith project."+
+			"\nPlease clean up all regolith files before running."+
+			"\nConsider running in a blank folder.")
 	}
 
 	// Create new default configuration
@@ -203,18 +192,7 @@ func Init(force, debug bool) error {
 		return WrapErrorf(err, "Failed to write data to %q", ConfigFilePath)
 	}
 
-	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
-	foldersToCreate := []string{
-		"packs",
-		"packs/data",
-		"packs/BP",
-		"packs/RP",
-		".regolith",
-		".regolith/cache",
-		".regolith/venvs",
-	}
-
-	for _, folder := range foldersToCreate {
+	for _, folder := range ConfigurationFolders {
 		err = os.Mkdir(folder, 0666)
 		if err != nil {
 			Logger.Error("Could not create folder: %s", folder, err)
