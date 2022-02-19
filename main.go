@@ -114,15 +114,7 @@ func main() {
 				Name:  "init",
 				Usage: "Initialize a Regolith project in the current directory.",
 				Action: func(c *cli.Context) error {
-					force := c.Bool("force")
-					return regolith.Init(force, debug)
-				},
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "force",
-						Aliases: []string{"f"},
-						Usage:   "Force the operation, overriding potential safeguards.",
-					},
+					return regolith.Init(debug)
 				},
 			},
 			{

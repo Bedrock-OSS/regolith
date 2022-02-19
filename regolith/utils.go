@@ -56,6 +56,8 @@ func firstErr(errors ...error) error {
 // wrapErrorStackTrace is used by other wrapped error functions to add a stack
 // trace to the error message.
 func wrapErrorStackTrace(err error, text string) error {
+	text = strings.Replace(text, "\n", color.YellowString("\n   >> "), -1)
+
 	if err != nil {
 		text = fmt.Sprintf(
 			"%s\n[%s]: %s", text, color.RedString("+"), err.Error())
