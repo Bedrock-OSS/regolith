@@ -48,7 +48,7 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 func (f *RemoteFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.GetFriendlyName())
+		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
 		return nil
 	}
 	// All other filters require safe mode to be turned off
@@ -59,7 +59,7 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 				"code.\nYou may turn it off using 'regolith unlock'",
 		)
 	}
-	Logger.Infof("Running filter %s", f.GetFriendlyName())
+	Logger.Infof("Running filter %s", f.Id)
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 
@@ -154,16 +154,6 @@ func (f *RemoteFilter) CopyArguments(parent *RemoteFilter) {
 	f.Arguments = parent.Arguments
 	f.Settings = parent.Settings
 	f.Definition.VenvSlot = parent.Definition.VenvSlot
-}
-
-func (f *RemoteFilter) GetFriendlyName() string {
-	if f.Name != "" {
-		return f.Name
-	} else if f.Id != "" {
-		return f.Id
-	}
-	_, end := path.Split(f.Definition.Url) // Return the last part of the URL
-	return end
 }
 
 // CopyFilterData copies the filter's data to the data folder.

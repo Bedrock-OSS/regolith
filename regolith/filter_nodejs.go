@@ -34,10 +34,10 @@ func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*N
 func (f *NodeJSFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.GetFriendlyName())
+		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
 		return nil
 	}
-	Logger.Infof("Running filter %s", f.GetFriendlyName())
+	Logger.Infof("Running filter %s", f.Id)
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 	// Run filter
@@ -132,13 +132,6 @@ func (f *NodeJSFilter) Check() error {
 func (f *NodeJSFilter) CopyArguments(parent *RemoteFilter) {
 	f.Arguments = parent.Arguments
 	f.Settings = parent.Settings
-}
-
-func (f *NodeJSFilter) GetFriendlyName() string {
-	if f.Name != "" {
-		return f.Name
-	}
-	return "Unnamed NodeJS filter"
 }
 
 func hasPackageJson(filterPath string) bool {
