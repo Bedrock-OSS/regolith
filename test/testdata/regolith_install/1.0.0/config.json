@@ -1,0 +1,26 @@
+{
+  "author": "Your name",
+  "name": "Project name",
+  "packs": {
+    "behaviorPack": "./packs/BP",
+    "resourcePack": "./packs/RP"
+  },
+  "regolith": {
+    "dataPath": "./packs/data",
+    "filterDefinitions": {
+      "hello-version-python-filter": {
+        "url": "github.com/Bedrock-OSS/regolith-test-filters",
+        "version": "1.0.0"
+      }
+    },
+    "profiles": {
+      "dev": {
+        "export": {
+          "readOnly": false,
+          "target": "development"
+        },
+        "filters": []
+      }
+    }
+  }
+}

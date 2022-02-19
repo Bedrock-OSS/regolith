@@ -42,6 +42,19 @@ func nth(i int) string {
 	return fmt.Sprintf("%dth", i)
 }
 
+// firstErr returns the first error in a list of errors. If the list is empty
+// or all errors are nil, nil is returned.
+func firstErr(errors ...error) error {
+	for _, err := range errors {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// wrapErrorStackTrace is used by other wrapped error functions to add a stack
+// trace to the error message.
 func wrapErrorStackTrace(err error, text string) error {
 	if err != nil {
 		text = fmt.Sprintf(
@@ -54,10 +67,43 @@ func wrapErrorStackTrace(err error, text string) error {
 	return errors.New(text)
 }
 
+// PassError adds stack trace to an error without any additional text.
+func PassError(err error) error {
+	text := err.Error()
+	if printStackTraces {
+		pc, fn, line, _ := runtime.Caller(1)
+		text = fmt.Sprintf("%s\n    %s; %s:%d", text, runtime.FuncForPC(pc).Name(), fn, line)
+	}
+	return errors.New(text)
+}
+
+// WrappedError creates an error with a stack trace from text.
+func WrappedError(text string) error {
+	if printStackTraces {
+		pc, fn, line, _ := runtime.Caller(1)
+		text = fmt.Sprintf("%s\n    %s; %s:%d", text, runtime.FuncForPC(pc).Name(), fn, line)
+	}
+	return errors.New(text)
+}
+
+// WrappedErrorf creates an error with a stack trace from formatted text.
+func WrappedErrorf(text string, args ...interface{}) error {
+	text = fmt.Sprintf(text, args...)
+	if printStackTraces {
+		pc, fn, line, _ := runtime.Caller(1)
+		text = fmt.Sprintf("%s\n    %s; %s:%d", text, runtime.FuncForPC(pc).Name(), fn, line)
+	}
+	return errors.New(text)
+}
+
+// WrapError wraps an error with a stack trace and adds additional text
+// information.
 func WrapError(err error, text string) error {
 	return wrapErrorStackTrace(err, text)
 }
 
+// WrapErrorf wraps an error with a stack trace and adds additional formatted
+// text information.
 func WrapErrorf(err error, text string, args ...interface{}) error {
 	return wrapErrorStackTrace(err, fmt.Sprintf(text, args...))
 }
