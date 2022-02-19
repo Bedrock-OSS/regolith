@@ -132,24 +132,19 @@ func parseInstallFilterArg(arg string) (url, name, version string, err error) {
 	return
 }
 
-func GetRemoteFilterDownloadRef(
-	url, name, version string, filterNamePrefix bool,
-) (string, error) {
+func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 	// The custom type and a function is just to reduce the amount of code by
 	// changing the function signature. In order to pass it in the 'vg' list.
 	type vg []func(string, string) (string, error)
 	var versionGetters vg
-	getLatestRemoteFilterTag := func(url, name string) (string, error) {
-		return GetLatestRemoteFilterTag(url, name, filterNamePrefix)
-	}
 	if version == "" {
-		versionGetters = vg{getLatestRemoteFilterTag, GetHeadSha}
+		versionGetters = vg{GetLatestRemoteFilterTag, GetHeadSha}
 	} else if version == "latest" {
-		versionGetters = vg{getLatestRemoteFilterTag}
+		versionGetters = vg{GetLatestRemoteFilterTag}
 	} else if version == "HEAD" {
 		versionGetters = vg{GetHeadSha}
 	} else {
-		if semver.IsValid("v"+version) && filterNamePrefix {
+		if semver.IsValid("v" + version) {
 			version = name + "-" + version
 		}
 		return version, nil
@@ -166,16 +161,11 @@ func GetRemoteFilterDownloadRef(
 
 // GetLatestRemoteFilterTag returns the most up-to-date tag of the remote filter
 // specified by the filter name and URL.
-func GetLatestRemoteFilterTag(
-	url, name string, filterNamePrefix bool,
-) (string, error) {
+func GetLatestRemoteFilterTag(url, name string) (string, error) {
 	tags, err := ListRemoteFilterTags(url, name)
 	if err == nil {
 		if len(tags) > 0 {
 			lastTag := tags[len(tags)-1]
-			if filterNamePrefix {
-				lastTag = name + "-" + lastTag
-			}
 			return lastTag, nil
 		}
 		return "", WrapErrorf(nil, "no tags found for filter %q", name)
@@ -202,8 +192,8 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 			if !strings.HasPrefix(tag, name+"-") {
 				continue
 			}
-			tag = tag[len(name)+1:]
-			if semver.IsValid("v" + tag) {
+			strippedTag := tag[len(name)+1:]
+			if semver.IsValid("v" + strippedTag) {
 				tags = append(tags, tag)
 			}
 		}
@@ -227,4 +217,17 @@ func GetHeadSha(url, name string) (string, error) {
 	lines := strings.Split(string(output), "\n")
 	sha := strings.Split(lines[1], "\t")[0]
 	return sha, nil
+}
+
+// trimFilterPrefix removes the prefix of the filter name from versionTag if
+// versionTag follows the pattern <filterName>-<version>, otherwise it returns
+// the same string.
+func trimFilterPrefix(versionTag, prefix string) string {
+	if strings.HasPrefix(versionTag, prefix+"-") {
+		trimmedVersionTag := versionTag[len(prefix)+1:]
+		if semver.IsValid("v" + trimmedVersionTag) {
+			return trimmedVersionTag
+		}
+	}
+	return versionTag
 }

@@ -69,7 +69,31 @@ func InstallAll(force, debug bool) error {
 // should be printed.
 func Update(filters []string, debug bool) error {
 	InitLogging(debug)
-	// TODO - implement
+	configMap, err1 := LoadConfigAsMap()
+	config, err2 := ConfigFromObject(configMap)
+	if err := firstErr(err1, err2); err != nil {
+		return WrapError(err, "Failed to load config.json.")
+	}
+	for _, filterName := range filters {
+		filterDefinition, ok := config.FilterDefinitions[filterName]
+		if !ok {
+			Logger.Warnf(
+				"Filter %q is not installed and therefore cannot be updated.",
+				filterName)
+			continue
+		}
+		remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition)
+		if !ok {
+			Logger.Warnf(
+				"Filter %q is not a remote filter and therefore cannot be updated.",
+				filterName)
+			continue
+		}
+		if err := remoteFilter.Update(); err != nil {
+			Logger.Error(
+				WrapErrorf(err, "Failed to update filter %q.", filterName))
+		}
+	}
 	return nil
 }
 
@@ -81,7 +105,23 @@ func Update(filters []string, debug bool) error {
 // should be printed.
 func UpdateAll(debug bool) error {
 	InitLogging(debug)
-	// TODO - implement
+	Logger.Infof("Updating filters...")
+	configMap, err1 := LoadConfigAsMap()
+	config, err2 := ConfigFromObject(configMap)
+	if err := firstErr(err1, err2); err != nil {
+		return WrapError(err, "Failed to load config.json.")
+	}
+	for filterName, filterDefinition := range config.FilterDefinitions {
+		remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition)
+		if !ok { // Skip updating non-remote filters.
+			continue
+		}
+		if err := remoteFilter.Update(); err != nil {
+			Logger.Error(
+				WrapErrorf(
+					err, "Failed to update filter %q.", filterName))
+		}
+	}
 	return nil
 }
 
