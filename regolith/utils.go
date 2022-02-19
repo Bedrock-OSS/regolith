@@ -42,6 +42,17 @@ func nth(i int) string {
 	return fmt.Sprintf("%dth", i)
 }
 
+// firstErr returns the first error in a list of errors. If the list is empty
+// or all errors are nil, nil is returned.
+func firstErr(errors ...error) error {
+	for _, err := range errors {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func wrapErrorStackTrace(err error, text string) error {
 	if err != nil {
 		text = fmt.Sprintf(
