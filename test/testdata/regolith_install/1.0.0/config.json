@@ -1,6 +1,6 @@
 {
-  "name": "regolith_test_project",
-  "author": "Bedrock-OSS",
+  "author": "Your name",
+  "name": "Project name",
   "packs": {
     "behaviorPack": "./packs/BP",
     "resourcePack": "./packs/RP"
@@ -15,14 +15,11 @@
     },
     "profiles": {
       "dev": {
-        "filters": [
-          {
-            "filter": "hello-version-python-filter"
-          }
-        ],
         "export": {
-          "target": "local"
-        }
+          "readOnly": false,
+          "target": "development"
+        },
+        "filters": []
       }
     }
   }
