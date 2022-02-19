@@ -226,14 +226,14 @@ func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
 // IsProjectInitialized checks if the project is initialized by testing if
 // the config.json exists.
 func IsProjectInitialized() bool {
-	if _, err := os.Stat(ConfigFilePath); errors.Is(err, os.ErrNotExist) {
-		return false
-	}
-
 	for _, folder := range ConfigurationFolders {
 		if _, err := os.Stat(folder); os.IsNotExist(err) {
-			return false
+			return true
 		}
+	}
+
+	if _, err := os.Stat(ConfigFilePath); errors.Is(err, os.ErrNotExist) {
+		return false
 	}
 
 	return true
