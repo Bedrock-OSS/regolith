@@ -154,13 +154,13 @@ func Init(debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Initializing Regolith project...")
 
-	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
-
 	if IsProjectInitialized() {
 		return WrapError(nil, "This folder already contains a regolith project."+
 			"\nPlease clean up all regolith files before running."+
 			"\nConsider running in a blank folder.")
 	}
+
+	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
 
 	// Create new default configuration
 	jsonData := Config{
