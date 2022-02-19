@@ -1,6 +1,6 @@
 {
-  "name": "regolith_test_project",
-  "author": "Bedrock-OSS",
+  "author": "Your name",
+  "name": "Project name",
   "packs": {
     "behaviorPack": "./packs/BP",
     "resourcePack": "./packs/RP"
@@ -10,19 +10,16 @@
     "filterDefinitions": {
       "hello-version-python-filter": {
         "url": "github.com/Bedrock-OSS/regolith-test-filters",
-        "version": "1.0.0"
+        "version": "TEST_TAG_1"
       }
     },
     "profiles": {
       "dev": {
-        "filters": [
-          {
-            "filter": "hello-version-python-filter"
-          }
-        ],
         "export": {
-          "target": "local"
-        }
+          "readOnly": false,
+          "target": "development"
+        },
+        "filters": []
       }
     }
   }
