@@ -5,11 +5,11 @@ type FilterDefinition struct {
 }
 
 type Filter struct {
-	Id        string                 `json:"filter,omitempty"`
-	Name      string                 `json:"name,omitempty"`
-	Disabled  bool                   `json:"disabled,omitempty"`
-	Arguments []string               `json:"arguments,omitempty"`
-	Settings  map[string]interface{} `json:"settings,omitempty"`
+	Id          string                 `json:"filter,omitempty"`
+	Description string                 `json:"name,omitempty"`
+	Disabled    bool                   `json:"disabled,omitempty"`
+	Arguments   []string               `json:"arguments,omitempty"`
+	Settings    map[string]interface{} `json:"settings,omitempty"`
 }
 
 func FilterDefinitionFromObject(id string) *FilterDefinition {
@@ -19,8 +19,8 @@ func FilterDefinitionFromObject(id string) *FilterDefinition {
 func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
 	filter := &Filter{}
 	// Name
-	name, _ := obj["name"].(string)
-	filter.Name = name
+	description, _ := obj["description"].(string)
+	filter.Description = description
 	// Disabled
 	disabled, _ := obj["disabled"].(bool)
 	filter.Disabled = disabled
@@ -30,6 +30,7 @@ func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
 	// Settings
 	settings, _ := obj["settings"].(map[string]interface{})
 	filter.Settings = settings
+
 	// Id
 	// TODO - this property is redundant. You can find it in Filter and
 	// FilterDefinition. This could cause hard to find bugs. There should
@@ -54,7 +55,6 @@ type FilterRunner interface {
 	CopyArguments(parent *RemoteFilter)
 	Run(absoluteLocation string) error
 	Check() error
-	GetFriendlyName() string
 }
 
 func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterInstaller, error) {

@@ -35,10 +35,10 @@ func NimFilterDefinitionFromObject(
 func (f *NimFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.GetFriendlyName())
+		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
 		return nil
 	}
-	Logger.Infof("Running filter %s", f.GetFriendlyName())
+	Logger.Infof("Running filter %s", f.Id)
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 
@@ -80,7 +80,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "failed to create Java filter")
+		return nil, WrapError(err, "failed to create Nim filter")
 	}
 	filter := &NimFilter{
 		Filter:     *basicFilter,
@@ -139,13 +139,6 @@ func (f *NimFilter) Check() error {
 func (f *NimFilter) CopyArguments(parent *RemoteFilter) {
 	f.Arguments = parent.Arguments
 	f.Settings = parent.Settings
-}
-
-func (f *NimFilter) GetFriendlyName() string {
-	if f.Name != "" {
-		return f.Name
-	}
-	return "Unnamed Nim filter"
 }
 
 func hasNimble(filterPath string) bool {

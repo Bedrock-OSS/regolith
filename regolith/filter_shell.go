@@ -34,10 +34,10 @@ func ShellFilterDefinitionFromObject(id string, obj map[string]interface{}) (*Sh
 func (f *ShellFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.GetFriendlyName())
+		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
 		return nil
 	}
-	Logger.Infof("Running filter %s", f.GetFriendlyName())
+	Logger.Infof("Running filter %s", f.Id)
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 	return runShellFilter(*f, f.Settings, absoluteLocation)
@@ -70,13 +70,6 @@ func (f *ShellFilter) Check() error {
 func (f *ShellFilter) CopyArguments(parent *RemoteFilter) {
 	f.Arguments = parent.Arguments
 	f.Settings = parent.Settings
-}
-
-func (f *ShellFilter) GetFriendlyName() string {
-	if f.Name != "" {
-		return f.Name
-	}
-	return "Unnamed Shell filter"
 }
 
 var shells = [][]string{{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"}, {"sh", "-c"}}

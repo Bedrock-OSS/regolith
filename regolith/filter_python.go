@@ -36,10 +36,10 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 func (f *PythonFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.GetFriendlyName())
+		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
 		return nil
 	}
-	Logger.Infof("Running filter %s", f.GetFriendlyName())
+	Logger.Infof("Running filter %s", f.Id)
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 
@@ -168,13 +168,6 @@ func (f *PythonFilter) CopyArguments(parent *RemoteFilter) {
 	f.Arguments = parent.Arguments
 	f.Settings = parent.Settings
 	f.Definition.VenvSlot = parent.Definition.VenvSlot
-}
-
-func (f *PythonFilter) GetFriendlyName() string {
-	if f.Name != "" {
-		return f.Name
-	}
-	return "Unnamed Python filter"
 }
 
 func (f *PythonFilterDefinition) resolveVenvPath() (string, error) {
