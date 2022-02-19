@@ -69,7 +69,7 @@ func main() {
 				Usage: `It updates all of the filters listed in the
 				filtersDefinitions which aren't version locked.`,
 				Action: func(c *cli.Context) error {
-					return regolith.Update(c.Args().Slice(), debug)
+					return regolith.UpdateAll(debug)
 				},
 			},
 			{

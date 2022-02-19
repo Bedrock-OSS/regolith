@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/go-getter"
@@ -220,16 +219,20 @@ func (f *RemoteFilter) IsCached() bool {
 func FilterDefinitionFromTheInternet(
 	url, name, version string,
 ) (*RemoteFilterDefinition, error) {
-	version, err := GetRemoteFilterDownloadRef(url, name, version, false)
-	if err == nil {
-		return &RemoteFilterDefinition{
-			FilterDefinition: FilterDefinition{Id: name},
-			Version:          version,
-			Url:              url,
-		}, nil
+	if version == "" { // "" locks the version to the latest
+		var err error
+		version, err = GetRemoteFilterDownloadRef(url, name, version)
+		version = trimFilterPrefix(version, name)
+		if err != nil {
+			return nil, WrapErrorf(
+				nil, "no valid version found for filter %q", name)
+		}
 	}
-	return nil, WrapErrorf(
-		nil, "no valid version found for filter %q", name)
+	return &RemoteFilterDefinition{
+		FilterDefinition: FilterDefinition{Id: name},
+		Version:          version,
+		Url:              url,
+	}, nil
 }
 
 // Download
@@ -240,10 +243,6 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 				"with '-f' to force.", i.Id)
 			return nil
 		} else {
-			// TODO should we print version information here?
-			// like "version 1.4.2 uninstalled, version 1.4.3 installed"
-			Logger.Warnf("Filter %q already installed, but force mode is enabled.\n"+
-				"Filter will be installed, erasing prior contents.", i.Id)
 			i.Uninstall()
 		}
 	}
@@ -255,8 +254,7 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 	// Can we somehow detect whether this is a failure from git being not
 	// installed, or a failure from
 	// the repo/folder not existing?
-	repoVersion, err := GetRemoteFilterDownloadRef(
-		i.Url, i.Id, i.Version, true)
+	repoVersion, err := GetRemoteFilterDownloadRef(i.Url, i.Id, i.Version)
 	if err != nil {
 		return WrapErrorf(
 			err, "unable to get download URL for filter %q", i.Id)
@@ -272,7 +270,7 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 				"	Does that filter exist?", url)
 	}
 	// Save the version of the filter we downloaded
-	i.SaveVerssionInfo(repoVersion)
+	i.SaveVerssionInfo(trimFilterPrefix(repoVersion, i.Id))
 	// Remove 'test' folder, which we never want to use (saves space on disk)
 	testFolder := path.Join(downloadPath, "test")
 	if _, err := os.Stat(testFolder); err == nil {
@@ -286,24 +284,77 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 // SaveVersionInfo saves puts the specified version string into the
 // filter.json of the remote fileter.
 func (i *RemoteFilterDefinition) SaveVerssionInfo(version string) error {
-	downloadPath := i.GetDownloadPath()
+	filterJsonMap, err := i.LoadFilterJson()
+	if err != nil {
+		return WrapErrorf(
+			err, "Could not load filter.json for %q filter", i.Id)
+	}
+	filterJsonMap["version"] = version
+	filterJson, _ := json.MarshalIndent(filterJsonMap, "", "\t") // no error
+	filterJsonPath := path.Join(i.GetDownloadPath(), "filter.json")
+	err = os.WriteFile(filterJsonPath, filterJson, 0666)
+	if err != nil {
+		return WrapErrorf(
+			err, "Unable to write \"filter.json\" for %q filter.", i.Id)
+	}
+	return nil
+}
+
+// LoadFilterJson loads the filter.json file of the remote filter to a map.
+func (f *RemoteFilterDefinition) LoadFilterJson() (map[string]interface{}, error) {
+	downloadPath := f.GetDownloadPath()
 	filterJsonPath := path.Join(downloadPath, "filter.json")
 	filterJson, err1 := ioutil.ReadFile(filterJsonPath)
 	var filterJsonMap map[string]interface{}
 	err2 := json.Unmarshal(filterJson, &filterJsonMap)
 	if err := firstErr(err1, err2); err != nil {
-		return WrapErrorf(
-			err, "Unable to read \"filter.json\" for %q filter.", i.Id)
+		return nil, PassError(err)
 	}
-	if strings.HasPrefix(version, i.Id+"-") {
-		version = strings.TrimPrefix(version, i.Id+"-")
+	return filterJsonMap, nil
+}
+
+// GetInstalledVersion reads the version seaved in the filter.json
+func (f *RemoteFilterDefinition) InstalledVersion() (string, error) {
+	filterJsonMap, err := f.LoadFilterJson()
+	if err != nil {
+		return "", WrapErrorf(
+			err, "Could not load filter.json for %q filter", f.Id)
 	}
-	filterJsonMap["version"] = version
-	filterJson, _ = json.MarshalIndent(filterJsonMap, "", "\t") // no error
-	err := os.WriteFile(filterJsonPath, filterJson, 0666)
+	version, ok1 := filterJsonMap["version"]
+	versionStr, ok2 := version.(string)
+	if !ok1 || !ok2 {
+		return "", WrappedErrorf(
+			"Could not read \"version\" from filter.json for %q filter",
+			f.Id)
+	}
+	return versionStr, nil
+}
+
+func (f *RemoteFilterDefinition) Update() error {
+	installedVersion, err := f.InstalledVersion()
+	installedVersion = trimFilterPrefix(installedVersion, f.Id)
+	if err != nil {
+		Logger.Warnf("Unable to get installed version of %q filter", f.Id)
+	}
+	version, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
+	version = trimFilterPrefix(version, f.Id)
 	if err != nil {
 		return WrapErrorf(
-			err, "Unable to write \"filter.json\" for %q filter.", i.Id)
+			err, "Unable to check for updates for %q filter", f.Id)
+	}
+	if installedVersion != version {
+		Logger.Infof(
+			"Updating filter %q to new version: %q->%q.",
+			f.Id, installedVersion, version)
+		err = f.Download(true)
+		if err != nil {
+			return PassError(err)
+		}
+		Logger.Infof("Filter %q updated successfully.", f.Id)
+	} else {
+		Logger.Infof(
+			"Filter %q is up to date. Instaleld version: %q. Skipped update.",
+			f.Id, version)
 	}
 	return nil
 }
