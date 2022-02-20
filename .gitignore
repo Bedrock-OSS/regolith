@@ -1,2 +1,4 @@
-/build
-/.regolith
+/dist/
+/vendor/
+*.exe
+local
