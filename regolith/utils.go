@@ -91,25 +91,13 @@ func PassError(err error) error {
 
 // WrappedError creates an error with a stack trace from text.
 func WrappedError(text string) error {
-	if printStackTraces {
-		pc, fn, line, _ := runtime.Caller(1)
-		text = fmt.Sprintf(
-			"%s\n   [%s] %s:%d", text, runtime.FuncForPC(pc).Name(),
-			filepath.Base(fn), line)
-	}
-	return errors.New(text)
+	return wrapErrorStackTrace(nil, text)
 }
 
 // WrappedErrorf creates an error with a stack trace from formatted text.
 func WrappedErrorf(text string, args ...interface{}) error {
 	text = fmt.Sprintf(text, args...)
-	if printStackTraces {
-		pc, fn, line, _ := runtime.Caller(1)
-		text = fmt.Sprintf(
-			"%s\n   [%s] %s:%d", text, runtime.FuncForPC(pc).Name(),
-			filepath.Base(fn), line)
-	}
-	return errors.New(text)
+	return wrapErrorStackTrace(nil, text)
 }
 
 // WrapError wraps an error with a stack trace and adds additional text
@@ -166,4 +154,29 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 	for scanner.Scan() {
 		logFunc("[Filter] %s", scanner.Text())
 	}
+}
+
+// isDirEmpty checks whether the path points at empty directory. If the path
+// is not a directory or info about the path can't be obtaioned for some reason
+// it returns false. If the path is a directory and it is empty, it returns
+// true.
+func isDirEmpty(path string) (bool, error) {
+	if stat, err := os.Stat(path); os.IsNotExist(err) {
+		return false, WrappedErrorf("Path %q does not exist.", path)
+	} else if !stat.IsDir() {
+		return false, WrappedErrorf("Path %q is not a directory.", path)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return false, WrapErrorf(err, "Failed to open %q.", path)
+	}
+	defer f.Close()
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	} else if err != nil {
+		return false, PassError(err)
+	}
+	// err is nil -> not empty
+	return false, nil
 }
