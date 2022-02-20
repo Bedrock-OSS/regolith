@@ -166,14 +166,21 @@ func Init(debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Initializing Regolith project...")
 
-	if IsProjectInitialized() {
-		return WrapError(nil, "This folder already contains a regolith project."+
-			"\nPlease clean up all regolith files before running."+
-			"\nConsider running in a blank folder.")
+	wd, err := os.Getwd()
+	if err != nil {
+		return WrapError(
+			err, "Unable to get working directory to initialize project.")
 	}
-
+	if isEmpty, err := isDirEmpty(wd); err != nil {
+		return WrapErrorf(
+			err, "Failed to check if %s is an empty directory.", wd)
+	} else if !isEmpty {
+		return WrappedErrorf(
+			"Cannot initialze the project, because %s is not an empty "+
+				"directory.\n\"regolith init\" can be used only in empty "+
+				"directories.", wd)
+	}
 	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
-
 	// Create new default configuration
 	jsonData := Config{
 		Name:   "Project name",
@@ -199,7 +206,7 @@ func Init(debug bool) error {
 		},
 	}
 	jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
-	err := ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
+	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
 	if err != nil {
 		return WrapErrorf(err, "Failed to write data to %q", ConfigFilePath)
 	}
@@ -242,19 +249,33 @@ func Clean(debug bool) error {
 // should be printed.
 func Unlock(debug bool) error {
 	InitLogging(debug)
-	if !IsProjectInitialized() {
-		return WrapError(nil, "this does not appear to be a Regolith project")
+	configMap, err1 := LoadConfigAsMap()
+	_, err2 := ConfigFromObject(configMap)
+	if err := firstErr(err1, err2); err != nil {
+		return WrapError(
+			err,
+			"This does not appear to be a Regolith project.\nRegolith was "+
+				"unable to load the \"config.json\" file.\nEvery regolith"+
+				"project requires a valid config file.")
 	}
 
 	id, err := GetMachineId()
 	if err != nil {
-		return err
+		return WrappedError("Failed to get machine ID for the lock file.")
 	}
 
-	err = ioutil.WriteFile(".regolith/cache/lockfile.txt", []byte(id), 0666)
+	lockfilePath := ".regolith/cache/lockfile.txt"
+	Logger.Infof("Creating the lock file...", lockfilePath)
+	if _, err := os.Stat(lockfilePath); err == nil {
+		return WrappedErrorf(
+			"Failed to create the lock file because it already exists.\n"+
+				"Please remove the file manually.\n"+
+				"The lock file is located at %q.", lockfilePath)
+	}
+	err = ioutil.WriteFile(lockfilePath, []byte(id), 0666)
 	if err != nil {
 		return WrapError(err, "Failed to write lock file.")
 	}
-
+	Logger.Infof("Successfully created the lock file in \"%s\"", lockfilePath)
 	return nil
 }

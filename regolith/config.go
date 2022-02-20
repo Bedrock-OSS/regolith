@@ -2,16 +2,12 @@ package regolith
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
-	"os"
 )
 
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
 const ConfigFilePath = "config.json"
-const GitIgnore = `
-/build
-/.regolith`
+const GitIgnore = "/build\n/.regolith"
 
 var ConfigurationFolders = []string{
 	"packs",
@@ -221,22 +217,6 @@ func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
 	readOnly, _ := obj["readOnly"].(bool)
 	result.ReadOnly = readOnly
 	return result, nil
-}
-
-// IsProjectInitialized checks if the project is initialized by testing if
-// the config.json exists.
-func IsProjectInitialized() bool {
-	for _, folder := range ConfigurationFolders {
-		if _, err := os.Stat(folder); os.IsNotExist(err) {
-			return true
-		}
-	}
-
-	if _, err := os.Stat(ConfigFilePath); errors.Is(err, os.ErrNotExist) {
-		return false
-	}
-
-	return true
 }
 
 // InstallFilters handles the "regolith install" command (without the --add
