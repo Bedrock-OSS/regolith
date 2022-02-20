@@ -70,7 +70,9 @@ func wrapErrorStackTrace(err error, text string) error {
 	}
 	if printStackTraces {
 		pc, fn, line, _ := runtime.Caller(2)
-		text = fmt.Sprintf("%s\n    %s; %s:%d", text, runtime.FuncForPC(pc).Name(), fn, line)
+		text = fmt.Sprintf(
+			"%s\n   [%s] %s:%d", text, runtime.FuncForPC(pc).Name(),
+			filepath.Base(fn), line)
 	}
 	return errors.New(text)
 }
@@ -80,7 +82,9 @@ func PassError(err error) error {
 	text := err.Error()
 	if printStackTraces {
 		pc, fn, line, _ := runtime.Caller(1)
-		text = fmt.Sprintf("%s\n    %s; %s:%d", text, runtime.FuncForPC(pc).Name(), fn, line)
+		text = fmt.Sprintf(
+			"%s\n   [%s] %s:%d", text, runtime.FuncForPC(pc).Name(),
+			filepath.Base(fn), line)
 	}
 	return errors.New(text)
 }
@@ -89,7 +93,9 @@ func PassError(err error) error {
 func WrappedError(text string) error {
 	if printStackTraces {
 		pc, fn, line, _ := runtime.Caller(1)
-		text = fmt.Sprintf("%s\n    %s; %s:%d", text, runtime.FuncForPC(pc).Name(), fn, line)
+		text = fmt.Sprintf(
+			"%s\n   [%s] %s:%d", text, runtime.FuncForPC(pc).Name(),
+			filepath.Base(fn), line)
 	}
 	return errors.New(text)
 }
@@ -99,7 +105,9 @@ func WrappedErrorf(text string, args ...interface{}) error {
 	text = fmt.Sprintf(text, args...)
 	if printStackTraces {
 		pc, fn, line, _ := runtime.Caller(1)
-		text = fmt.Sprintf("%s\n    %s; %s:%d", text, runtime.FuncForPC(pc).Name(), fn, line)
+		text = fmt.Sprintf(
+			"%s\n   [%s] %s:%d", text, runtime.FuncForPC(pc).Name(),
+			filepath.Base(fn), line)
 	}
 	return errors.New(text)
 }
