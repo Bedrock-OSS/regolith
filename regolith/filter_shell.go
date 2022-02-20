@@ -19,13 +19,16 @@ type ShellFilter struct {
 	Definition ShellFilterDefinition `json:"definition,omitempty"`
 }
 
-func ShellFilterDefinitionFromObject(id string, obj map[string]interface{}) (*ShellFilterDefinition, error) {
-	filter := &ShellFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
+func ShellFilterDefinitionFromObject(
+	id string, obj map[string]interface{},
+) (*ShellFilterDefinition, error) {
+	filter := &ShellFilterDefinition{
+		FilterDefinition: *FilterDefinitionFromObject(id)}
 	command, ok := obj["command"].(string)
 	if !ok {
 		return nil, WrapErrorf(
 			nil,
-			"missing 'command' property in filter definition %q", filter.Id)
+			"Missing \"command\" property in filter definition %q.", filter.Id)
 	}
 	filter.Command = command
 	return filter, nil
@@ -34,19 +37,21 @@ func ShellFilterDefinitionFromObject(id string, obj map[string]interface{}) (*Sh
 func (f *ShellFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
+		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
 		return nil
 	}
-	Logger.Infof("Running filter %s", f.Id)
+	Logger.Infof("Running filter %s.", f.Id)
 	start := time.Now()
-	defer Logger.Debugf("Executed in %s", time.Since(start))
+	defer Logger.Debugf("Executed in %s.", time.Since(start))
 	return runShellFilter(*f, f.Settings, absoluteLocation)
 }
 
-func (f *ShellFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
+func (f *ShellFilterDefinition) CreateFilterRunner(
+	runConfiguration map[string]interface{},
+) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "failed to create Java filter")
+		return nil, WrapError(err, "Failed to create Java filter.")
 	}
 	filter := &ShellFilter{
 		Filter:     *basicFilter,
@@ -55,7 +60,9 @@ func (f *ShellFilterDefinition) CreateFilterRunner(runConfiguration map[string]i
 	return filter, nil
 }
 
-func (f *ShellFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
+func (f *ShellFilterDefinition) InstallDependencies(
+	parent *RemoteFilterDefinition,
+) error {
 	return nil
 }
 
@@ -72,9 +79,13 @@ func (f *ShellFilter) CopyArguments(parent *RemoteFilter) {
 	f.Settings = parent.Settings
 }
 
-var shells = [][]string{{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"}, {"sh", "-c"}}
+var shells = [][]string{
+	{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"}, {"sh", "-c"}}
 
-func runShellFilter(filter ShellFilter, settings map[string]interface{}, absoluteLocation string) error {
+func runShellFilter(
+	filter ShellFilter, settings map[string]interface{},
+	absoluteLocation string,
+) error {
 	var err error = nil
 	if len(settings) == 0 {
 		err = executeCommand(
@@ -87,10 +98,12 @@ func runShellFilter(filter ShellFilter, settings map[string]interface{}, absolut
 			append([]string{string(jsonSettings)}, filter.Arguments...),
 			absoluteLocation, GetAbsoluteWorkingDirectory())
 	}
-	return WrapError(err, "failed to run shell filter")
+	return WrapError(err, "Failed to run shell filter.")
 }
 
-func executeCommand(command string, args []string, absoluteLocation string, workingDir string) error {
+func executeCommand(
+	command string, args []string, absoluteLocation string, workingDir string,
+) error {
 	for i, arg := range args {
 		args[i] = strconv.Quote(arg)
 	}
@@ -98,7 +111,7 @@ func executeCommand(command string, args []string, absoluteLocation string, work
 	Logger.Debugf("Executing command: %s", joined)
 	shell, arg, err := findShell()
 	if err != nil {
-		return WrapError(err, "unable to find a valid shell")
+		return WrapError(err, "Unable to find a valid shell.")
 	}
 	cmd := exec.Command(shell, arg, joined)
 	cmd.Dir = workingDir
@@ -109,7 +122,7 @@ func executeCommand(command string, args []string, absoluteLocation string, work
 	err = cmd.Run()
 
 	if err != nil {
-		return WrapError(err, "failed to run shell script")
+		return WrapError(err, "Failed to run shell script.")
 	}
 	return nil
 }
@@ -121,7 +134,7 @@ func findShell() (string, string, error) {
 			return shell[0], shell[1], nil
 		}
 	}
-	return "", "", WrapError(nil, "unable to find a valid shell")
+	return "", "", WrappedError("Unable to find a valid shell.")
 }
 
 func checkShellRequirements() error {
@@ -129,5 +142,5 @@ func checkShellRequirements() error {
 	if err == nil {
 		Logger.Debugf("Using shell: %s", shell)
 	}
-	return WrapError(err, "shell requirements check failed")
+	return WrapError(err, "Shell requirements check failed")
 }

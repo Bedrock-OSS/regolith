@@ -26,7 +26,8 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 	script, ok := obj["script"].(string)
 	if !ok {
 		return nil, WrapErrorf(
-			nil, "missing 'script' property in filter definition %q", filter.Id)
+			nil, "Missing \"script\" property in filter definition %q.",
+			filter.Id)
 	}
 	filter.Script = script
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
@@ -36,7 +37,7 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 func (f *PythonFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
+		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
 		return nil
 	}
 	Logger.Infof("Running filter %s", f.Id)
@@ -51,7 +52,7 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 	if needsVenv(filepath.Dir(scriptPath)) {
 		venvPath, err := f.Definition.resolveVenvPath()
 		if err != nil {
-			return WrapError(err, "failed to resolve venv path")
+			return WrapError(err, "Failed to resolve venv path.")
 		}
 		Logger.Debug("Running Python filter using venv: ", venvPath)
 		command = []string{
@@ -75,7 +76,7 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 		}
 	}
 	if err != nil {
-		return WrapError(err, "failed to run Python script")
+		return WrapError(err, "Failed to run Python script.")
 	}
 	return nil
 }
@@ -83,7 +84,7 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "failed to create Java filter")
+		return nil, WrapError(err, "Failed to create Java filter.")
 	}
 	filter := &PythonFilter{
 		Filter:     *basicFilter,
@@ -101,7 +102,7 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
 	if err != nil {
-		return WrapErrorf(err, "Unable to resolve path of %s script", f.Id)
+		return WrapErrorf(err, "Unable to resolve path of %s script.", f.Id)
 	}
 
 	// Install the filter dependencies
@@ -109,7 +110,7 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	if needsVenv(filterPath) {
 		venvPath, err := f.resolveVenvPath()
 		if err != nil {
-			return WrapError(err, "Failed to resolve venv path")
+			return WrapError(err, "Failed to resolve venv path.")
 		}
 		Logger.Info("Creating venv...")
 		// it's sometimes python3 on some OSs
@@ -131,7 +132,7 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 			)
 		}
 	}
-	Logger.Infof("Dependencies for %s installed successfully", f.Id)
+	Logger.Infof("Dependencies for %s installed successfully.", f.Id)
 	return nil
 }
 
@@ -153,10 +154,10 @@ func (f *PythonFilterDefinition) Check() error {
 	}
 	cmd, err := exec.Command(python, "--version").Output()
 	if err != nil {
-		return WrapError(err, "Python version check failed")
+		return WrapError(err, "Python version check failed.")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "Python ")
-	Logger.Debugf("Found Python version %s", a)
+	Logger.Debugf("Found Python version %s.", a)
 	return nil
 }
 
@@ -175,7 +176,7 @@ func (f *PythonFilterDefinition) resolveVenvPath() (string, error) {
 		filepath.Join(".regolith/cache/venvs", strconv.Itoa(f.VenvSlot)))
 	if err != nil {
 		return "", WrapErrorf(
-			err, "unable to create venv for VenvSlot %v", f.VenvSlot)
+			err, "Unable to create venv for VenvSlot %v.", f.VenvSlot)
 	}
 	return resolvedPath, nil
 }

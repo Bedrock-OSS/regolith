@@ -39,7 +39,7 @@ func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
 	// other filters.
 	id, ok := obj["filter"].(string)
 	if !ok {
-		return nil, WrapError(nil, "missing \"filter\" property in filter")
+		return nil, WrappedError("Missing \"filter\" property in filter.")
 	}
 	filter.Id = id
 	return filter, nil
@@ -65,7 +65,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 		if err != nil {
 			return nil, WrapErrorf(
 				err,
-				"unable to create Java filter from %q filter definition", id)
+				"Unable to create Java filter from %q filter definition.", id)
 		}
 		return filter, nil
 	case "nim":
@@ -73,7 +73,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 		if err != nil {
 			return nil, WrapErrorf(
 				err,
-				"unable to create Nim filter from %q filter definition", id)
+				"Unable to create Nim filter from %q filter definition.", id)
 		}
 		return filter, nil
 	case "nodejs":
@@ -81,7 +81,8 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 		if err != nil {
 			return nil, WrapErrorf(
 				err,
-				"unable to create NodeJs filter from %q filter definition", id)
+				"Unable to create NodeJs filter from %q filter definition.",
+				id)
 		}
 		return filter, nil
 	case "python":
@@ -89,7 +90,8 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 		if err != nil {
 			return nil, WrapErrorf(
 				err,
-				"unable to create Python filter from %q filter definition", id)
+				"Unable to create Python filter from %q filter definition.",
+				id)
 		}
 		return filter, nil
 	case "shell":
@@ -97,7 +99,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 		if err != nil {
 			return nil, WrapErrorf(
 				err,
-				"unable to create shell filter from %q filter definition", id)
+				"Unable to create shell filter from %q filter definition.", id)
 		}
 		return filter, nil
 	case "":
@@ -105,12 +107,13 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 		if err != nil {
 			return nil, WrapErrorf(
 				err,
-				"unable to create remote filter from %q filter definition", id)
+				"Unable to create remote filter from %q filter definition.",
+				id)
 		}
 		return filter, nil
 	}
-	return nil, WrapErrorf(
-		nil, "unknown runWith %q in filter definition %q", runWith, id)
+	return nil, WrappedErrorf(
+		"Unknown runWith %q in filter definition %q", runWith, id)
 }
 
 func FilterRunnerFromObjectAndDefinitions(
@@ -118,19 +121,19 @@ func FilterRunnerFromObjectAndDefinitions(
 ) (FilterRunner, error) {
 	filter, ok := obj["filter"].(string)
 	if !ok {
-		return nil, WrapError(
-			nil, "missing \"filter\" property in filter runner")
+		return nil, WrappedError(
+			"Missing \"filter\" property in filter runner.")
 	}
 	if filterDefinition, ok := filterDefinitions[filter]; ok {
 		filterRunner, err := filterDefinition.CreateFilterRunner(obj)
 		if err != nil {
 			return nil, WrapErrorf(
 				err,
-				"unable to create filter runner from %q filter definition",
+				"Unable to create filter runner from %q filter definition.",
 				filter)
 		}
 		return filterRunner, nil
 	}
-	return nil, WrapErrorf(
-		nil, "unable to find %q filter in filter definitions", filter)
+	return nil, WrappedErrorf(
+		"Unable to find %q filter in filter definitions.", filter)
 }

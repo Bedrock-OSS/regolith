@@ -87,14 +87,13 @@ func SetupTmpFiles(config Config, profile Profile) error {
 // RunProfile loads the profile from config.json and runs it. The profileName
 // is the name of the profile which should be loaded from the configuration.
 func RunProfile(profileName string) error {
-	Logger.Info("Running profile: ", profileName)
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
-		return WrapError(err, "could not load config.json")
+		return WrapError(err, "Could not load \"config.json\".")
 	}
 	config, err := ConfigFromObject(configJson)
 	if err != nil {
-		return WrapError(err, "could not load 'config.json'")
+		return WrapError(err, "Could not load \"config.json\".")
 	}
 	profile := config.Profiles[profileName]
 
@@ -109,7 +108,7 @@ func RunProfile(profileName string) error {
 	// Prepare tmp files
 	err = SetupTmpFiles(*config, profile)
 	if err != nil {
-		return WrapError(err, "Unable to setup profile")
+		return WrapError(err, "Unable to setup profile.")
 	}
 
 	// Run the filters!
@@ -124,17 +123,17 @@ func RunProfile(profileName string) error {
 	}
 
 	// Export files
-	Logger.Info("Moving files to target directory")
+	Logger.Info("Moving files to target directory.")
 	start := time.Now()
 	err = ExportProject(profile, config.Name, config.DataPath)
 	if err != nil {
-		return WrapError(err, "Exporting project failed")
+		return WrapError(err, "Exporting project failed.")
 	}
 	Logger.Debug("Done in ", time.Since(start))
 	// Clear the tmp/data path
 	err = os.RemoveAll(".regolith/tmp/data")
 	if err != nil {
-		return WrapError(err, "Unable to clean .regolith/tmp/data directory")
+		return WrapError(err, "Unable to clean .regolith/tmp/data directory.")
 	}
 	return nil
 }
@@ -147,25 +146,25 @@ func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, WrapErrorf(err, "Couldn't read %q", path)
+		return nil, WrapErrorf(err, "Couldn't read %q.", path)
 	}
 
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
 		return nil, WrapErrorf(
-			err, "couldn't load %s! Does the file contain correct json?", path)
+			err, "Couldn't load %s! Does the file contain correct json?", path)
 	}
 	// Filters
 	filters, ok := filterCollection["filters"].([]interface{})
 	if !ok {
-		return nil, WrapErrorf(nil, "could not parse filters of %q", path)
+		return nil, WrappedErrorf("Could not parse filters of %q.", path)
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		if !ok {
-			return nil, WrapErrorf(
-				nil, "could not parse filter %v of %q", i, path)
+			return nil, WrappedErrorf(
+				"Could not parse filter %v of %q.", i, path)
 		}
 		// Using the same JSON data to create both the filter
 		// definiton (installer) and the filter (runner)
@@ -173,7 +172,7 @@ func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
 		filterInstaller, err := FilterInstallerFromObject(filterId, filter)
 		if err != nil {
 			return nil, WrapErrorf(
-				err, "could not parse filter %v of %q", i, path)
+				err, "Could not parse filter %v of %q.", i, path)
 		}
 		// Remote filters don't have the "filter" key but this would break the
 		// code as it's required by local filters. Adding it here to make the
@@ -183,12 +182,11 @@ func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
 		filterRunner, err := filterInstaller.CreateFilterRunner(filter)
 		if err != nil {
 			return nil, WrapErrorf(
-				err, "could not parse filter %v of %q", i, path)
+				err, "Could not parse filter %v of %q.", i, path)
 		}
 		if _, ok := filterRunner.(*RemoteFilter); ok {
 			// TODO - we could possibly implement recursive filters here
-			return nil, WrapErrorf(
-				nil,
+			return nil, WrappedErrorf(
 				"remote filters are not allowed in subfilters. Remote filter"+
 					" %q subfilter %v", f.Id, i)
 		}
@@ -214,39 +212,38 @@ func ProfileFromObject(
 	result := Profile{}
 	// Filters
 	if _, ok := obj["filters"]; !ok {
-		return result, WrapError(nil, "missing 'filters' property")
+		return result, WrappedError("Missing \"filters\" property.")
 	}
 	filters, ok := obj["filters"].([]interface{})
 	if !ok {
-		return result, WrapError(nil, "could not parse 'filters'")
+		return result, WrappedError("Could not parse \"filters\" property.")
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		if !ok {
-			return result, WrapErrorf(
-				nil, "the %s filter from the list is a %T instead of a map",
-				nth(i), filters[i])
+			return result, WrappedErrorf(
+				"The %s filter from the list not a map.", nth(i))
 		}
 		filterRunner, err := FilterRunnerFromObjectAndDefinitions(
 			filter, filterDefinitions)
 		if err != nil {
 			return result, WrapErrorf(
-				err, "could not parse the %v filter of the profile", nth(i))
+				err, "Could not parse the %v filter of the profile.", nth(i))
 		}
 		result.Filters = append(result.Filters, filterRunner)
 	}
 	// ExportTarget
 	if _, ok := obj["export"]; !ok {
-		return result, WrapError(nil, "missing 'export' property")
+		return result, WrappedError("Missing \"export\" property.")
 	}
 	export, ok := obj["export"].(map[string]interface{})
 	if !ok {
-		return result, WrapErrorf(
-			nil, "'export' property is a %T, not a map", obj["export"])
+		return result, WrappedError(
+			"The \"export\" property is not a map.")
 	}
 	exportTarget, err := ExportTargetFromObject(export)
 	if err != nil {
-		return result, WrapError(err, "could not parse 'export'")
+		return result, WrapError(err, "Could not parse \"export\".")
 	}
 	result.ExportTarget = exportTarget
 	return result, nil

@@ -24,8 +24,8 @@ func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*N
 	filter := &NodeJSFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		return nil, WrapErrorf(
-			nil, "missing 'script' property in filter definition %q", filter.Id)
+		return nil, WrappedErrorf(
+			"Missing \"script\" property in filter definition %q.", filter.Id)
 	}
 	filter.Script = script
 	return filter, nil
@@ -34,7 +34,7 @@ func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*N
 func (f *NodeJSFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
+		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
 		return nil
 	}
 	Logger.Infof("Running filter %s", f.Id)
