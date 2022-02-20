@@ -31,7 +31,7 @@ func InitLogging(dev bool) {
 	if Logger != nil {
 		return
 	}
-	// printStackTraces = dev
+	printStackTraces = dev // Our custom stack traces
 	err := zap.RegisterSink("color", func(url *url.URL) (zap.Sink, error) {
 		if url.Host == "stderr" {
 			return colorWriter{color.Output}, nil
@@ -51,8 +51,8 @@ func InitLogging(dev bool) {
 		Encoding:          "console",
 		OutputPaths:       []string{"color:stdout"},
 		ErrorOutputPaths:  []string{"color:stderr"},
-		DisableStacktrace: !dev,
-		DisableCaller:     !dev,
+		DisableStacktrace: true,
+		DisableCaller:     true,
 		EncoderConfig: zapcore.EncoderConfig{
 			TimeKey:       "T",
 			LevelKey:      "L",
