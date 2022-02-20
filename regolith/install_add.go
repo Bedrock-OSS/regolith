@@ -19,7 +19,7 @@ func addFilter(filter string, force bool) error {
 	// Open the filter definitions map.
 	config, err := LoadConfigAsMap()
 	if err != nil {
-		return WrapError(err, "unable to load config file")
+		return WrapError(err, "Unable to load config file.")
 	}
 	var regolithProject map[string]interface{}
 	if _, ok := config["regolith"]; !ok {
@@ -28,10 +28,8 @@ func addFilter(filter string, force bool) error {
 	} else {
 		regolithProject, ok = config["regolith"].(map[string]interface{})
 		if !ok {
-			return WrapErrorf(
-				nil,
-				"'regolith' property of the config file is a %T not a map",
-				config["regolith"])
+			return WrappedError(
+				"The \"regolith\" property of the config file not a map.")
 		}
 	}
 	var filterDefinitions map[string]interface{}
@@ -41,21 +39,18 @@ func addFilter(filter string, force bool) error {
 	} else {
 		filterDefinitions, ok = regolithProject["filterDefinitions"].(map[string]interface{})
 		if !ok {
-			return WrapErrorf(
-				nil,
-				"'filterDefinitions' property of the config file is a %T not a map",
-				regolithProject["filterDefinitions"])
+			return WrappedError(
+				"The \"filterDefinitions\" property of the config not a map")
 		}
 	}
 	filterUrl, filterName, version, err := parseInstallFilterArg(filter)
 	if err != nil {
 		return WrapErrorf(
-			err, "unable to parse filter name and version from %q", filter)
+			err, "Unable to parse filter name and version from %q.", filter)
 	}
 	// Check if the filter is already installed
 	if _, ok := filterDefinitions[filterName]; ok && !force {
-		return WrapErrorf(
-			nil,
+		return WrappedErrorf(
 			"The filter %q is already on the filter definitions list.\n"+
 				"Please remove it first before installing it again or use "+
 				"the --force option.", filterName)
@@ -65,12 +60,12 @@ func addFilter(filter string, force bool) error {
 		filterUrl, filterName, version)
 	if err != nil {
 		return WrapErrorf(
-			err, "unable to get filter definition %q", filter)
+			err, "Unable to get filter definition %q.", filter)
 	}
 	err = filterDefinition.Download(force)
 	if err != nil {
 		return WrapErrorf(
-			err, "unable to download filter definition %q", filter)
+			err, "Unable to download filter %q.", filter)
 	}
 	// The default URL don't need to be added to the config file
 	if filterDefinition.Url == StandardLibraryUrl {
@@ -86,13 +81,13 @@ func addFilter(filter string, force bool) error {
 	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
 	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
 	if err != nil {
-		return WrapError(err, "unable to save the config file")
+		return WrapError(err, "Unable to save the config file.")
 	}
 	// Install the dependencies of the filter
 	err = filterDefinition.InstallDependencies(nil)
 	if err != nil {
 		return WrapErrorf(
-			err, "unable to instsall dependencies of filter %q",
+			err, "Unable to instsall dependencies of filter %q.",
 			filterDefinition.Id)
 	}
 	return nil
@@ -106,8 +101,7 @@ func parseInstallFilterArg(arg string) (url, name, version string, err error) {
 	if strings.Contains(arg, "==") {
 		splitStr := strings.Split(arg, "==")
 		if len(splitStr) != 2 {
-			err = WrapErrorf(
-				nil,
+			err = WrappedErrorf(
 				"Unable to parse argument %q as filter data. "+
 					"The argument should contain an URL and optionally a "+
 					"version number separated by '=='.",
@@ -155,8 +149,7 @@ func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 			return version, nil
 		}
 	}
-	return "", WrapErrorf(
-		nil, "no valid version found for filter %q", name)
+	return "", WrappedErrorf("No valid version found for %q filter.", name)
 }
 
 // GetLatestRemoteFilterTag returns the most up-to-date tag of the remote filter
@@ -168,7 +161,7 @@ func GetLatestRemoteFilterTag(url, name string) (string, error) {
 			lastTag := tags[len(tags)-1]
 			return lastTag, nil
 		}
-		return "", WrapErrorf(nil, "no tags found for filter %q", name)
+		return "", WrappedErrorf("No tags found for %q filter.", name)
 	}
 	return "", err
 }
@@ -181,7 +174,7 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 	).Output()
 	if err != nil {
 		return nil, WrapErrorf(
-			err, "unable to list tags for filter %q: ", name)
+			err, "Unable to list tags for %q filter.", name)
 	}
 	// Go line by line though the output
 	var tags []string
@@ -211,7 +204,7 @@ func GetHeadSha(url, name string) (string, error) {
 	).Output()
 	if err != nil {
 		return "", WrapErrorf(
-			err, "Unable to get head SHA for filter %q: ", name)
+			err, "Unable to get head SHA for %q filter.", name)
 	}
 	// The result is on the second line.
 	lines := strings.Split(string(output), "\n")

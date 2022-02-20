@@ -60,14 +60,14 @@ func LoadConfigAsMap() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, WrapErrorf(
 			err,
-			"%q not found (use 'regolith init' to initialize the project)",
+			"%q not found (use \"regolith init\" to initialize the project).",
 			ConfigFilePath)
 	}
 	var configJson map[string]interface{}
 	err = json.Unmarshal(file, &configJson)
 	if err != nil {
 		return nil, WrapErrorf(
-			err, "could not load %s as a JSON file", ConfigFilePath)
+			err, "Could not load %q as a JSON file.", ConfigFilePath)
 	}
 	return configJson, nil
 }
@@ -78,41 +78,40 @@ func ConfigFromObject(obj map[string]interface{}) (*Config, error) {
 	// Name
 	name, ok := obj["name"].(string)
 	if !ok {
-		return nil, WrapError(nil, "missing 'name' property")
+		return nil, WrappedError("The \"name\" property is missing.")
 	}
 	result.Name = name
 	// Author
 	author, ok := obj["author"].(string)
 	if !ok {
-		return nil, WrapError(nil, "missing 'author' property")
+		return nil, WrappedError("The \"author\" is missing.")
 	}
 	result.Author = author
 	// Packs
 	if packs, ok := obj["packs"]; ok {
 		packs, ok := packs.(map[string]interface{})
 		if !ok {
-			return nil, WrapErrorf(
-				nil, "'packs' property is a %T, not a map", packs)
+			return nil, WrappedError("The \"packs\" property not a map.")
 		}
 		// Packs can be empty, no need to check for errors
 		result.Packs = PacksFromObject(packs)
 	} else {
-		return nil, WrapError(nil, "missing 'packs' property")
+		return nil, WrappedError("The \"packs\" property is missing.")
 	}
 	// Regolith
 	if regolith, ok := obj["regolith"]; ok {
 		regolith, ok := regolith.(map[string]interface{})
 		if !ok {
-			return nil, WrapErrorf(
-				nil, "'regolith' property is a %T, not a map", regolith)
+			return nil, WrappedError("The \"regolith\" property is not a map.")
 		}
 		regolithProject, err := RegolithProjectFromObject(regolith)
 		if err != nil {
-			return nil, WrapError(err, "could not parse 'regolith' property")
+			return nil, WrapError(
+				err, "Could not parse \"regolith\" property.")
 		}
 		result.RegolithProject = regolithProject
 	} else {
-		return nil, WrapError(nil, "missing 'regolith' property")
+		return nil, WrappedError("Missing \"regolith\" property.")
 	}
 	return result, nil
 }
@@ -140,12 +139,11 @@ func RegolithProjectFromObject(
 	}
 	// DataPath
 	if _, ok := obj["dataPath"]; !ok {
-		return result, WrapError(nil, "missing 'dataPath' property")
+		return result, WrappedError("The \"dataPath\" property is missing.")
 	}
 	dataPath, ok := obj["dataPath"].(string)
 	if !ok {
-		return result, WrapErrorf(
-			nil, "'dataPath' is a %T, not a string", obj["dataPath"])
+		return result, WrappedErrorf("The \"dataPath\" is not a string")
 	}
 	result.DataPath = dataPath
 	// Filter definitions
@@ -154,15 +152,14 @@ func RegolithProjectFromObject(
 		for filterDefinitionName, filterDefinition := range filterDefinitions {
 			filterDefinitionMap, ok := filterDefinition.(map[string]interface{})
 			if !ok {
-				return result, WrapErrorf(
-					nil, "filter definition %q is a %T not a map",
-					filterDefinitionName, filterDefinitions[filterDefinitionName])
+				return result, WrappedErrorf(
+					"The filter definition %q not a map.", filterDefinitionName)
 			}
 			filterInstaller, err := FilterInstallerFromObject(
 				filterDefinitionName, filterDefinitionMap)
 			if err != nil {
 				return result, WrapError(
-					err, "could not parse filter definition")
+					err, "Could not parse the filter definition.")
 			}
 			result.FilterDefinitions[filterDefinitionName] = filterInstaller
 		}
@@ -170,20 +167,19 @@ func RegolithProjectFromObject(
 	// Profiles
 	profiles, ok := obj["profiles"].(map[string]interface{})
 	if !ok {
-		return result, WrapError(nil, "missing 'profiles' property")
+		return result, WrappedError("Missing \"profiles\" property.")
 	}
 	for profileName, profile := range profiles {
 		profileMap, ok := profile.(map[string]interface{})
 		if !ok {
-			return result, WrapErrorf(
-				nil, "profile %q is a %T not a map",
-				profileName, profiles[profileName])
+			return result, WrappedErrorf(
+				"Profile %q is not a map.", profileName)
 		}
 		profileValue, err := ProfileFromObject(
 			profileMap, result.FilterDefinitions)
 		if err != nil {
 			return result, WrapErrorf(
-				err, "could not parse profile %q", profileName)
+				err, "Could not parse %q profile.", profileName)
 		}
 		result.Profiles[profileName] = profileValue
 	}
@@ -198,7 +194,8 @@ func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
 	// Target
 	target, ok := obj["target"].(string)
 	if !ok {
-		return result, WrapError(nil, "could not find 'target' in config.json")
+		return result, WrappedError(
+			"The\"target\" property in \"config.json\" is missing.")
 	}
 	result.Target = target
 	// RpPath
@@ -228,26 +225,26 @@ func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
 func (c *Config) InstallFilters(isForced bool) error {
 	err := CreateDirectoryIfNotExists(".regolith/cache/filters", true)
 	if err != nil {
-		return WrapError(nil, err.Error())
+		return PassError(err)
 	}
 	err = CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
 	if err != nil {
-		return WrapError(nil, err.Error())
+		return PassError(err)
 	}
 
 	err = c.DownloadRemoteFilters(isForced)
 	if err != nil {
-		return WrapError(err, "failed to download filters")
+		return WrapError(err, "Downloading remote filters has failed.")
 	}
 	for filterName, filterDefinition := range c.FilterDefinitions {
+		Logger.Infof("Installing %q filter dependencies...", filterName)
 		err = filterDefinition.InstallDependencies(nil)
 		if err != nil {
 			return WrapErrorf(
-				err, "failed to install dependencies for filter %q",
+				err, "Failed to install dependencies for %q filter.",
 				filterName)
 		}
 	}
-	Logger.Infof("All filters installed.")
 	return nil
 }
 
@@ -257,16 +254,16 @@ func (c *Config) InstallFilters(isForced bool) error {
 func (c *Config) DownloadRemoteFilters(isForced bool) error {
 	err := CreateDirectoryIfNotExists(".regolith/cache/filters", true)
 	if err != nil {
-		return WrapError(nil, err.Error())
+		return PassError(err)
 	}
 	err = CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
 	if err != nil {
-		return WrapError(nil, err.Error())
+		return PassError(err)
 	}
 
 	for name := range c.FilterDefinitions {
 		filterDefinition := c.FilterDefinitions[name]
-		Logger.Infof("Downloading %q...", name)
+		Logger.Infof("Downloading %q filter...", name)
 		switch remoteFilter := filterDefinition.(type) {
 		case *RemoteFilterDefinition:
 			err := remoteFilter.Download(isForced)
@@ -277,6 +274,5 @@ func (c *Config) DownloadRemoteFilters(isForced bool) error {
 			remoteFilter.CopyFilterData(c.DataPath)
 		}
 	}
-	Logger.Infof("All remote filters installed.")
 	return nil
 }

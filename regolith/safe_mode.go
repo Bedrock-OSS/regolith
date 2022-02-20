@@ -23,7 +23,8 @@ func IsUnlocked() bool {
 	unlocked := id == string(lockedId)
 
 	if !unlocked {
-		Logger.Info("Safe mode is locked. Unlock it by running `regolith unlock`.")
+		Logger.Info(
+			"Safe mode is locked. Unlock it by running \"regolith unlock\".")
 	}
 
 	return unlocked

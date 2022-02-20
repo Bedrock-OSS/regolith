@@ -22,8 +22,9 @@ func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*Jav
 	filter := &JavaFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		return nil, WrapErrorf(
-			nil, "missing 'script' property in filter definition %q", filter.Id)
+		return nil, WrappedErrorf(
+			"Missing \"script\" property in filter definition %q.",
+			filter.Id)
 	}
 	filter.Script = script
 	return filter, nil
@@ -32,7 +33,7 @@ func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*Jav
 func (f *JavaFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
+		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
 		return nil
 	}
 	Logger.Infof("Running filter %s", f.Id)
@@ -54,7 +55,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return WrapError(err, "failed to run Java filter")
+			return WrapError(err, "Failed to run Java filter")
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -70,7 +71,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return WrapError(err, "failed to run Java filter")
+			return WrapError(err, "Failed to run Java filter")
 		}
 	}
 	return nil
@@ -79,7 +80,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "failed to create Java filter")
+		return nil, WrapError(err, "Failed to create Java filter")
 	}
 	filter := &JavaFilter{
 		Filter:     *basicFilter,
@@ -102,7 +103,7 @@ func (f *JavaFilterDefinition) Check() error {
 	}
 	cmd, err := exec.Command("java", "--version").Output()
 	if err != nil {
-		return WrapError(err, "failed to check Java version")
+		return WrapError(err, "Failed to check Java version")
 	}
 	a := strings.Split(strings.Trim(string(cmd), " \n\t"), " ")
 	if len(a) > 1 {

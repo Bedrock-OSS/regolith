@@ -26,6 +26,10 @@ import (
 // should be printed.
 func Install(filters []string, force, debug bool) error {
 	InitLogging(debug)
+	if len(filters) == 0 {
+		return WrappedError("No filters specified.")
+	}
+	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalled)
 	}
@@ -34,6 +38,7 @@ func Install(filters []string, force, debug bool) error {
 			return WrapErrorf(err, "Failed to install filter %q.", filter)
 		}
 	}
+	Logger.Info("Successfully installed the filters.")
 	return nil
 }
 
@@ -48,6 +53,7 @@ func Install(filters []string, force, debug bool) error {
 // should be printed.
 func InstallAll(force, debug bool) error {
 	InitLogging(debug)
+	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalled)
 	}
@@ -58,12 +64,13 @@ func InstallAll(force, debug bool) error {
 	config, err := ConfigFromObject(configJson)
 
 	if err != nil {
-		return WrapError(err, "Failed to parse 'config.json' file.")
+		return WrapError(err, "Failed to parse \"config.json\" file.")
 	}
 	err = config.InstallFilters(force)
 	if err != nil {
 		return WrapError(err, "Could not install filters.")
 	}
+	Logger.Info("Successfully installed the filters.")
 	return nil
 }
 
@@ -75,6 +82,10 @@ func InstallAll(force, debug bool) error {
 // should be printed.
 func Update(filters []string, debug bool) error {
 	InitLogging(debug)
+	if len(filters) == 0 {
+		return WrappedError("No filters specified.")
+	}
+	Logger.Info("Updating filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalled)
 	}
@@ -103,6 +114,7 @@ func Update(filters []string, debug bool) error {
 				WrapErrorf(err, "Failed to update filter %q.", filterName))
 		}
 	}
+	Logger.Info("Successfully updated the filters.")
 	return nil
 }
 
@@ -114,6 +126,7 @@ func Update(filters []string, debug bool) error {
 // should be printed.
 func UpdateAll(debug bool) error {
 	InitLogging(debug)
+	Logger.Info("Updating filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalled)
 	}
@@ -134,6 +147,7 @@ func UpdateAll(debug bool) error {
 					err, "Failed to update filter %q.", filterName))
 		}
 	}
+	Logger.Info("Successfully updated the filters.")
 	return nil
 }
 
@@ -150,10 +164,12 @@ func Run(profile string, debug bool) error {
 	if profile == "" {
 		profile = "dev"
 	}
+	Logger.Infof("Running %q profile...", profile)
 	err := RunProfile(profile)
 	if err != nil {
 		return WrapErrorf(err, "Failed to run profile %q", profile)
 	}
+	Logger.Info("Successfully ran the %q profile.", profile)
 	return nil
 }
 
@@ -249,6 +265,7 @@ func Clean(debug bool) error {
 // should be printed.
 func Unlock(debug bool) error {
 	InitLogging(debug)
+	Logger.Info("Disabling the safe mode...")
 	configMap, err1 := LoadConfigAsMap()
 	_, err2 := ConfigFromObject(configMap)
 	if err := firstErr(err1, err2); err != nil {
@@ -265,7 +282,7 @@ func Unlock(debug bool) error {
 	}
 
 	lockfilePath := ".regolith/cache/lockfile.txt"
-	Logger.Infof("Creating the lock file...", lockfilePath)
+	Logger.Infof("Creating the lock file in %s...", lockfilePath)
 	if _, err := os.Stat(lockfilePath); err == nil {
 		return WrappedErrorf(
 			"Failed to create the lock file because it already exists.\n"+
@@ -276,6 +293,6 @@ func Unlock(debug bool) error {
 	if err != nil {
 		return WrapError(err, "Failed to write lock file.")
 	}
-	Logger.Infof("Successfully created the lock file in \"%s\"", lockfilePath)
+	Logger.Infof("Safe mode disabled.")
 	return nil
 }

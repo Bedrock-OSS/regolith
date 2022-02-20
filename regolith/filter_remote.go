@@ -38,8 +38,8 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	}
 	version, ok := obj["version"].(string)
 	if !ok {
-		return nil, WrapErrorf(
-			nil, "missing 'version' property in filter definition %s", id)
+		return nil, WrappedErrorf(
+			"Missing \"version\" property in filter definition %s.", id)
 	}
 	result.Version = version
 	result.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
@@ -49,25 +49,24 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 func (f *RemoteFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
+		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
 		return nil
 	}
 	// All other filters require safe mode to be turned off
 	if f.Definition.Url != StandardLibraryUrl && !IsUnlocked() {
-		return WrapError(
-			nil,
-			"Safe mode is on, which protects you from potentially unsafe "+
-				"code.\nYou may turn it off using 'regolith unlock'",
+		return WrappedErrorf(
+			"Safe mode is on, it protects you from potentially unsafe " +
+				"code.\nYou may turn it off using \"regolith unlock\".",
 		)
 	}
 	Logger.Infof("Running filter %s", f.Id)
 	start := time.Now()
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 
-	Logger.Debugf("RunRemoteFilter '%s'", f.Definition.Url)
+	Logger.Debugf("RunRemoteFilter \"%s\"", f.Definition.Url)
 	if !f.IsCached() {
-		return WrapError(
-			nil, "Filter is not downloaded. Please run 'regolith install'")
+		return WrappedErrorf(
+			"Filter is not downloaded. Please run \"regolith install\".")
 	}
 
 	path := f.GetDownloadPath()
@@ -89,7 +88,7 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "failed to create Java filter")
+		return nil, WrapError(err, "Failed to create Java filter.")
 	}
 	filter := &RemoteFilter{
 		Filter:     *basicFilter,
@@ -105,37 +104,39 @@ func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return WrapErrorf(err, "couldn't read %q", path)
+		return WrapErrorf(err, "Couldn't read \"%s\".", path)
 	}
 
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
 		return WrapErrorf(
-			err, "couldn't load %s! Does the file contain correct json?", path)
+			err, "Couldn't load \"%s\"! Does the file contain correct json?",
+			path)
 	}
 	// Filters
 	filters, ok := filterCollection["filters"].([]interface{})
 	if !ok {
-		return WrapErrorf(nil, "could not parse filters of %q", path)
+		return WrappedErrorf("Could not parse filters of \"%s\"", path)
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		if !ok {
-			return WrapErrorf(nil, "could not parse filter %v of %q", i, path)
+			return WrappedErrorf(
+				"Could not parse filter %v of \"%s\"", i, path)
 		}
 		filterInstaller, err := FilterInstallerFromObject(
 			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
 		if err != nil {
 			return WrapErrorf(
-				err, "could not parse filter %q, subfioter %v", f.Id, i)
+				err, "Could not parse filter \"%s\", subfilter %v", f.Id, i)
 		}
 		err = filterInstaller.InstallDependencies(f)
 		if err != nil {
 			return WrapErrorf(
 				err,
-				"could not install dependencies for filter %q, subfilter %v",
-				f.Id, i)
+				"Could not install dependencies for filter \"%s\", "+
+					"subfilter %v", f.Id, i)
 		}
 	}
 	return nil
@@ -166,15 +167,16 @@ func (f *RemoteFilterDefinition) CopyFilterData(dataPath string) {
 	remoteDataPath := path.Join(f.GetDownloadPath(), "data")
 	localDataPath := path.Join(dataPath, f.Id)
 	if _, err := os.Stat(localDataPath); err == nil {
-		Logger.Warnf("Filter %s already has data in the 'data' folder. \n"+
-			"You may manually delete this data and reinstall if you "+
-			"would like these configuration files to be updated.",
+		Logger.Warnf(
+			"Filter \"%s\" already has data in the \"data\" folder.\n"+
+				"You may manually delete this data and reinstall if you "+
+				"would like these configuration files to be updated.",
 			f.Id)
 	} else if _, err := os.Stat(remoteDataPath); err == nil {
 		// Ensure folder exists
 		err = os.MkdirAll(localDataPath, 0666)
 		if err != nil {
-			Logger.Error("Could not create filter data folder", err)
+			Logger.Error("Could not create filter data folder.", err)
 		}
 
 		// Copy 'data' to dataPath
@@ -183,11 +185,11 @@ func (f *RemoteFilterDefinition) CopyFilterData(dataPath string) {
 				remoteDataPath, localDataPath,
 				copy.Options{PreserveTimes: false, Sync: false})
 			if err != nil {
-				Logger.Error("Could not initialize filter data", err)
+				Logger.Error("Could not initialize filter data.", err)
 			}
 		} else {
 			Logger.Warnf(
-				"Filter %s has installation data, but the "+
+				"Filter \"%s\" has installation data, but the "+
 					"dataPath is not set. Skipping.", f.Id)
 		}
 	}
@@ -215,8 +217,8 @@ func FilterDefinitionFromTheInternet(
 		version, err = GetRemoteFilterDownloadRef(url, name, version)
 		version = trimFilterPrefix(version, name)
 		if err != nil {
-			return nil, WrapErrorf(
-				nil, "no valid version found for filter %q", name)
+			return nil, WrappedErrorf(
+				"No valid version found for filter %q", name)
 		}
 	}
 	return &RemoteFilterDefinition{
@@ -230,8 +232,8 @@ func FilterDefinitionFromTheInternet(
 func (i *RemoteFilterDefinition) Download(isForced bool) error {
 	if i.IsInstalled() {
 		if !isForced {
-			Logger.Warnf("Filter %q already installed, skipping. Run "+
-				"with '-f' to force.", i.Id)
+			Logger.Warnf("Filter \"%s\" already installed, skipping. Run "+
+				"with \"-f\" to force.", i.Id)
 			return nil
 		} else {
 			i.Uninstall()
@@ -251,7 +253,7 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 	repoVersion, err := GetRemoteFilterDownloadRef(i.Url, i.Id, i.Version)
 	if err != nil {
 		return WrapErrorf(
-			err, "unable to get download URL for filter %q", i.Id)
+			err, "Unable to get download URL for filter \"%s\".", i.Id)
 	}
 	url := fmt.Sprintf("%s//%s?ref=%s", i.Url, i.Id, repoVersion)
 	downloadPath := i.GetDownloadPath()
@@ -260,8 +262,8 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 		return WrapErrorf(
 			err,
 			"Could not download filter from %s.\n"+
-				"	Is git installed?\n"+
-				"	Does that filter exist?", url)
+				"    Is git installed?\n"+
+				"    Does that filter exist?", url)
 	}
 	// Save the version of the filter we downloaded
 	i.SaveVerssionInfo(trimFilterPrefix(repoVersion, i.Id))
@@ -271,7 +273,7 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 		os.RemoveAll(testFolder)
 	}
 
-	Logger.Infof("Filter %q downloaded successfully.", i.Id)
+	Logger.Infof("Filter \"%s\" downloaded successfully.", i.Id)
 	return nil
 }
 
@@ -281,7 +283,7 @@ func (i *RemoteFilterDefinition) SaveVerssionInfo(version string) error {
 	filterJsonMap, err := i.LoadFilterJson()
 	if err != nil {
 		return WrapErrorf(
-			err, "Could not load filter.json for %q filter", i.Id)
+			err, "Could not load filter.json for \"%s\" filter.", i.Id)
 	}
 	filterJsonMap["version"] = version
 	filterJson, _ := json.MarshalIndent(filterJsonMap, "", "\t") // no error
@@ -312,7 +314,7 @@ func (f *RemoteFilterDefinition) InstalledVersion() (string, error) {
 	filterJsonMap, err := f.LoadFilterJson()
 	if err != nil {
 		return "", WrapErrorf(
-			err, "Could not load filter.json for %q filter", f.Id)
+			err, "Could not load filter.json for %q filter.", f.Id)
 	}
 	version, ok1 := filterJsonMap["version"]
 	versionStr, ok2 := version.(string)
@@ -328,13 +330,13 @@ func (f *RemoteFilterDefinition) Update() error {
 	installedVersion, err := f.InstalledVersion()
 	installedVersion = trimFilterPrefix(installedVersion, f.Id)
 	if err != nil {
-		Logger.Warnf("Unable to get installed version of %q filter", f.Id)
+		Logger.Warnf("Unable to get installed version of %q filter.", f.Id)
 	}
 	version, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
 	version = trimFilterPrefix(version, f.Id)
 	if err != nil {
 		return WrapErrorf(
-			err, "Unable to check for updates for %q filter", f.Id)
+			err, "Unable to check for updates for %q filter.", f.Id)
 	}
 	if installedVersion != version {
 		Logger.Infof(

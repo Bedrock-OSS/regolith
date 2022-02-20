@@ -25,8 +25,8 @@ func NimFilterDefinitionFromObject(
 	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
-		return nil, WrapErrorf(
-			nil, "missing 'script' property in filter definition %q", filter.Id)
+		return nil, WrappedErrorf(
+			"Missing \"script\" property in filter definition %q.", filter.Id)
 	}
 	filter.Script = script
 	return filter, nil
@@ -35,7 +35,7 @@ func NimFilterDefinitionFromObject(
 func (f *NimFilter) Run(absoluteLocation string) error {
 	// Disabled filters are skipped
 	if f.Disabled {
-		Logger.Infof("Filter '%s' is disabled, skipping.", f.Id)
+		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
 		return nil
 	}
 	Logger.Infof("Running filter %s", f.Id)
@@ -55,7 +55,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return WrapError(err, "Failed to run Nim script")
+			return WrapError(err, "Failed to run Nim script.")
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -71,7 +71,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			GetAbsoluteWorkingDirectory(),
 		)
 		if err != nil {
-			return WrapError(err, "Failed to run Nim script")
+			return WrapError(err, "Failed to run Nim script.")
 		}
 	}
 	return nil
@@ -80,7 +80,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "failed to create Nim filter")
+		return nil, WrapError(err, "Failed to create Nim filter.")
 	}
 	filter := &NimFilter{
 		Filter:     *basicFilter,
@@ -107,7 +107,7 @@ func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 			"nimble", []string{"install"}, filterPath, filterPath)
 		if err != nil {
 			return WrapErrorf(
-				err, "Failed to run nimble to install dependencies of %s",
+				err, "Failed to run nimble to install dependencies of %s.",
 				f.Id)
 		}
 	}
@@ -125,10 +125,10 @@ func (f *NimFilterDefinition) Check() error {
 	}
 	cmd, err := exec.Command("nim", "--version").Output()
 	if err != nil {
-		return WrapError(err, "Failed to check Nim version")
+		return WrapError(err, "Failed to check Nim version.")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
-	Logger.Debugf("Found Nim version %s", a)
+	Logger.Debugf("Found Nim version %s.", a)
 	return nil
 }
 

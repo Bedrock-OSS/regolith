@@ -17,7 +17,8 @@ func GetExportPaths(
 	if exportTarget.Target == "development" {
 		comMojang, err := FindMojangDir()
 		if err != nil {
-			return "", "", WrapError(err, "failed to find com.mojang directory.")
+			return "", "", WrapError(
+				err, "Failed to find \"com.mojang\" directory.")
 		}
 
 		// TODO - I don't like the _rp and _bp sufixes. Can we get rid of that?
@@ -30,9 +31,9 @@ func GetExportPaths(
 	} else if exportTarget.Target == "world" {
 		if exportTarget.WorldPath != "" {
 			if exportTarget.WorldName != "" {
-				return "", "", WrapError(
-					nil, "using both \"worldName\" and \"worldPath\" is not"+
-						" allowed")
+				return "", "", WrappedError(
+					"Using both \"worldName\" and \"worldPath\" is not" +
+						" allowed.")
 			}
 			bpPath = filepath.Join(
 				exportTarget.WorldPath, "behavior_packs", name+"_bp")
@@ -42,11 +43,11 @@ func GetExportPaths(
 			dir, err := FindMojangDir()
 			if err != nil {
 				return "", "", WrapError(
-					err, "failed to find \"com.mojang\" directory")
+					err, "Failed to find \"com.mojang\" directory.")
 			}
 			worlds, err := ListWorlds(dir)
 			if err != nil {
-				return "", "", WrapError(err, "Failed to list worlds")
+				return "", "", WrapError(err, "Failed to list worlds.")
 			}
 			for _, world := range worlds {
 				if world.Name == exportTarget.WorldName {
@@ -57,16 +58,16 @@ func GetExportPaths(
 				}
 			}
 		} else {
-			err = WrapError(
-				nil, "the \"world\" export target requires either a "+
+			err = WrappedError(
+				"The \"world\" export target requires either a " +
 					"\"worldName\" or \"worldPath\" property")
 		}
 	} else if exportTarget.Target == "local" {
 		bpPath = "build/BP/"
 		rpPath = "build/RP/"
 	} else {
-		err = WrapErrorf(
-			nil, "export target %q is not valid", exportTarget.Target)
+		err = WrappedErrorf(
+			"Export target %q is not valid", exportTarget.Target)
 	}
 	return
 }
@@ -77,19 +78,23 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
 	if err != nil {
-		return WrapError(err, "Failed to get generate export paths. Is your export target correct?")
+		return WrapError(
+			err, "Failed to get generate export paths.")
 	}
 
 	// Loading edited_files.json or creating empty object
 	editedFiles := LoadEditedFiles()
 	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
 	if err != nil {
-		return WrapError(
+		return WrapErrorf(
 			err,
-			"The safety check failed, this means that the list of the files\n"+
-				"from export path from previous run don't match to the\n"+
-				"current state of the folder. Please remove the files from the\n"+
-				"export path and try again.")
+			"Safety mechanism stopped Regolith to protect unexpected files "+
+				"from your export targets.\n"+
+				"Did you edit the exported files manually?\n"+
+				"Please clear your export paths and try again.\n"+
+				"    Resource pack export path: %s\n"+
+				"    Behavior pack export path: %s",
+			rpPath, bpPath)
 	}
 
 	// Clearing output locations
@@ -97,36 +102,36 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	err = os.RemoveAll(bpPath)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to clear behavior pack from build path %q. Are user permissions correct?", bpPath)
+			err, "Failed to clear behavior pack from build path %q.\n"+
+				"Are user permissions correct?", bpPath)
 	}
 	err = os.RemoveAll(rpPath)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to clear resource pack from build path %q. Are user permissions correct?", rpPath)
+			err, "Failed to clear resource pack from build path %q.\n"+
+				"Are user permissions correct?", rpPath)
 	}
-	// TODO - this code is dangerous. You can put any dataPath into the config
-	// file and regolith will delete it
 	err = os.RemoveAll(dataPath)
 	if err != nil {
 		return WrapErrorf(
-			err, "failed to clear filter data path to %q", dataPath)
+			err, "Failed to clear filter data path %q.", dataPath)
 	}
 
-	Logger.Infof("Exporting behavior pack to %q", bpPath)
+	Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
 	err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
 	if err != nil {
-		return WrapError(err, "failed to export behavior pack")
+		return WrapError(err, "Failed to export behavior pack.")
 	}
-	Logger.Info("Exporting project to ", rpPath)
+	Logger.Infof("Exporting project to \"%s\".", rpPath)
 	err = MoveOrCopy(".regolith/tmp/RP", rpPath, exportTarget.ReadOnly, true)
 	if err != nil {
-		return WrapError(err, "failed to export resource pack")
+		return WrapError(err, "Failed to export resource pack.")
 	}
 	err = MoveOrCopy(".regolith/tmp/data", dataPath, false, false)
 	if err != nil {
 		return WrapError(
-			err,
-			"failed to move the filter data back to the project's data folder")
+			err, "Failed to move the filter data back to the project's "+
+				"data folder.")
 	}
 
 	// Update or create edited_files.json
@@ -134,7 +139,7 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	if err != nil {
 		return WrapError(
 			err,
-			"failed to create a list of files edited by this 'regolith run'")
+			"Failed to create a list of files edited by this 'regolith run'")
 	}
 	err = editedFiles.Dump()
 	return err
@@ -146,26 +151,29 @@ func MoveOrCopy(
 	source string, destination string, makeReadOnly bool, copyParentAcl bool,
 ) error {
 	if err := os.Rename(source, destination); err != nil {
-		Logger.Infof("Couldn't move files to %s. Trying to copy files instead...", destination)
+		Logger.Infof(
+			"Couldn't move files to \"%s\". Trying to copy files instead...",
+			destination)
 		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
 		err := copy.Copy(source, destination, copyOptions)
 		if err != nil {
 			return WrapErrorf(
-				err, "couldn't copy data files to %s, aborting.", destination)
+				err, "Couldn't copy data files to \"%s\", aborting.",
+				destination)
 		}
 	} else if copyParentAcl { // No errors with moving files but needs ACL copy
 		parent := filepath.Dir(destination)
 		if _, err := os.Stat(parent); os.IsNotExist(err) {
 			return WrapError(
 				err,
-				"couldn't copy ACLs - parent directory (used as a source of "+
-					"ACL data) doesn't exist")
+				"Couldn't copy ACLs - parent directory (used as a source of "+
+					"ACL data) doesn't exist.")
 		}
 		err = copyFileSecurityInfo(parent, destination)
 		if err != nil {
 			return WrapErrorf(
 				err,
-				"counldn't copy ACLs to the target file %s",
+				"Counldn't copy ACLs to the target file \"%s\".",
 				destination,
 			)
 		}
@@ -176,7 +184,7 @@ func MoveOrCopy(
 			func(s string, d fs.DirEntry, e error) error {
 				if e != nil {
 					return WrapErrorf(
-						e, "failed to walk directory %q", destination)
+						e, "Failed to walk directory \"%s\".", destination)
 				}
 				if !d.IsDir() {
 					os.Chmod(s, 0444)
@@ -184,7 +192,9 @@ func MoveOrCopy(
 				return nil
 			})
 		if err != nil {
-			Logger.Warnf("Unable to change file permissions of %q into read-only", destination)
+			Logger.Warnf(
+				"Unable to change file permissions of \"%s\" into read-only",
+				destination)
 		}
 	}
 	return nil

@@ -118,9 +118,11 @@ func CreateDirectoryIfNotExists(directory string, mustSucceed bool) error {
 		if err != nil {
 			if mustSucceed {
 				return WrapErrorf(
-					err, "Failed to create directory %s", directory)
+					err, "Failed to create directory %s.", directory)
 			} else {
-				Logger.Warnf("Failed to create directory %s: %s", directory, err.Error())
+				Logger.Warnf(
+					"Failed to create directory %s: %s.", directory,
+					err.Error())
 				return nil
 			}
 		}
