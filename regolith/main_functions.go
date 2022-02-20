@@ -26,6 +26,9 @@ import (
 // should be printed.
 func Install(filters []string, force, debug bool) error {
 	InitLogging(debug)
+	if !hasGit() {
+		Logger.Warn(gitNotInstalled)
+	}
 	for _, filter := range filters {
 		if err := addFilter(filter, force); err != nil {
 			return WrapErrorf(err, "Failed to install filter %q.", filter)
@@ -45,6 +48,9 @@ func Install(filters []string, force, debug bool) error {
 // should be printed.
 func InstallAll(force, debug bool) error {
 	InitLogging(debug)
+	if !hasGit() {
+		Logger.Warn(gitNotInstalled)
+	}
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
 		return WrapError(err, "Failed to load config.json.")
@@ -69,6 +75,9 @@ func InstallAll(force, debug bool) error {
 // should be printed.
 func Update(filters []string, debug bool) error {
 	InitLogging(debug)
+	if !hasGit() {
+		Logger.Warn(gitNotInstalled)
+	}
 	configMap, err1 := LoadConfigAsMap()
 	config, err2 := ConfigFromObject(configMap)
 	if err := firstErr(err1, err2); err != nil {
@@ -105,6 +114,9 @@ func Update(filters []string, debug bool) error {
 // should be printed.
 func UpdateAll(debug bool) error {
 	InitLogging(debug)
+	if !hasGit() {
+		Logger.Warn(gitNotInstalled)
+	}
 	Logger.Infof("Updating filters...")
 	configMap, err1 := LoadConfigAsMap()
 	config, err2 := ConfigFromObject(configMap)
