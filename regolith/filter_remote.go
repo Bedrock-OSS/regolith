@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"time"
@@ -244,6 +245,9 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 	// Can we somehow detect whether this is a failure from git being not
 	// installed, or a failure from
 	// the repo/folder not existing?
+	if !hasGit() {
+		return WrappedError(gitNotInstalled)
+	}
 	repoVersion, err := GetRemoteFilterDownloadRef(i.Url, i.Id, i.Version)
 	if err != nil {
 		return WrapErrorf(
@@ -368,4 +372,10 @@ func (i *RemoteFilterDefinition) IsInstalled() bool {
 		return true
 	}
 	return false
+}
+
+// hasGit returns whether git is installed or not.
+func hasGit() bool {
+	_, err := exec.LookPath("git")
+	return err == nil
 }

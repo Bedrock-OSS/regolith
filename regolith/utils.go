@@ -14,6 +14,12 @@ import (
 	"github.com/fatih/color"
 )
 
+// Common warnings
+const (
+	gitNotInstalled = "Git is not installed. Git is required to download " +
+		"filters.\n You can download Git from https://git-scm.com/downloads"
+)
+
 func StringArrayContains(arr []string, str string) bool {
 	for _, a := range arr {
 		if a == str {
