@@ -77,18 +77,18 @@ func addFilter(filter string, force bool) error {
 		filterDefinition.Version = version
 	}
 	filterDefinitions[filterName] = filterDefinition
-	// Save the config file
-	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
-	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
-	if err != nil {
-		return WrapError(err, "Unable to save the config file.")
-	}
 	// Install the dependencies of the filter
 	err = filterDefinition.InstallDependencies(nil)
 	if err != nil {
 		return WrapErrorf(
 			err, "Unable to instsall dependencies of filter %q.",
 			filterDefinition.Id)
+	}
+	// Save the config file
+	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
+	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
+	if err != nil {
+		return WrapError(err, "Unable to save the config file.")
 	}
 	return nil
 }
