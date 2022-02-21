@@ -169,7 +169,7 @@ func Run(profile string, debug bool) error {
 	if err != nil {
 		return WrapErrorf(err, "Failed to run profile %q", profile)
 	}
-	Logger.Info("Successfully ran the %q profile.", profile)
+	Logger.Infof("Successfully ran the %q profile.", profile)
 	return nil
 }
 

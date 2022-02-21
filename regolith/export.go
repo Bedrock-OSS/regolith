@@ -92,8 +92,8 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 				"from your export targets.\n"+
 				"Did you edit the exported files manually?\n"+
 				"Please clear your export paths and try again.\n"+
-				"    Resource pack export path: %s\n"+
-				"    Behavior pack export path: %s",
+				"Resource pack export path: %s\n"+
+				"Behavior pack export path: %s",
 			rpPath, bpPath)
 	}
 
@@ -152,7 +152,8 @@ func MoveOrCopy(
 ) error {
 	if err := os.Rename(source, destination); err != nil {
 		Logger.Infof(
-			"Couldn't move files to \"%s\". Trying to copy files instead...",
+			"Couldn't move files to \"%s\".\n"+
+				"    Trying to copy files instead...",
 			destination)
 		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
 		err := copy.Copy(source, destination, copyOptions)

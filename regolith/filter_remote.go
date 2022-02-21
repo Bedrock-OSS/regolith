@@ -230,10 +230,13 @@ func FilterDefinitionFromTheInternet(
 
 // Download
 func (i *RemoteFilterDefinition) Download(isForced bool) error {
-	if i.IsInstalled() {
+	if _, err := os.Stat(i.GetDownloadPath()); err == nil {
 		if !isForced {
-			Logger.Warnf("Filter \"%s\" already installed, skipping. Run "+
-				"with \"-f\" to force.", i.Id)
+			Logger.Warnf(
+				"The download path of the \"%s\" already exists.This should "+
+					"be the case only if the filter is installed.\n"+
+					"    Skipped the download. You can force the it by "+
+					"passing the \"-force\" flag.", i.Id)
 			return nil
 		} else {
 			i.Uninstall()
@@ -257,13 +260,17 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 	}
 	url := fmt.Sprintf("%s//%s?ref=%s", i.Url, i.Id, repoVersion)
 	downloadPath := i.GetDownloadPath()
+
+	_, err = os.Stat(downloadPath)
+	downloadPathIsNew := os.IsNotExist(err)
 	err = getter.Get(downloadPath, url)
 	if err != nil {
+		if downloadPathIsNew { // Remove the path created by getter
+			os.Remove(downloadPath)
+		}
 		return WrapErrorf(
-			err,
-			"Could not download filter from %s.\n"+
-				"    Is git installed?\n"+
-				"    Does that filter exist?", url)
+			err, "Could not download filter from %s.\n"+
+				"Does that filter exist?", url)
 	}
 	// Save the version of the filter we downloaded
 	i.SaveVerssionInfo(trimFilterPrefix(repoVersion, i.Id))
@@ -366,14 +373,6 @@ func (i *RemoteFilterDefinition) Uninstall() {
 		Logger.Error(
 			WrapErrorf(err, "Could not remove installed filter %s.", i.Id))
 	}
-}
-
-// IsInstalled eturns whether the filter is currently installed or not.
-func (i *RemoteFilterDefinition) IsInstalled() bool {
-	if _, err := os.Stat(i.GetDownloadPath()); err == nil {
-		return true
-	}
-	return false
 }
 
 // hasGit returns whether git is installed or not.
