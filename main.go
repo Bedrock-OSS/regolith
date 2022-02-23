@@ -45,7 +45,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "run",
-				Usage: "Runs Regolith, and generates compiled RP and BP, which will be exported to the destination specified in the config.",
+				Usage: "Runs Regolith and exports compiled RP and BP to the destination specified in the config.",
 				Action: func(c *cli.Context) error {
 					args := c.Args().Slice()
 					var profile string
@@ -56,25 +56,22 @@ func main() {
 				},
 			},
 			{
-				Name: "update",
-				Usage: `It updates filters listed in "filters" parameter. The
-				names of the filters must be already present in the
-				filtersDefinitions list in the config.json file.`,
+				Name:  "update",
+				Usage: "Updates filters from filtersDefinitions list of config.json file specified in arguments by their names.",
 				Action: func(c *cli.Context) error {
 					return regolith.Update(c.Args().Slice(), debug)
 				},
 			},
 			{
-				Name: "update-all",
-				Usage: `It updates all of the filters listed in the
-				filtersDefinitions which aren't version locked.`,
+				Name:  "update-all",
+				Usage: "Updates all of the filters listed in the filtersDefinitions to the version specified in the config.json file.",
 				Action: func(c *cli.Context) error {
 					return regolith.UpdateAll(debug)
 				},
 			},
 			{
 				Name:  "install-all",
-				Usage: `Installs all of the filters from filtersDefintions of config.json file and their dependencies.`,
+				Usage: "Installs all of the filters from filtersDefintions of config.json file and their dependencies.",
 				Action: func(c *cli.Context) error {
 					force := c.Bool("force")
 					return regolith.InstallAll(force, debug)
@@ -89,7 +86,7 @@ func main() {
 			},
 			{
 				Name:  "install",
-				Usage: `Installs specific filters from the Internet and adds them to the filtersDefinitions list in the config.json file.`,
+				Usage: "Downloads filters specified in arguments from the Internet, installs them and adds them to the filtersDefinitions list in the config.json file.",
 				Action: func(c *cli.Context) error {
 					force := c.Bool("force")
 					filters := c.Args().Slice()
@@ -112,7 +109,7 @@ func main() {
 			},
 			{
 				Name:  "init",
-				Usage: "Initialize a Regolith project in the current directory.",
+				Usage: "Initializes a Regolith project in the current directory.",
 				Action: func(c *cli.Context) error {
 					return regolith.Init(debug)
 				},

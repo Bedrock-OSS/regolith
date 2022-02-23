@@ -12,7 +12,7 @@ Regolith is an Addon Compiler for the Bedrock Edition of Minecraft.
 
 Much like [bridge v2](https://editor.bridge-core.app/), Regolith introduces the concept of a "project folder", where your addons are written, including the RP, the BP, and any models, textures or configuration files. This single-folder-structure is great for version control, and allows you to keep your "source-of-truth" outside of com.mojang.
 
-Here is what a newly initialized Regolith project looks like:
+Here is what the structure of a newly initialized Regolith project looks like:
 
 
 ![](/regolith/assets/images/introduction/project_folder.png)
@@ -25,8 +25,8 @@ In the simplest case, Regolith can be used to move your packs from the project f
 However, Regoliths real value preposition is the ability to run *arbitrary code during this copy*. 
 
 We refer to these scripts and programs as `filters`. Here is the flow:
-- `RP`, `BP` and `data` folder are copied into a `temp` folder
-- Every filter is executed in-order, editing the `temp` folder in-place
+- `RP`, `BP` and `data` folder are copied into a `tmp` folder
+- Every filter is executed in-order, editing the `tmp` folder in-place
 - The contents of `RP` and `BP` are moved into your export location
 - The contents of `data` is moved back into your data location
 
@@ -42,7 +42,7 @@ For example, one of our standard filters is called `psd_convert`, which *filters
 
 With this filter turned on, you can place `.psd` files directly into `RP/textures/*` folder! By the time your files reach `com.mojang`, the photoshop files will be replaced by a normal images -Minecraft won't know the difference!
 
-You can write filters in Python, Javescript, Java, or any other language, using our shell integration, or select from the list of pre-written standard and community filters.
+You can write filters in Python, Javescript, Nim, Java, or any other language, using our shell integration, or select from the list of pre-written standard and community filters.
 
 ## Regolith Use Cases
 

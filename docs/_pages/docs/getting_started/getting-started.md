@@ -28,9 +28,8 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
 
 ```json
 {
-  "name": "Project Name", // Put your project name here
+  "name": "Project name", // Put your project name here
   "author": "Your name", // Put your name here
-
   "packs": {
     "behaviorPack": "./packs/BP",
     "resourcePack": "./packs/RP"
@@ -38,15 +37,15 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
   "regolith": {
     "profiles": {
       "dev": {
-        "filters": [
-          
-        ],
+        "filters": [],
         "export": {
-          "clean": false,
-          "target": "development"
+          "target": "development",
+          "readOnly": false
         }
       }
-    }
+    },
+    "filterDefinitions": {},
+    "dataPath": "./packs/data"
   }
 }
 ```
@@ -67,27 +66,32 @@ Later on, you can experiment with creating multiple profiles -for example, one f
 
 Regolith contains a very powerful filter system, that allows you write filters in many languages, as well as from the internet. For now, we will simply use the `standard library`, which is a set of approved filters that we maintain. 
 
-To add a new filter to your profile, you must add items into the `"filters": [],` list of your profile.
+As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, read [here](https://wiki.bedrock.dev/visuals/texture-list.html).
 
-As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, read [here](https://wiki.bedrock.dev/visuals/textures-list.html).
+Before using the filter in a profile, you must first add it to the `filterDefinitions` and install it. In case of standard and remote filters, you can simply run the `regolith install` command.
 
+```
+regolith install texture_list
+```
+
+This command should download the filter, install all of its dependencies and register it in the `filterDefinitions` section of `config.json`. The installation process might be a bit different for other types of filters. The details can be found in the [filter types](/regolith/docs/filter-types) section of the documentation.
+
+Now, you can add the filter to the `filters` list in your profile.
 ```json
+...
 "filters": [
   {
     "filter": "texture_list"
   }
 ]
+...
 ```
 
-`Warning:` If your resource pack already contains `texture_list.json`, you should delete it. You don't need to manually worry about it anymore -Regolith will handle it!
+**Warning!** If your resource pack already contains `texture_list.json`, you should delete it. You don't need to manually worry about it anymore -Regolith will handle it!
 
-:`Warning:` If your project doesn't have any textures, than `texture_list.json` will simply create a blank file `[]`. Consider adding some textures to see the filter at work!
+**Warning!** If your project doesn't have any textures, than `texture_list.json` will simply create a blank file `[]`. Consider adding some textures to see the filter at work!
 
-Run `regolith run`. You will crash, since the dependencies for `texture_list` were not installed yet. This is expected!
-
-Run `regolith install`. This may take some time, but you only need to run it when you add new filters.
-
-After installation is finished, you can run `regolith run` again.
+After installation is finished, you can run `regolith run`.
 
 Check `com.mojang`, and open the new `texture_list.json` file in `RP/textures/texture_list.json`. Every time you run regolith, this file will be re-created, based on your current textures. No need to manually edit it ever again!
 
