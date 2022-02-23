@@ -13,6 +13,11 @@ You can test for installation by running `regolith` inside of a terminal. This g
 
 If you run into issues installing, you can check our [troubleshooting guide](/regolith/docs/troubleshooting) for tips.
 
+{: .notice--warning}
+**Warning:** Regolith is a command line application. It assumes some familiarity with how to navigate and use the command line. You can get a [refresher](https://tutorial.djangogirls.org/en/intro_to_command_line/) here.
+
+
+
 ## Creating a new Project
 
 To create a new project, navigate to a blank folder, and run `regolith init`. This will create a few files:
@@ -20,7 +25,12 @@ To create a new project, navigate to a blank folder, and run `regolith init`. Th
 
 ![](/regolith/assets/images/introduction/project_folder.png)
 
-You may now create your addon inside of the RP and BP folders, or better yet, import them from an addon you are currently working on.
+In short:
+ - `.regolith` is a special folder that regolith uses to store data. You don't need to look here.
+ - `packs/BP` stores your behavior pack.
+ - `packs/RP` stores your resource pack.
+ - `packs/data` is a special folder that filters can use to store data.
+ - `config.json` is the configuration file for Regolith.
 
 ## config.json
 
@@ -28,9 +38,8 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
 
 ```json
 {
-  "name": "Project Name", // Put your project name here
-  "author": "Your name", // Put your name here
-
+  "name": "Project name", // Enter your pack name here. (Example: spooky_gravestones)
+  "author": "Your name",  // Enter your author name here. (example: SirLich)
   "packs": {
     "behaviorPack": "./packs/BP",
     "resourcePack": "./packs/RP"
@@ -38,58 +47,81 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
   "regolith": {
     "profiles": {
       "dev": {
-        "filters": [
-          
-        ],
+        "filters": [],
         "export": {
-          "clean": false,
-          "target": "development"
+          "target": "development",
+          "readOnly": false
         }
       }
-    }
+    },
+    "filterDefinitions": {},
+    "dataPath": "./packs/data"
   }
 }
 ```
 
 Later on you can play with the additional configuration options, but for now, just set a project name, and author name.
 
-We suggest using a name like 'dragons' or 'cars' for the project name, as opposed to 'My Dragon Adventure Map', since the project name will be used as the folder name for the final export.
+{: .notice}
+We suggest using a name like `dragons` or `cars` for the project name, as opposed to `My Dragon Adventure Map`, since the project name will be used as the folder name for the final export.
+
+## Creating your Addon
+
+At this point, you will want to add some files into your regolith project. If you have an existing project, you can copy/paste the files into the `RP` (resource pack) and `BP` (behavior pack) folders. 
+
+If you don't have an addon prepared, you may also create a fresh one directly in your project folder, following the normal rules. Add a `manifest.json`, a `pack_icon.png`, and any other files you want. The files should go directly into the `RP` and `BP` folders, like this:
+
+![](/regolith/assets/images/introduction/project_folder2.png)
+
 
 ## Running Regolith
 
-To run regolith, open up a terminal and type `regolith run`. This will run the default profile (dev) from `config.json`. When you run this command, Regolith will copy/paste your addon into the `development` folders inside of `com.mojang`. If you navigate there, you should be able to see your pack folders, with a name like `project_name_bp`. 
+To run regolith, open up a terminal and type `regolith run`. This will run the default profile (dev) from `config.json`. When you run this command, Regolith will copy/paste your addon into the `development` folders inside of `com.mojang`. If you navigate there, you should be able to see your pack folders, with a name like `project_name_bp`, and `project_name_rp`.
 
-Every time you want to update your addon, re-run this command. 
+{: .notice--warning}
+Every time you want to update your addon, re-run this command.
 
-Later on, you can experiment with creating multiple profiles -for example, one for `dev` and one for `packaging`.
+Later on, you can experiment with creating multiple [profiles](/regolith/docs/documentation/profiles) -for example, one for `dev` and one for `packaging`.
 
 ## Adding your first Filter
 
-Regolith contains a very powerful filter system, that allows you write filters in many languages, as well as from the internet. For now, we will simply use the `standard library`, which is a set of approved filters that we maintain. 
-
-To add a new filter to your profile, you must add items into the `"filters": [],` list of your profile.
+Regolith contains a very powerful filter system, that allows you write filters in many languages, as well as running existing filters from the internet. For now, we will simply use the [standard library](/regolith/docs/content/standard-filters), which is a set of approved filters that we maintain. 
 
 As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, read [here](https://wiki.bedrock.dev/visuals/textures-list.html).
 
+### Installing
+
+You can install this filter by running `regolith install texture_list`, which will make the filter available for use. 
+
+The last step is selecting where/when the filter will run. In our case, we want to run the filter every time we export using the default `dev` profile.
+
+You should adjust the dev profile in `config.json` to look like this:
+
 ```json
-"filters": [
-  {
-    "filter": "texture_list"
-  }
-]
+"dev": {
+  "export": {
+    "readOnly": false,
+    "target": "development"
+  },
+  "filters": [
+    {
+      "filter": "texture_list",
+    }
+  ]
+}
 ```
 
-`Warning:` If your resource pack already contains `texture_list.json`, you should delete it. You don't need to manually worry about it anymore -Regolith will handle it!
+### Running
 
-:`Warning:` If your project doesn't have any textures, than `texture_list.json` will simply create a blank file `[]`. Consider adding some textures to see the filter at work!
-
-Run `regolith run`. You will crash, since the dependencies for `texture_list` were not installed yet. This is expected!
-
-Run `regolith install`. This may take some time, but you only need to run it when you add new filters.
-
-After installation is finished, you can run `regolith run` again.
+Now, you can re-run `regolith run`.
 
 Check `com.mojang`, and open the new `texture_list.json` file in `RP/textures/texture_list.json`. Every time you run regolith, this file will be re-created, based on your current textures. No need to manually edit it ever again!
+
+{: .notice--warning}
+`Warning:` If your resource pack already contains `texture_list.json`, you should delete it. You don't need to manually worry about it anymore -Regolith will handle it!
+
+{: .notice--warning}
+`Warning:` If your project doesn't have any textures, than `texture_list.json` will simply create a blank file `[]`. Consider adding some textures to see the filter at work!
 
 ## Whats Next
 
