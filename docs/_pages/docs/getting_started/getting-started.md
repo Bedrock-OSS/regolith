@@ -81,11 +81,11 @@ To run regolith, open up a terminal and type `regolith run`. This will run the d
 {: .notice--warning}
 Every time you want to update your addon, re-run this command.
 
-Later on, you can experiment with creating multiple [profiles](/regolith/docs/documentation/profiles) -for example, one for `dev` and one for `packaging`.
+Later on, you can experiment with creating multiple [profiles](/regolith/docs/profiles) -for example, one for `dev` and one for `packaging`.
 
 ## Adding your first Filter
 
-Regolith contains a very powerful filter system, that allows you write filters in many languages, as well as running existing filters from the internet. For now, we will simply use the [standard library](/regolith/docs/content/standard-filters), which is a set of approved filters that we maintain. 
+Regolith contains a very powerful filter system, that allows you write filters in many languages, as well as running existing filters from the internet. For now, we will simply use the [standard library](/regolith/docs/standard-filters), which is a set of approved filters that we maintain. 
 
 As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, read [here](https://wiki.bedrock.dev/visuals/textures-list.html).
 

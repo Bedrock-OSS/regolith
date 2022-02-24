@@ -2,7 +2,7 @@
 permalink: /docs/filter-types
 layout: single
 classes: wide
-title: Filter Types
+title: Filters
 sidebar:
   nav: "sidebar"
 ---

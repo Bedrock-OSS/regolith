@@ -33,12 +33,16 @@ sidebar:
         url: /docs/safety
   - title: Filters
     children:
-      - title: "Filter Types"
+      - title: "Filters"
         url: /docs/filter-types
       - title: "Custom Filters"
         url: "/docs/custom-filters"
       - title: "Online Filters"
         url: /docs/online-filters
+      - title: "Creating your First Filter"
+        url: /docs/creating-a-filter
+  - title: Filter Types
+    children:
       - title: "Java Filters"
         url: /docs/java-filters
       - title: "Nim Filters"
@@ -49,7 +53,6 @@ sidebar:
         url: /docs/shell-filters
       - title: "Node JS Filters"
         url: /docs/node-filters
-      
   - title: Content
     children:
       - title: "Standard Filters"

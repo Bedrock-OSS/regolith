@@ -7,14 +7,7 @@ sidebar:
   nav: "sidebar"
 ---
 
-The syntax for running a python script is this:
-
-```json
-{
-  "runWith": "python",
-  "script": "./filters/example.py"
-}
-```
+Python is an interpreted high-level general-purpose programming language.
 
 ## Installing Python
 
@@ -24,6 +17,16 @@ Please ensure that you add python to your path:
 
 ![](/regolith/assets/images/installing/python.png)
 
+## Running Python code as Filter
+
+The syntax for running a python script is this:
+
+```json
+{
+  "runWith": "python",
+  "script": "./filters/example.py"
+}
+```
 
 ## Requirements and Dependencies
 
@@ -35,7 +38,7 @@ When developing a python filter with dependencies, you must create this file. Yo
 
 [Python Venvs](https://docs.python.org/3/library/venv.html) are flexible, lightweight "virtual environments". 
 
-Regolith uses venvs to install dependencies, since it will prevent your global installation space from becoming bloated. When you install a python filter with dependencies, they will be installed into a venv, stored in `.regolith/cache/venvs/`.
+Regolith uses venvs to install dependencies, since it will prevent your global installation space from becoming polluted. When you install a python filter with dependencies, they will be installed into a venv, stored in `.regolith/cache/venvs/`.
 
 By default, all filters will share a single venv.
 
