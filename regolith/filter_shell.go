@@ -98,7 +98,10 @@ func runShellFilter(
 			append([]string{string(jsonSettings)}, filter.Arguments...),
 			absoluteLocation, GetAbsoluteWorkingDirectory())
 	}
-	return WrapError(err, "Failed to run shell filter.")
+	if err != nil {
+		return WrapError(err, "Failed to run shell filter.")
+	}
+	return nil
 }
 
 func executeCommand(
