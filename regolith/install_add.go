@@ -32,6 +32,7 @@ func addFilter(filter string, force bool) error {
 				"The \"regolith\" property of the config file not a map.")
 		}
 	}
+	// Get filter definitions map
 	var filterDefinitions map[string]interface{}
 	if _, ok := regolithProject["filterDefinitions"]; !ok {
 		filterDefinitions = make(map[string]interface{})
@@ -47,6 +48,13 @@ func addFilter(filter string, force bool) error {
 	if err != nil {
 		return WrapErrorf(
 			err, "Unable to parse filter name and version from %q.", filter)
+	}
+	// Get dataPath
+	dataPath := "./packs/data"
+	if dp, ok := regolithProject["dataPath"].(string); ok {
+		dataPath = dp
+	} else {
+		regolithProject["dataPath"] = dataPath
 	}
 	// Check if the filter is already installed
 	if _, ok := filterDefinitions[filterName]; ok && !force {
@@ -67,6 +75,7 @@ func addFilter(filter string, force bool) error {
 		return WrapErrorf(
 			err, "Unable to download filter %q.", filter)
 	}
+	filterDefinition.CopyFilterData(dataPath)
 	// The default URL don't need to be added to the config file
 	if filterDefinition.Url == StandardLibraryUrl {
 		filterDefinition.Url = ""
