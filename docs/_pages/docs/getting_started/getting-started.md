@@ -17,7 +17,6 @@ If you run into issues installing, you can check our [troubleshooting guide](/re
 **Warning:** Regolith is a command line application. It assumes some familiarity with how to navigate and use the command line. You can get a [refresher](https://tutorial.djangogirls.org/en/intro_to_command_line/) here.
 
 
-
 ## Creating a new Project
 
 To create a new project, navigate to a blank folder, and run `regolith init`. This will create a few files:
@@ -90,6 +89,9 @@ Regolith contains a very powerful filter system, that allows you write filters i
 As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, read [here](https://wiki.bedrock.dev/visuals/textures-list.html).
 
 ### Installing
+
+{: .notice--warning}
+The `install` command relies on `git`. [You may download git here](https://git-scm.com/download/win).
 
 You can install this filter by running `regolith install texture_list`, which will make the filter available for use. 
 

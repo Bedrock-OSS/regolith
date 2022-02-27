@@ -11,7 +11,7 @@ A `profile` is a collection of filters, settings, and export information. By def
 
 ## Running Profiles
 
-You can use `regolith run` to run the default profile (dev), or use `regolith run <filter name>` to run a specific profile
+You can use `regolith run` to run the default profile (dev), or use `regolith run <profile name>` to run a specific profile
 
 ## Why Profiles?
 
@@ -20,6 +20,47 @@ Profiles are useful for creating different run-targets.
 For example, `dev` profile may contain development focused filters, which are not desired for a final build. You can create a `build` or `package` profile, potentially with a different export target to fill this need. 
 
 You can now run `regolith run dev` normally, and then sometimes `regolith run build` when you need a new final build.
+
+Here is an example `config.json` with a second profile called `package`.
+
+```json
+{
+  "name": "moondust",
+  "author": "Regolith Gang",
+  "packs": {
+    "behaviorPack": "./packs/BP",
+    "resourcePack": "./packs/RP"
+  },
+  "regolith": {
+
+    // This is the list of profiles!
+    "profiles": {
+
+      // This is the default profile
+      "dev": {
+        "filters": [
+          {"filter": "example_filter"}
+        ],
+        "export": {
+          "target": "development",
+        }
+      },
+
+      // A second profile, with different filters
+      "build": {
+        "filters": [
+          {"filter": "different_filter"}
+        ],
+        "export": {
+          "target": "development",
+        }
+      }
+    },
+    "filterDefinitions": {},
+    "dataPath": "./packs/data"
+  }
+}
+```
 
 ## Profile Customization
 
