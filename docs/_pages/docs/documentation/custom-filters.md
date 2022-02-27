@@ -7,7 +7,7 @@ sidebar:
   nav: "sidebar"
 ---
 
-Regolith allows you to write your own local files, and register them directly as filters. Special support is provided for filters written with Python, Java, and Node JS,
+Regolith allows you to write your own local files, and register them directly as filters. Special support is provided for filters written with Python, Node JS, and other languages.
 
 To start writing a custom filter, you first need a script to run. We will use `hello_world.py` as an example:
 

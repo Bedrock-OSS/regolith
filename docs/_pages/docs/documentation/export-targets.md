@@ -11,15 +11,17 @@ Export Targets determine where your generated files will go, after Regolith is f
 
 Export is an object, and the keys inside determine how it will function. The `target` key is required, but some export targets require additional keys.
 
-```json
-"export": {
-    "target": "local"
-}
-```
+# Configuration
+
+Some configuration properties may be used with all export targets.
+
+## readOnly
+
+`readOnly` changes the permissions of exported files to read-only. The default value is `false`. This property can be used to protect against accidental editing of files that should only be edited by Regolith!
 
 # Export Targets
 
-The following targets exist.
+These are the export targets that Regolith offers.
 
 ## Development
 
@@ -33,8 +35,7 @@ The development export target will place the compiled packs into your `com.mojan
 
 ## Local
 
-This export target will place the compiled packs into a folder called `build`, created in your regolith project. Mostly useful for quick testing.
-Example:
+This export target will place the compiled packs into a folder called `build`, created in your regolith project. This export target is mostly useful for quick testing.
 
 ```json
 "export": {
@@ -46,7 +47,7 @@ Example:
 
 The Exact export target will place the files to specific, user specified locations. This is useful when you need absolute control over Regoliths export functionality.
 
-`rpPath` and `bpPath` are required.
+`rpPath` and `bpPath` are required options.
 
 Example:
 
@@ -69,20 +70,7 @@ Example:
 ```json
 "export": {
     "target": "world",
-    "worldName": "...",
-    "worldPath": "...
+    "worldName": "...",  // This
+    "worldPath": "..."   // OR this
 }
 ```
-
-## Package
-
-The packaging workflow for Regolith is still being worked on.
-
-# Additional properties
-
-This is a list of properties that can always be added regardless of the
-`target` property being used.
-
-- `readOnly` - changes the permissions of exported files to read-only. The default
-  value is `false`. This property can be used to protect against accidental
-  editing of files that should only be edited by Regolith.
