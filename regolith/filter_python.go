@@ -84,7 +84,7 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create Java filter.")
+		return nil, WrapError(err, "Failed to create Python filter.")
 	}
 	filter := &PythonFilter{
 		Filter:     *basicFilter,

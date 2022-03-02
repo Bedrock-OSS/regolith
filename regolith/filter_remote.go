@@ -92,7 +92,7 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create Java filter.")
+		return nil, WrapError(err, "Failed to create remote filter.")
 	}
 	filter := &RemoteFilter{
 		Filter:     *basicFilter,
@@ -147,6 +147,32 @@ func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 }
 
 func (f *RemoteFilterDefinition) Check() error {
+	dummyFilterRunner, err := f.CreateFilterRunner(
+		map[string]interface{}{"filter": f.Id})
+	if err != nil { // Shouldn't happen but just in case it's better to check
+		return WrapErrorf(
+			err, "Failed to create FilterRunner for filter \"%s\". This is a"+
+				" bug.", f.Id)
+	}
+	dummyFilterRunnerConverted, ok := dummyFilterRunner.(*RemoteFilter)
+	if !ok { // Shouldn't happen but just in case it's better to check
+		return WrappedErrorf(
+			"Failed to convert \"%s\" to RemoteFilter. This is a bug.", f.Id)
+	}
+	filterCollection, err := dummyFilterRunnerConverted.SubfilterCollection()
+	if err != nil {
+		return WrapErrorf(
+			err, "Failed to get subfilters of \"%s\" filter.", f.Id)
+	}
+	for i, filter := range filterCollection.Filters {
+		// Overwrite the venvSlot with the parent value
+		err := filter.Check()
+		if err != nil {
+			return WrapErrorf(
+				err, "The check of the %s subfilter of \"%s\" filter failed.",
+				nth(i), f.Id)
+		}
+	}
 	return nil
 }
 
