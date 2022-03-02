@@ -19,6 +19,13 @@ sidebar:
         url: /docs/getting-started
       - title: "Troubleshooting"
         url: /docs/troubleshooting
+
+  - title: Content
+    children:
+      - title: "Standard Filters"
+        url: /docs/standard-filters
+      - title: "Community Filters"
+        url: /docs/community-filters
   - title: Documentation
     children:
       - title: "Configuration File"
@@ -53,9 +60,3 @@ sidebar:
         url: /docs/shell-filters
       - title: "Node JS Filters"
         url: /docs/node-filters
-  - title: Content
-    children:
-      - title: "Standard Filters"
-        url: /docs/standard-filters
-      - title: "Community Filters"
-        url: /docs/community-filters
