@@ -158,16 +158,16 @@ func TestUpdateAndUpdateAll(t *testing.T) {
 	// THE TEST
 	filterName := "hello-version-python-filter"
 	var regolithInstallProjects = map[string]string{
-		"1.0.0":  "testdata/regolith_install/1.0.0",
-		"1.0.1":  "testdata/regolith_install/1.0.1",
-		"latest": "testdata/regolith_install/latest",
+		"1.0.0":  "testdata/regolith_update/1.0.0",
+		"1.0.1":  "testdata/regolith_update/1.0.1",
+		"latest": "testdata/regolith_update/latest",
 
 		// The expected result of the HEAD barnch might change in the future
 		// once the test repository is updated. This means that the test data
 		// also needs to be updated.
-		"HEAD": "testdata/regolith_install/HEAD",
-		"0c129227eb90e2f10a038755e4756fdd47e765e6": "testdata/regolith_install/sha",
-		"TEST_TAG_1": "testdata/regolith_install/tag",
+		"HEAD": "testdata/regolith_update/HEAD",
+		"0c129227eb90e2f10a038755e4756fdd47e765e6": "testdata/regolith_update/sha",
+		"TEST_TAG_1": "testdata/regolith_update/tag",
 	}
 	updateFunctions := map[string]func([]string) error{
 		"update": func(filters []string) error {

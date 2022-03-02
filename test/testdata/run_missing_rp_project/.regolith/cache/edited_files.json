@@ -1,0 +1,12 @@
+{
+	"rp": {
+		"build/RP/": []
+	},
+	"bp": {
+		"build/BP/": [
+			"xample.json",
+			"xample.png",
+			"ested\\example.txt"
+		]
+	}
+}
