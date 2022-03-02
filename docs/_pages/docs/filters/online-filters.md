@@ -11,17 +11,11 @@ Regolith allows custom filters to be placed on GitHub. This is perfect for a fil
 
 The standard [filters library](/regolith/docs/standard-filters) is a good reference for how to structure an online filter, but we will also explain here.
 
-## Running an Online Filter
+## Installing an Online Filter
 
-To add an online filter to your profile, you must write like this:
+To install an online filter, you must do so via its resource identifier, which is similar to a URL: `regolith install <url>`
 
-```json
-{
-  "url": "github.com/username/repository/folder"
-}
-```
-
-You must run `regolith install` before you can compile. This will pull the files into your machine, and the next run will use these cached files. 
+The format is `github.com/username/repository/folder`. For example: `github.com/SirLich/echo-npc-regolith/echo`.
 
 ## Updating an Online Filter
 

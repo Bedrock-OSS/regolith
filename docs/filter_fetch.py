@@ -21,16 +21,9 @@ The Standard Library is a special set of filters, approved or written by the Reg
 
 Please be aware that when running in safe mode, standard filters are the only filters allowed.
 
-## Using a Standard Filter
+## Installing
 
-The syntax for standard filters is like this:
-
-```json
-{
-  "filter": "<filter_name>",
-  "settings" { ... } // Optional
-}
-```
+You may install standard filters by name. For example: `regolith install name_ninja`
 
 """.lstrip()
 
