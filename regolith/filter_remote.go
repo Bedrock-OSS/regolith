@@ -73,13 +73,17 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	absolutePath, _ := filepath.Abs(path)
 	filterCollection, err := f.SubfilterCollection()
 	if err != nil {
-		return err
+		return WrapErrorf(
+			err, "Failed to get subfilters of \"%s\" filter.",
+			f.Id)
 	}
-	for _, filter := range filterCollection.Filters {
+	for i, filter := range filterCollection.Filters {
 		// Overwrite the venvSlot with the parent value
 		err := filter.Run(absolutePath)
 		if err != nil {
-			return err
+			return WrapErrorf(
+				err, "Failed to run the %s subfilter of \"%s\" filter.",
+				nth(i), f.Id)
 		}
 	}
 	return nil

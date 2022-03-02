@@ -179,5 +179,8 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 			}
 			return nil
 		})
-	return err
+	if err != nil {
+		return PassError(err)
+	}
+	return nil
 }
