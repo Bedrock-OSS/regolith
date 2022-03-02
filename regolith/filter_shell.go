@@ -51,7 +51,7 @@ func (f *ShellFilterDefinition) CreateFilterRunner(
 ) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create Java filter.")
+		return nil, WrapError(err, "Failed to create shell filter.")
 	}
 	filter := &ShellFilter{
 		Filter:     *basicFilter,
@@ -67,7 +67,12 @@ func (f *ShellFilterDefinition) InstallDependencies(
 }
 
 func (f *ShellFilterDefinition) Check() error {
-	return checkShellRequirements()
+	shell, _, err := findShell()
+	if err != nil {
+		return WrapError(err, "Shell requirements check failed")
+	}
+	Logger.Debugf("Using shell: %s", shell)
+	return nil
 }
 
 func (f *ShellFilter) Check() error {
@@ -138,12 +143,4 @@ func findShell() (string, string, error) {
 		}
 	}
 	return "", "", WrappedError("Unable to find a valid shell.")
-}
-
-func checkShellRequirements() error {
-	shell, _, err := findShell()
-	if err == nil {
-		Logger.Debugf("Using shell: %s", shell)
-	}
-	return WrapError(err, "Shell requirements check failed")
 }
