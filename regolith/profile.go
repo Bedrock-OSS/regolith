@@ -130,8 +130,7 @@ func RunProfile(profileName string) error {
 		path, _ := filepath.Abs(".")
 		err := filter.Run(path)
 		if err != nil {
-			// TODO: This needs to print which filter failed
-			return WrapErrorf(err, " failed")
+			return WrapError(err, "Failed to run filter.")
 		}
 	}
 
