@@ -168,7 +168,6 @@ func (f *PythonFilterDefinition) resolveVenvPath() (string, error) {
 }
 
 func needsVenv(filterPath string) bool {
-	Logger.Info(filepath.Join(filterPath, "requirements.txt"))
 	stats, err := os.Stat(filepath.Join(filterPath, "requirements.txt"))
 	if err == nil {
 		return !stats.IsDir()
