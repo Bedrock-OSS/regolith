@@ -7,14 +7,12 @@ sidebar:
   nav: "sidebar"
 ---
 
-## Installing and Using Filters
-
 To start using a filter, you need to do four things:
 
- 1) Ensure you can run the filter
- 2) Install the filter
- 3) Add the filter to the profile which you would like to use it.
- 4) Run your profile, to test it out!
+ 1. Ensure you can run the filter
+ 2. Install the filter
+ 3. Add the filter to the profile which you would like to use it.
+ 4. Run your profile, to test it out!
 
 ### Filter Dependencies
 
