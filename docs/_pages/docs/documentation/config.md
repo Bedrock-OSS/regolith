@@ -10,20 +10,26 @@ sidebar:
 The configuration of regolith is stored inside of `config.json`, at the top level of your Regolith project. This file will be created when you run `regolith init`.
 
 ## Project Config Standard
+
 Regolith follows the [Project Config Standard](https://github.com/Bedrock-OSS/project-config-standard). This config is a shared format, used by programs that interact with Minecraft projects, such as [bridge](https://editor.bridge-core.app/).
 
 ## Regolith Configuration
 
-Regolith builds on this standard with the addition of the `regolith` namespace, which is where all regolith-specific information is stored:
+Regolith builds on this standard with the addition of the `regolith` namespace, which is where all regolith-specific information is stored.
+
+{: .notice--warning}
+**Warning:** This page only shows an example configuration. There are other documentation pages to fully explain concepts such as 'filters' and 'profiles'.
 
 Example config, with many options explained:
 
 ```json
 {
   // These fields come from project standard
-  "name": "Project name",
-  "author": "Your name",
+  "name": "Project Name",
+  "author": "Author Name",
   "packs": {
+    // You should create your packs directly within these folders.
+    // Example: 'regolith_project/packs/BP/manifest.json'
     "behaviorPack": "./packs/BP",
     "resourcePack": "./packs/RP"
   },
@@ -33,15 +39,22 @@ Example config, with many options explained:
 
     // Profiles are a list of filters and export information, which can be run with 'regolith run <profile>'
     "profiles": {
+      // 'dev' is the default profile. You can add more.
       "dev": {
-        // Every profile contains a list of filters to run
-        "filters": [
-          // Filter name, as defined in filter_definitions
-          "filter": "name_ninja",
 
-          // Settings object, which configure how name_ninja will run
-          "settings": {
-            "language": "en_GB.lang"
+        // Every profile contains a list of filters to run, in order.
+        "filters": [
+          {
+            // Filter name, as defined in filter_definitions
+            "filter": "name_ninja",
+
+            // Settings object, which configure how name_ninja will run (optional)
+            "settings": {
+              "language": "en_GB.lang"
+          },
+          {
+            // A second filter, which will run after 'name_ninja'
+            "filter": "bump_manifest"
           }
         ],
 
@@ -53,12 +66,18 @@ Example config, with many options explained:
       }
     },
 
-    // Filter definitions contains a full list of installed filters, known to Regolith
+    // Filter definitions contains a full list of installed filters, known to Regolith.
+    // You may install more filters using 'regolith install <identifier>'
     "filterDefinitions": {
       "name_ninja": {
         "version": "1.0"
+      },
+      "bump_manifest": {
+        "version": "1.0"
       }
     },
+
+    // The path to your regolith data folder, which contains configuration files for your filter.
     "dataPath": "./packs/data"
   }
 }
