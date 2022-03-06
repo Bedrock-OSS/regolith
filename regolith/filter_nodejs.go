@@ -75,7 +75,7 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 func (f *NodeJSFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "failed to create Java filter")
+		return nil, WrapError(err, "failed to create NodeJS filter")
 	}
 	filter := &NodeJSFilter{
 		Filter:     *basicFilter,

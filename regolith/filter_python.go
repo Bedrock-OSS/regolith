@@ -45,9 +45,10 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 	defer Logger.Debugf("Executed in %s", time.Since(start))
 
 	// Run filter
-	// command is a list of strings that can possibly run python (it's python3
-	// on some OSs)
-	command := []string{"python", "python3"}
+	pythonCommand, err := findPython()
+	if err != nil {
+		return PassError(err)
+	}
 	scriptPath := filepath.Join(absoluteLocation, f.Definition.Script)
 	if needsVenv(filepath.Dir(scriptPath)) {
 		venvPath, err := f.Definition.resolveVenvPath()
@@ -55,8 +56,8 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 			return WrapError(err, "Failed to resolve venv path.")
 		}
 		Logger.Debug("Running Python filter using venv: ", venvPath)
-		command = []string{
-			filepath.Join(venvPath, venvScriptsPath, "python"+exeSuffix)}
+		pythonCommand = filepath.Join(
+			venvPath, venvScriptsPath, "python"+exeSuffix)
 	}
 	var args []string
 	if len(f.Settings) == 0 {
@@ -67,14 +68,8 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 			[]string{"-u", scriptPath, string(jsonSettings)},
 			f.Arguments...)
 	}
-	var err error
-	for _, c := range command {
-		err = RunSubProcess(
-			c, args, absoluteLocation, GetAbsoluteWorkingDirectory())
-		if err == nil {
-			return nil
-		}
-	}
+	err = RunSubProcess(
+		pythonCommand, args, absoluteLocation, GetAbsoluteWorkingDirectory())
 	if err != nil {
 		return WrapError(err, "Failed to run Python script.")
 	}
@@ -84,7 +79,7 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create Java filter.")
+		return nil, WrapError(err, "Failed to create Python filter.")
 	}
 	filter := &PythonFilter{
 		Filter:     *basicFilter,
@@ -113,13 +108,15 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 			return WrapError(err, "Failed to resolve venv path.")
 		}
 		Logger.Info("Creating venv...")
-		// it's sometimes python3 on some OSs
-		for _, c := range []string{"python", "python3"} {
-			err = RunSubProcess(
-				c, []string{"-m", "venv", venvPath}, filterPath, "")
-			if err == nil {
-				break
-			}
+		pythonCommand, err := findPython()
+		if err != nil {
+			return PassError(err)
+		}
+		// Create the "venv"
+		err = RunSubProcess(
+			pythonCommand, []string{"-m", "venv", venvPath}, filterPath, "")
+		if err != nil {
+			return WrapError(err, "Failed to create venv.")
 		}
 		Logger.Info("Installing pip dependencies...")
 		err = RunSubProcess(
@@ -137,22 +134,11 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 }
 
 func (f *PythonFilterDefinition) Check() error {
-	python := ""
-	var err error
-	for _, c := range []string{"python", "python3"} {
-		_, err = exec.LookPath(c)
-		if err == nil {
-			python = c
-			break
-		}
-	}
+	pythonCommand, err := findPython()
 	if err != nil {
-		return WrapError(
-			nil, // the error woud say something like "python3" doesn't exist but we don't care
-			"Python not found, download and install it from "+
-				"https://www.python.org/downloads/")
+		return PassError(err)
 	}
-	cmd, err := exec.Command(python, "--version").Output()
+	cmd, err := exec.Command(pythonCommand, "--version").Output()
 	if err != nil {
 		return WrapError(err, "Python version check failed.")
 	}
@@ -182,10 +168,22 @@ func (f *PythonFilterDefinition) resolveVenvPath() (string, error) {
 }
 
 func needsVenv(filterPath string) bool {
-	Logger.Info(filepath.Join(filterPath, "requirements.txt"))
 	stats, err := os.Stat(filepath.Join(filterPath, "requirements.txt"))
 	if err == nil {
 		return !stats.IsDir()
 	}
 	return false
+}
+
+func findPython() (string, error) {
+	var err error
+	for _, c := range []string{"python", "python3"} {
+		_, err = exec.LookPath(c)
+		if err == nil {
+			return c, nil
+		}
+	}
+	return "", WrappedError(
+		"Python not found, download and install it from " +
+			"https://www.python.org/downloads/")
 }

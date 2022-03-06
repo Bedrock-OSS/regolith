@@ -16,7 +16,7 @@ var ConfigurationFolders = []string{
 	"packs/RP",
 	".regolith",
 	".regolith/cache",
-	".regolith/venvs",
+	".regolith/cache/venvs",
 }
 
 // Config represents the full configuration file of Regolith, as saved in

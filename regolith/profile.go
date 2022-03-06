@@ -18,12 +18,14 @@ func SetupTmpFiles(config Config, profile Profile) error {
 	Logger.Debug("Cleaning .regolith/tmp")
 	err := os.RemoveAll(".regolith/tmp")
 	if err != nil {
-		return err
+		return WrapError(
+			err, "Unable to clean temporary directory: \".regolith/tmp\".")
 	}
 
 	err = os.MkdirAll(".regolith/tmp", 0666)
 	if err != nil {
-		return err
+		return WrapError(
+			err, "Unable to prepare temporary directory: \"./regolith/tmp\".")
 	}
 
 	// Copy the contents of the 'regolith' folder to '.regolith/tmp'
@@ -42,7 +44,10 @@ func SetupTmpFiles(config Config, profile Profile) error {
 					err = os.MkdirAll(
 						fmt.Sprintf(".regolith/tmp/%s", short_name), 0666)
 					if err != nil {
-						return err
+						return WrapErrorf(
+							err,
+							"Failed to create \".regolith/tmp/%s\" directory.",
+							short_name)
 					}
 				}
 			} else if stats.IsDir() {
@@ -50,18 +55,23 @@ func SetupTmpFiles(config Config, profile Profile) error {
 					path, fmt.Sprintf(".regolith/tmp/%s", short_name),
 					copy.Options{PreserveTimes: false, Sync: false})
 				if err != nil {
-					return err
+					return WrapErrorf(
+						err,
+						"Failed to copy %s %q to \".regolith/tmp/%s\".",
+						descriptive_name, path, short_name)
 				}
 			} else { // The folder paths leads to a file
-				return WrapErrorf(
-					nil, "%s path %q is not a directory",
-					descriptive_name, path)
+				return WrappedErrorf(
+					"%s path %q is not a directory", descriptive_name, path)
 			}
 		} else {
 			err = os.MkdirAll(
 				fmt.Sprintf(".regolith/tmp/%s", short_name), 0666)
 			if err != nil {
-				return err
+				return WrapErrorf(
+					err,
+					"Failed to create \".regolith/tmp/%s\" directory.",
+					short_name)
 			}
 		}
 		return nil
@@ -69,15 +79,18 @@ func SetupTmpFiles(config Config, profile Profile) error {
 
 	err = setup_tmp_directory(config.ResourceFolder, "RP", "resource folder")
 	if err != nil {
-		return err
+		return WrapErrorf(
+			err, "Failed to setup resource folder in the temporary directory.")
 	}
 	err = setup_tmp_directory(config.BehaviorFolder, "BP", "behavior folder")
 	if err != nil {
-		return err
+		return WrapErrorf(
+			err, "Failed to setup behavior folder in the temporary directory.")
 	}
 	err = setup_tmp_directory(config.DataPath, "data", "data folder")
 	if err != nil {
-		return err
+		return WrapErrorf(
+			err, "Failed to setup data folder in the temporary directory.")
 	}
 
 	Logger.Debug("Setup done in ", time.Since(start))
@@ -101,7 +114,7 @@ func RunProfile(profileName string) error {
 	for _, f := range profile.Filters {
 		err := f.Check()
 		if err != nil {
-			return err
+			return WrapErrorf(err, "Filter check failed.")
 		}
 	}
 
@@ -117,8 +130,7 @@ func RunProfile(profileName string) error {
 		path, _ := filepath.Abs(".")
 		err := filter.Run(path)
 		if err != nil {
-			// TODO: This needs to print which filter failed
-			return WrapErrorf(err, " failed")
+			return WrapError(err, "Failed to run filter.")
 		}
 	}
 
