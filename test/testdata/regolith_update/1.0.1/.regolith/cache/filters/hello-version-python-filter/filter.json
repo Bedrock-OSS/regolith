@@ -1,0 +1,10 @@
+{
+	"filters": [
+		{
+			"name": "regolith-test-filters: Hello Version Python Filter",
+			"runWith": "python",
+			"script": "./main.py"
+		}
+	],
+	"version": "1.0.1"
+}

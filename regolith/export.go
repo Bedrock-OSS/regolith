@@ -142,7 +142,12 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 			"Failed to create a list of files edited by this 'regolith run'")
 	}
 	err = editedFiles.Dump()
-	return err
+	if err != nil {
+		return WrapError(
+			err, "Failed to update the list of the files edited by Regolith."+
+				"This may cause the next run to fail.")
+	}
+	return nil
 }
 
 // MoveOrCopy tries to move the the source to destination first and in case
