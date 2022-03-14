@@ -8,10 +8,10 @@ intro:
 cards:
   - image_path: assets/images/homepage/fast.png
     title: "Blazingly Fast"
-    excerpt: "Regolith can improve your velocity by automating away boring or repetitive tasks."
+    excerpt: "Regolith can improve your productivity by automating away boring or repetitive tasks."
   - image_path: /assets/images/homepage/powerful.png
     title: "Flexible"
-    excerpt: "Regolith is designed with a language agnostic, tool agnostic feature set. The flexibility of Regolith allows you to bring all scripts and tools under a single, unified workflow."
+    excerpt: "Regolith is designed with a language-agnostic, tool-agnostic feature set. The flexibility of Regolith allows you to bring all scripts and tools under a single, unified workflow."
   - image_path: /assets/images/homepage/simple.png
     title: "Version Control Friendly"
     excerpt: "Regolith keeps the 'source of truth' out of your com.mojang folder, allowing for seamless git integration."

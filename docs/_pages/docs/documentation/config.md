@@ -18,7 +18,7 @@ Regolith follows the [Project Config Standard](https://github.com/Bedrock-OSS/pr
 Regolith builds on this standard with the addition of the `regolith` namespace, which is where all regolith-specific information is stored.
 
 {: .notice--warning}
-**Warning:** This page only shows an example configuration. There are other documentation pages to fully explain concepts such as 'filters' and 'profiles'.
+**Warning:** This page only shows an example configuration. There are other documentation pages to fully explain concepts such as `filters` and `profiles`.
 
 Example config, with many options explained:
 
