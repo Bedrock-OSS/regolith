@@ -47,3 +47,11 @@ The most common reason Regolith will crash is from a broken filter. The first st
 
 Filter errors will be printed like `[filter][error] ... `.
 
+## Python Not Found
+
+If you get a message like `[+]: Python not found, download and install it from https://www.python.org/downloads/`, this means that Python either not installed, or is not available on the path. 
+
+We provide [installation instructions](regolith/docs/python-filters), to help you get Python installed correctly on your system. Please be aware that Python installed via the Microsoft Store will not work with Regolith, as it generally doesn't add itself to path.
+
+
+
