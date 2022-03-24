@@ -1,8 +1,8 @@
 package regolith
 
 import (
-	"encoding/json"
 	"io/ioutil"
+	"muzzammil.xyz/jsonc"
 )
 
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
@@ -64,7 +64,7 @@ func LoadConfigAsMap() (map[string]interface{}, error) {
 			ConfigFilePath)
 	}
 	var configJson map[string]interface{}
-	err = json.Unmarshal(file, &configJson)
+	err = jsonc.Unmarshal(file, &configJson)
 	if err != nil {
 		return nil, WrapErrorf(
 			err, "Could not load %q as a JSON file.", ConfigFilePath)
