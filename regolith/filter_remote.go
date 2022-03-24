@@ -367,13 +367,13 @@ func (f *RemoteFilterDefinition) Update() error {
 	installedVersion, err := f.InstalledVersion()
 	installedVersion = trimFilterPrefix(installedVersion, f.Id)
 	if err != nil {
-		Logger.Warnf("Unable to get installed version of %q filter.", f.Id)
+		Logger.Warnf("Unable to get installed version of filter %q.", f.Id)
 	}
 	version, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
 	version = trimFilterPrefix(version, f.Id)
 	if err != nil {
 		return WrapErrorf(
-			err, "Unable to check for updates for %q filter.", f.Id)
+			err, "Unable to check for updates for filter %q.", f.Id)
 	}
 	if installedVersion != version {
 		Logger.Infof(
@@ -386,8 +386,8 @@ func (f *RemoteFilterDefinition) Update() error {
 		Logger.Infof("Filter %q updated successfully.", f.Id)
 	} else {
 		Logger.Infof(
-			"Filter %q is up to date. Instaleld version: %q. Skipped update.",
-			f.Id, version)
+			"Filter %q is up to date. Installed version: %q.",
+			f.Id, installedVersion)
 	}
 	return nil
 }
