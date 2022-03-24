@@ -51,4 +51,5 @@ require (
 	google.golang.org/genproto v0.0.0-20220118154757-00ab72f36ad5 // indirect
 	google.golang.org/grpc v1.43.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
+	muzzammil.xyz/jsonc v0.0.0-20211230184646-baf1f7156737 // indirect
 )

@@ -21,7 +21,7 @@ type NodeJSFilter struct {
 }
 
 func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*NodeJSFilterDefinition, error) {
-	filter := &NodeJSFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
+	filter := &NodeJSFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id, obj)}
 	script, ok := obj["script"].(string)
 	if !ok {
 		return nil, WrappedErrorf(
@@ -47,7 +47,11 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 			append([]string{
 				absoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script},
-				f.Arguments...),
+				append(
+					f.Definition.Arguments,
+					f.Arguments...,
+				)...,
+			),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 		)
@@ -61,7 +65,10 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 			append([]string{
 				absoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
-				string(jsonSettings)}, f.Arguments...),
+				string(jsonSettings)}, append(
+				f.Definition.Arguments,
+				f.Arguments...,
+			)...),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 		)

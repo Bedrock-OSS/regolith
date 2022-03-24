@@ -23,7 +23,7 @@ func ShellFilterDefinitionFromObject(
 	id string, obj map[string]interface{},
 ) (*ShellFilterDefinition, error) {
 	filter := &ShellFilterDefinition{
-		FilterDefinition: *FilterDefinitionFromObject(id)}
+		FilterDefinition: *FilterDefinitionFromObject(id, obj)}
 	command, ok := obj["command"].(string)
 	if !ok {
 		return nil, WrapErrorf(
@@ -94,13 +94,20 @@ func runShellFilter(
 	var err error = nil
 	if len(settings) == 0 {
 		err = executeCommand(
-			filter.Definition.Command, filter.Arguments, absoluteLocation,
+			filter.Definition.Command,
+			append(
+				filter.Definition.Arguments,
+				filter.Arguments...,
+			), absoluteLocation,
 			GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
 		err = executeCommand(
 			filter.Definition.Command,
-			append([]string{string(jsonSettings)}, filter.Arguments...),
+			append([]string{string(jsonSettings)}, append(
+				filter.Definition.Arguments,
+				filter.Arguments...,
+			)...),
 			absoluteLocation, GetAbsoluteWorkingDirectory())
 	}
 	if err != nil {
