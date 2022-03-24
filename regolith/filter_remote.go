@@ -29,7 +29,7 @@ type RemoteFilter struct {
 }
 
 func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*RemoteFilterDefinition, error) {
-	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id, obj)}
+	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	url, ok := obj["url"].(string)
 	if !ok {
 		result.Url = StandardLibraryUrl
@@ -178,14 +178,6 @@ func (f *RemoteFilterDefinition) Check() error {
 
 func (f *RemoteFilter) Check() error {
 	return f.Definition.Check()
-}
-
-func (f *RemoteFilter) CopyArguments(parent *RemoteFilter) {
-	// We don't support nested remote filters anymore so this function is
-	// never called.
-	f.Arguments = parent.Arguments
-	f.Settings = parent.Settings
-	f.Definition.VenvSlot = parent.Definition.VenvSlot
 }
 
 // CopyFilterData copies the filter's data to the data folder.

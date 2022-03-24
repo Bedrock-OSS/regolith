@@ -21,7 +21,7 @@ type NodeJSFilter struct {
 }
 
 func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*NodeJSFilterDefinition, error) {
-	filter := &NodeJSFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id, obj)}
+	filter := &NodeJSFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
 		return nil, WrappedErrorf(
@@ -47,10 +47,7 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 			append([]string{
 				absoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script},
-				append(
-					f.Definition.Arguments,
-					f.Arguments...,
-				)...,
+				f.Arguments...,
 			),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
@@ -65,10 +62,7 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 			append([]string{
 				absoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
-				string(jsonSettings)}, append(
-				f.Definition.Arguments,
-				f.Arguments...,
-			)...),
+				string(jsonSettings)}, f.Arguments...),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 		)
@@ -134,11 +128,6 @@ func (f *NodeJSFilterDefinition) Check() error {
 
 func (f *NodeJSFilter) Check() error {
 	return f.Definition.Check()
-}
-
-func (f *NodeJSFilter) CopyArguments(parent *RemoteFilter) {
-	f.Arguments = parent.Arguments
-	f.Settings = parent.Settings
 }
 
 func hasPackageJson(filterPath string) bool {

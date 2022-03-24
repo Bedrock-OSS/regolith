@@ -22,7 +22,7 @@ type PythonFilter struct {
 }
 
 func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*PythonFilterDefinition, error) {
-	filter := &PythonFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id, obj)}
+	filter := &PythonFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
 		return nil, WrapErrorf(
@@ -61,18 +61,12 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 	}
 	var args []string
 	if len(f.Settings) == 0 {
-		args = append([]string{"-u", scriptPath}, append(
-			f.Definition.Arguments,
-			f.Arguments...,
-		)...)
+		args = append([]string{"-u", scriptPath}, f.Arguments...)
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
 		args = append(
 			[]string{"-u", scriptPath, string(jsonSettings)},
-			append(
-				f.Definition.Arguments,
-				f.Arguments...,
-			)...,
+			f.Arguments...,
 		)
 	}
 	err = RunSubProcess(
@@ -159,7 +153,7 @@ func (f *PythonFilter) Check() error {
 }
 
 func (f *PythonFilter) CopyArguments(parent *RemoteFilter) {
-	f.Arguments = parent.Arguments
+	f.Arguments = append(f.Arguments, parent.Arguments...)
 	f.Settings = parent.Settings
 	f.Definition.VenvSlot = parent.Definition.VenvSlot
 }
