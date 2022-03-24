@@ -22,7 +22,7 @@ type NimFilter struct {
 func NimFilterDefinitionFromObject(
 	id string, obj map[string]interface{},
 ) (*NimFilterDefinition, error) {
-	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id, obj)}
+	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
 		return nil, WrappedErrorf(
@@ -49,10 +49,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			append([]string{
 				"-r", "c", "--hints:off", "--warnings:off",
 				absoluteLocation + string(os.PathSeparator) + f.Definition.Script},
-				append(
-					f.Definition.Arguments,
-					f.Arguments...,
-				)...,
+				f.Arguments...,
 			),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
@@ -69,10 +66,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 				absoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
 				string(jsonSettings)},
-				append(
-					f.Definition.Arguments,
-					f.Arguments...,
-				)...),
+				f.Arguments...),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 		)
@@ -140,11 +134,6 @@ func (f *NimFilterDefinition) Check() error {
 
 func (f *NimFilter) Check() error {
 	return f.Definition.Check()
-}
-
-func (f *NimFilter) CopyArguments(parent *RemoteFilter) {
-	f.Arguments = parent.Arguments
-	f.Settings = parent.Settings
 }
 
 func hasNimble(filterPath string) bool {

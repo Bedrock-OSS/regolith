@@ -23,7 +23,7 @@ func ShellFilterDefinitionFromObject(
 	id string, obj map[string]interface{},
 ) (*ShellFilterDefinition, error) {
 	filter := &ShellFilterDefinition{
-		FilterDefinition: *FilterDefinitionFromObject(id, obj)}
+		FilterDefinition: *FilterDefinitionFromObject(id)}
 	command, ok := obj["command"].(string)
 	if !ok {
 		return nil, WrapErrorf(
@@ -79,11 +79,6 @@ func (f *ShellFilter) Check() error {
 	return f.Definition.Check()
 }
 
-func (f *ShellFilter) CopyArguments(parent *RemoteFilter) {
-	f.Arguments = parent.Arguments
-	f.Settings = parent.Settings
-}
-
 var shells = [][]string{
 	{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"}, {"sh", "-c"}}
 
@@ -95,19 +90,13 @@ func runShellFilter(
 	if len(settings) == 0 {
 		err = executeCommand(
 			filter.Definition.Command,
-			append(
-				filter.Definition.Arguments,
-				filter.Arguments...,
-			), absoluteLocation,
+			filter.Arguments, absoluteLocation,
 			GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
 		err = executeCommand(
 			filter.Definition.Command,
-			append([]string{string(jsonSettings)}, append(
-				filter.Definition.Arguments,
-				filter.Arguments...,
-			)...),
+			append([]string{string(jsonSettings)}, filter.Arguments...),
 			absoluteLocation, GetAbsoluteWorkingDirectory())
 	}
 	if err != nil {
