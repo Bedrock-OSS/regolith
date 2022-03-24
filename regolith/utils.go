@@ -91,12 +91,19 @@ func PassError(err error) error {
 
 // NotImplementedError is used by default functions, that need implementation.
 func NotImplementedError(text string) error {
-	return WrappedErrorf("Function not implemented: %s", text)
+	text = fmt.Sprintf("Function not implemented: %s", text)
+	return wrapErrorStackTrace(nil, text)
 }
 
 // VersionMismatchError is used when cached filter version doesn't match the one required by config.
 func VersionMismatchError(id string, requiredVersion string, cachedVersion string) error {
-	return WrappedErrorf("Installation missmatch for '%s' detected.\nInstalled version: %s\nRequired version: %s\nUpdate the filter using: 'regolith update %[1]s'", id, cachedVersion, requiredVersion)
+	text := fmt.Sprintf(
+		"Installation missmatch for '%s' detected.\n"+
+			"Installed version: %s\n"+
+			"Required version: %s\n"+
+			"Update the filter using: 'regolith update %[1]s'",
+		id, cachedVersion, requiredVersion)
+	return wrapErrorStackTrace(nil, text)
 }
 
 // WrappedError creates an error with a stack trace from text.
