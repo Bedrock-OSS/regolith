@@ -142,6 +142,7 @@ func main() {
 	result := <-status
 	if result.Err != nil {
 		regolith.Logger.Warn("Update check failed")
+		regolith.Logger.Debug(result.Err)
 	} else if result.ShouldUpdate {
 		_, _ = fmt.Fprintln(color.Output, color.GreenString("New version available!"))
 		_, _ = fmt.Fprintln(color.Output, color.GreenString(*result.Url))
