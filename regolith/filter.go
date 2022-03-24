@@ -1,8 +1,7 @@
 package regolith
 
 type FilterDefinition struct {
-	Id        string   `json:"-"`
-	Arguments []string `json:"-"`
+	Id string `json:"-"`
 }
 
 type Filter struct {
@@ -13,16 +12,8 @@ type Filter struct {
 	Settings    map[string]interface{} `json:"settings,omitempty"`
 }
 
-func FilterDefinitionFromObject(id string, obj map[string]interface{}) *FilterDefinition {
-	arguments, ok := obj["arguments"].([]interface{})
-	if !ok {
-		arguments = nil
-	}
-	s := make([]string, len(arguments))
-	for i, v := range arguments {
-		s[i] = v.(string)
-	}
-	return &FilterDefinition{Id: id, Arguments: s}
+func FilterDefinitionFromObject(id string) *FilterDefinition {
+	return &FilterDefinition{Id: id}
 }
 
 func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
@@ -71,6 +62,19 @@ type FilterRunner interface {
 	CopyArguments(parent *RemoteFilter)
 	Run(absoluteLocation string) error
 	Check() error
+}
+
+func (f *Filter) CopyArguments(parent *RemoteFilter) {
+	f.Arguments = append(f.Arguments, parent.Arguments...)
+	f.Settings = parent.Settings
+}
+
+func (f *Filter) Check() error {
+	return NotImplementedError("Check")
+}
+
+func (f *Filter) Run(absoluteLocation string) error {
+	return NotImplementedError("Run")
 }
 
 func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterInstaller, error) {

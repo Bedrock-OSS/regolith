@@ -89,6 +89,18 @@ func PassError(err error) error {
 	return errors.New(text)
 }
 
+// NotImplementedError is used by default functions, that need implementation.
+func NotImplementedError(text string) error {
+	text = fmt.Sprintf("Function not implemented: %s", text)
+	if printStackTraces {
+		pc, fn, line, _ := runtime.Caller(1)
+		text = fmt.Sprintf(
+			"%s\n   [%s] %s:%d", text, runtime.FuncForPC(pc).Name(),
+			filepath.Base(fn), line)
+	}
+	return errors.New(text)
+}
+
 // WrappedError creates an error with a stack trace from text.
 func WrappedError(text string) error {
 	return wrapErrorStackTrace(nil, text)
