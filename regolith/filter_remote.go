@@ -29,7 +29,7 @@ type RemoteFilter struct {
 }
 
 func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*RemoteFilterDefinition, error) {
-	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
+	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id, obj)}
 	url, ok := obj["url"].(string)
 	if !ok {
 		result.Url = StandardLibraryUrl

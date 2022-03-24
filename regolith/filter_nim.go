@@ -22,7 +22,7 @@ type NimFilter struct {
 func NimFilterDefinitionFromObject(
 	id string, obj map[string]interface{},
 ) (*NimFilterDefinition, error) {
-	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
+	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id, obj)}
 	script, ok := obj["script"].(string)
 	if !ok {
 		return nil, WrappedErrorf(
@@ -49,7 +49,10 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			append([]string{
 				"-r", "c", "--hints:off", "--warnings:off",
 				absoluteLocation + string(os.PathSeparator) + f.Definition.Script},
-				f.Arguments...,
+				append(
+					f.Definition.Arguments,
+					f.Arguments...,
+				)...,
 			),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
@@ -66,7 +69,10 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 				absoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
 				string(jsonSettings)},
-				f.Arguments...),
+				append(
+					f.Definition.Arguments,
+					f.Arguments...,
+				)...),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 		)

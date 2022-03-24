@@ -22,7 +22,7 @@ type PythonFilter struct {
 }
 
 func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*PythonFilterDefinition, error) {
-	filter := &PythonFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
+	filter := &PythonFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id, obj)}
 	script, ok := obj["script"].(string)
 	if !ok {
 		return nil, WrapErrorf(
@@ -61,12 +61,19 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 	}
 	var args []string
 	if len(f.Settings) == 0 {
-		args = append([]string{"-u", scriptPath}, f.Arguments...)
+		args = append([]string{"-u", scriptPath}, append(
+			f.Definition.Arguments,
+			f.Arguments...,
+		)...)
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
 		args = append(
 			[]string{"-u", scriptPath, string(jsonSettings)},
-			f.Arguments...)
+			append(
+				f.Definition.Arguments,
+				f.Arguments...,
+			)...,
+		)
 	}
 	err = RunSubProcess(
 		pythonCommand, args, absoluteLocation, GetAbsoluteWorkingDirectory())

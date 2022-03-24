@@ -1,7 +1,8 @@
 package regolith
 
 type FilterDefinition struct {
-	Id string `json:"-"`
+	Id        string   `json:"-"`
+	Arguments []string `json:"-"`
 }
 
 type Filter struct {
@@ -12,8 +13,16 @@ type Filter struct {
 	Settings    map[string]interface{} `json:"settings,omitempty"`
 }
 
-func FilterDefinitionFromObject(id string) *FilterDefinition {
-	return &FilterDefinition{Id: id}
+func FilterDefinitionFromObject(id string, obj map[string]interface{}) *FilterDefinition {
+	arguments, ok := obj["arguments"].([]interface{})
+	if !ok {
+		arguments = nil
+	}
+	s := make([]string, len(arguments))
+	for i, v := range arguments {
+		s[i] = v.(string)
+	}
+	return &FilterDefinition{Id: id, Arguments: s}
 }
 
 func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
@@ -25,8 +34,15 @@ func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
 	disabled, _ := obj["disabled"].(bool)
 	filter.Disabled = disabled
 	// Arguments
-	arguments, _ := obj["arguments"].([]string)
-	filter.Arguments = arguments
+	arguments, ok := obj["arguments"].([]interface{})
+	if !ok {
+		arguments = nil
+	}
+	s := make([]string, len(arguments))
+	for i, v := range arguments {
+		s[i] = v.(string)
+	}
+	filter.Arguments = s
 	// Settings
 	settings, _ := obj["settings"].(map[string]interface{})
 	filter.Settings = settings
