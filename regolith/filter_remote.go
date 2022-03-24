@@ -69,6 +69,14 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 			"Filter is not downloaded. Please run \"regolith install\".")
 	}
 
+	version, err := f.GetCachedVersion()
+	if err != nil {
+		return WrapErrorf(err, "Failed to get the cached version of filter %s!", f.Id)
+	}
+	if f.Definition.Version != "HEAD" && f.Definition.Version != "latest" && f.Definition.Version != *version {
+		return VersionMismatchError(f.Id, f.Definition.Version, *version)
+	}
+
 	path := f.GetDownloadPath()
 	absolutePath, _ := filepath.Abs(path)
 	filterCollection, err := f.SubfilterCollection()
@@ -227,6 +235,29 @@ func (f *RemoteFilter) GetDownloadPath() string {
 func (f *RemoteFilter) IsCached() bool {
 	_, err := os.Stat(f.GetDownloadPath())
 	return err == nil
+}
+
+// GetCachedVersion returns cached version of the remote filter.
+func (f *RemoteFilter) GetCachedVersion() (*string, error) {
+	path := filepath.Join(f.GetDownloadPath(), "filter.json")
+	file, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		return nil, WrapErrorf(err, "Couldn't read \"%s\".", path)
+	}
+
+	var filterCollection map[string]interface{}
+	err = json.Unmarshal(file, &filterCollection)
+	if err != nil {
+		return nil, WrapErrorf(
+			err, "Couldn't load \"%s\"! Does the file contain correct json?",
+			path)
+	}
+	version, ok := filterCollection["version"].(string)
+	if !ok {
+		return nil, WrappedErrorf("Couldn't find version field!")
+	}
+	return &version, nil
 }
 
 // FilterDefinitionFromTheInternet downloads a filter from the internet and
