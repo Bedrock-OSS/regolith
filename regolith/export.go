@@ -25,6 +25,17 @@ func GetExportPaths(
 		// I for example always name my packs "0".
 		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
 		rpPath = comMojang + "/development_resource_packs/" + name + "_rp"
+	} else if exportTarget.Target == "preview" {
+		comMojang, err := FindPreviewDir()
+		if err != nil {
+			return "", "", WrapError(
+				err, "Failed to find preview \"com.mojang\" directory.")
+		}
+
+		// TODO - I don't like the _rp and _bp sufixes. Can we get rid of that?
+		// I for example always name my packs "0".
+		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
+		rpPath = comMojang + "/development_resource_packs/" + name + "_rp"
 	} else if exportTarget.Target == "exact" {
 		bpPath = exportTarget.BpPath
 		rpPath = exportTarget.RpPath

@@ -74,3 +74,13 @@ Example:
     "worldPath": "..."   // OR this
 }
 ```
+
+## Preview
+
+The development export target will place the compiled packs into your (minecraft preview) `com.mojang` `development_*_packs` folder, in a new folder called `<name>_BP` or `<name>_RP`.
+
+```json
+"export": {
+    "target": "preview"
+}
+```
