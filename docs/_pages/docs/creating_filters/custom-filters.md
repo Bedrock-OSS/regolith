@@ -25,16 +25,40 @@ Once this folder is created, you can add your scripts here. You can organize wit
 
 The accepted flow for Regolith is to store configuration scripts and configs inside of the `data` folder. This folder has special support that makes it easy to access during compilation. Read more about the data folder [here](/regolith/docs/data-folder).
 
-## Running Custom Filter
+## Registering Custom Filter
 
-Now you can register your script by placing the following into your profile filters list, just like a standard filter.
-
-Example:
+Now you can register your script by placing the filter into `filterDefinitions`. Here is a full example, which defines a new filter named "test", and runs it in the "dev" profile.
 
 ```json
 {
-  "runWith": "python",
-  "script": "./filters/hello_world.py"
+  "name": "example",
+  "author": "example",
+  "packs": {
+    "behaviorPack": "./packs/BP",
+    "resourcePack": "./packs/RP"
+  },
+  "regolith": {
+    "profiles": {
+      "dev": {
+        "filters": [
+          {
+            "filter": "test"
+          }
+        ],
+        "export": {
+          "target": "local",
+          "readOnly": false
+        }
+      }
+    },
+    "filterDefinitions": {
+      "test": {
+        "runWith": "python",
+        "script": "./filters/test.py"
+      }
+    },
+    "dataPath": "./packs/data"
+  }
 }
 ```
 
@@ -45,7 +69,7 @@ You can use the following "runWith" types:
  - [nim](/regolith/docs/nim-filters)
  - [shell](/regolith/docs/shell-filters)
 
-Please see the dedicated pages for these run-types for more information. TODO
+Please see the dedicated pages for these run-types for more information!
 
 ## Filter Arguments
 
@@ -84,6 +108,6 @@ This will generate: `python ./filters/message.py {'message':'Hello World!'}`
 
 This is useful for passing user-defined settings into your filter. Simply handle the first argument in the argument array, and interpret it as json!
 
-## Filter environment variables
+## Filter Environment Variables
 
-Every filter process ran by regolith has an additional environment variable, called `FILTER_DIR`. This environment variable contains an absolute path to the cache directory, where currently ran filter is.
+Every filter process ran by regolith has an additional environment variable, called `FILTER_DIR`. This environment variable contains an absolute path to the cache directory, where currently ran filter is. You may use this to build out additional behavior, if desired.

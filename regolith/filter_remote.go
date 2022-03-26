@@ -29,7 +29,7 @@ type RemoteFilter struct {
 }
 
 func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*RemoteFilterDefinition, error) {
-	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id, obj)}
+	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	url, ok := obj["url"].(string)
 	if !ok {
 		result.Url = StandardLibraryUrl
@@ -67,6 +67,14 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 	if !f.IsCached() {
 		return WrappedErrorf(
 			"Filter is not downloaded. Please run \"regolith install\".")
+	}
+
+	version, err := f.GetCachedVersion()
+	if err != nil {
+		return WrapErrorf(err, "Failed to get the cached version of filter %s!", f.Id)
+	}
+	if f.Definition.Version != "HEAD" && f.Definition.Version != "latest" && f.Definition.Version != *version {
+		return VersionMismatchError(f.Id, f.Definition.Version, *version)
 	}
 
 	path := f.GetDownloadPath()
@@ -180,14 +188,6 @@ func (f *RemoteFilter) Check() error {
 	return f.Definition.Check()
 }
 
-func (f *RemoteFilter) CopyArguments(parent *RemoteFilter) {
-	// We don't support nested remote filters anymore so this function is
-	// never called.
-	f.Arguments = parent.Arguments
-	f.Settings = parent.Settings
-	f.Definition.VenvSlot = parent.Definition.VenvSlot
-}
-
 // CopyFilterData copies the filter's data to the data folder.
 func (f *RemoteFilterDefinition) CopyFilterData(dataPath string) {
 	// Move filters 'data' folder contents into 'data'
@@ -235,6 +235,29 @@ func (f *RemoteFilter) GetDownloadPath() string {
 func (f *RemoteFilter) IsCached() bool {
 	_, err := os.Stat(f.GetDownloadPath())
 	return err == nil
+}
+
+// GetCachedVersion returns cached version of the remote filter.
+func (f *RemoteFilter) GetCachedVersion() (*string, error) {
+	path := filepath.Join(f.GetDownloadPath(), "filter.json")
+	file, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		return nil, WrapErrorf(err, "Couldn't read \"%s\".", path)
+	}
+
+	var filterCollection map[string]interface{}
+	err = json.Unmarshal(file, &filterCollection)
+	if err != nil {
+		return nil, WrapErrorf(
+			err, "Couldn't load \"%s\"! Does the file contain correct json?",
+			path)
+	}
+	version, ok := filterCollection["version"].(string)
+	if !ok {
+		return nil, WrappedErrorf("Couldn't find version field!")
+	}
+	return &version, nil
 }
 
 // FilterDefinitionFromTheInternet downloads a filter from the internet and
@@ -367,13 +390,13 @@ func (f *RemoteFilterDefinition) Update() error {
 	installedVersion, err := f.InstalledVersion()
 	installedVersion = trimFilterPrefix(installedVersion, f.Id)
 	if err != nil {
-		Logger.Warnf("Unable to get installed version of %q filter.", f.Id)
+		Logger.Warnf("Unable to get installed version of filter %q.", f.Id)
 	}
 	version, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
 	version = trimFilterPrefix(version, f.Id)
 	if err != nil {
 		return WrapErrorf(
-			err, "Unable to check for updates for %q filter.", f.Id)
+			err, "Unable to check for updates for filter %q.", f.Id)
 	}
 	if installedVersion != version {
 		Logger.Infof(
@@ -386,8 +409,8 @@ func (f *RemoteFilterDefinition) Update() error {
 		Logger.Infof("Filter %q updated successfully.", f.Id)
 	} else {
 		Logger.Infof(
-			"Filter %q is up to date. Instaleld version: %q. Skipped update.",
-			f.Id, version)
+			"Filter %q is up to date. Installed version: %q.",
+			f.Id, installedVersion)
 	}
 	return nil
 }
