@@ -19,7 +19,7 @@ type JavaFilter struct {
 }
 
 func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*JavaFilterDefinition, error) {
-	filter := &JavaFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id, obj)}
+	filter := &JavaFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["script"].(string)
 	if !ok {
 		return nil, WrappedErrorf(
@@ -49,10 +49,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 					"-jar", absoluteLocation + string(os.PathSeparator) +
 						f.Definition.Script,
 				},
-				append(
-					f.Definition.Arguments,
-					f.Arguments...,
-				)...,
+				f.Arguments...,
 			),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
@@ -68,10 +65,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 				[]string{
 					"-jar", absoluteLocation + string(os.PathSeparator) +
 						f.Definition.Script, string(jsonSettings)},
-				append(
-					f.Definition.Arguments,
-					f.Arguments...,
-				)...,
+				f.Arguments...,
 			),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
@@ -122,9 +116,4 @@ func (f *JavaFilterDefinition) Check() error {
 
 func (f *JavaFilter) Check() error {
 	return f.Definition.Check()
-}
-
-func (f *JavaFilter) CopyArguments(parent *RemoteFilter) {
-	f.Arguments = parent.Arguments
-	f.Settings = parent.Settings
 }

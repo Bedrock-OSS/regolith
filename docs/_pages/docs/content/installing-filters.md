@@ -26,7 +26,7 @@ Regolith contains a powerful installation command, which will download a filter 
 
 `regolith install <filter_identifier>`
 
-The value of `filter_identifier` will depend on where the filter is hosted. This is explained bellow.
+The value of `filter_identifier` will depend on where the filter is hosted, but in general the format is: `github.com/<user>/<repository>/<folder>`
 
 {: .notice--warning}
 The `install` command relies on `git`. [You may download git here](https://git-scm.com/download/win).
@@ -62,19 +62,19 @@ The full list of available standard-library filters can be found [here](/regolit
 To install, you may use the name directly: e.g., `regolith install json_cleaner`
 
 {: .notice--warning}
-This  is equivalent to `regolith install https://github.com/Bedrock-OSS/regolith-filters/tree/master/json_cleaner`, but since it's hosted in our repository, you can just use `json_cleaner`!
+This  is equivalent to `regolith install github.com/Bedrock-OSS/regolith-filters/json_cleaner`, but since it's hosted in our repository, you can just use `json_cleaner`!
 
 ### Community Filters
 
-Community filters use the same format as standard filters, except instead of being hosted in our library repository, they can be contained in any github repository. To install a community filter, you will need to use the full URL:
+Community filters use the same format as standard filters, except instead of being hosted in our library repository, they can be contained in any github repository. To install a community filter, you will need to use the full identifier:
 
-Example: `regolith install https://github.com/Bedrock-OSS/regolith-filters/tree/master/json_cleaner`
+Example: `regolith install github.com/Bedrock-OSS/regolith-filters/json_cleaner`
 
 ## Install All
 
-Regolith is intended to be used with git version control, and by default the `.regolith` folder is ignored. That means that when you collaborate on a project, or simply re-clone your existing projects, you will need an easy way to download all the filters again. 
+Regolith is intended to be used with git version control, and by default the `.regolith` folder is ignored. That means that when you collaborate on a project, or simply re-clone your existing projects, you will need an easy way to download all the filters again!
 
-You may use the command `regolith install-all`, which will check `config.json`, and install every filter in the `filter_definitions`.
+You may use the command `regolith install-all`, which will check `config.json`, and install every filter in the `filterDefinitions`.
 
 {: .notice--warning}
 This is only intended to be used with existing projects. To install new filters, use `regolith install`.
@@ -105,7 +105,7 @@ Optionally, you may mark filters as `unpinned`, which signifies that your projec
 
 ### Updating your Filters
 
-This feature exists, but is undocumented ⛄
+Generally speaking, updating your filters only makes sense when you're working with unpinned versions. Pinned filters will always report themselves as up to date, unless you explicitly ask for a new version.
 
 Commands:
  - `regolith update <filter_name>`
