@@ -1,0 +1,30 @@
+{
+  "name": "exe_filter_test_project",
+  "author": "Bedrock-OSS",
+  "packs": {
+    "behaviorPack": "./packs/BP",
+    "resourcePack": "./packs/RP"
+  },
+  "regolith": {
+    "profiles": {
+      "dev": {
+        "filters": [
+          {
+            "filter": "test_exe_filter"
+          }
+        ],
+        "export": {
+          "target": "local",
+          "readOnly": false
+        }
+      }
+    },
+    "filterDefinitions": {
+      "test_exe_filter": {
+        "runWith": "exe",
+        "exe": "./executables/test_exe_filter"
+      } 
+    },
+    "dataPath": "./packs/data"
+  }
+}
