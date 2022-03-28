@@ -12,7 +12,7 @@ require (
 	go.uber.org/zap v1.21.0
 	golang.org/x/mod v0.5.1
 	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8
-	muzzammil.xyz/jsonc v0.0.0-20211230184646-baf1f7156737
+	muzzammil.xyz/jsonc v1.0.0
 )
 
 require (
