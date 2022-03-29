@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type PythonFilterDefinition struct {
@@ -35,15 +34,6 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 }
 
 func (f *PythonFilter) Run(absoluteLocation string) error {
-	// Disabled filters are skipped
-	if f.Disabled {
-		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
-		return nil
-	}
-	Logger.Infof("Running filter %s", f.Id)
-	start := time.Now()
-	defer Logger.Debugf("Executed in %s", time.Since(start))
-
 	// Run filter
 	pythonCommand, err := findPython()
 	if err != nil {

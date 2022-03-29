@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type ShellFilterDefinition struct {
@@ -35,14 +34,6 @@ func ShellFilterDefinitionFromObject(
 }
 
 func (f *ShellFilter) Run(absoluteLocation string) error {
-	// Disabled filters are skipped
-	if f.Disabled {
-		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
-		return nil
-	}
-	Logger.Infof("Running filter %s.", f.Id)
-	start := time.Now()
-	defer Logger.Debugf("Executed in %s.", time.Since(start))
 	return runShellFilter(*f, f.Settings, absoluteLocation)
 }
 

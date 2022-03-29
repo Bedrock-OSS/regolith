@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 type NimFilterDefinition struct {
@@ -33,15 +32,6 @@ func NimFilterDefinitionFromObject(
 }
 
 func (f *NimFilter) Run(absoluteLocation string) error {
-	// Disabled filters are skipped
-	if f.Disabled {
-		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
-		return nil
-	}
-	Logger.Infof("Running filter %s", f.Id)
-	start := time.Now()
-	defer Logger.Debugf("Executed in %s", time.Since(start))
-
 	// Run filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(

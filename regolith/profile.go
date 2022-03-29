@@ -128,7 +128,15 @@ func RunProfile(profileName string) error {
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
 		path, _ := filepath.Abs(".")
+		// Disabled filters are skipped
+		if filter.IsDisabled() {
+			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
+			continue
+		}
+		Logger.Infof("Running filter %s", filter.GetId())
+		start := time.Now()
 		err := filter.Run(path)
+		Logger.Debugf("Executed in %s", time.Since(start))
 		if err != nil {
 			return WrapError(err, "Failed to run filter.")
 		}
