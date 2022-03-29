@@ -144,7 +144,7 @@ func (f *PythonFilterDefinition) Check() error {
 		return WrapError(err, "Python version check failed.")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "Python ")
-	Logger.Debugf("Found Python version %s.", a)
+	Logger.Debugf("Found Python version %s", a)
 	return nil
 }
 
