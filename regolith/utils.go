@@ -163,7 +163,7 @@ func CreateEnvironmentVariables(filterDir string) ([]string, error) {
 	if err != nil {
 		return nil, WrapErrorf(err, "Failed to get absolute path to current working directory.")
 	}
-	return append(os.Environ(), "FILTER_DIR="+filterDir, "PROJECT_DIR="+projectDir), nil
+	return append(os.Environ(), "FILTER_DIR="+filterDir, "ROOT_DIR="+projectDir), nil
 }
 
 // RunSubProcess runs a sub-process with specified arguments and working
