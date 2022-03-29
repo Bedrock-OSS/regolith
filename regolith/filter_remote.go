@@ -111,7 +111,7 @@ func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]
 
 // TODO - this code is almost a duplicate of the code in the
 // (f *RemoteFilter) SubfilterCollection()
-func (f *RemoteFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
+func (f *RemoteFilterDefinition) InstallDependencies(*RemoteFilterDefinition) error {
 	path := filepath.Join(f.GetDownloadPath(), "filter.json")
 	file, err := ioutil.ReadFile(path)
 
@@ -403,6 +403,10 @@ func (f *RemoteFilterDefinition) Update() error {
 			"Updating filter %q to new version: %q->%q.",
 			f.Id, installedVersion, version)
 		err = f.Download(true)
+		if err != nil {
+			return PassError(err)
+		}
+		err = f.InstallDependencies(f)
 		if err != nil {
 			return PassError(err)
 		}
