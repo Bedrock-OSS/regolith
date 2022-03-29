@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -75,6 +76,21 @@ func wrapErrorStackTrace(err error, text string) error {
 			filepath.Base(fn), line)
 	}
 	return errors.New(text)
+}
+
+func FullFilterToNiceFilterName(name string) string {
+	if strings.Contains(name, ":subfilter") {
+		i, err := strconv.Atoi(strings.Split(name, ":subfilter")[1])
+		if err != nil {
+			return fmt.Sprintf("the \"%s\" filter", name)
+		}
+		return NiceFilterName(strings.Split(name, ":")[0], i)
+	}
+	return fmt.Sprintf("the \"%s\" filter", name)
+}
+
+func NiceFilterName(name string, i int) string {
+	return fmt.Sprintf("the %s subfilter of \"%s\" filter", nth(i), name)
 }
 
 // PassError adds stack trace to an error without any additional text.

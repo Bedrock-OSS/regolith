@@ -234,7 +234,7 @@ func ProfileFromObject(
 		filter, ok := filter.(map[string]interface{})
 		if !ok {
 			return result, WrappedErrorf(
-				"The %s filter from the list not a map.", nth(i))
+				"The %s filter from the list is not a map.", nth(i))
 		}
 		filterRunner, err := FilterRunnerFromObjectAndDefinitions(
 			filter, filterDefinitions)

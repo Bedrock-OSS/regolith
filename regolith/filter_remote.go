@@ -177,8 +177,7 @@ func (f *RemoteFilterDefinition) Check() error {
 		err := filter.Check()
 		if err != nil {
 			return WrapErrorf(
-				err, "The check of the %s subfilter of \"%s\" filter failed.",
-				nth(i), f.Id)
+				err, "The check of %s failed.", NiceFilterName(f.Id, i))
 		}
 	}
 	return nil

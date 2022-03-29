@@ -20,11 +20,15 @@ type JavaFilter struct {
 
 func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*JavaFilterDefinition, error) {
 	filter := &JavaFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
-	script, ok := obj["script"].(string)
+	script, ok := obj["path"].(string)
 	if !ok {
-		return nil, WrappedErrorf(
-			"Missing \"script\" property in filter definition %q.",
-			filter.Id)
+		script, ok = obj["script"].(string)
+		if !ok {
+			return nil, WrappedErrorf(
+				"Missing \"path\" property in %s definition.",
+				FullFilterToNiceFilterName(filter.Id))
+		}
+		Logger.Warnf("\"script\" property in %s definition is deprecated, use \"path\" instead.", FullFilterToNiceFilterName(filter.Id))
 	}
 	filter.Script = script
 	return filter, nil
@@ -89,7 +93,7 @@ func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]in
 	return filter, nil
 }
 
-func (f *JavaFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
+func (f *JavaFilterDefinition) InstallDependencies(*RemoteFilterDefinition) error {
 	return nil
 }
 
