@@ -89,6 +89,13 @@ func FullFilterToNiceFilterName(name string) string {
 	return fmt.Sprintf("the \"%s\" filter", name)
 }
 
+func ShortFilterName(name string) string {
+	if strings.Contains(name, ":subfilter") {
+		return strings.Split(name, ":")[0]
+	}
+	return name
+}
+
 func NiceFilterName(name string, i int) string {
 	return fmt.Sprintf("the %s subfilter of \"%s\" filter", nth(i), name)
 }
@@ -184,14 +191,14 @@ func CreateEnvironmentVariables(filterDir string) ([]string, error) {
 
 // RunSubProcess runs a sub-process with specified arguments and working
 // directory
-func RunSubProcess(command string, args []string, filterDir string, workingDir string) error {
+func RunSubProcess(command string, args []string, filterDir string, workingDir string, outputLabel string) error {
 	Logger.Debugf("Exec: %s %s", command, strings.Join(args, " "))
 	cmd := exec.Command(command, args...)
 	cmd.Dir = workingDir
 	out, _ := cmd.StdoutPipe()
 	err, _ := cmd.StderrPipe()
-	go LogStd(out, Logger.Infof)
-	go LogStd(err, Logger.Errorf)
+	go LogStd(out, Logger.Infof, outputLabel)
+	go LogStd(err, Logger.Errorf, outputLabel)
 	env, err1 := CreateEnvironmentVariables(filterDir)
 	if err1 != nil {
 		return WrapErrorf(err1, "Failed to create environment variables.")
@@ -201,10 +208,10 @@ func RunSubProcess(command string, args []string, filterDir string, workingDir s
 	return cmd.Run()
 }
 
-func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})) {
+func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{}), outputLabel string) {
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
-		logFunc("[Filter] %s", scanner.Text())
+		logFunc("[%s] %s", outputLabel, scanner.Text())
 	}
 }
 

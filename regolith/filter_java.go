@@ -47,6 +47,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
+			ShortFilterName(f.Id),
 		)
 		if err != nil {
 			return WrapError(err, "Failed to run Java filter")
@@ -63,6 +64,7 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
+			ShortFilterName(f.Id),
 		)
 		if err != nil {
 			return WrapError(err, "Failed to run Java filter")

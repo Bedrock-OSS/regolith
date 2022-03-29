@@ -2,7 +2,6 @@ package regolith
 
 import (
 	"encoding/json"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -79,13 +78,13 @@ func runShellFilter(
 ) error {
 	var err error = nil
 	if len(settings) == 0 {
-		err = executeCommand(
+		err = executeCommand(filter.Id,
 			filter.Definition.Command,
 			filter.Arguments, absoluteLocation,
 			GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		err = executeCommand(
+		err = executeCommand(filter.Id,
 			filter.Definition.Command,
 			append([]string{string(jsonSettings)}, filter.Arguments...),
 			absoluteLocation, GetAbsoluteWorkingDirectory())
@@ -96,7 +95,7 @@ func runShellFilter(
 	return nil
 }
 
-func executeCommand(
+func executeCommand(id string,
 	command string, args []string, filterDir string, workingDir string,
 ) error {
 	for i, arg := range args {
@@ -108,18 +107,7 @@ func executeCommand(
 	if err != nil {
 		return WrapError(err, "Unable to find a valid shell.")
 	}
-	cmd := exec.Command(shell, arg, joined)
-	cmd.Dir = workingDir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	env, err1 := CreateEnvironmentVariables(filterDir)
-	if err1 != nil {
-		return WrapErrorf(err1, "Failed to create environment variables.")
-	}
-	cmd.Env = env
-
-	err = cmd.Run()
-
+	err = RunSubProcess(shell, []string{arg, joined}, filterDir, workingDir, ShortFilterName(id))
 	if err != nil {
 		return WrapError(err, "Failed to run shell script.")
 	}

@@ -42,6 +42,7 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 			),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
+			ShortFilterName(f.Id),
 		)
 		if err != nil {
 			return WrapError(err, "failed to run NodeJS script")
@@ -56,6 +57,7 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 				string(jsonSettings)}, f.Arguments...),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
+			ShortFilterName(f.Id),
 		)
 		if err != nil {
 			return WrapError(err, "failed to run NodeJS script")
@@ -91,7 +93,7 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	filterPath := filepath.Dir(scriptPath)
 	if hasPackageJson(filterPath) {
 		Logger.Info("Installing npm dependencies...")
-		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath, filterPath)
+		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
 				err, "failed to run npm and install dependencies of %s", f.Id)
