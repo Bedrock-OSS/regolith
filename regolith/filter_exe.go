@@ -2,8 +2,6 @@ package regolith
 
 import (
 	"encoding/json"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 )
@@ -71,13 +69,13 @@ func runExeFilter(
 ) error {
 	var err error = nil
 	if len(settings) == 0 {
-		err = executeExeFile(
+		err = executeExeFile(filter.Id,
 			filter.Definition.Exe,
 			filter.Arguments, absoluteLocation,
 			GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		err = executeExeFile(
+		err = executeExeFile(filter.Id,
 			filter.Definition.Exe,
 			append([]string{string(jsonSettings)}, filter.Arguments...),
 			absoluteLocation, GetAbsoluteWorkingDirectory())
@@ -88,24 +86,15 @@ func runExeFilter(
 	return nil
 }
 
-func executeExeFile(
+func executeExeFile(id string,
 	exe string, args []string, filterDir string, workingDir string,
 ) error {
 	for i, arg := range args {
 		args[i] = strconv.Quote(arg)
 	}
 	exe = filepath.Join(filterDir, exe)
-	cmd := exec.Command(exe, args...)
-	cmd.Dir = workingDir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	env, err1 := CreateEnvironmentVariables(filterDir)
-	if err1 != nil {
-		return WrapErrorf(err1, "Failed to create environment variables.")
-	}
-	cmd.Env = env
 	Logger.Debugf("Running exe file %s:", exe)
-	err := cmd.Run()
+	err := RunSubProcess(exe, args, filterDir, workingDir, id)
 	if err != nil {
 		return WrapError(err, "Failed to run exe file.")
 	}

@@ -60,7 +60,7 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 		)
 	}
 	err = RunSubProcess(
-		pythonCommand, args, absoluteLocation, GetAbsoluteWorkingDirectory())
+		pythonCommand, args, absoluteLocation, GetAbsoluteWorkingDirectory(), ShortFilterName(f.Id))
 	if err != nil {
 		return WrapError(err, "Failed to run Python script.")
 	}
@@ -105,14 +105,14 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 		}
 		// Create the "venv"
 		err = RunSubProcess(
-			pythonCommand, []string{"-m", "venv", venvPath}, filterPath, "")
+			pythonCommand, []string{"-m", "venv", venvPath}, filterPath, "", ShortFilterName(f.Id))
 		if err != nil {
 			return WrapError(err, "Failed to create venv.")
 		}
 		Logger.Info("Installing pip dependencies...")
 		err = RunSubProcess(
 			filepath.Join(venvPath, venvScriptsPath, "pip"+exeSuffix),
-			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath)
+			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
 				err, "couldn't run pip to install dependencies of %s",

@@ -43,6 +43,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
+			ShortFilterName(f.Id),
 		)
 		if err != nil {
 			return WrapError(err, "Failed to run Nim script.")
@@ -59,6 +60,7 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 				f.Arguments...),
 			absoluteLocation,
 			GetAbsoluteWorkingDirectory(),
+			ShortFilterName(f.Id),
 		)
 		if err != nil {
 			return WrapError(err, "Failed to run Nim script.")
@@ -94,7 +96,7 @@ func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 	if hasNimble(filterPath) {
 		Logger.Info("Installing nim dependencies...")
 		err := RunSubProcess(
-			"nimble", []string{"install"}, filterPath, filterPath)
+			"nimble", []string{"install"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to run nimble to install dependencies of %s.",
