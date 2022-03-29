@@ -153,9 +153,22 @@ func GetAbsoluteWorkingDirectory() string {
 	return absoluteWorkingDir
 }
 
+// CreateEnvironmentVariables creates an array of environment variables including custom ones
+func CreateEnvironmentVariables(filterDir string) ([]string, error) {
+	projectDir, err := os.Getwd()
+	if err != nil {
+		return nil, WrapErrorf(err, "Failed to get current working directory.")
+	}
+	projectDir, err = filepath.Abs(projectDir)
+	if err != nil {
+		return nil, WrapErrorf(err, "Failed to get absolute path to current working directory.")
+	}
+	return append(os.Environ(), "FILTER_DIR="+filterDir, "PROJECT_DIR="+projectDir), nil
+}
+
 // RunSubProcess runs a sub-process with specified arguments and working
 // directory
-func RunSubProcess(command string, args []string, absoluteLocation string, workingDir string) error {
+func RunSubProcess(command string, args []string, filterDir string, workingDir string) error {
 	Logger.Debugf("Exec: %s %s", command, strings.Join(args, " "))
 	cmd := exec.Command(command, args...)
 	cmd.Dir = workingDir
@@ -163,7 +176,11 @@ func RunSubProcess(command string, args []string, absoluteLocation string, worki
 	err, _ := cmd.StderrPipe()
 	go LogStd(out, Logger.Infof)
 	go LogStd(err, Logger.Errorf)
-	cmd.Env = append(os.Environ(), "FILTER_DIR="+absoluteLocation)
+	env, err1 := CreateEnvironmentVariables(filterDir)
+	if err1 != nil {
+		return WrapErrorf(err1, "Failed to create environment variables.")
+	}
+	cmd.Env = env
 
 	return cmd.Run()
 }

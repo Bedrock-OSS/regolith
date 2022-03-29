@@ -106,7 +106,7 @@ func runShellFilter(
 }
 
 func executeCommand(
-	command string, args []string, absoluteLocation string, workingDir string,
+	command string, args []string, filterDir string, workingDir string,
 ) error {
 	for i, arg := range args {
 		args[i] = strconv.Quote(arg)
@@ -121,7 +121,11 @@ func executeCommand(
 	cmd.Dir = workingDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "FILTER_DIR="+absoluteLocation)
+	env, err1 := CreateEnvironmentVariables(filterDir)
+	if err1 != nil {
+		return WrapErrorf(err1, "Failed to create environment variables.")
+	}
+	cmd.Env = env
 
 	err = cmd.Run()
 

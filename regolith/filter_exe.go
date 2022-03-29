@@ -98,17 +98,21 @@ func runExeFilter(
 }
 
 func executeExeFile(
-	exe string, args []string, absoluteLocation string, workingDir string,
+	exe string, args []string, filterDir string, workingDir string,
 ) error {
 	for i, arg := range args {
 		args[i] = strconv.Quote(arg)
 	}
-	exe = filepath.Join(absoluteLocation, exe)
+	exe = filepath.Join(filterDir, exe)
 	cmd := exec.Command(exe, args...)
 	cmd.Dir = workingDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "FILTER_DIR="+absoluteLocation)
+	env, err1 := CreateEnvironmentVariables(filterDir)
+	if err1 != nil {
+		return WrapErrorf(err1, "Failed to create environment variables.")
+	}
+	cmd.Env = env
 	Logger.Debugf("Running exe file %s:", exe)
 	err := cmd.Run()
 	if err != nil {
