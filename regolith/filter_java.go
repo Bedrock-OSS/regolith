@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 )
 
 type JavaFilterDefinition struct {
@@ -35,15 +34,6 @@ func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*Jav
 }
 
 func (f *JavaFilter) Run(absoluteLocation string) error {
-	// Disabled filters are skipped
-	if f.Disabled {
-		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
-		return nil
-	}
-	Logger.Infof("Running filter %s", f.Id)
-	start := time.Now()
-	defer Logger.Debugf("Executed in %s", time.Since(start))
-
 	// Run the filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(

@@ -3,15 +3,13 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/go-getter"
+	"github.com/otiai10/copy"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"time"
-
-	"github.com/hashicorp/go-getter"
-	"github.com/otiai10/copy"
 )
 
 type RemoteFilterDefinition struct {
@@ -47,11 +45,6 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 }
 
 func (f *RemoteFilter) Run(absoluteLocation string) error {
-	// Disabled filters are skipped
-	if f.Disabled {
-		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
-		return nil
-	}
 	// All other filters require safe mode to be turned off
 	if f.Definition.Url != StandardLibraryUrl && !IsUnlocked() {
 		return WrappedErrorf(
@@ -59,14 +52,10 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 				"code.\nYou may turn it off using \"regolith unlock\".",
 		)
 	}
-	Logger.Infof("Running filter %s", f.Id)
-	start := time.Now()
-	defer Logger.Debugf("Executed in %s", time.Since(start))
-
 	Logger.Debugf("RunRemoteFilter \"%s\"", f.Definition.Url)
 	if !f.IsCached() {
 		return WrappedErrorf(
-			"Filter is not downloaded. Please run \"regolith install\".")
+			"Filter is not downloaded. Please run \"regolith install %s\".", f.Id)
 	}
 
 	version, err := f.GetCachedVersion()
@@ -86,12 +75,17 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 			f.Id)
 	}
 	for i, filter := range filterCollection.Filters {
+		// Disabled filters are skipped
+		if filter.IsDisabled() {
+			Logger.Infof("The %s subfilter of \"%s\" filter is disabled, skipping.", nth(i), f.Id)
+			continue
+		}
 		// Overwrite the venvSlot with the parent value
 		err := filter.Run(absolutePath)
 		if err != nil {
 			return WrapErrorf(
-				err, "Failed to run the %s subfilter of \"%s\" filter.",
-				nth(i), f.Id)
+				err, "Failed to run %s.",
+				NiceFilterName(f.Id, i))
 		}
 	}
 	return nil

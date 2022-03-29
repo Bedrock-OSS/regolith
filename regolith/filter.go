@@ -61,6 +61,8 @@ type FilterInstaller interface {
 type FilterRunner interface {
 	CopyArguments(parent *RemoteFilter)
 	Run(absoluteLocation string) error
+	IsDisabled() bool
+	GetId() string
 	Check() error
 }
 
@@ -75,6 +77,14 @@ func (f *Filter) Check() error {
 
 func (f *Filter) Run(absoluteLocation string) error {
 	return NotImplementedError("Run")
+}
+
+func (f *Filter) GetId() string {
+	return f.Id
+}
+
+func (f *Filter) IsDisabled() bool {
+	return f.Disabled
 }
 
 func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterInstaller, error) {

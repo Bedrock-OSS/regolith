@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"time"
 )
 
 type ExeFilterDefinition struct {
@@ -35,14 +34,6 @@ func ExeFilterDefinitionFromObject(
 }
 
 func (f *ExeFilter) Run(absoluteLocation string) error {
-	// Disabled filters are skipped
-	if f.Disabled {
-		Logger.Infof("Filter \"%s\" is disabled, skipping.", f.Id)
-		return nil
-	}
-	Logger.Infof("Running filter %s.", f.Id)
-	start := time.Now()
-	defer Logger.Debugf("Executed in %s.", time.Since(start))
 	return runExeFilter(*f, f.Settings, absoluteLocation)
 }
 
