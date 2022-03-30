@@ -1,13 +1,13 @@
 {
 	"rp": {
 		"build/RP/": [
-			"anifest.json"
+			"manifest.json"
 		]
 	},
 	"bp": {
 		"build/BP/": [
-			"ello_version.txt",
-			"anifest.json"
+			"hello_version.txt",
+			"manifest.json"
 		]
 	}
 }
