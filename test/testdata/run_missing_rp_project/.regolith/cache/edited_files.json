@@ -4,9 +4,9 @@
 	},
 	"bp": {
 		"build/BP/": [
-			"xample.json",
-			"xample.png",
-			"ested\\example.txt"
+			"example.json",
+			"example.png",
+			"nested\\example.txt"
 		]
 	}
 }

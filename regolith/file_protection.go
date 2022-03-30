@@ -125,7 +125,14 @@ func listFiles(path string) ([]string, error) {
 				return WrapErrorf(e, "Failed to walk directory \"%s\".", path)
 			}
 			if !d.IsDir() {
-				result = append(result, s[len(path)+1:])
+				relpath, err := filepath.Rel(path, s)
+				if err != nil {
+					return WrapErrorf(
+						err,
+						"Failed to get path relative to \"%s\" from \"%s\"",
+						path, s)
+				}
+				result = append(result, relpath)
 			}
 			return nil
 		})
@@ -160,7 +167,14 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 			if d.IsDir() { // Directories aren't checked
 				return nil
 			}
-			s = s[len(path)+1:] // remove path from the file path
+			relpath, err := filepath.Rel(path, s)
+			if err != nil {
+				return WrapErrorf(
+					err,
+					"Failed to get path relative to \"%s\" from \"%s\"",
+					path, s)
+			}
+			s = relpath // remove path from the file path
 			for {
 				if i >= len(removableFiles) {
 					return WrappedErrorf(

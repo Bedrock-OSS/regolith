@@ -80,7 +80,7 @@ func TestRegolithRunMissingRp(t *testing.T) {
 	if err != nil {
 		t.Fatalf(
 			"Failed to copy test files %q into the working directory %q",
-			multitargetProjectPath, tmpDir,
+			runMissingRpProjectPath, tmpDir,
 		)
 	}
 	// Switch to the working directory
