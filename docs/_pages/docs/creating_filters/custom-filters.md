@@ -84,7 +84,7 @@ Fundamentally, a Regolith run target is a wrapper around generating a system com
 
 If you need to pass additional command line arguments, you can do so like this:
 
-`"arguments": "-u --no-console"` (example of additional console commands)
+`"arguments": ["-u --no-console"]` (example of additional console commands)
 
 These console arguments will be passed into the script as args.
 
