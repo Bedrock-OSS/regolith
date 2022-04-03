@@ -10,16 +10,43 @@ import (
 	"testing"
 )
 
-const freshProjectPath = "testdata/fresh_project"
-const minimalProjectPath = "testdata/minimal_project"
-const multitargetProjectPath = "testdata/multitarget_project"
-const localRequirementsPath = "testdata/local_requirements"
-const doubleRemoteProjectPath = "testdata/double_remote_project"
-const doubleRemoteProjectInstalledPath = "testdata/double_remote_project_installed"
-const runMissingRpProjectPath = "testdata/run_missing_rp_project"
-const versionedRemoteFilterProject = "testdata/versioned_remote_filter_project"
-const versionedRemoteFilterProjectAfterRun = "testdata/versioned_remote_filter_project_after_run"
-const exeFilterPath = "testdata/exe_filter"
+// The ".ignoreme" files inside the test directories are files used to simulate
+// empty directories in git repository.
+const (
+	// freshProjectPath is the regolith project created with `regolith init`
+	freshProjectPath = "testdata/fresh_project"
+
+	// minimalProjectPath is the simplest possible valid project, no filters
+	// but with addition of *manifest.json* for BP and RP, and with empty file
+	// in data path.
+	minimalProjectPath = "testdata/minimal_project"
+
+	// multitarget_project is a copy of minimal_project but with modified
+	// config.json, to add multiple profiles with different export targets.
+	multitargetProjectPath = "testdata/multitarget_project"
+
+	// double_remote_project is a project that uses a remote filter from
+	// https://github.com/Bedrock-OSS/regolith-test-filters. The filter has a
+	// reference to another remote filter on the same reposiotry.
+	doubleRemoteProjectPath = "testdata/double_remote_project"
+
+	// double_remote_project_installed is expected result of contents of
+	// double_remote_project after installation.
+	doubleRemoteProjectInstalledPath = "testdata/double_remote_project_installed"
+
+	// run_missing_rp_project is a project that for testing "regolith run"
+	// which with missing "packs/RP". The profile doesn't have any filters.
+	runMissingRpProjectPath = "testdata/run_missing_rp_project"
+
+	// recycledCopyData is a directory with data used for testing functions
+	// recycled_copy.go file
+	recycledCopyData = "testdata/recycled_copy_data"
+
+	localRequirementsPath                = "testdata/local_requirements"
+	versionedRemoteFilterProject         = "testdata/versioned_remote_filter_project"
+	versionedRemoteFilterProjectAfterRun = "testdata/versioned_remote_filter_project_after_run"
+	exeFilterPath                        = "testdata/exe_filter"
+)
 
 // firstErr returns the first error in a list of errors. If the list is empty
 // or all errors are nil, nil is returned.
