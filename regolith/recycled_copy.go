@@ -50,7 +50,7 @@ func RecycledMoveOrCopy(
 	}
 	s := sourceState.Front()
 	t := targetState.Front()
-	for s == nil && t == nil {
+	for s != nil || t != nil {
 		if t == nil || s.Value.(PathHashPair).Path < t.Value.(PathHashPair).Path {
 			// Target is ahead of source - the file doesn't exist in the
 			// target. Copy file from source to the target.
@@ -72,6 +72,28 @@ func RecycledMoveOrCopy(
 					return WrapErrorf(
 						err, "Failed to remove \"%s\" from sourceState.",
 						fullSPath)
+				}
+				// If the directory is empty after moving the file, it should
+				// be added to the source state
+				fullSPathDir := filepath.Dir(fullSPath)
+				if fullSPathDir != sourcePath {
+					files, err := ioutil.ReadDir(fullSPathDir)
+					if err != nil {
+						return WrapErrorf(
+							err,
+							"Failed to check if directory is empty \"%s\".",
+							fullSPathDir)
+					}
+					if len(files) == 0 {
+						fullSPathDir, _ = filepath.Rel( // Trim root
+							sourcePath, fullSPathDir)
+						dirEntry := PathHashPair{fullSPathDir, ""}
+						if s != nil {
+							sourceState.InsertBefore(dirEntry, s)
+						} else {
+							sourceState.PushBack(dirEntry)
+						}
+					}
 				}
 			} else {
 				s = s.Next()
@@ -113,8 +135,7 @@ func RecycledMoveOrCopy(
 						fullTPath)
 				}
 				// Just overwrite the properties of the target element
-				tPair := t.Value.(PathHashPair)
-				tPair.Hash = sHash
+				t.Value = s.Value
 				// Remove from source if necesary and advance 's' and 't'
 				if moved {
 					s, err = removePathFromState(sourceState, s)
@@ -147,15 +168,16 @@ func LoadPathState(
 	if cacheFilePath != "" {
 		file, err := ioutil.ReadFile(cacheFilePath)
 		if err == nil {
-			var fullFile map[string]list.List
+			var fullFile map[string][]PathHashPair
 			err = json.Unmarshal(file, &fullFile)
 			if err != nil {
 				Logger.Warnf(
 					"Failed to parse file with cached file hashes: %s", err)
 			} else {
-				result, ok := fullFile[path]
+				slice, ok := fullFile[path]
 				if ok {
-					return &result, nil
+					result := patHashPairSliceToState(slice)
+					return result, nil
 				}
 			}
 		}
@@ -171,15 +193,20 @@ func LoadPathState(
 // SavePathState appends new entry to the cache file of the RecycledMoveOrCopy.
 func SavePathState(cacheFilePath, path string, pairs *list.List) error {
 	file, err := ioutil.ReadFile(cacheFilePath)
-	var fullFile map[string]list.List
+	var fullFile map[string][]PathHashPair
 	if err == nil {
 		err = json.Unmarshal(file, &fullFile)
 	}
 	// Read or marshal error, create empty map
 	if err != nil {
-		fullFile = make(map[string]list.List)
+		fullFile = make(map[string][]PathHashPair)
 	}
-	fullFile[path] = *pairs
+	entry, err := stateToPathHashPairSlice(pairs)
+	if err != nil {
+		return WrapError(
+			err, "Failed to convert state to slice for JSON convertsion.")
+	}
+	fullFile[path] = entry
 	file, err = json.Marshal(fullFile)
 	if err != nil {
 		return WrapErrorf(
@@ -203,17 +230,36 @@ func DeepCopyAndGetState(
 	state := list.New()
 	err := filepath.WalkDir(
 		source, func(path string, d fs.DirEntry, err error) error {
-			currSource := filepath.Join(source, path)
-			currTarget := filepath.Join(target, path)
-			hashStr, err := shallowCopyAndGetHash(
-				filepath.Join(currSource, path),
-				filepath.Join(currTarget, path),
-				hash)
+			if path == source {
+				return nil // skip the root directory
+			}
+			relPath, _ := filepath.Rel(source, path) // shouldn't error
+			currTarget := filepath.Join(target, relPath)
+			if isDir, err := isDirectory(path); err != nil {
+				return WrapErrorf(
+					err, "Failed to determine if \"%s\" is a directory.",
+					path)
+			} else if isDir { // Check if the directory is non-empty
+				files, err := ioutil.ReadDir(path)
+				if err != nil {
+					return WrapErrorf(
+						err,
+						"Failed to check if directory is empty \"%s\".", path)
+				}
+				if len(files) != 0 {
+					// No need to save info about non-empty directories because
+					// their existance is implied by the existance of their
+					// children.
+					return nil
+				}
+			}
+			hashStr, err := shallowCopyAndGetHash(path, currTarget, hash)
 			if err != nil {
 				return WrapErrorf(
-					err, "Failed to \"%s\" to \"%s\"", currSource, currTarget)
+					err, "Failed to copy \"%s\" to \"%s\"",
+					path, currTarget)
 			}
-			state.PushBack(PathHashPair{Path: path, Hash: hashStr})
+			state.PushBack(PathHashPair{Path: relPath, Hash: hashStr})
 			return nil
 		})
 	if err != nil {
@@ -264,9 +310,12 @@ func shallowMoveOrCopy(source, target string, canMove bool) (bool, error) {
 	}
 	// If moving is allowed then try to move the file
 	if canMove {
-		err = os.Rename(source, target)
+		err := os.MkdirAll(filepath.Dir(target), 0755)
 		if err == nil {
-			return true, nil
+			err = os.Rename(source, target)
+			if err == nil {
+				return true, nil
+			}
 		}
 	}
 	// Move failed or not allowed, copy the file
@@ -299,11 +348,7 @@ func removePathFromState(
 	rootPath := element.Value.(PathHashPair).Path
 	removeElement()
 	// Check if the first element is a directory
-	rootIsDir, err := isDirectory(rootPath)
-	if err != nil {
-		return nil, WrapErrorf(
-			err, "Failed to check if \"%s\" is a directory.", rootPath)
-	}
+	rootIsDir := rootPath == ""
 	if !rootIsDir {
 		return element, nil
 	}
@@ -338,15 +383,20 @@ func addPathToState(
 	// If element is last, then temporarily use the last element of the
 	// state to specify where to insert the new element.
 	isTLast := element == nil
-	if isTLast {
-		element = state.Back()
-	}
-	// Thanks to sorting we can insert directly after or before t
-	if element.Value.(PathHashPair).Path > entry.Path {
-		state.InsertBefore(entry, element)
-	} else { // "<" it can't be "==" because of the sorting
-		state.InsertAfter(entry, element)
-		element = element.Next()
+
+	if state.Len() != 0 {
+		if isTLast {
+			element = state.Back()
+		}
+		// Thanks to sorting we can insert directly after or before t
+		if element.Value.(PathHashPair).Path > entry.Path {
+			state.InsertBefore(entry, element)
+		} else { // "<" it can't be "==" because of the sorting
+			state.InsertAfter(entry, element)
+			element = element.Next()
+		}
+	} else {
+		state.PushBack(entry)
 	}
 	// No matter what, t is still the last element
 	if isTLast {
@@ -358,28 +408,50 @@ func addPathToState(
 // getStateFromDirPath returns a state for the file path (a list of
 // PathHashPairs of  the files in the path). The list is sorted alphabetically
 // by path.
-func getStateFromDirPath(path string, hash hash.Hash) (*list.List, error) {
-	if stats, err := os.Stat(path); err != nil {
-		return nil, WrapErrorf(err, "Failed to stat \"%s\".", path)
+func getStateFromDirPath(dirPath string, hash hash.Hash) (*list.List, error) {
+	if stats, err := os.Stat(dirPath); err != nil {
+		return nil, WrapErrorf(err, "Failed to stat \"%s\".", dirPath)
 	} else if !stats.IsDir() {
 		return nil, WrapErrorf(
-			err, "\"%s\" is not a directory.", path)
+			err, "\"%s\" is not a directory.", dirPath)
 	}
 	result := list.New()
 	err := filepath.WalkDir(
-		path, func(path string, d fs.DirEntry, err error) error {
+		dirPath, func(path string, d fs.DirEntry, err error) error {
+			if path == dirPath {
+				return nil // skip the root directory
+			}
+			relPath, _ := filepath.Rel(dirPath, path) // shouldn't error
 			if err != nil {
 				return WrapErrorf(err, "Failed to walk \"%s\".", path)
+			}
+			if isDir, err := isDirectory(path); err != nil {
+				return WrapErrorf(
+					err, "Failed to determine if \"%s\" is a directory.",
+					path)
+			} else if isDir { // Check if the directory is non-empty
+				files, err := ioutil.ReadDir(path)
+				if err != nil {
+					return WrapErrorf(
+						err,
+						"Failed to check if directory is empty \"%s\".", path)
+				}
+				if len(files) != 0 {
+					// No need to save info about non-empty directories because
+					// their existance is implied by the existance of their
+					// children.
+					return nil
+				}
 			}
 			hashStr, err := getPathHash(path, hash)
 			if err != nil {
 				return WrapErrorf(err, "Failed to get hash for \"%s\".", path)
 			}
-			result.PushBack(PathHashPair{path, hashStr})
+			result.PushBack(PathHashPair{relPath, hashStr})
 			return nil
 		})
 	if err != nil {
-		return nil, WrapErrorf(err, "Failed to walk \"%s\".", path)
+		return nil, WrapErrorf(err, "Failed to walk \"%s\".", dirPath)
 	}
 	return result, nil
 }
@@ -438,7 +510,7 @@ func shallowCopyAndGetHash(
 			err, "Failed to open \"%s\" for reading.", source)
 	}
 	defer sourceF.Close()
-	targetF, err := os.Open(target)
+	targetF, err := os.Create(target)
 	if err != nil {
 		return "", WrapErrorf(
 			err, "Failed to open \"%s\" for writing.", target)
@@ -503,7 +575,7 @@ func copyFile(source, target string) error {
 			err, "Failed to open \"%s\" for reading.", source)
 	}
 	defer sourceF.Close()
-	targetF, err := os.Open(target)
+	targetF, err := os.Create(target)
 	if err != nil {
 		return WrapErrorf(
 			err, "Failed to open \"%s\" for writing.", target)
@@ -524,4 +596,28 @@ func copyFile(source, target string) error {
 	}
 	targetF.Sync()
 	return nil
+}
+
+// patHashPairSliceToState converts a slice of PathHashPairs to a list.List.
+func patHashPairSliceToState(s []PathHashPair) *list.List {
+	l := list.New()
+	for _, v := range s {
+		l.PushBack(v)
+	}
+	return l
+}
+
+// stateToPathHashPairSlice convertes a list.List (with PathHashPair elements)
+// to a slice of PathHashPairs.
+func stateToPathHashPairSlice(l *list.List) ([]PathHashPair, error) {
+	s := make([]PathHashPair, 0)
+	for e := l.Front(); e != nil; e = e.Next() {
+		item, ok := e.Value.(PathHashPair)
+		if !ok {
+			return nil, WrappedError(
+				"Failed to convert list element to PathHashPair.")
+		}
+		s = append(s, item)
+	}
+	return s, nil
 }
