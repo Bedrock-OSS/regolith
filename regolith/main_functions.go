@@ -161,6 +161,9 @@ func UpdateAll(debug bool) error {
 // should be printed.
 func Run(profile string, debug bool) error {
 	InitLogging(debug)
+	if ExperimentalFeatureRecycleFiles {
+		Logger.Warn("The \"recycle\" feature is experimental and may be unstable.")
+	}
 	if profile == "" {
 		profile = "dev"
 	}

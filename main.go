@@ -41,6 +41,11 @@ func main() {
 				Usage:       "Enables debugging.",
 				Destination: &debug,
 			},
+			&cli.BoolFlag{
+				Name:        "recycle",
+				Usage:       "Copies/Moves files in a new experimental way which uses the files from the previous run",
+				Destination: &regolith.ExperimentalFeatureRecycleFiles,
+			},
 		},
 		Commands: []*cli.Command{
 			{
