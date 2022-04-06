@@ -127,7 +127,6 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 		return WrapErrorf(
 			err, "Failed to clear filter data path %q.", dataPath)
 	}
-
 	Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
 	err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
 	if err != nil {
@@ -161,6 +160,92 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	return nil
 }
 
+func RecycledExportProject(profile Profile, name string, dataPath string) error {
+	exportTarget := profile.ExportTarget
+	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
+	if err != nil {
+		return WrapError(
+			err, "Failed to get generate export paths.")
+	}
+
+	// Loading edited_files.json or creating empty object
+	editedFiles := LoadEditedFiles()
+	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
+	if err != nil {
+		return WrapErrorf(
+			err,
+			"Safety mechanism stopped Regolith to protect unexpected files "+
+				"from your export targets.\n"+
+				"Did you edit the exported files manually?\n"+
+				"Please clear your export paths and try again.\n"+
+				"Resource pack export path: %s\n"+
+				"Behavior pack export path: %s",
+			rpPath, bpPath)
+	}
+
+	Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
+	// err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
+	err = FullRecycledMoveOrCopy(
+		".regolith/tmp/BP", bpPath,
+		RecycledMoveOrCopySettings{
+			canMove:                 true,
+			saveSourceHashes:        true,
+			saveTargetHashes:        true,
+			makeTargetReadOnly:      exportTarget.ReadOnly,
+			copyTargetAclFromParent: true,
+			reloadSourceHashes:      true,
+		})
+	if err != nil {
+		return WrapError(err, "Failed to export behavior pack.")
+	}
+	Logger.Infof("Exporting project to \"%s\".", rpPath)
+	// err = MoveOrCopy(".regolith/tmp/RP", rpPath, exportTarget.ReadOnly, true)
+	err = FullRecycledMoveOrCopy(
+		".regolith/tmp/RP", rpPath,
+		RecycledMoveOrCopySettings{
+			canMove:                 true,
+			saveSourceHashes:        true,
+			saveTargetHashes:        true,
+			makeTargetReadOnly:      exportTarget.ReadOnly,
+			copyTargetAclFromParent: true,
+			reloadSourceHashes:      true,
+		})
+	if err != nil {
+		return WrapError(err, "Failed to export resource pack.")
+	}
+	// err = MoveOrCopy(".regolith/tmp/data", dataPath, false, false)
+	err = FullRecycledMoveOrCopy(
+		".regolith/tmp/data", dataPath,
+		RecycledMoveOrCopySettings{
+			canMove:                 true,
+			saveSourceHashes:        true,
+			saveTargetHashes:        false,
+			makeTargetReadOnly:      false,
+			copyTargetAclFromParent: false,
+			reloadSourceHashes:      true,
+		})
+	if err != nil {
+		return WrapError(
+			err, "Failed to move the filter data back to the project's "+
+				"data folder.")
+	}
+
+	// Update or create edited_files.json
+	err = editedFiles.UpdateFromPaths(rpPath, bpPath)
+	if err != nil {
+		return WrapError(
+			err,
+			"Failed to create a list of files edited by this 'regolith run'")
+	}
+	err = editedFiles.Dump()
+	if err != nil {
+		return WrapError(
+			err, "Failed to update the list of the files edited by Regolith."+
+				"This may cause the next run to fail.")
+	}
+	return nil
+}
+
 // MoveOrCopy tries to move the the source to destination first and in case
 // of failore it copies the files instead.
 func MoveOrCopy(
@@ -171,6 +256,7 @@ func MoveOrCopy(
 			"Couldn't move files to \"%s\".\n"+
 				"    Trying to copy files instead...",
 			destination)
+		Logger.Debug("Problem: ", err)
 		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
 		err := copy.Copy(source, destination, copyOptions)
 		if err != nil {

@@ -97,6 +97,59 @@ func SetupTmpFiles(config Config, profile Profile) error {
 	return nil
 }
 
+func RecycledSetupTmpFiles(config Config, profile Profile) error {
+	start := time.Now()
+	err := os.MkdirAll(".regolith/tmp", 0666)
+	if err != nil {
+		return WrapError(
+			err, "Unable to prepare temporary directory: \"./regolith/tmp\".")
+	}
+	// Copy the contents of the 'regolith' folder to '.regolith/tmp'
+	Logger.Debug("Copying project files to .regolith/tmp")
+	err = FullRecycledMoveOrCopy(
+		config.ResourceFolder, ".regolith/tmp/RP",
+		RecycledMoveOrCopySettings{
+			canMove:                 false,
+			saveSourceHashes:        false,
+			saveTargetHashes:        false,
+			copyTargetAclFromParent: false,
+			reloadSourceHashes:      true,
+		})
+	if err != nil {
+		return WrapErrorf(
+			err, "Failed to setup resource folder in the temporary directory.")
+	}
+	err = FullRecycledMoveOrCopy(
+		config.BehaviorFolder, ".regolith/tmp/BP",
+		RecycledMoveOrCopySettings{
+			canMove:                 false,
+			saveSourceHashes:        false,
+			saveTargetHashes:        false,
+			copyTargetAclFromParent: false,
+			reloadSourceHashes:      true,
+		})
+	if err != nil {
+		return WrapErrorf(
+			err, "Failed to setup behavior folder in the temporary directory.")
+	}
+	err = FullRecycledMoveOrCopy(
+		config.DataPath, ".regolith/tmp/data",
+		RecycledMoveOrCopySettings{
+			canMove:                 false,
+			saveSourceHashes:        false,
+			saveTargetHashes:        false,
+			copyTargetAclFromParent: false,
+			reloadSourceHashes:      true,
+		})
+	if err != nil {
+		return WrapErrorf(
+			err, "Failed to setup data folder in the temporary directory.")
+	}
+
+	Logger.Debug("Setup done in ", time.Since(start))
+	return nil
+}
+
 // RunProfile loads the profile from config.json and runs it. The profileName
 // is the name of the profile which should be loaded from the configuration.
 func RunProfile(profileName string) error {
@@ -119,7 +172,28 @@ func RunProfile(profileName string) error {
 	}
 
 	// Prepare tmp files
-	err = SetupTmpFiles(*config, profile)
+	if ExperimentalFeatureRecycleFiles {
+		err = RecycledSetupTmpFiles(*config, profile)
+	} else {
+		// delete defaultHashPairsPath if exists so the Recycled mode won't
+		// break next time it's run
+		if _, err := os.Stat(defaultHashPairsPath); err == nil {
+			isDir, err := isDirectory(defaultHashPairsPath)
+			if err == nil {
+				if isDir {
+					err = os.RemoveAll(defaultHashPairsPath)
+				} else {
+					err = os.Remove(defaultHashPairsPath)
+				}
+				if err != nil {
+					Logger.Debugf(
+						"Failed to remove defaultHashPairsPath %q.",
+						defaultHashPairsPath)
+				}
+			}
+		}
+		err = SetupTmpFiles(*config, profile)
+	}
 	if err != nil {
 		return WrapError(err, "Unable to setup profile.")
 	}
@@ -145,16 +219,15 @@ func RunProfile(profileName string) error {
 	// Export files
 	Logger.Info("Moving files to target directory.")
 	start := time.Now()
-	err = ExportProject(profile, config.Name, config.DataPath)
+	if ExperimentalFeatureRecycleFiles {
+		err = RecycledExportProject(profile, config.Name, config.DataPath)
+	} else {
+		err = ExportProject(profile, config.Name, config.DataPath)
+	}
 	if err != nil {
 		return WrapError(err, "Exporting project failed.")
 	}
 	Logger.Debug("Done in ", time.Since(start))
-	// Clear the tmp/data path
-	err = os.RemoveAll(".regolith/tmp/data")
-	if err != nil {
-		return WrapError(err, "Unable to clean .regolith/tmp/data directory.")
-	}
 	return nil
 }
 

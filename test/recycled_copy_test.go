@@ -56,6 +56,7 @@ func logState(state *list.List, t *testing.T) {
 // TestRecycledCopy tests most of the recycled_copy.go functions in one go.
 func TestRecycledCopy(t *testing.T) {
 	// SETUP
+	regolith.InitLogging(true)
 	wd, err1 := os.Getwd()
 	defer os.Chdir(wd) // Go back before the test ends
 	tmpDir, err2 := ioutil.TempDir("", "regolith-test")
@@ -76,7 +77,7 @@ func TestRecycledCopy(t *testing.T) {
 	// 1. Use "DeepCopyAndGetState" to copy a directory to a new location,
 	// compare the state of the copied directory (returned by the copy
 	// function) with the state of the original directory (from
-	// "LoadPathState")
+	// "GetStateFromPath")
 	source := "random_files"
 	target := "random_files_1"
 	t.Logf(
@@ -87,9 +88,9 @@ func TestRecycledCopy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to copy directory: %v", err)
 	}
-	t.Log("Using \"LoadPathState\": loading the state of the source from " +
+	t.Log("Using \"GetStateFromPath\": loading the state of the source from " +
 		"file structure...")
-	stateSource, err := regolith.LoadPathState("", source, sha1.New())
+	stateSource, err := regolith.GetStateFromPath(source, sha1.New())
 	if err != nil {
 		t.Fatalf("Failed to get state of directory: %v", err)
 	}
@@ -117,9 +118,9 @@ func TestRecycledCopy(t *testing.T) {
 	// t.Log(string(b))
 
 	// 3. Load the state of the copied directory and original directory from
-	// the JSON file using "LoadPathState" and compare them to the expected
+	// the JSON file using "LoadStateFromCache" and compare them to the expected
 	// values.
-	t.Log("(3) Testing \"LoadPathState\": loading the state of the source " +
+	t.Log("(3) Testing \"LoadStateFromCache\": loading the state of the source " +
 		"from a file with cached data.")
 	// The directories are temporarily renamed to make sure that the state is
 	// actually loaded from the file and not generated from the directory
@@ -131,10 +132,10 @@ func TestRecycledCopy(t *testing.T) {
 	if err := firstErr(err, err1); err != nil {
 		t.Fatalf("Failed to set temporary name for directories: %v", err)
 	}
-	stateSourceLoaded, err := regolith.LoadPathState(
-		pathStatesFilePath, source, sha1.New())
-	stateTargetLoaded, err1 := regolith.LoadPathState(
-		pathStatesFilePath, target, sha1.New())
+	stateSourceLoaded, err := regolith.LoadStateFromCache(
+		pathStatesFilePath, source)
+	stateTargetLoaded, err1 := regolith.LoadStateFromCache(
+		pathStatesFilePath, target)
 	if err := firstErr(err, err1); err != nil {
 		t.Fatalf("Failed to load state from a file: %v", err)
 	}
@@ -163,8 +164,10 @@ func TestRecycledCopy(t *testing.T) {
 	assertEqualStates(stateTargetLoaded, stateTarget, t)
 	// Reload the values from files to make sure that "RecycledMoveOrCopy"
 	// returned the correct values
-	stateSourceReloaded, err := regolith.LoadPathState("", source, sha1.New())
-	stateTargetReloaded, err1 := regolith.LoadPathState("", target, sha1.New())
+	stateSourceReloaded, err := regolith.GetStateFromPath(
+		source, sha1.New())
+	stateTargetReloaded, err1 := regolith.GetStateFromPath(
+		target, sha1.New())
 	if err := firstErr(err, err1); err != nil {
 		t.Fatalf("Failed to load state of the path: %v", err)
 	}
@@ -184,13 +187,10 @@ func TestRecycledCopy(t *testing.T) {
 		t.Fatalf("Failed to create a directory: %v", err)
 	}
 	// Save the state for now
-	stateSourceBefore, err := regolith.LoadPathState(
-		pathStatesFilePath, source, sha1.New())
+	stateSourceBefore, err := regolith.GetStateFromPath(source, sha1.New())
 	// Use the "After" states in the function call (it modifies them)
-	stateSourceAfter, err1 := regolith.LoadPathState(
-		pathStatesFilePath, source, sha1.New())
-	stateTarget2After, err2 := regolith.LoadPathState(
-		pathStatesFilePath, target2, sha1.New())
+	stateSourceAfter, err1 := regolith.GetStateFromPath(source, sha1.New())
+	stateTarget2After, err2 := regolith.GetStateFromPath(target2, sha1.New())
 	if err := firstErr(err, err1, err2); err != nil {
 		t.Fatalf("Failed to get state of directory: %v", err)
 	}
@@ -205,8 +205,8 @@ func TestRecycledCopy(t *testing.T) {
 	assertEqualStates(stateSourceBefore, stateTarget2After, t)
 	// Reload the values from files to make sure that "RecycledMoveOrCopy"
 	// returned the correct values
-	stateSourceReloaded, err = regolith.LoadPathState("", source, sha1.New())
-	stateTargetReloaded, err1 = regolith.LoadPathState("", target2, sha1.New())
+	stateSourceReloaded, err = regolith.GetStateFromPath(source, sha1.New())
+	stateTargetReloaded, err1 = regolith.GetStateFromPath(target2, sha1.New())
 	if err := firstErr(err, err1); err != nil {
 		t.Fatalf("Failed to load state of the path: %v", err)
 	}
@@ -252,9 +252,9 @@ func TestRecycledCopy(t *testing.T) {
 		t.Fatalf("Failed to create a directory: %v", err)
 	}
 	// Make sure that we have up-to-date state of source and target
-	stateSourceBefore, err = regolith.LoadPathState("", source, sha1.New())
-	stateSourceAfter, err1 = regolith.LoadPathState("", source, sha1.New())
-	stateTargetAfter, err2 := regolith.LoadPathState("", target, sha1.New())
+	stateSourceBefore, err = regolith.GetStateFromPath(source, sha1.New())
+	stateSourceAfter, err1 = regolith.GetStateFromPath(source, sha1.New())
+	stateTargetAfter, err2 := regolith.GetStateFromPath(target, sha1.New())
 	if err := firstErr(err, err1, err2); err != nil {
 		t.Fatalf("Failed to get state of the directory: %v", err)
 	}
@@ -268,8 +268,8 @@ func TestRecycledCopy(t *testing.T) {
 	assertEqualStates(stateSourceBefore, stateTargetAfter, t)
 	// Compare the "after" states returned by the function with the actual
 	// states of the source and target
-	stateSource, err1 = regolith.LoadPathState("", source, sha1.New())
-	stateTarget, err2 = regolith.LoadPathState("", target, sha1.New())
+	stateSource, err1 = regolith.GetStateFromPath(source, sha1.New())
+	stateTarget, err2 = regolith.GetStateFromPath(target, sha1.New())
 	if err := firstErr(err1, err2); err != nil {
 		t.Fatalf("Failed to get state of the directory: %v", err)
 	}
