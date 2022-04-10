@@ -2,10 +2,10 @@ package regolith
 
 import (
 	"container/list"
-	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
 	"hash"
+	"hash/crc32"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -42,7 +42,7 @@ type RecycledMoveOrCopySettings struct {
 
 func (s *RecycledMoveOrCopySettings) loadDefaults() {
 	if s.hash == nil {
-		s.hash = sha1.New()
+		s.hash = crc32.NewIEEE()
 	}
 	if s.hashPairsPath == "" {
 		s.hashPairsPath = defaultHashPairsPath
@@ -197,6 +197,7 @@ func RecycledMoveOrCopy(
 	movedFiles := 0
 	copiedFiles := 0
 	deletedFiles := 0
+	skippedFiles := 0
 
 	s := sourceState.Front()
 	t := targetState.Front()
@@ -266,6 +267,7 @@ func RecycledMoveOrCopy(
 			sHash := s.Value.(PathHashPair).Hash
 			tHash := t.Value.(PathHashPair).Hash
 			if sHash == tHash { // Nothing to do, advance 's' and 't'
+				skippedFiles++
 				s = s.Next()
 				t = t.Next()
 			} else {
@@ -303,8 +305,8 @@ func RecycledMoveOrCopy(
 		}
 	}
 	Logger.Debugf(
-		"Target: %s; Moved %d; Copied %d; Deleted %d;",
-		targetPath, movedFiles, copiedFiles, deletedFiles)
+		"Target: %s; Moved %d; Copied %d; Deleted %d; Skipped (already in target) %d;",
+		targetPath, movedFiles, copiedFiles, deletedFiles, skippedFiles)
 	return nil
 }
 
@@ -580,7 +582,7 @@ func getPathHash(path string, hash hash.Hash) (string, error) {
 	hash.Reset()
 	_, err = io.Copy(hash, file)
 	if err != nil {
-		return "", WrapErrorf(err, "Failed to get sha1 hash fo \"%s\".", path)
+		return "", WrapErrorf(err, "Failed to get hash for \"%s\".", path)
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
