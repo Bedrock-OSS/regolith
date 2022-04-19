@@ -14,8 +14,6 @@ import (
 	"strings"
 )
 
-var ExperimentalFeatureRecycleFiles = false
-
 const defaultHashPairsPath = ".regolith/cache/dir_hash_pairs.json"
 const copyFileBufferSize = 1_000_000 // 1 MB
 
@@ -26,6 +24,8 @@ type PathHashPair struct {
 	Hash string `json:"hash"`
 }
 
+// RecycledMoveOrCopySettings is a structure that defines the settings of the
+// FullRecycledMoveOrCopy function.
 type RecycledMoveOrCopySettings struct {
 	sourceState             *list.List // Preloaded file hashes of source path
 	targetState             *list.List // Preloaded target hashes of target path
@@ -59,11 +59,11 @@ func FullRecycledMoveOrCopy(
 	// Create source and target paths if they don't exist
 	err = os.MkdirAll(sourcePath, 0755)
 	if err != nil {
-		return WrapErrorf(err, "Failed to create path %s", sourcePath)
+		return WrapErrorf(err, "Failed to create path \"%s\"", sourcePath)
 	}
 	err = os.MkdirAll(targetPath, 0755)
 	if err != nil {
-		return WrapErrorf(err, "Failed to create path %s", targetPath)
+		return WrapErrorf(err, "Failed to create path \"%s\"", targetPath)
 	}
 	// Try to load the states from the file if they are not loaded yet
 	if settings.sourceState == nil {
@@ -310,6 +310,31 @@ func RecycledMoveOrCopy(
 	return nil
 }
 
+// ClearCachedStates clears the defaultHashPairsPath. It doesn't matter if the
+// if it's a file or a folder. If the path is cleared successfully or doesn't
+// exist returns nil, otherwise returns an error.
+func ClearCachedStates() error {
+	Logger.Debug("Clearing the cached path states.")
+	_, err := os.Stat(defaultHashPairsPath)
+	if err == nil {
+		isDir, err := isDirectory(defaultHashPairsPath)
+		if err == nil {
+			if isDir {
+				err = os.RemoveAll(defaultHashPairsPath)
+			} else {
+				err = os.Remove(defaultHashPairsPath)
+			}
+		}
+	} else if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return WrapErrorf(
+			err, "Failed to clear path \"%s\"", defaultHashPairsPath)
+	}
+	return nil
+}
+
 // LoadStateFromCache loads the state of the file path for the RecycledMoveOrCopy.
 // It tries to load it from the cacheFilePath first and if
 // it failes, it generates the state based on the actual files. The hashes are
@@ -406,6 +431,12 @@ func SavePathState(cacheFilePath, path string, pairs *list.List) error {
 		return WrapErrorf(
 			err, "Failed to marshal a file with catched file hashes.")
 	}
+	// create parent of cacheFilePath
+	if err := os.MkdirAll(filepath.Dir(cacheFilePath), 0755); err != nil {
+		return WrapErrorf(err, "Failed to create parent directory of \"%s\".",
+			cacheFilePath)
+	}
+	// Create the file
 	err = ioutil.WriteFile(cacheFilePath, file, 0644)
 	if err != nil {
 		return WrapErrorf(

@@ -85,6 +85,8 @@ func GetExportPaths(
 
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export target. The paths are generated with GetExportPaths.
+//
+// Deprecated: Use RecycledExportProject instead.
 func ExportProject(profile Profile, name string, dataPath string) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
@@ -160,6 +162,10 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	return nil
 }
 
+// RecycledExportProject copies files from the tmp paths (tmp/BP and tmp/RP)
+// into the project's export target. The paths are generated with
+// GetExportPaths. The function uses cached data about the state of the project
+// files to reduce the number of file system operations.
 func RecycledExportProject(profile Profile, name string, dataPath string) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
