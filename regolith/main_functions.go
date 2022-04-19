@@ -161,9 +161,6 @@ func UpdateAll(debug bool) error {
 // should be printed.
 func Run(profile string, debug bool) error {
 	InitLogging(debug)
-	if ExperimentalFeatureRecycleFiles {
-		Logger.Warn("The \"recycle\" feature is experimental and may be unstable.")
-	}
 	if profile == "" {
 		profile = "dev"
 	}
@@ -246,16 +243,23 @@ func Init(debug bool) error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Clean(debug bool) error {
+func Clean(debug bool, cachedStatesOnly bool) error {
 	InitLogging(debug)
 	Logger.Infof("Cleaning cache...")
-	err := os.RemoveAll(".regolith")
-	if err != nil {
-		return WrapError(err, "failed to remove .regolith folder")
-	}
-	err = os.Mkdir(".regolith", 0666)
-	if err != nil {
-		return WrapError(err, "failed to recreate .regolith folder")
+	if cachedStatesOnly {
+		err := ClearCachedStates()
+		if err != nil {
+			return WrapError(err, "Failed to remove cached path states.")
+		}
+	} else {
+		err := os.RemoveAll(".regolith")
+		if err != nil {
+			return WrapError(err, "failed to remove .regolith folder")
+		}
+		err = os.Mkdir(".regolith", 0666)
+		if err != nil {
+			return WrapError(err, "failed to recreate .regolith folder")
+		}
 	}
 	Logger.Infof("Cache cleaned.")
 	return nil

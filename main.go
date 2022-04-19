@@ -41,11 +41,6 @@ func main() {
 				Usage:       "Enables debugging.",
 				Destination: &debug,
 			},
-			&cli.BoolFlag{
-				Name:        "recycle",
-				Usage:       "Copies/Moves files in a new experimental way which uses the files from the previous run",
-				Destination: &regolith.ExperimentalFeatureRecycleFiles,
-			},
 		},
 		Commands: []*cli.Command{
 			{
@@ -126,7 +121,17 @@ func main() {
 				Name:  "clean",
 				Usage: "Cleans cache from the .regolith folder.",
 				Action: func(c *cli.Context) error {
-					return regolith.Clean(debug)
+					clearPathStates := c.Bool("path-states")
+					return regolith.Clean(debug, clearPathStates)
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "path-states",
+						Aliases: []string{"p"},
+						Usage: "Deletes file used for caching contents of " +
+							"paths used by Regolith (useful when Regolith " +
+							"doesn't export files propertly).",
+					},
 				},
 			},
 			{
