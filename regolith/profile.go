@@ -235,6 +235,105 @@ func RunProfile(profileName string) error {
 	return nil
 }
 
+// WatchProfile is used by "regolith watch". It is the same as RunProfile, but
+// it can be interrupted through the use of the interrupt channel. On various
+// stages of the execution, the function checks the channel, and if it is
+// sending a message, it restarts.
+func WatchProfile(profile *Profile, config *Config, interrupt chan bool) error {
+	isInterrupted := func() bool {
+		select {
+		case <-interrupt:
+			Logger.Warn(
+				"A new change was detected while running profile. " +
+					"Restarting...")
+			return true
+		default:
+			return false
+		}
+	}
+	// LOL XD - it could be a loop and interruptions could cause continue
+	// instead of using a label and goto bu honestly I think this is more
+	// readable.
+	// Obviously this need to be changed. Don't judge me. I know goto is
+	// considered the worst programming practice in the world but I never used
+	// it for anything and it was really exciting to write it like that :D
+	//
+	// I probably won't change it. I wonder if anyone will ever read this...
+start:
+	// Prepare tmp files
+	err := RecycledSetupTmpFiles(*config, *profile)
+	if err != nil {
+		err1 := ClearCachedStates() // Just to be safe clear cached states
+		if err1 != nil {
+			err = WrapError(
+				err1, "Failed to clear cached file path states whil handling"+
+					" another error.")
+		}
+		return WrapError(err, "Unable to setup profile.")
+	}
+	if isInterrupted() {
+		goto start
+	}
+
+	// Run the filters!
+	for filter := range profile.Filters {
+		filter := profile.Filters[filter]
+		path, _ := filepath.Abs(".")
+		// Disabled filters are skipped
+		if filter.IsDisabled() {
+			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
+			continue
+		}
+		Logger.Infof("Running filter %s", filter.GetId())
+		start := time.Now()
+		err := filter.Run(path)
+		Logger.Debugf("Executed in %s", time.Since(start))
+		if err != nil {
+			err1 := ClearCachedStates() // Just to be safe clear cached states
+			if err1 != nil {
+				err = WrapError(
+					err1, "Failed to clear cached file path states while "+
+						"handling another error.")
+			}
+			return WrapError(err, "Failed to run filter.")
+		}
+		if isInterrupted() { // Save the current target state before rerun
+			err1 := SaveStateInDefaultCache(".regolith/tmp/RP")
+			err2 := SaveStateInDefaultCache(".regolith/tmp/BP")
+			err3 := SaveStateInDefaultCache(".regolith/tmp/data")
+			if err = firstErr(err1, err2, err3); err != nil {
+				err1 := ClearCachedStates() // Just to be safe clear cached states
+				if err1 != nil {
+					err = WrapError(
+						err1, "Failed to clear cached file path states while "+
+							"handling another error.")
+				}
+				return WrapError(err, "Failed to run filter.")
+			}
+			goto start
+		}
+	}
+
+	// Export files
+	Logger.Info("Moving files to target directory.")
+	start := time.Now()
+	err = RecycledExportProject(*profile, config.Name, config.DataPath)
+	if err != nil {
+		err1 := ClearCachedStates() // Just to be safe clear cached states
+		if err1 != nil {
+			err = WrapError(
+				err1, "Failed to clear cached file path states while "+
+					"handling another error.")
+		}
+		return WrapError(err, "Exporting project failed.")
+	}
+	if isInterrupted() {
+		goto start
+	}
+	Logger.Debug("Done in ", time.Since(start))
+	return nil
+}
+
 // SubfilterCollection returns a collection of filters from a
 // "filter.json" file of a remote filter.
 func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {

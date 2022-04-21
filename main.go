@@ -56,6 +56,18 @@ func main() {
 				},
 			},
 			{
+				Name:  "watch",
+				Usage: "Watches the project files and runs specified Regolith profile when they change.",
+				Action: func(c *cli.Context) error {
+					args := c.Args().Slice()
+					var profile string
+					if len(args) != 0 {
+						profile = args[0]
+					}
+					return regolith.Watch(profile, debug)
+				},
+			},
+			{
 				Name: "update",
 				Usage: `It updates filters listed in "filters" parameter. The
 				names of the filters must be already present in the

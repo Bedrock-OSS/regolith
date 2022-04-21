@@ -173,6 +173,75 @@ func Run(profile string, debug bool) error {
 	return nil
 }
 
+// Watch handles the "regolith watch" command. It watches the project
+// directories and it runs selected profile and exports created resource pack
+// and behvaiour pack to the target destination when the project changes.
+//
+// The "profile" parameter is the name of the profile to run. If the profile
+// is an empty string, the "dev" profile will be used.
+//
+// The "debug" parameter is a boolean that determines if the debug messages
+// should be printed.
+func Watch(profileName string, debug bool) error {
+	InitLogging(debug)
+	if profileName == "" {
+		profileName = "dev"
+	}
+	Logger.Infof("Watching project with %q profile...", profileName)
+	configJson, err := LoadConfigAsMap()
+	if err != nil {
+		return WrapError(err, "Could not load \"config.json\".")
+	}
+	config, err := ConfigFromObject(configJson)
+	if err != nil {
+		return WrapError(err, "Could not load \"config.json\".")
+	}
+	profile := config.Profiles[profileName]
+	// Check whether every filter, uses a supported filter type
+	for _, f := range profile.Filters {
+		err := f.Check()
+		if err != nil {
+			return WrapErrorf(err, "Filter check failed.")
+		}
+	}
+	rpWatcher, err := NewDirWatcher(config.ResourceFolder)
+	if err != nil {
+		return WrapError(err, "Could not create resource pack watcher.")
+	}
+	bpWatcher, err := NewDirWatcher(config.BehaviorFolder)
+	if err != nil {
+		return WrapError(err, "Could not create behavior pack watcher.")
+	}
+	dataWatcher, err := NewDirWatcher(config.DataPath)
+	if err != nil {
+		return WrapError(err, "Could not create data watcher.")
+	}
+	interrupt := make(chan bool)
+	yieldChanges := func(interrupt chan bool, watcher *DirWatcher) {
+		for {
+			err := watcher.WaitForChangeGroup(100)
+			if err != nil {
+				return
+			}
+			interrupt <- true
+		}
+	}
+	go yieldChanges(interrupt, rpWatcher)
+	go yieldChanges(interrupt, bpWatcher)
+	go yieldChanges(interrupt, dataWatcher)
+	for {
+		err = WatchProfile(&profile, config, interrupt)
+		if err != nil {
+			return WrapErrorf(err, "Failed to run profile %q", profileName)
+		}
+		Logger.Infof("Successfully ran the %q profile.", profileName)
+		Logger.Info("Press Ctrl+C to stop watching.")
+		<-interrupt
+		Logger.Warn("Restarting...")
+	}
+	// return nil
+}
+
 // Init handles the "regolith init" command. It initializes a new Regolith
 // project in the current directory.
 //

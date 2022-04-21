@@ -445,6 +445,20 @@ func SavePathState(cacheFilePath, path string, pairs *list.List) error {
 	return nil
 }
 
+// SaveStateInDefaultCache saves a state of a path in the default cache file
+// using the default hash function. If targetPath doesn't exist, it creates
+// it before getting the state.
+func SaveStateInDefaultCache(path string) error {
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return WrapErrorf(err, "Failed to create directory \"%s\".", path)
+	}
+	state, err := GetStateFromPath(path, crc32.NewIEEE())
+	if err != nil {
+		return WrapErrorf(err, "Failed to get state for \"%s\".", path)
+	}
+	return SavePathState(defaultHashPairsPath, path, state)
+}
+
 // DeepCopyAndGetState copies the files from source to the target path and
 // calculates the state of the target path (a list of the PathHashPairs sorted
 // by paths). The hash is used to calculate the hashes for the PathHashPairs
