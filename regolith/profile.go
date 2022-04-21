@@ -7,97 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/otiai10/copy"
 )
-
-// SetupTmpFiles set up the workspace for the filters.
-//
-// Deprecated: Use RecycledSetupTmpFiles instead.
-func SetupTmpFiles(config Config, profile Profile) error {
-	start := time.Now()
-	// Setup Directories
-	Logger.Debug("Cleaning .regolith/tmp")
-	err := os.RemoveAll(".regolith/tmp")
-	if err != nil {
-		return WrapError(
-			err, "Unable to clean temporary directory: \".regolith/tmp\".")
-	}
-
-	err = os.MkdirAll(".regolith/tmp", 0666)
-	if err != nil {
-		return WrapError(
-			err, "Unable to prepare temporary directory: \"./regolith/tmp\".")
-	}
-
-	// Copy the contents of the 'regolith' folder to '.regolith/tmp'
-	Logger.Debug("Copying project files to .regolith/tmp")
-	// Avoid repetetive code of preparing ResourceFolder, BehaviorFolder
-	// and DataPath with a closure
-	setup_tmp_directory := func(
-		path, short_name, descriptive_name string,
-	) error {
-		if path != "" {
-			stats, err := os.Stat(path)
-			if err != nil {
-				if os.IsNotExist(err) {
-					Logger.Warnf(
-						"%s %q does not exist", descriptive_name, path)
-					err = os.MkdirAll(
-						fmt.Sprintf(".regolith/tmp/%s", short_name), 0666)
-					if err != nil {
-						return WrapErrorf(
-							err,
-							"Failed to create \".regolith/tmp/%s\" directory.",
-							short_name)
-					}
-				}
-			} else if stats.IsDir() {
-				err = copy.Copy(
-					path, fmt.Sprintf(".regolith/tmp/%s", short_name),
-					copy.Options{PreserveTimes: false, Sync: false})
-				if err != nil {
-					return WrapErrorf(
-						err,
-						"Failed to copy %s %q to \".regolith/tmp/%s\".",
-						descriptive_name, path, short_name)
-				}
-			} else { // The folder paths leads to a file
-				return WrappedErrorf(
-					"%s path %q is not a directory", descriptive_name, path)
-			}
-		} else {
-			err = os.MkdirAll(
-				fmt.Sprintf(".regolith/tmp/%s", short_name), 0666)
-			if err != nil {
-				return WrapErrorf(
-					err,
-					"Failed to create \".regolith/tmp/%s\" directory.",
-					short_name)
-			}
-		}
-		return nil
-	}
-
-	err = setup_tmp_directory(config.ResourceFolder, "RP", "resource folder")
-	if err != nil {
-		return WrapErrorf(
-			err, "Failed to setup resource folder in the temporary directory.")
-	}
-	err = setup_tmp_directory(config.BehaviorFolder, "BP", "behavior folder")
-	if err != nil {
-		return WrapErrorf(
-			err, "Failed to setup behavior folder in the temporary directory.")
-	}
-	err = setup_tmp_directory(config.DataPath, "data", "data folder")
-	if err != nil {
-		return WrapErrorf(
-			err, "Failed to setup data folder in the temporary directory.")
-	}
-
-	Logger.Debug("Setup done in ", time.Since(start))
-	return nil
-}
 
 // RecycledSetupTmpFiles set up the workspace for the filters. The function
 // uses cached data about the state of the project files to reduce the number
@@ -239,17 +149,37 @@ func RunProfile(profileName string) error {
 // it can be interrupted through the use of the interrupt channel. On various
 // stages of the execution, the function checks the channel, and if it is
 // sending a message, it restarts.
-func WatchProfile(profile *Profile, config *Config, interrupt chan bool) error {
-	isInterrupted := func() bool {
+func WatchProfile(profile *Profile, config *Config, interrupt chan string) error {
+	// Checks if the interrupt channel is sending a message.
+	isInterrupted := func(ignoreData bool) bool {
 		select {
-		case <-interrupt:
+		case source := <-interrupt:
 			Logger.Warn(
 				"A new change was detected while running profile. " +
 					"Restarting...")
+			if ignoreData && source == "data" {
+				return false
+			}
 			return true
 		default:
 			return false
 		}
+	}
+	// Saves the state of the tmp files
+	saveTmp := func() error {
+		err1 := SaveStateInDefaultCache(".regolith/tmp/RP")
+		err2 := SaveStateInDefaultCache(".regolith/tmp/BP")
+		err3 := SaveStateInDefaultCache(".regolith/tmp/data")
+		if err := firstErr(err1, err2, err3); err != nil {
+			err1 := ClearCachedStates() // Just to be safe - clear cached states
+			if err1 != nil {
+				err = WrapError(
+					err1, "Failed to clear cached file path states while "+
+						"handling another error.")
+			}
+			return WrapError(err, "Failed to run filter.")
+		}
+		return nil
 	}
 	// LOL XD - it could be a loop and interruptions could cause continue
 	// instead of using a label and goto bu honestly I think this is more
@@ -271,7 +201,10 @@ start:
 		}
 		return WrapError(err, "Unable to setup profile.")
 	}
-	if isInterrupted() {
+	if isInterrupted(false) {
+		if err := saveTmp(); err != nil {
+			return PassError(err)
+		}
 		goto start
 	}
 
@@ -297,18 +230,9 @@ start:
 			}
 			return WrapError(err, "Failed to run filter.")
 		}
-		if isInterrupted() { // Save the current target state before rerun
-			err1 := SaveStateInDefaultCache(".regolith/tmp/RP")
-			err2 := SaveStateInDefaultCache(".regolith/tmp/BP")
-			err3 := SaveStateInDefaultCache(".regolith/tmp/data")
-			if err = firstErr(err1, err2, err3); err != nil {
-				err1 := ClearCachedStates() // Just to be safe clear cached states
-				if err1 != nil {
-					err = WrapError(
-						err1, "Failed to clear cached file path states while "+
-							"handling another error.")
-				}
-				return WrapError(err, "Failed to run filter.")
+		if isInterrupted(false) { // Save the current target state before rerun
+			if err := saveTmp(); err != nil {
+				return PassError(err)
 			}
 			goto start
 		}
@@ -327,7 +251,10 @@ start:
 		}
 		return WrapError(err, "Exporting project failed.")
 	}
-	if isInterrupted() {
+	if isInterrupted(true) { // Ignore the interruptions from the data path
+		if err := saveTmp(); err != nil {
+			return PassError(err)
+		}
 		goto start
 	}
 	Logger.Debug("Done in ", time.Since(start))

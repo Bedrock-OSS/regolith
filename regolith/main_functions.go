@@ -216,25 +216,30 @@ func Watch(profileName string, debug bool) error {
 	if err != nil {
 		return WrapError(err, "Could not create data watcher.")
 	}
-	interrupt := make(chan bool)
-	yieldChanges := func(interrupt chan bool, watcher *DirWatcher) {
+	interrupt := make(chan string)
+	yieldChanges := func(
+		interrupt chan string, watcher *DirWatcher, sourceName string,
+	) {
 		for {
 			err := watcher.WaitForChangeGroup(100)
 			if err != nil {
 				return
 			}
-			interrupt <- true
+			interrupt <- sourceName
 		}
 	}
-	go yieldChanges(interrupt, rpWatcher)
-	go yieldChanges(interrupt, bpWatcher)
-	go yieldChanges(interrupt, dataWatcher)
+	go yieldChanges(interrupt, rpWatcher, "rp")
+	go yieldChanges(interrupt, bpWatcher, "bp")
+	go yieldChanges(interrupt, dataWatcher, "data")
 	for {
 		err = WatchProfile(&profile, config, interrupt)
 		if err != nil {
-			return WrapErrorf(err, "Failed to run profile %q", profileName)
+			Logger.Errorf(
+				"Failed to run profile %q: %s",
+				profileName, PassError(err).Error())
+		} else {
+			Logger.Infof("Successfully ran the %q profile.", profileName)
 		}
-		Logger.Infof("Successfully ran the %q profile.", profileName)
 		Logger.Info("Press Ctrl+C to stop watching.")
 		<-interrupt
 		Logger.Warn("Restarting...")
