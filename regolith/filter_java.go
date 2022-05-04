@@ -33,19 +33,19 @@ func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*Jav
 	return filter, nil
 }
 
-func (f *JavaFilter) Run(absoluteLocation string) error {
+func (f *JavaFilter) Run(context RunContext) error {
 	// Run the filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			"java",
 			append(
 				[]string{
-					"-jar", absoluteLocation + string(os.PathSeparator) +
+					"-jar", context.AbsoluteLocation + string(os.PathSeparator) +
 						f.Definition.Script,
 				},
 				f.Arguments...,
 			),
-			absoluteLocation,
+			context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 			ShortFilterName(f.Id),
 		)
@@ -58,11 +58,11 @@ func (f *JavaFilter) Run(absoluteLocation string) error {
 			"java",
 			append(
 				[]string{
-					"-jar", absoluteLocation + string(os.PathSeparator) +
+					"-jar", context.AbsoluteLocation + string(os.PathSeparator) +
 						f.Definition.Script, string(jsonSettings)},
 				f.Arguments...,
 			),
-			absoluteLocation,
+			context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 			ShortFilterName(f.Id),
 		)

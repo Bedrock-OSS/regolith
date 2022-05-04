@@ -31,8 +31,8 @@ func ExeFilterDefinitionFromObject(
 	return filter, nil
 }
 
-func (f *ExeFilter) Run(absoluteLocation string) error {
-	return runExeFilter(*f, f.Settings, absoluteLocation)
+func (f *ExeFilter) Run(context RunContext) error {
+	return runExeFilter(*f, f.Settings, context.AbsoluteLocation)
 }
 
 func (f *ExeFilterDefinition) CreateFilterRunner(

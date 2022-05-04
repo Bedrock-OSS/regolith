@@ -30,17 +30,17 @@ func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*N
 	return filter, nil
 }
 
-func (f *NodeJSFilter) Run(absoluteLocation string) error {
+func (f *NodeJSFilter) Run(context RunContext) error {
 	// Run filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			"node",
 			append([]string{
-				absoluteLocation + string(os.PathSeparator) +
+				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script},
 				f.Arguments...,
 			),
-			absoluteLocation,
+			context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 			ShortFilterName(f.Id),
 		)
@@ -52,10 +52,10 @@ func (f *NodeJSFilter) Run(absoluteLocation string) error {
 		err := RunSubProcess(
 			"node",
 			append([]string{
-				absoluteLocation + string(os.PathSeparator) +
+				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
 				string(jsonSettings)}, f.Arguments...),
-			absoluteLocation,
+			context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 			ShortFilterName(f.Id),
 		)
