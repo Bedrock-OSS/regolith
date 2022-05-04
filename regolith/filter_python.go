@@ -33,13 +33,13 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 	return filter, nil
 }
 
-func (f *PythonFilter) Run(absoluteLocation string) error {
+func (f *PythonFilter) Run(context RunContext) error {
 	// Run filter
 	pythonCommand, err := findPython()
 	if err != nil {
 		return PassError(err)
 	}
-	scriptPath := filepath.Join(absoluteLocation, f.Definition.Script)
+	scriptPath := filepath.Join(context.AbsoluteLocation, f.Definition.Script)
 	if needsVenv(filepath.Dir(scriptPath)) {
 		venvPath, err := f.Definition.resolveVenvPath()
 		if err != nil {
@@ -60,7 +60,7 @@ func (f *PythonFilter) Run(absoluteLocation string) error {
 		)
 	}
 	err = RunSubProcess(
-		pythonCommand, args, absoluteLocation, GetAbsoluteWorkingDirectory(), ShortFilterName(f.Id))
+		pythonCommand, args, context.AbsoluteLocation, GetAbsoluteWorkingDirectory(), ShortFilterName(f.Id))
 	if err != nil {
 		return WrapError(err, "Failed to run Python script.")
 	}

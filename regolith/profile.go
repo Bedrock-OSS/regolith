@@ -97,6 +97,27 @@ func SetupTmpFiles(config Config, profile Profile) error {
 	return nil
 }
 
+func RunProfileImpl(profile Profile, profileName string, config Config, parentContext *RunContext) error {
+	// Run the filters!
+	for filter := range profile.Filters {
+		filter := profile.Filters[filter]
+		path, _ := filepath.Abs(".")
+		// Disabled filters are skipped
+		if filter.IsDisabled() {
+			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
+			continue
+		}
+		Logger.Infof("Running filter %s", filter.GetId())
+		start := time.Now()
+		err := filter.Run(RunContext{AbsoluteLocation: path, Config: config, Parent: parentContext, Profile: profileName})
+		Logger.Debugf("Executed in %s", time.Since(start))
+		if err != nil {
+			return WrapError(err, "Failed to run filter.")
+		}
+	}
+	return nil
+}
+
 // RunProfile loads the profile from config.json and runs it. The profileName
 // is the name of the profile which should be loaded from the configuration.
 func RunProfile(profileName string) error {
@@ -124,22 +145,9 @@ func RunProfile(profileName string) error {
 		return WrapError(err, "Unable to setup profile.")
 	}
 
-	// Run the filters!
-	for filter := range profile.Filters {
-		filter := profile.Filters[filter]
-		path, _ := filepath.Abs(".")
-		// Disabled filters are skipped
-		if filter.IsDisabled() {
-			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
-			continue
-		}
-		Logger.Infof("Running filter %s", filter.GetId())
-		start := time.Now()
-		err := filter.Run(path)
-		Logger.Debugf("Executed in %s", time.Since(start))
-		if err != nil {
-			return WrapError(err, "Failed to run filter.")
-		}
+	err = RunProfileImpl(profile, profileName, *config, nil)
+	if err != nil {
+		return err
 	}
 
 	// Export files

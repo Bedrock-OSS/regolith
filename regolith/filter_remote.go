@@ -44,7 +44,7 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	return result, nil
 }
 
-func (f *RemoteFilter) Run(absoluteLocation string) error {
+func (f *RemoteFilter) Run(context RunContext) error {
 	// All other filters require safe mode to be turned off
 	if f.Definition.Url != StandardLibraryUrl && !IsUnlocked() {
 		return WrappedErrorf(
@@ -81,7 +81,7 @@ func (f *RemoteFilter) Run(absoluteLocation string) error {
 			continue
 		}
 		// Overwrite the venvSlot with the parent value
-		err := filter.Run(absolutePath)
+		err := filter.Run(RunContext{Config: context.Config, AbsoluteLocation: absolutePath, Profile: context.Profile, Parent: context.Parent})
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to run %s.",

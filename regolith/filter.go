@@ -12,6 +12,38 @@ type Filter struct {
 	Settings    map[string]interface{} `json:"settings,omitempty"`
 }
 
+type RunContext struct {
+	AbsoluteLocation string
+	Config           Config
+	Profile          string
+	Parent           *RunContext
+}
+
+type ProfileFilter struct {
+	Filter
+	Profile string `json:"-"`
+}
+
+func (f *ProfileFilter) Run(context RunContext) error {
+	profile, ok := context.Config.Profiles[f.Profile]
+	if !ok {
+		return WrappedErrorf("Profile %s not found", f.Profile)
+	}
+	parent := context.Parent
+	for parent != nil {
+		if parent.Profile == f.Profile {
+			return WrappedErrorf("Profile %s is circularly defined", f.Profile)
+		}
+		parent = parent.Parent
+	}
+	Logger.Infof("Running %q nested profile...", f.Profile)
+	return RunProfileImpl(profile, f.Profile, context.Config, &context)
+}
+
+func (f *ProfileFilter) Check() error {
+	return nil
+}
+
 func FilterDefinitionFromObject(id string) *FilterDefinition {
 	return &FilterDefinition{Id: id}
 }
@@ -60,7 +92,7 @@ type FilterInstaller interface {
 
 type FilterRunner interface {
 	CopyArguments(parent *RemoteFilter)
-	Run(absoluteLocation string) error
+	Run(context RunContext) error
 	IsDisabled() bool
 	GetId() string
 	Check() error
@@ -157,6 +189,10 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 func FilterRunnerFromObjectAndDefinitions(
 	obj map[string]interface{}, filterDefinitions map[string]FilterInstaller,
 ) (FilterRunner, error) {
+	profile, ok := obj["profile"].(string)
+	if ok {
+		return &ProfileFilter{Profile: profile}, nil
+	}
 	filter, ok := obj["filter"].(string)
 	if !ok {
 		return nil, WrappedError(

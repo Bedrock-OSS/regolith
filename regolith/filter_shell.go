@@ -32,8 +32,8 @@ func ShellFilterDefinitionFromObject(
 	return filter, nil
 }
 
-func (f *ShellFilter) Run(absoluteLocation string) error {
-	return runShellFilter(*f, f.Settings, absoluteLocation)
+func (f *ShellFilter) Run(context RunContext) error {
+	return runShellFilter(*f, f.Settings, context.AbsoluteLocation)
 }
 
 func (f *ShellFilterDefinition) CreateFilterRunner(

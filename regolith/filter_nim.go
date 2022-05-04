@@ -31,17 +31,17 @@ func NimFilterDefinitionFromObject(
 	return filter, nil
 }
 
-func (f *NimFilter) Run(absoluteLocation string) error {
+func (f *NimFilter) Run(context RunContext) error {
 	// Run filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			"nim",
 			append([]string{
 				"-r", "c", "--hints:off", "--warnings:off",
-				absoluteLocation + string(os.PathSeparator) + f.Definition.Script},
+				context.AbsoluteLocation + string(os.PathSeparator) + f.Definition.Script},
 				f.Arguments...,
 			),
-			absoluteLocation,
+			context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 			ShortFilterName(f.Id),
 		)
@@ -54,11 +54,11 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			"nim",
 			append([]string{
 				"-r", "c", "--hints:off", "--warnings:off",
-				absoluteLocation + string(os.PathSeparator) +
+				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
 				string(jsonSettings)},
 				f.Arguments...),
-			absoluteLocation,
+			context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 			ShortFilterName(f.Id),
 		)
