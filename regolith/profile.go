@@ -143,7 +143,11 @@ func RunProfile(profileName string) error {
 	if err != nil {
 		return WrapError(err, "Could not load \"config.json\".")
 	}
-	profile := config.Profiles[profileName]
+	profile, ok := config.Profiles[profileName]
+	if !ok {
+		return WrappedErrorf(
+			"Profile %q does not exist in the configuration.", profileName)
+	}
 
 	err = CheckProfileImpl(profile, profileName, *config, nil)
 	if err != nil {
