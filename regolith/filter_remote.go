@@ -148,7 +148,7 @@ func (f *RemoteFilterDefinition) InstallDependencies(*RemoteFilterDefinition) er
 	return nil
 }
 
-func (f *RemoteFilterDefinition) Check() error {
+func (f *RemoteFilterDefinition) Check(context RunContext) error {
 	dummyFilterRunner, err := f.CreateFilterRunner(
 		map[string]interface{}{"filter": f.Id})
 	if err != nil { // Shouldn't happen but just in case it's better to check
@@ -168,7 +168,7 @@ func (f *RemoteFilterDefinition) Check() error {
 	}
 	for i, filter := range filterCollection.Filters {
 		// Overwrite the venvSlot with the parent value
-		err := filter.Check()
+		err := filter.Check(context)
 		if err != nil {
 			return WrapErrorf(
 				err, "The check of %s failed.", NiceFilterName(f.Id, i))
@@ -177,8 +177,8 @@ func (f *RemoteFilterDefinition) Check() error {
 	return nil
 }
 
-func (f *RemoteFilter) Check() error {
-	return f.Definition.Check()
+func (f *RemoteFilter) Check(context RunContext) error {
+	return f.Definition.Check(context)
 }
 
 // CopyFilterData copies the filter's data to the data folder.

@@ -124,7 +124,7 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	return nil
 }
 
-func (f *PythonFilterDefinition) Check() error {
+func (f *PythonFilterDefinition) Check(context RunContext) error {
 	pythonCommand, err := findPython()
 	if err != nil {
 		return PassError(err)
@@ -138,8 +138,8 @@ func (f *PythonFilterDefinition) Check() error {
 	return nil
 }
 
-func (f *PythonFilter) Check() error {
-	return f.Definition.Check()
+func (f *PythonFilter) Check(context RunContext) error {
+	return f.Definition.Check(context)
 }
 
 func (f *PythonFilter) CopyArguments(parent *RemoteFilter) {
