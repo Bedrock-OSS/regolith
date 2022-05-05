@@ -103,7 +103,7 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	return nil
 }
 
-func (f *NodeJSFilterDefinition) Check() error {
+func (f *NodeJSFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("node")
 	if err != nil {
 		return WrapError(
@@ -119,8 +119,8 @@ func (f *NodeJSFilterDefinition) Check() error {
 	return nil
 }
 
-func (f *NodeJSFilter) Check() error {
-	return f.Definition.Check()
+func (f *NodeJSFilter) Check(context RunContext) error {
+	return f.Definition.Check(context)
 }
 
 func hasPackageJson(filterPath string) bool {

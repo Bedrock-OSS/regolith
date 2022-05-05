@@ -97,6 +97,17 @@ func SetupTmpFiles(config Config, profile Profile) error {
 	return nil
 }
 
+func CheckProfileImpl(profile Profile, profileName string, config Config, parentContext *RunContext) error {
+	// Check whether every filter, uses a supported filter type
+	for _, f := range profile.Filters {
+		err := f.Check(RunContext{Config: &config, Parent: parentContext, Profile: profileName})
+		if err != nil {
+			return WrapErrorf(err, "Filter check failed.")
+		}
+	}
+	return nil
+}
+
 func RunProfileImpl(profile Profile, profileName string, config Config, parentContext *RunContext) error {
 	// Run the filters!
 	for filter := range profile.Filters {
@@ -107,9 +118,12 @@ func RunProfileImpl(profile Profile, profileName string, config Config, parentCo
 			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
 			continue
 		}
-		Logger.Infof("Running filter %s", filter.GetId())
+		// Skip printing if the filter ID is empty (most likely a nested profile)
+		if filter.GetId() != "" {
+			Logger.Infof("Running filter %s", filter.GetId())
+		}
 		start := time.Now()
-		err := filter.Run(RunContext{AbsoluteLocation: path, Config: config, Parent: parentContext, Profile: profileName})
+		err := filter.Run(RunContext{AbsoluteLocation: path, Config: &config, Parent: parentContext, Profile: profileName})
 		Logger.Debugf("Executed in %s", time.Since(start))
 		if err != nil {
 			return WrapError(err, "Failed to run filter.")
@@ -131,12 +145,9 @@ func RunProfile(profileName string) error {
 	}
 	profile := config.Profiles[profileName]
 
-	// Check whether every filter, uses a supported filter type
-	for _, f := range profile.Filters {
-		err := f.Check()
-		if err != nil {
-			return WrapErrorf(err, "Filter check failed.")
-		}
+	err = CheckProfileImpl(profile, profileName, *config, nil)
+	if err != nil {
+		return err
 	}
 
 	// Prepare tmp files

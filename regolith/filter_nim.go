@@ -107,7 +107,7 @@ func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 	return nil
 }
 
-func (f *NimFilterDefinition) Check() error {
+func (f *NimFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("nim")
 	if err != nil {
 		return WrapError(
@@ -124,8 +124,8 @@ func (f *NimFilterDefinition) Check() error {
 	return nil
 }
 
-func (f *NimFilter) Check() error {
-	return f.Definition.Check()
+func (f *NimFilter) Check(context RunContext) error {
+	return f.Definition.Check(context)
 }
 
 func hasNimble(filterPath string) bool {

@@ -14,7 +14,7 @@ type Filter struct {
 
 type RunContext struct {
 	AbsoluteLocation string
-	Config           Config
+	Config           *Config
 	Profile          string
 	Parent           *RunContext
 }
@@ -25,10 +25,18 @@ type ProfileFilter struct {
 }
 
 func (f *ProfileFilter) Run(context RunContext) error {
+	profile := context.Config.Profiles[f.Profile]
+	Logger.Infof("Running %q nested profile...", f.Profile)
+	return RunProfileImpl(profile, f.Profile, *context.Config, &context)
+}
+
+func (f *ProfileFilter) Check(context RunContext) error {
+	// Check if the profile exists
 	profile, ok := context.Config.Profiles[f.Profile]
 	if !ok {
 		return WrappedErrorf("Profile %s not found", f.Profile)
 	}
+	// Check if the profile we're nesting wasn't already nested
 	parent := context.Parent
 	for parent != nil {
 		if parent.Profile == f.Profile {
@@ -36,12 +44,7 @@ func (f *ProfileFilter) Run(context RunContext) error {
 		}
 		parent = parent.Parent
 	}
-	Logger.Infof("Running %q nested profile...", f.Profile)
-	return RunProfileImpl(profile, f.Profile, context.Config, &context)
-}
-
-func (f *ProfileFilter) Check() error {
-	return nil
+	return CheckProfileImpl(profile, f.Profile, *context.Config, &context)
 }
 
 func FilterDefinitionFromObject(id string) *FilterDefinition {
@@ -86,7 +89,7 @@ func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
 
 type FilterInstaller interface {
 	InstallDependencies(parent *RemoteFilterDefinition) error
-	Check() error
+	Check(context RunContext) error
 	CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error)
 }
 
@@ -95,7 +98,7 @@ type FilterRunner interface {
 	Run(context RunContext) error
 	IsDisabled() bool
 	GetId() string
-	Check() error
+	Check(context RunContext) error
 }
 
 func (f *Filter) CopyArguments(parent *RemoteFilter) {

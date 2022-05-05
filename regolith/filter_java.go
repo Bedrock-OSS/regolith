@@ -89,7 +89,7 @@ func (f *JavaFilterDefinition) InstallDependencies(*RemoteFilterDefinition) erro
 	return nil
 }
 
-func (f *JavaFilterDefinition) Check() error {
+func (f *JavaFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("java")
 	if err != nil {
 		return WrapError(
@@ -110,6 +110,6 @@ func (f *JavaFilterDefinition) Check() error {
 	return nil
 }
 
-func (f *JavaFilter) Check() error {
-	return f.Definition.Check()
+func (f *JavaFilter) Check(context RunContext) error {
+	return f.Definition.Check(context)
 }
