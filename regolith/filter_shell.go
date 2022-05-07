@@ -32,8 +32,8 @@ func ShellFilterDefinitionFromObject(
 	return filter, nil
 }
 
-func (f *ShellFilter) Run(absoluteLocation string) error {
-	return runShellFilter(*f, f.Settings, absoluteLocation)
+func (f *ShellFilter) Run(context RunContext) error {
+	return runShellFilter(*f, f.Settings, context.AbsoluteLocation)
 }
 
 func (f *ShellFilterDefinition) CreateFilterRunner(
@@ -56,7 +56,7 @@ func (f *ShellFilterDefinition) InstallDependencies(
 	return nil
 }
 
-func (f *ShellFilterDefinition) Check() error {
+func (f *ShellFilterDefinition) Check(context RunContext) error {
 	shell, _, err := findShell()
 	if err != nil {
 		return WrapError(err, "Shell requirements check failed")
@@ -65,8 +65,8 @@ func (f *ShellFilterDefinition) Check() error {
 	return nil
 }
 
-func (f *ShellFilter) Check() error {
-	return f.Definition.Check()
+func (f *ShellFilter) Check(context RunContext) error {
+	return f.Definition.Check(context)
 }
 
 var shells = [][]string{
