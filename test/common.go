@@ -20,6 +20,7 @@ const runMissingRpProjectPath = "testdata/run_missing_rp_project"
 const versionedRemoteFilterProject = "testdata/versioned_remote_filter_project"
 const versionedRemoteFilterProjectAfterRun = "testdata/versioned_remote_filter_project_after_run"
 const exeFilterPath = "testdata/exe_filter"
+const profileFilterPath = "testdata/profile_filter"
 
 // firstErr returns the first error in a list of errors. If the list is empty
 // or all errors are nil, nil is returned.
