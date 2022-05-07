@@ -1,0 +1,18 @@
+// This is the source code of an exe file which is located in the same
+// directory and uses the sanme name. This file doesn't use the "go" extension
+// so it won't mess with the "go test" command.
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+)
+
+func main() {
+	err := ioutil.WriteFile("BP/hello.txt", []byte("Hello World"), 0666)
+	if err != nil {
+		fmt.Println("Error writing file:", err)
+		os.Exit(1)
+	}
+}

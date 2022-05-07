@@ -31,17 +31,17 @@ func NimFilterDefinitionFromObject(
 	return filter, nil
 }
 
-func (f *NimFilter) Run(absoluteLocation string) error {
+func (f *NimFilter) Run(context RunContext) error {
 	// Run filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			"nim",
 			append([]string{
 				"-r", "c", "--hints:off", "--warnings:off",
-				absoluteLocation + string(os.PathSeparator) + f.Definition.Script},
+				context.AbsoluteLocation + string(os.PathSeparator) + f.Definition.Script},
 				f.Arguments...,
 			),
-			absoluteLocation,
+			context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 			ShortFilterName(f.Id),
 		)
@@ -54,11 +54,11 @@ func (f *NimFilter) Run(absoluteLocation string) error {
 			"nim",
 			append([]string{
 				"-r", "c", "--hints:off", "--warnings:off",
-				absoluteLocation + string(os.PathSeparator) +
+				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
 				string(jsonSettings)},
 				f.Arguments...),
-			absoluteLocation,
+			context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(),
 			ShortFilterName(f.Id),
 		)
@@ -107,7 +107,7 @@ func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 	return nil
 }
 
-func (f *NimFilterDefinition) Check() error {
+func (f *NimFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("nim")
 	if err != nil {
 		return WrapError(
@@ -124,8 +124,8 @@ func (f *NimFilterDefinition) Check() error {
 	return nil
 }
 
-func (f *NimFilter) Check() error {
-	return f.Definition.Check()
+func (f *NimFilter) Check(context RunContext) error {
+	return f.Definition.Check(context)
 }
 
 func hasNimble(filterPath string) bool {
