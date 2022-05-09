@@ -46,6 +46,11 @@ const (
 	versionedRemoteFilterProject         = "testdata/versioned_remote_filter_project"
 	versionedRemoteFilterProjectAfterRun = "testdata/versioned_remote_filter_project_after_run"
 	exeFilterPath                        = "testdata/exe_filter"
+
+	// profileFilterPath is a directory that contains files for testing
+	// ProfileFilter. It contains a project and an expected result. The
+	// projects has both valid and invalid profiles.
+	profileFilterPath = "testdata/profile_filter"
 )
 
 // firstErr returns the first error in a list of errors. If the list is empty

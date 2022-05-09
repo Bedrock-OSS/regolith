@@ -12,6 +12,13 @@ type Filter struct {
 	Settings    map[string]interface{} `json:"settings,omitempty"`
 }
 
+type RunContext struct {
+	AbsoluteLocation string
+	Config           *Config
+	Profile          string
+	Parent           *RunContext
+}
+
 func FilterDefinitionFromObject(id string) *FilterDefinition {
 	return &FilterDefinition{Id: id}
 }
@@ -54,16 +61,16 @@ func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
 
 type FilterInstaller interface {
 	InstallDependencies(parent *RemoteFilterDefinition) error
-	Check() error
+	Check(context RunContext) error
 	CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error)
 }
 
 type FilterRunner interface {
 	CopyArguments(parent *RemoteFilter)
-	Run(absoluteLocation string) error
+	Run(context RunContext) error
 	IsDisabled() bool
 	GetId() string
-	Check() error
+	Check(context RunContext) error
 }
 
 func (f *Filter) CopyArguments(parent *RemoteFilter) {
@@ -75,7 +82,7 @@ func (f *Filter) Check() error {
 	return NotImplementedError("Check")
 }
 
-func (f *Filter) Run(absoluteLocation string) error {
+func (f *Filter) Run(context RunContext) error {
 	return NotImplementedError("Run")
 }
 
@@ -157,6 +164,10 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 func FilterRunnerFromObjectAndDefinitions(
 	obj map[string]interface{}, filterDefinitions map[string]FilterInstaller,
 ) (FilterRunner, error) {
+	profile, ok := obj["profile"].(string)
+	if ok {
+		return &ProfileFilter{Profile: profile}, nil
+	}
 	filter, ok := obj["filter"].(string)
 	if !ok {
 		return nil, WrappedError(

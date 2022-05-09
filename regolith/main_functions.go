@@ -198,11 +198,9 @@ func Watch(profileName string, debug bool) error {
 	}
 	profile := config.Profiles[profileName]
 	// Check whether every filter, uses a supported filter type
-	for _, f := range profile.Filters {
-		err := f.Check()
-		if err != nil {
-			return WrapErrorf(err, "Filter check failed.")
-		}
+	err = CheckProfileImpl(profile, profileName, *config, nil)
+	if err != nil {
+		return err
 	}
 	rpWatcher, err := NewDirWatcher(config.ResourceFolder)
 	if err != nil {
@@ -232,7 +230,7 @@ func Watch(profileName string, debug bool) error {
 	go yieldChanges(interrupt, bpWatcher, "bp")
 	go yieldChanges(interrupt, dataWatcher, "data")
 	for {
-		err = WatchProfile(&profile, config, interrupt)
+		err = WatchProfile(profileName, &profile, config, interrupt)
 		if err != nil {
 			Logger.Errorf(
 				"Failed to run profile %q: %s",
@@ -244,7 +242,6 @@ func Watch(profileName string, debug bool) error {
 		<-interrupt
 		Logger.Warn("Restarting...")
 	}
-	// return nil
 }
 
 // Init handles the "regolith init" command. It initializes a new Regolith
