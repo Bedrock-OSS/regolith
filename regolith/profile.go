@@ -71,6 +71,47 @@ func RecycledSetupTmpFiles(config Config, profile Profile) error {
 	return nil
 }
 
+func CheckProfileImpl(profile Profile, profileName string, config Config, parentContext *RunContext) error {
+	// Check whether every filter, uses a supported filter type
+	for _, f := range profile.Filters {
+		err := f.Check(RunContext{Config: &config, Parent: parentContext, Profile: profileName})
+		if err != nil {
+			return WrapErrorf(err, "Filter check failed.")
+		}
+	}
+	return nil
+}
+
+func RunProfileImpl(profile Profile, profileName string, config Config, parentContext *RunContext) error {
+	// Run the filters!
+	for filter := range profile.Filters {
+		filter := profile.Filters[filter]
+		path, _ := filepath.Abs(".")
+		// Disabled filters are skipped
+		if filter.IsDisabled() {
+			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
+			continue
+		}
+		// Skip printing if the filter ID is empty (most likely a nested profile)
+		if filter.GetId() != "" {
+			Logger.Infof("Running filter %s", filter.GetId())
+		}
+		start := time.Now()
+		err := filter.Run(RunContext{AbsoluteLocation: path, Config: &config, Parent: parentContext, Profile: profileName})
+		Logger.Debugf("Executed in %s", time.Since(start))
+		if err != nil {
+			err1 := ClearCachedStates() // Just to be safe clear cached states
+			if err1 != nil {
+				err = WrapError(
+					err1, "Failed to clear cached file path states while "+
+						"handling another error.")
+			}
+			return WrapError(err, "Failed to run filter.")
+		}
+	}
+	return nil
+}
+
 // RunProfile loads the profile from config.json and runs it. The profileName
 // is the name of the profile which should be loaded from the configuration.
 func RunProfile(profileName string) error {
@@ -82,14 +123,15 @@ func RunProfile(profileName string) error {
 	if err != nil {
 		return WrapError(err, "Could not load \"config.json\".")
 	}
-	profile := config.Profiles[profileName]
+	profile, ok := config.Profiles[profileName]
+	if !ok {
+		return WrappedErrorf(
+			"Profile %q does not exist in the configuration.", profileName)
+	}
 
-	// Check whether every filter, uses a supported filter type
-	for _, f := range profile.Filters {
-		err := f.Check()
-		if err != nil {
-			return WrapErrorf(err, "Filter check failed.")
-		}
+	err = CheckProfileImpl(profile, profileName, *config, nil)
+	if err != nil {
+		return err
 	}
 
 	// Prepare tmp files
@@ -104,28 +146,9 @@ func RunProfile(profileName string) error {
 		return WrapError(err, "Unable to setup profile.")
 	}
 
-	// Run the filters!
-	for filter := range profile.Filters {
-		filter := profile.Filters[filter]
-		path, _ := filepath.Abs(".")
-		// Disabled filters are skipped
-		if filter.IsDisabled() {
-			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
-			continue
-		}
-		Logger.Infof("Running filter %s", filter.GetId())
-		start := time.Now()
-		err := filter.Run(path)
-		Logger.Debugf("Executed in %s", time.Since(start))
-		if err != nil {
-			err1 := ClearCachedStates() // Just to be safe clear cached states
-			if err1 != nil {
-				err = WrapError(
-					err1, "Failed to clear cached file path states while "+
-						"handling another error.")
-			}
-			return WrapError(err, "Failed to run filter.")
-		}
+	err = RunProfileImpl(profile, profileName, *config, nil)
+	if err != nil {
+		return PassError(err)
 	}
 
 	// Export files
@@ -149,7 +172,7 @@ func RunProfile(profileName string) error {
 // it can be interrupted through the use of the interrupt channel. On various
 // stages of the execution, the function checks the channel, and if it is
 // sending a message, it restarts.
-func WatchProfile(profile *Profile, config *Config, interrupt chan string) error {
+func WatchProfile(profileName string, profile *Profile, config *Config, interrupt chan string) error {
 	// Checks if the interrupt channel is sending a message.
 	isInterrupted := func(ignoreData bool) bool {
 		select {
@@ -208,34 +231,17 @@ start:
 		goto start
 	}
 
-	// Run the filters!
-	for filter := range profile.Filters {
-		filter := profile.Filters[filter]
-		path, _ := filepath.Abs(".")
-		// Disabled filters are skipped
-		if filter.IsDisabled() {
-			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
-			continue
+	interrupted, err := WatchProfileImpl(
+		*profile, profileName, *config, nil, func() bool { return isInterrupted(false) })
+
+	if interrupted { // Save the current target state before rerun
+		if err := saveTmp(); err != nil {
+			return PassError(err)
 		}
-		Logger.Infof("Running filter %s", filter.GetId())
-		start := time.Now()
-		err := filter.Run(path)
-		Logger.Debugf("Executed in %s", time.Since(start))
-		if err != nil {
-			err1 := ClearCachedStates() // Just to be safe clear cached states
-			if err1 != nil {
-				err = WrapError(
-					err1, "Failed to clear cached file path states while "+
-						"handling another error.")
-			}
-			return WrapError(err, "Failed to run filter.")
-		}
-		if isInterrupted(false) { // Save the current target state before rerun
-			if err := saveTmp(); err != nil {
-				return PassError(err)
-			}
-			goto start
-		}
+		goto start
+	}
+	if err != nil {
+		return PassError(err)
 	}
 
 	// Export files
@@ -259,6 +265,52 @@ start:
 	}
 	Logger.Debug("Done in ", time.Since(start))
 	return nil
+}
+
+// TODO - refactor this code, write proper comment
+// WatchProfileImpl ...
+/// isInterrupted - a function that checks the interruptions.
+// ... returns whether there were any interruptions and an error
+func WatchProfileImpl(
+	profile Profile, profileName string, config Config,
+	parentContext *RunContext, isInterrupted func() bool,
+) (bool, error) {
+	// Run the filters!
+	for filter := range profile.Filters {
+		filter := profile.Filters[filter]
+		path, _ := filepath.Abs(".")
+		// Disabled filters are skipped
+		if filter.IsDisabled() {
+			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
+			continue
+		}
+		// Skip printing if the filter ID is empty (most likely a nested profile)
+		if filter.GetId() != "" {
+			Logger.Infof("Running filter %s", filter.GetId())
+		}
+		start := time.Now()
+		// TODO - This function should propagate the interruptions for the
+		// profile filter currently it doesn't do that so nested profiles can
+		// handle interruptions only after the execution of the entire prfoile.
+		err := filter.Run(
+			RunContext{
+				AbsoluteLocation: path, Config: &config, Parent: parentContext,
+				Profile: profileName})
+		Logger.Debugf("Executed in %s", time.Since(start))
+		if err != nil {
+			err1 := ClearCachedStates() // Just to be safe clear cached states
+			if err1 != nil {
+				err = WrapError(
+					err1, "Failed to clear cached file path states while "+
+						"handling another error.")
+			}
+			return false, WrapError(err, "Failed to run filter.")
+		}
+		if isInterrupted() {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // SubfilterCollection returns a collection of filters from a

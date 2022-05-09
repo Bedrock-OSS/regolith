@@ -29,6 +29,10 @@
 
 ## 🎚 Setup:
 
+**This setup is for developers. If you're a normal user, you can find simpler
+instructions
+[here](https://bedrock-oss.github.io/regolith/docs/installing).**
+
 ### 1. Install Golang
 
 - **[Installation and beginners guide ⇗.](https://golang.org/doc/tutorial/getting-started)**
@@ -37,9 +41,23 @@
 
 - `go get -u ./...` to recursively install all dependencies.
 
-### 3. Run
+### 3. Test / Run
 
--  Run with `go run .\main.go`
+Since Regolith is a console application which requires very specific
+project setup and arguments, `go run .\main.go` doesn't really do anything.
+
+You can build and install Regolith from source using `go install` and
+test test the application in the same way as user would do, by using
+it on a separate Regolith project.
+
+You can also write your own tests in the `test` directory. Here are some examples
+of useful test commands:
+
+- `go test ./test` - runs all of the tests from the test folder (we keep all of the test there)
+- `go test ./test -v -run "TestRecycledCopy"` - run only the "TestRecycledCopy"
+  with verbose output.
+- `dlv test ./test -- "-test.run" TestInstallAllUnlockAndRun` - debug the "TestInstallAllUnlockAndRun"
+  test using [delve](https://github.com/go-delve/delve)
 
 ## 🏗 Building as a `.exe`:
 
@@ -52,10 +70,6 @@
 ### 2. Build
 
 There are a few ways to build:
- - `./scripts/build-local.sh` (¯\_(ツ)_/¯)
- - `go build` (creates a `.exe` file)
  - `go install` (installs to gopath)
-
-## :test_tube: Running Tests
-
-- `go test ./...`
+  - `go build` (creates a `.exe` file)
+ - `./scripts/build-local.sh` (¯\_(ツ)_/¯)
