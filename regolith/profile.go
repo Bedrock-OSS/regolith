@@ -82,11 +82,13 @@ func CheckProfileImpl(profile Profile, profileName string, config Config, parent
 	return nil
 }
 
-func RunProfileImpl(profile Profile, profileName string, config Config, parentContext *RunContext) error {
-	// Run the filters!
+func RunProfileImpl(context RunContext) error {
+	profile, ok := context.GetProfile()
+	if !ok {
+		return WrappedErrorf("Unable to get profile %s", context.Profile)
+	}
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
-		path, _ := filepath.Abs(".")
 		// Disabled filters are skipped
 		if filter.IsDisabled() {
 			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
@@ -97,7 +99,7 @@ func RunProfileImpl(profile Profile, profileName string, config Config, parentCo
 			Logger.Infof("Running filter %s", filter.GetId())
 		}
 		start := time.Now()
-		err := filter.Run(RunContext{AbsoluteLocation: path, Config: &config, Parent: parentContext, Profile: profileName})
+		err := filter.Run(context)
 		Logger.Debugf("Executed in %s", time.Since(start))
 		if err != nil {
 			err1 := ClearCachedStates() // Just to be safe clear cached states
@@ -115,6 +117,7 @@ func RunProfileImpl(profile Profile, profileName string, config Config, parentCo
 // RunProfile loads the profile from config.json and runs it. The profileName
 // is the name of the profile which should be loaded from the configuration.
 func RunProfile(profileName string) error {
+	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
 		return WrapError(err, "Could not load \"config.json\".")
@@ -128,7 +131,7 @@ func RunProfile(profileName string) error {
 		return WrappedErrorf(
 			"Profile %q does not exist in the configuration.", profileName)
 	}
-
+	// Check the filters of the profile
 	err = CheckProfileImpl(profile, profileName, *config, nil)
 	if err != nil {
 		return err
@@ -146,7 +149,15 @@ func RunProfile(profileName string) error {
 		return WrapError(err, "Unable to setup profile.")
 	}
 
-	err = RunProfileImpl(profile, profileName, *config, nil)
+	// profile, profileName, *config, nil
+	path, _ := filepath.Abs(".")
+	err = RunProfileImpl(
+		RunContext{
+			AbsoluteLocation: path,
+			Config:           config,
+			Parent:           nil,
+			Profile:          profileName,
+		})
 	if err != nil {
 		return PassError(err)
 	}
@@ -172,22 +183,7 @@ func RunProfile(profileName string) error {
 // it can be interrupted through the use of the interrupt channel. On various
 // stages of the execution, the function checks the channel, and if it is
 // sending a message, it restarts.
-func WatchProfile(profileName string, profile *Profile, config *Config, interrupt chan string) error {
-	// Checks if the interrupt channel is sending a message.
-	isInterrupted := func(ignoreData bool) bool {
-		select {
-		case source := <-interrupt:
-			Logger.Warn(
-				"A new change was detected while running profile. " +
-					"Restarting...")
-			if ignoreData && source == "data" {
-				return false
-			}
-			return true
-		default:
-			return false
-		}
-	}
+func WatchProfile(profileName string, profile *Profile, config *Config) error {
 	// Saves the state of the tmp files
 	saveTmp := func() error {
 		err1 := SaveStateInDefaultCache(".regolith/tmp/RP")
@@ -200,18 +196,13 @@ func WatchProfile(profileName string, profile *Profile, config *Config, interrup
 					err1, "Failed to clear cached file path states while "+
 						"handling another error.")
 			}
-			return WrapError(err, "Failed to run filter.")
+			return PassError(err)
 		}
 		return nil
 	}
-	// LOL XD - it could be a loop and interruptions could cause continue
-	// instead of using a label and goto bu honestly I think this is more
-	// readable.
-	// Obviously this need to be changed. Don't judge me. I know goto is
-	// considered the worst programming practice in the world but I never used
-	// it for anything and it was really exciting to write it like that :D
-	//
-	// I probably won't change it. I wonder if anyone will ever read this...
+	// The label and goto can be easily changed to a loop with continue and
+	// break but I find this more readable. If you want to change it, because
+	// you believe goto is forbidden, dark art then feel free to do so.
 start:
 	// Prepare tmp files
 	err := RecycledSetupTmpFiles(*config, *profile)
@@ -224,26 +215,30 @@ start:
 		}
 		return WrapError(err, "Unable to setup profile.")
 	}
-	if isInterrupted(false) {
+	if config.IsInterrupted() {
 		if err := saveTmp(); err != nil {
 			return PassError(err)
 		}
 		goto start
 	}
-
+	// Run the profile
+	path, _ := filepath.Abs(".")
 	interrupted, err := WatchProfileImpl(
-		*profile, profileName, *config, nil, func() bool { return isInterrupted(false) })
-
+		RunContext{
+			AbsoluteLocation: path,
+			Config:           config,
+			Parent:           nil,
+			Profile:          profileName,
+		})
+	if err != nil {
+		return PassError(err)
+	}
 	if interrupted { // Save the current target state before rerun
 		if err := saveTmp(); err != nil {
 			return PassError(err)
 		}
 		goto start
 	}
-	if err != nil {
-		return PassError(err)
-	}
-
 	// Export files
 	Logger.Info("Moving files to target directory.")
 	start := time.Now()
@@ -257,7 +252,7 @@ start:
 		}
 		return WrapError(err, "Exporting project failed.")
 	}
-	if isInterrupted(true) { // Ignore the interruptions from the data path
+	if config.IsInterrupted("data") { // Ignore the interruptions from the data path
 		if err := saveTmp(); err != nil {
 			return PassError(err)
 		}
@@ -267,18 +262,17 @@ start:
 	return nil
 }
 
-// TODO - refactor this code, write proper comment
-// WatchProfileImpl ...
-/// isInterrupted - a function that checks the interruptions.
-// ... returns whether there were any interruptions and an error
-func WatchProfileImpl(
-	profile Profile, profileName string, config Config,
-	parentContext *RunContext, isInterrupted func() bool,
-) (bool, error) {
+// WatchProfileImpl runs the profile from the given context and returns true
+// if the execution was interrupted.
+func WatchProfileImpl(context RunContext) (bool, error) {
+	profile, ok := context.GetProfile()
+	if !ok {
+		return false, WrappedErrorf(
+			"Unable to get profile %s", context.Profile)
+	}
 	// Run the filters!
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
-		path, _ := filepath.Abs(".")
 		// Disabled filters are skipped
 		if filter.IsDisabled() {
 			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
@@ -288,14 +282,9 @@ func WatchProfileImpl(
 		if filter.GetId() != "" {
 			Logger.Infof("Running filter %s", filter.GetId())
 		}
+		// Run the filter in watch mode
 		start := time.Now()
-		// TODO - This function should propagate the interruptions for the
-		// profile filter currently it doesn't do that so nested profiles can
-		// handle interruptions only after the execution of the entire prfoile.
-		err := filter.Run(
-			RunContext{
-				AbsoluteLocation: path, Config: &config, Parent: parentContext,
-				Profile: profileName})
+		interrupted, err := filter.Watch(context)
 		Logger.Debugf("Executed in %s", time.Since(start))
 		if err != nil {
 			err1 := ClearCachedStates() // Just to be safe clear cached states
@@ -306,7 +295,7 @@ func WatchProfileImpl(
 			}
 			return false, WrapError(err, "Failed to run filter.")
 		}
-		if isInterrupted() {
+		if interrupted {
 			return true, nil
 		}
 	}

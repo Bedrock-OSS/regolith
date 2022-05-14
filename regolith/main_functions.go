@@ -187,7 +187,7 @@ func Watch(profileName string, debug bool) error {
 	if profileName == "" {
 		profileName = "dev"
 	}
-	Logger.Infof("Watching project with %q profile...", profileName)
+	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
 		return WrapError(err, "Could not load \"config.json\".")
@@ -196,41 +196,19 @@ func Watch(profileName string, debug bool) error {
 	if err != nil {
 		return WrapError(err, "Could not load \"config.json\".")
 	}
-	profile := config.Profiles[profileName]
-	// Check whether every filter, uses a supported filter type
+	profile, ok := config.Profiles[profileName]
+	if !ok {
+		return WrappedErrorf(
+			"Profile %q does not exist in the configuration.", profileName)
+	}
+	// Check the filters of the profile
 	err = CheckProfileImpl(profile, profileName, *config, nil)
 	if err != nil {
 		return err
 	}
-	rpWatcher, err := NewDirWatcher(config.ResourceFolder)
-	if err != nil {
-		return WrapError(err, "Could not create resource pack watcher.")
-	}
-	bpWatcher, err := NewDirWatcher(config.BehaviorFolder)
-	if err != nil {
-		return WrapError(err, "Could not create behavior pack watcher.")
-	}
-	dataWatcher, err := NewDirWatcher(config.DataPath)
-	if err != nil {
-		return WrapError(err, "Could not create data watcher.")
-	}
-	interrupt := make(chan string)
-	yieldChanges := func(
-		interrupt chan string, watcher *DirWatcher, sourceName string,
-	) {
-		for {
-			err := watcher.WaitForChangeGroup(100)
-			if err != nil {
-				return
-			}
-			interrupt <- sourceName
-		}
-	}
-	go yieldChanges(interrupt, rpWatcher, "rp")
-	go yieldChanges(interrupt, bpWatcher, "bp")
-	go yieldChanges(interrupt, dataWatcher, "data")
+	config.StartWatchingSrouceFiles()
 	for {
-		err = WatchProfile(profileName, &profile, config, interrupt)
+		err = WatchProfile(profileName, &profile, config)
 		if err != nil {
 			Logger.Errorf(
 				"Failed to run profile %q: %s",
@@ -239,7 +217,7 @@ func Watch(profileName string, debug bool) error {
 			Logger.Infof("Successfully ran the %q profile.", profileName)
 		}
 		Logger.Info("Press Ctrl+C to stop watching.")
-		<-interrupt
+		config.AwaitInterruption()
 		Logger.Warn("Restarting...")
 	}
 }

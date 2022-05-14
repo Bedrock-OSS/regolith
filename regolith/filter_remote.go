@@ -3,13 +3,14 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/go-getter"
-	"github.com/otiai10/copy"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+
+	"github.com/hashicorp/go-getter"
+	"github.com/otiai10/copy"
 )
 
 type RemoteFilterDefinition struct {
@@ -89,6 +90,13 @@ func (f *RemoteFilter) Run(context RunContext) error {
 		}
 	}
 	return nil
+}
+
+func (f *RemoteFilter) Watch(context RunContext) (bool, error) {
+	if err := f.Run(context); err != nil {
+		return false, err
+	}
+	return context.Config.IsInterrupted(), nil
 }
 
 func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
@@ -292,10 +300,6 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 	Logger.Infof("Downloading filter %s...", i.Id)
 
 	// Download the filter using Git Getter
-	// TODO:
-	// Can we somehow detect whether this is a failure from git being not
-	// installed, or a failure from
-	// the repo/folder not existing?
 	if !hasGit() {
 		return WrappedError(gitNotInstalled)
 	}

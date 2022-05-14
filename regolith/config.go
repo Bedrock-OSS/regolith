@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"io/ioutil"
+
 	"muzzammil.xyz/jsonc"
 )
 
@@ -26,6 +27,13 @@ type Config struct {
 	Author          string `json:"author,omitempty"`
 	Packs           `json:"packs,omitempty"`
 	RegolithProject `json:"regolith,omitempty"`
+
+	// interruptionChannel is a channel that is used to notify about changes
+	// in the sourec files, in order to trigger a restart of the program in
+	// the watch mode. The string send to the channel is the name of the source
+	// of the change ("rp", "bp" or "data"), which may be used to handle
+	// some interuptions differently.
+	interruptionChannel chan string
 }
 
 // ExportTarget is a part of "config.json" that contains export information
@@ -275,4 +283,70 @@ func (c *Config) DownloadRemoteFilters(isForced bool) error {
 		}
 	}
 	return nil
+}
+
+// StartWatchingSourceFiles causes the Config to start goroutines that watch
+// for changes in the source files and report that to the
+func (c *Config) StartWatchingSrouceFiles() error {
+	// TODO - if you want to be able to restart the watcher, you need to handle
+	// closing the channels somewhere. Currently the watching goroutines yield
+	// their messages until the end of the program. Sending to a closed channel
+	// would cause panic.
+	if c.interruptionChannel != nil {
+		return WrappedError("The Config is already watching source files.")
+	}
+	rpWatcher, err := NewDirWatcher(c.ResourceFolder)
+	if err != nil {
+		return WrapError(err, "Could not create resource pack watcher.")
+	}
+	bpWatcher, err := NewDirWatcher(c.BehaviorFolder)
+	if err != nil {
+		return WrapError(err, "Could not create behavior pack watcher.")
+	}
+	dataWatcher, err := NewDirWatcher(c.DataPath)
+	if err != nil {
+		return WrapError(err, "Could not create data watcher.")
+	}
+	c.interruptionChannel = make(chan string)
+	yieldChanges := func(
+		watcher *DirWatcher, sourceName string,
+	) {
+		for {
+			err := watcher.WaitForChangeGroup(100)
+			if err != nil {
+				return
+			}
+			c.interruptionChannel <- sourceName
+		}
+	}
+	go yieldChanges(rpWatcher, "rp")
+	go yieldChanges(bpWatcher, "bp")
+	go yieldChanges(dataWatcher, "data")
+	return nil
+}
+
+// AwaitInterruption locks the goroutine with the interruption channel until
+// the Config is interrupted and returns the interruption message.
+func (c *Config) AwaitInterruption() string {
+	return <-c.interruptionChannel
+}
+
+// IsInterrupted returns true if there is a message on the interruptionChannel
+// unless the source of the interruption is on the list of ignored sources.
+// This function does not block.
+func (c *Config) IsInterrupted(ignoredSourece ...string) bool {
+	if c.interruptionChannel == nil {
+		return false
+	}
+	select {
+	case source := <-c.interruptionChannel:
+		for _, ignored := range ignoredSourece {
+			if ignored == source {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
 }

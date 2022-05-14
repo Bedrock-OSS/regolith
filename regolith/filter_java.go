@@ -73,6 +73,13 @@ func (f *JavaFilter) Run(context RunContext) error {
 	return nil
 }
 
+func (f *JavaFilter) Watch(context RunContext) (bool, error) {
+	if err := f.Run(context); err != nil {
+		return false, err
+	}
+	return context.Config.IsInterrupted(), nil
+}
+
 func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {
