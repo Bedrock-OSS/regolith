@@ -35,6 +35,13 @@ func (f *ExeFilter) Run(context RunContext) error {
 	return runExeFilter(*f, f.Settings, context.AbsoluteLocation)
 }
 
+func (f *ExeFilter) Watch(context RunContext) (bool, error) {
+	if err := f.Run(context); err != nil {
+		return false, err
+	}
+	return context.Config.IsInterrupted(), nil
+}
+
 func (f *ExeFilterDefinition) CreateFilterRunner(
 	runConfiguration map[string]interface{},
 ) (FilterRunner, error) {

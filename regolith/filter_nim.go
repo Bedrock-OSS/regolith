@@ -69,6 +69,13 @@ func (f *NimFilter) Run(context RunContext) error {
 	return nil
 }
 
+func (f *NimFilter) Watch(context RunContext) (bool, error) {
+	if err := f.Run(context); err != nil {
+		return false, err
+	}
+	return context.Config.IsInterrupted(), nil
+}
+
 func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := FilterFromObject(runConfiguration)
 	if err != nil {

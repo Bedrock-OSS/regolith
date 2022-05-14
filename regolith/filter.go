@@ -19,6 +19,12 @@ type RunContext struct {
 	Parent           *RunContext
 }
 
+// GetProfile returns the Profile structure from the context.
+func (c *RunContext) GetProfile() (Profile, bool) {
+	profile, ok := c.Config.Profiles[c.Profile]
+	return profile, ok
+}
+
 func FilterDefinitionFromObject(id string) *FilterDefinition {
 	return &FilterDefinition{Id: id}
 }
@@ -66,10 +72,27 @@ type FilterInstaller interface {
 }
 
 type FilterRunner interface {
+	// CopyArguments copies the arguments from the parent filter to this
+	// filter. It's used  for the remote filters.
 	CopyArguments(parent *RemoteFilter)
+
+	// Run runs the filter.
 	Run(context RunContext) error
+
+	// Watch runs the filter and checks whether there were any interruptions.
+	// An interruption can be caused by changes in the filesystem in
+	// directories watched by the Config object.
+	// It returns true if the filter was interrupted.
+	Watch(context RunContext) (bool, error)
+
+	// IsDisabled returns whether the filter is disabled.
 	IsDisabled() bool
+
+	// GetId returns the id of the filter.
 	GetId() string
+
+	// Check checks whether the requirements of the filter are met. For
+	// example, a Python filter requires Python to be installed.
 	Check(context RunContext) error
 }
 
@@ -84,6 +107,10 @@ func (f *Filter) Check() error {
 
 func (f *Filter) Run(context RunContext) error {
 	return NotImplementedError("Run")
+}
+
+func (f *Filter) Watch(context RunContext) (bool, error) {
+	return false, NotImplementedError("Watch")
 }
 
 func (f *Filter) GetId() string {
