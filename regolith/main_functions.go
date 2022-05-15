@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 // Install handles the "regolith install" command. It installs specific filters
@@ -206,9 +207,16 @@ func Watch(profileName string, debug bool) error {
 	if err != nil {
 		return err
 	}
-	config.StartWatchingSrouceFiles()
+	path, _ := filepath.Abs(".")
+	context := RunContext{
+		AbsoluteLocation: path,
+		Config:           config,
+		Parent:           nil,
+		Profile:          profileName,
+	}
+	context.StartWatchingSrouceFiles()
 	for {
-		err = WatchProfile(profileName, &profile, config)
+		err = WatchProfile(context)
 		if err != nil {
 			Logger.Errorf(
 				"Failed to run profile %q: %s",
@@ -217,7 +225,7 @@ func Watch(profileName string, debug bool) error {
 			Logger.Infof("Successfully ran the %q profile.", profileName)
 		}
 		Logger.Info("Press Ctrl+C to stop watching.")
-		config.AwaitInterruption()
+		context.AwaitInterruption()
 		Logger.Warn("Restarting...")
 	}
 }

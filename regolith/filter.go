@@ -17,12 +17,91 @@ type RunContext struct {
 	Config           *Config
 	Profile          string
 	Parent           *RunContext
+
+	// interruptionChannel is a channel that is used to notify about changes
+	// in the sourec files, in order to trigger a restart of the program in
+	// the watch mode. The string send to the channel is the name of the source
+	// of the change ("rp", "bp" or "data"), which may be used to handle
+	// some interuptions differently.
+	interruptionChannel chan string
 }
 
 // GetProfile returns the Profile structure from the context.
 func (c *RunContext) GetProfile() (Profile, bool) {
 	profile, ok := c.Config.Profiles[c.Profile]
 	return profile, ok
+}
+
+// IsWatchMode returns a value that shows whether the context is in the
+// watch mode.
+func (c *RunContext) IsInWatchMode() bool {
+	return c.interruptionChannel == nil
+}
+
+// StartWatchingSourceFiles causes the Context to start goroutines that watch
+// for changes in the source files and report that to the
+func (c *RunContext) StartWatchingSrouceFiles() error {
+	// TODO - if you want to be able to restart the watcher, you need to handle
+	// closing the channels somewhere. Currently the watching goroutines yield
+	// their messages until the end of the program. Sending to a closed channel
+	// would cause panic.
+	if c.interruptionChannel != nil {
+		return WrappedError("The Config is already watching source files.")
+	}
+	rpWatcher, err := NewDirWatcher(c.Config.ResourceFolder)
+	if err != nil {
+		return WrapError(err, "Could not create resource pack watcher.")
+	}
+	bpWatcher, err := NewDirWatcher(c.Config.BehaviorFolder)
+	if err != nil {
+		return WrapError(err, "Could not create behavior pack watcher.")
+	}
+	dataWatcher, err := NewDirWatcher(c.Config.DataPath)
+	if err != nil {
+		return WrapError(err, "Could not create data watcher.")
+	}
+	c.interruptionChannel = make(chan string)
+	yieldChanges := func(
+		watcher *DirWatcher, sourceName string,
+	) {
+		for {
+			err := watcher.WaitForChangeGroup(100)
+			if err != nil {
+				return
+			}
+			c.interruptionChannel <- sourceName
+		}
+	}
+	go yieldChanges(rpWatcher, "rp")
+	go yieldChanges(bpWatcher, "bp")
+	go yieldChanges(dataWatcher, "data")
+	return nil
+}
+
+// AwaitInterruption locks the goroutine with the interruption channel until
+// the Config is interrupted and returns the interruption message.
+func (c *RunContext) AwaitInterruption() string {
+	return <-c.interruptionChannel
+}
+
+// IsInterrupted returns true if there is a message on the interruptionChannel
+// unless the source of the interruption is on the list of ignored sources.
+// This function does not block.
+func (c *RunContext) IsInterrupted(ignoredSourece ...string) bool {
+	if c.interruptionChannel == nil {
+		return false
+	}
+	select {
+	case source := <-c.interruptionChannel:
+		for _, ignored := range ignoredSourece {
+			if ignored == source {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
 }
 
 func FilterDefinitionFromObject(id string) *FilterDefinition {
@@ -76,14 +155,11 @@ type FilterRunner interface {
 	// filter. It's used  for the remote filters.
 	CopyArguments(parent *RemoteFilter)
 
-	// Run runs the filter.
-	Run(context RunContext) error
-
-	// Watch runs the filter and checks whether there were any interruptions.
-	// An interruption can be caused by changes in the filesystem in
-	// directories watched by the Config object.
-	// It returns true if the filter was interrupted.
-	Watch(context RunContext) (bool, error)
+	// Run runs the filter. If the context is in the watch mode, it also
+	// checks whether there were any interruptions.
+	// It returns true if the filter was interrupted. If the watch mode is
+	// disabled it always returns false.
+	Run(context RunContext) (bool, error)
 
 	// IsDisabled returns whether the filter is disabled.
 	IsDisabled() bool
@@ -105,12 +181,8 @@ func (f *Filter) Check() error {
 	return NotImplementedError("Check")
 }
 
-func (f *Filter) Run(context RunContext) error {
-	return NotImplementedError("Run")
-}
-
-func (f *Filter) Watch(context RunContext) (bool, error) {
-	return false, NotImplementedError("Watch")
+func (f *Filter) Run(context RunContext) (bool, error) {
+	return false, NotImplementedError("Run")
 }
 
 func (f *Filter) GetId() string {

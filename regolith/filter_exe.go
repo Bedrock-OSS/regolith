@@ -31,15 +31,11 @@ func ExeFilterDefinitionFromObject(
 	return filter, nil
 }
 
-func (f *ExeFilter) Run(context RunContext) error {
-	return runExeFilter(*f, f.Settings, context.AbsoluteLocation)
-}
-
-func (f *ExeFilter) Watch(context RunContext) (bool, error) {
-	if err := f.Run(context); err != nil {
-		return false, err
+func (f *ExeFilter) Run(context RunContext) (bool, error) {
+	if err := f.run(f.Settings, context.AbsoluteLocation); err != nil {
+		return false, PassError(err)
 	}
-	return context.Config.IsInterrupted(), nil
+	return context.IsInterrupted(), nil
 }
 
 func (f *ExeFilterDefinition) CreateFilterRunner(
@@ -70,21 +66,21 @@ func (f *ExeFilter) Check(context RunContext) error {
 	return f.Definition.Check(context)
 }
 
-func runExeFilter(
-	filter ExeFilter, settings map[string]interface{},
+func (f *ExeFilter) run(
+	settings map[string]interface{},
 	absoluteLocation string,
 ) error {
 	var err error = nil
 	if len(settings) == 0 {
-		err = executeExeFile(filter.Id,
-			filter.Definition.Exe,
-			filter.Arguments, absoluteLocation,
+		err = executeExeFile(f.Id,
+			f.Definition.Exe,
+			f.Arguments, absoluteLocation,
 			GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		err = executeExeFile(filter.Id,
-			filter.Definition.Exe,
-			append([]string{string(jsonSettings)}, filter.Arguments...),
+		err = executeExeFile(f.Id,
+			f.Definition.Exe,
+			append([]string{string(jsonSettings)}, f.Arguments...),
 			absoluteLocation, GetAbsoluteWorkingDirectory())
 	}
 	if err != nil {
