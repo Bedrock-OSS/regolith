@@ -99,7 +99,8 @@ func RunProfileImpl(context RunContext) error {
 			Logger.Infof("Running filter %s", filter.GetId())
 		}
 		start := time.Now()
-		err := filter.Run(context)
+		// Interruptions don't matter in the non-watch mode
+		_, err := filter.Run(context)
 		Logger.Debugf("Executed in %s", time.Since(start))
 		if err != nil {
 			err1 := ClearCachedStates() // Just to be safe clear cached states
@@ -183,7 +184,9 @@ func RunProfile(profileName string) error {
 // it can be interrupted through the use of the interrupt channel. On various
 // stages of the execution, the function checks the channel, and if it is
 // sending a message, it restarts.
-func WatchProfile(profileName string, profile *Profile, config *Config) error {
+func WatchProfile(context RunContext) error {
+	// profileName string, profile *Profile, config *Config
+
 	// Saves the state of the tmp files
 	saveTmp := func() error {
 		err1 := SaveStateInDefaultCache(".regolith/tmp/RP")
@@ -205,7 +208,11 @@ func WatchProfile(profileName string, profile *Profile, config *Config) error {
 	// you believe goto is forbidden, dark art then feel free to do so.
 start:
 	// Prepare tmp files
-	err := RecycledSetupTmpFiles(*config, *profile)
+	profile, ok := context.GetProfile()
+	if !ok {
+		return WrappedErrorf("Unable to get profile %s", context.Profile)
+	}
+	err := RecycledSetupTmpFiles(*context.Config, profile)
 	if err != nil {
 		err1 := ClearCachedStates() // Just to be safe clear cached states
 		if err1 != nil {
@@ -215,21 +222,14 @@ start:
 		}
 		return WrapError(err, "Unable to setup profile.")
 	}
-	if config.IsInterrupted() {
+	if context.IsInterrupted() {
 		if err := saveTmp(); err != nil {
 			return PassError(err)
 		}
 		goto start
 	}
 	// Run the profile
-	path, _ := filepath.Abs(".")
-	interrupted, err := WatchProfileImpl(
-		RunContext{
-			AbsoluteLocation: path,
-			Config:           config,
-			Parent:           nil,
-			Profile:          profileName,
-		})
+	interrupted, err := WatchProfileImpl(context)
 	if err != nil {
 		return PassError(err)
 	}
@@ -242,7 +242,8 @@ start:
 	// Export files
 	Logger.Info("Moving files to target directory.")
 	start := time.Now()
-	err = RecycledExportProject(*profile, config.Name, config.DataPath)
+	err = RecycledExportProject(
+		profile, context.Config.Name, context.Config.DataPath)
 	if err != nil {
 		err1 := ClearCachedStates() // Just to be safe clear cached states
 		if err1 != nil {
@@ -252,7 +253,7 @@ start:
 		}
 		return WrapError(err, "Exporting project failed.")
 	}
-	if config.IsInterrupted("data") { // Ignore the interruptions from the data path
+	if context.IsInterrupted("data") { // Ignore the interruptions from the data path
 		if err := saveTmp(); err != nil {
 			return PassError(err)
 		}
@@ -284,7 +285,7 @@ func WatchProfileImpl(context RunContext) (bool, error) {
 		}
 		// Run the filter in watch mode
 		start := time.Now()
-		interrupted, err := filter.Watch(context)
+		interrupted, err := filter.Run(context)
 		Logger.Debugf("Executed in %s", time.Since(start))
 		if err != nil {
 			err1 := ClearCachedStates() // Just to be safe clear cached states

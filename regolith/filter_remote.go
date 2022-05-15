@@ -45,7 +45,7 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	return result, nil
 }
 
-func (f *RemoteFilter) Run(context RunContext) error {
+func (f *RemoteFilter) run(context RunContext) error {
 	// All other filters require safe mode to be turned off
 	if f.Definition.Url != StandardLibraryUrl && !IsUnlocked() {
 		return WrappedErrorf(
@@ -82,7 +82,14 @@ func (f *RemoteFilter) Run(context RunContext) error {
 			continue
 		}
 		// Overwrite the venvSlot with the parent value
-		err := filter.Run(RunContext{Config: context.Config, AbsoluteLocation: absolutePath, Profile: context.Profile, Parent: context.Parent})
+		// TODO - remote filters can contain multiple filters, the interruption
+		// chceck should be performed after every subfilter
+		_, err := filter.Run(RunContext{
+			Config:           context.Config,
+			AbsoluteLocation: absolutePath,
+			Profile:          context.Profile,
+			Parent:           context.Parent,
+		})
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to run %s.",
@@ -92,11 +99,11 @@ func (f *RemoteFilter) Run(context RunContext) error {
 	return nil
 }
 
-func (f *RemoteFilter) Watch(context RunContext) (bool, error) {
-	if err := f.Run(context); err != nil {
+func (f *RemoteFilter) Run(context RunContext) (bool, error) {
+	if err := f.run(context); err != nil {
 		return false, err
 	}
-	return context.Config.IsInterrupted(), nil
+	return context.IsInterrupted(), nil
 }
 
 func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {

@@ -32,15 +32,11 @@ func ShellFilterDefinitionFromObject(
 	return filter, nil
 }
 
-func (f *ShellFilter) Run(context RunContext) error {
-	return runShellFilter(*f, f.Settings, context.AbsoluteLocation)
-}
-
-func (f *ShellFilter) Watch(context RunContext) (bool, error) {
-	if err := f.Run(context); err != nil {
+func (f *ShellFilter) Run(context RunContext) (bool, error) {
+	if err := f.run(f.Settings, context.AbsoluteLocation); err != nil {
 		return false, err
 	}
-	return context.Config.IsInterrupted(), nil
+	return context.IsInterrupted(), nil
 }
 
 func (f *ShellFilterDefinition) CreateFilterRunner(
@@ -79,21 +75,21 @@ func (f *ShellFilter) Check(context RunContext) error {
 var shells = [][]string{
 	{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"}, {"sh", "-c"}}
 
-func runShellFilter(
-	filter ShellFilter, settings map[string]interface{},
+func (f *ShellFilter) run(
+	settings map[string]interface{},
 	absoluteLocation string,
 ) error {
 	var err error = nil
 	if len(settings) == 0 {
-		err = executeCommand(filter.Id,
-			filter.Definition.Command,
-			filter.Arguments, absoluteLocation,
+		err = executeCommand(f.Id,
+			f.Definition.Command,
+			f.Arguments, absoluteLocation,
 			GetAbsoluteWorkingDirectory())
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
-		err = executeCommand(filter.Id,
-			filter.Definition.Command,
-			append([]string{string(jsonSettings)}, filter.Arguments...),
+		err = executeCommand(f.Id,
+			f.Definition.Command,
+			append([]string{string(jsonSettings)}, f.Arguments...),
 			absoluteLocation, GetAbsoluteWorkingDirectory())
 	}
 	if err != nil {
