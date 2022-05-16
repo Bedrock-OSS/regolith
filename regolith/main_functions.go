@@ -152,38 +152,11 @@ func UpdateAll(debug bool) error {
 	return nil
 }
 
-// Run handles the "regolith run" command. It runs selected profile and exports
-// created resource pack and behvaiour pack to the target destination.
-//
-// The "profile" parameter is the name of the profile to run. If the profile
-// is an empty string, the "dev" profile will be used.
-//
-// The "debug" parameter is a boolean that determines if the debug messages
-// should be printed.
-func Run(profile string, debug bool) error {
-	InitLogging(debug)
-	if profile == "" {
-		profile = "dev"
-	}
-	Logger.Infof("Running %q profile...", profile)
-	err := RunProfile(profile)
-	if err != nil {
-		return WrapErrorf(err, "Failed to run profile %q", profile)
-	}
-	Logger.Infof("Successfully ran the %q profile.", profile)
-	return nil
-}
-
-// Watch handles the "regolith watch" command. It watches the project
-// directories and it runs selected profile and exports created resource pack
-// and behvaiour pack to the target destination when the project changes.
-//
-// The "profile" parameter is the name of the profile to run. If the profile
-// is an empty string, the "dev" profile will be used.
-//
-// The "debug" parameter is a boolean that determines if the debug messages
-// should be printed.
-func Watch(profileName string, debug bool) error {
+// runOrWatch handles both 'regolith run' and 'regolith watch' commands based
+// on the 'watch' parameter. It runs/watches the profile named after
+// 'profileName' parameter. The 'debug' argument determines if the debug
+// messages should be printed or not.
+func runOrWatch(profileName string, debug, watch bool) error {
 	InitLogging(debug)
 	if profileName == "" {
 		profileName = "dev"
@@ -214,20 +187,42 @@ func Watch(profileName string, debug bool) error {
 		Parent:           nil,
 		Profile:          profileName,
 	}
-	context.StartWatchingSrouceFiles()
-	for {
-		err = WatchProfile(context)
-		if err != nil {
-			Logger.Errorf(
-				"Failed to run profile %q: %s",
-				profileName, PassError(err).Error())
-		} else {
-			Logger.Infof("Successfully ran the %q profile.", profileName)
+	if watch { // Loop until program termination (CTRL+C)
+		context.StartWatchingSrouceFiles()
+		for {
+			err = RunProfile(context)
+			if err != nil {
+				Logger.Errorf(
+					"Failed to run profile %q: %s",
+					profileName, PassError(err).Error())
+			} else {
+				Logger.Infof("Successfully ran the %q profile.", profileName)
+			}
+			Logger.Info("Press Ctrl+C to stop watching.")
+			context.AwaitInterruption()
+			Logger.Warn("Restarting...")
 		}
-		Logger.Info("Press Ctrl+C to stop watching.")
-		context.AwaitInterruption()
-		Logger.Warn("Restarting...")
+		// return nil // Unreachable code
 	}
+	err = RunProfile(context)
+	if err != nil {
+		return WrapErrorf(err, "Failed to run profile %q", profileName)
+	}
+	Logger.Infof("Successfully ran the %q profile.", profileName)
+	return nil
+}
+
+// Run handles the "regolith run" command. It runs selected profile and exports
+// created resource pack and behvaiour pack to the target destination.
+func Run(profileName string, debug bool) error {
+	return runOrWatch(profileName, debug, false)
+}
+
+// Watch handles the "regolith watch" command. It watches the project
+// directories and it runs selected profile and exports created resource pack
+// and behvaiour pack to the target destination when the project changes.
+func Watch(profileName string, debug bool) error {
+	return runOrWatch(profileName, debug, true)
 }
 
 // Init handles the "regolith init" command. It initializes a new Regolith

@@ -8,10 +8,11 @@ type ProfileFilter struct {
 func (f *ProfileFilter) Run(context RunContext) (bool, error) {
 	Logger.Infof("Running %q nested profile...", f.Profile)
 	return WatchProfileImpl(RunContext{
-		Profile:          f.Profile,
-		AbsoluteLocation: context.AbsoluteLocation,
-		Config:           context.Config,
-		Parent:           &context,
+		Profile:             f.Profile,
+		AbsoluteLocation:    context.AbsoluteLocation,
+		Config:              context.Config,
+		Parent:              &context,
+		interruptionChannel: context.interruptionChannel,
 	})
 }
 
