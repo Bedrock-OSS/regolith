@@ -82,112 +82,14 @@ func CheckProfileImpl(profile Profile, profileName string, config Config, parent
 	return nil
 }
 
-func RunProfileImpl(context RunContext) error {
-	profile, ok := context.GetProfile()
-	if !ok {
-		return WrappedErrorf("Unable to get profile %s", context.Profile)
-	}
-	for filter := range profile.Filters {
-		filter := profile.Filters[filter]
-		// Disabled filters are skipped
-		if filter.IsDisabled() {
-			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
-			continue
-		}
-		// Skip printing if the filter ID is empty (most likely a nested profile)
-		if filter.GetId() != "" {
-			Logger.Infof("Running filter %s", filter.GetId())
-		}
-		start := time.Now()
-		// Interruptions don't matter in the non-watch mode
-		_, err := filter.Run(context)
-		Logger.Debugf("Executed in %s", time.Since(start))
-		if err != nil {
-			err1 := ClearCachedStates() // Just to be safe clear cached states
-			if err1 != nil {
-				err = WrapError(
-					err1, "Failed to clear cached file path states while "+
-						"handling another error.")
-			}
-			return WrapError(err, "Failed to run filter.")
-		}
-	}
-	return nil
-}
-
-// RunProfile loads the profile from config.json and runs it. The profileName
-// is the name of the profile which should be loaded from the configuration.
-func RunProfile(profileName string) error {
-	// Load the Config and the profile
-	configJson, err := LoadConfigAsMap()
-	if err != nil {
-		return WrapError(err, "Could not load \"config.json\".")
-	}
-	config, err := ConfigFromObject(configJson)
-	if err != nil {
-		return WrapError(err, "Could not load \"config.json\".")
-	}
-	profile, ok := config.Profiles[profileName]
-	if !ok {
-		return WrappedErrorf(
-			"Profile %q does not exist in the configuration.", profileName)
-	}
-	// Check the filters of the profile
-	err = CheckProfileImpl(profile, profileName, *config, nil)
-	if err != nil {
-		return err
-	}
-
-	// Prepare tmp files
-	err = RecycledSetupTmpFiles(*config, profile)
-	if err != nil {
-		err1 := ClearCachedStates() // Just to be safe clear cached states
-		if err1 != nil {
-			err = WrapError(
-				err1, "Failed to clear cached file path states whil handling"+
-					" another error.")
-		}
-		return WrapError(err, "Unable to setup profile.")
-	}
-
-	// profile, profileName, *config, nil
-	path, _ := filepath.Abs(".")
-	err = RunProfileImpl(
-		RunContext{
-			AbsoluteLocation: path,
-			Config:           config,
-			Parent:           nil,
-			Profile:          profileName,
-		})
-	if err != nil {
-		return PassError(err)
-	}
-
-	// Export files
-	Logger.Info("Moving files to target directory.")
-	start := time.Now()
-	err = RecycledExportProject(profile, config.Name, config.DataPath)
-	if err != nil {
-		err1 := ClearCachedStates() // Just to be safe clear cached states
-		if err1 != nil {
-			err = WrapError(
-				err1, "Failed to clear cached file path states while "+
-					"handling another error.")
-		}
-		return WrapError(err, "Exporting project failed.")
-	}
-	Logger.Debug("Done in ", time.Since(start))
-	return nil
-}
-
-// WatchProfile is used by "regolith watch". It is the same as RunProfile, but
-// it can be interrupted through the use of the interrupt channel. On various
-// stages of the execution, the function checks the channel, and if it is
-// sending a message, it restarts.
-func WatchProfile(context RunContext) error {
+// RunProfile loads the profile from config.json and runs it based on the
+// context. If context is in the watch mode, it can repeat the process multiple
+// times in case of interruptions (changes in the source files).
+func RunProfile(context RunContext) error {
 	// profileName string, profile *Profile, config *Config
 
-	// Saves the state of the tmp files
+	// saveTmp saves the state of the tmp files. This is useful only if runnig
+	// in the watch mode.
 	saveTmp := func() error {
 		err1 := SaveStateInDefaultCache(".regolith/tmp/RP")
 		err2 := SaveStateInDefaultCache(".regolith/tmp/BP")
