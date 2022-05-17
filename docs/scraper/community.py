@@ -57,7 +57,10 @@ def comFilters():
                         result = i
                         break
                 return result
-            if os.path.isfile(fPath + "readme.md"): fDesc = md(fPath, "readme.md")
+            
+            if "description" in fJson["filters"][0]:
+                fDesc = fJson["filters"][0]["description"]
+            elif os.path.isfile(fPath + "readme.md"): fDesc = md(fPath, "readme.md")
             elif os.path.isfile(fPath + "README.md"): fDesc = md(fPath, "README.md")
             result.append(Filter(fName, fAuthor, fUrl, fLang, fDesc))
             print("Added filter:" + fName + " to community filters")
