@@ -3,8 +3,10 @@ Simple script to populate the standard filters page.
 """
 
 import requests
+import community
 
-PAGE_PATH = './_pages/docs/content/standard-filters.md'
+STANDARD_PATH = '../_pages/docs/content/standard-filters.md'
+COMMUNITY_PATH = '../_pages/docs/content/community-filters.md'
 URL = 'https://api.github.com/repos/bedrock-oss/regolith-filters/contents/'
 IGNORE = ['future']
 BASE_CONTENT = """
@@ -60,7 +62,7 @@ def main():
     """
     Main function
     """
-    with open(PAGE_PATH, 'w') as page:
+    with open(STANDARD_PATH, 'w') as page:
         page.write(BASE_CONTENT)
         page.write("\n")
         page.write('| Filter | Description |\n')
@@ -71,6 +73,9 @@ def main():
                 continue
             page.write('| [{}]({}) | {} |\n'.format(
                 filter_name, get_filter_link(filter_name), get_filter_description(filter_name)))
+    
+    cFilters = community.comFilters()
+    community.updateFilters(community.filterTable(cFilters), COMMUNITY_PATH)
 
 if __name__ == '__main__':
     main()
