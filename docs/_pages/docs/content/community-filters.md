@@ -24,18 +24,37 @@ For example `github.com/SirLich/echo-npc-regolith/echo`.
 
 ## Filters
 
-| Name                                                                                                    | Author         | Language | Description                                                                                                                                                                                                                                           |
-|---------------------------------------------------------------------------------------------------------|----------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Say Function Name](https://github.com/Nusiq/regolith-filters/tree/master/debug_say_function_name)      | Nusiq          | Python | Adds say command to the functions from specified paths to print the names of the functions when they're executed.                                                                                                                                     |
-| [pytemplate](https://github.com/Nusiq/regolith-filters/tree/master/pytemplate)                           | Nusiq          | Python | This filter loops through the JSON files from RP and BP that match provided glob patterns (*/**.json by default), when it finds a JSON key that matches the name specified in settings, it replaces it with a value generated based on template file. |
-| [subfunctions](https://github.com/Nusiq/regolith-filters/tree/master/subfunctions)                      | Nusiq          | Python | It extends the syntax of Mcfunctions and lets you implement function files inside other function files.                                                                                                                                               |
-| [Echo:NPC](https://github.com/SirLich/echo-npc-regolith/tree/main/echo)                                           | SirLich        | Python | Compiles Echo:NPC templates.                                                                                                                                                                                                                          |
-| [JSON Templating Engine](https://github.com/MCDevKit/regolith-library/tree/main/json_templating_engine) | MCDevKit       | Java | JSON templating engine for quicker generation of complicated JSON files.                                                                                                                                                                              |
-| [Templater](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/templater)              | Hatchibombotar | Node JS | A templater filter for regolith.                                                                                                                                                                                                                     |
-| [Function Shorthand](https://github.com/evilguy50/regolith-shorthand/tree/master/shorthand)            | evilguy50      | Python | Filter for having shorthand syntax inside of functions.   |
-| [DS_Store](https://github.com/evilguy50/regolith-ds_store)            | evilguy50      | Nim | filter for removing .DS_Store files.                           |
-| [Strip](https://github.com/evilguy50/regolith-strip)            | evilguy50      | Nim | Filter for stripping comments in json, lang, and mcfunction files. also formats the json files. |
-| [Functioner](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/functioner)            | Hatchibombotar      | Node JS | A filter that adds more syntax to function files. |
-| [Link Manifests](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/link_manifests)            | Hatchibombotar      | Node JS | Filter for linking manifest dependencies between the behaviour and resource packs.                                                                                                                                                                                               |
-| [esbuild Executor](https://github.com/MajestikButter/regolith-filters/tree/main/esbuild_executor) | MajestikButter | Node JS | Filter for executing [esbuild](https://esbuild.github.io/). |
-| [JSON Formatter](https://github.com/MajestikButter/regolith-filters/tree/main/json_formatter) | MajestikButter | Node JS | Filter for formatting JSON files. Includes single line and obfuscation options. |
+| Name | Author | Language | Description |
+|------|--------|----------|-------------|
+| [esbuild_executor](https://github.com/MajestikButter/Regolith-Filters/tree/main/esbuild_executor) | MajestikButter | nodejs | A regolith filter for using esbuild |
+| [json_formatter](https://github.com/MajestikButter/Regolith-Filters/tree/main/json_formatter) | MajestikButter | nodejs | A regolith filter for formatting JSON files |
+| [js_formatter](https://github.com/MajestikButter/Regolith-Filters/tree/main/js_formatter) | MajestikButter | nodejs | A regolith filter for formatting JavaScript files |
+| [ts_transpiler](https://github.com/MajestikButter/Regolith-Filters/tree/main/ts_transpiler) | MajestikButter | nodejs | A regolith filter for transpiling Typescript files |
+| [NBTEnchant](https://github.com/SmokeyStack/MCScripts/tree/main/NBTEnchant) | SmokeyStack | python | This script is used to generate `.mcstructure` files containing edited nbt data that is currently not possible to do ingame. |
+| [functioner](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/functioner) | Hatchibombotar | nodejs | A filter that adds extra syntax to minecraft functions. |
+| [link_manifests](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/link_manifests) | Hatchibombotar | nodejs | Links uuid's from the resource and behaviour pack manifests in the dependencies section. |
+| [molang_insert](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/molang_insert) | Hatchibombotar | nodejs | A filter for regolith that allows you to insert molang. |
+| [pack_commons](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/pack_commons) | Hatchibombotar | nodejs | Intended to allow copying of files into both the resource and behaviour packs |
+| [simple_blocks](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/simple_blocks) | Hatchibombotar | nodejs | A filter that creates blocks from one file. |
+| [templater](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/templater) | Hatchibombotar | nodejs | A templater filter for regolith. |
+| [custom_project](https://github.com/Nusiq/regolith-filters/tree/master/custom_project) | Nusiq | exe | This filter is experimental. I'm not sure if I'll keep it. |
+| [debug_say_function_name](https://github.com/Nusiq/regolith-filters/tree/master/debug_say_function_name) | Nusiq | python | Adds tellraw command to the functions from specified paths to print `@s`and |
+| [pytemplate](https://github.com/Nusiq/regolith-filters/tree/master/pytemplate) | Nusiq | python | ![](../.resources/pytemplate-title.svg) |
+| [subfunctions](https://github.com/Nusiq/regolith-filters/tree/master/subfunctions) | Nusiq | python | ![](../.resources/subfunctions-title.svg) |
+| [system_template](https://github.com/Nusiq/regolith-filters/tree/master/system_template) | Nusiq | python | WARNING! THIS FILTER USES THE PYTHON `eval()` FUNCTION TO GENERATE CODE. IF |
+| [extend-vanilla-entities](https://github.com/littlechestnutgames/regolith-filters/tree/main/extend-vanilla-entities) | littlechestnutgames | python |  |
+| [e-backup](https://github.com/cda94581/regolith-filters/tree/main/e-backup) | cda94581 | nodejs | Version **0.0.1** |
+| [export](https://github.com/cda94581/regolith-filters/tree/main/export) | cda94581 | nodejs | Version **0.0.2** |
+| [minimize](https://github.com/cda94581/regolith-filters/tree/main/minimize) | cda94581 | nodejs | Version **0.0.2** |
+| [namespace](https://github.com/cda94581/regolith-filters/tree/main/namespace) | cda94581 | nodejs | Version **0.0.6** |
+| [classes](https://github.com/evilguy50/my-regolith-filters/tree/main/classes) | evilguy50 | nim | filter for adding OOP class like structure to functions. |
+| [ds_store](https://github.com/evilguy50/my-regolith-filters/tree/main/ds_store) | evilguy50 | nim | filter for removing .DS_Store files. |
+| [shorthand](https://github.com/evilguy50/my-regolith-filters/tree/main/shorthand) | evilguy50 | python | filter for having shorthand syntax inside of functions. |
+| [strip](https://github.com/evilguy50/my-regolith-filters/tree/main/strip) | evilguy50 | nim | filter for striping comments from json, mcfunction, and lang files. |
+| [style_lint](https://github.com/evilguy50/my-regolith-filters/tree/main/style_lint) | evilguy50 | python | filter for automatic project styling. |
+| [title_ui](https://github.com/evilguy50/my-regolith-filters/tree/main/title_ui) | evilguy50 | nim | filter for generating title ui bindings. |
+| [module_importer](https://github.com/ShiCheng-Lu/Regolith-Filters/tree/main/module_importer) | ShiCheng-Lu | nodejs | A regolith filter for import |
+| [command_lang](https://github.com/MCDevKit/regolith-library/tree/main/command_lang) | MCDevKit | shell |  |
+| [json_templating_engine](https://github.com/MCDevKit/regolith-library/tree/main/json_templating_engine) | MCDevKit | java |  |
+| [scalable-teams](https://github.com/cda94581/regolith-premade-addons/tree/main/scalable-teams) | cda94581 | nodejs | Version **1.0.0** |
+| [echo](https://github.com/SirLich/echo-npc-regolith/tree/main/echo) | SirLich | python |  |

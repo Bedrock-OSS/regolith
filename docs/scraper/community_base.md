@@ -1,0 +1,28 @@
+---
+permalink: /docs/community-filters
+layout: single
+classes: wide
+title: Community Filters
+sidebar:
+  nav: "sidebar"
+---
+
+The beauty of Regolith is that filters can be written and shared by anyone! This page contains an uncurated list of community filters. If your filter doesn't appear here, [let us know](https://discord.com/invite/XjV87YN)!
+
+## Installing Community Filters
+
+Community filters are installed via a URL-like resource definition: `github.com/<username>/<repository>/<folder>`.
+
+For example `github.com/SirLich/echo-npc-regolith/echo`.
+
+**Warning:** Please use extreme caution when running unknown code. Regolith and its maintainers take no responsibility for any damages incurred by using the filters on this page. To learn more, please read our [safety page](/regolith/docs/safety).
+{: .notice--warning}
+
+**Tip:** Having trouble? You can learn more about online filters [here](/regolith/docs/online-filters).
+{: .notice--warning}
+
+
+## Filters
+
+| Name | Author | Language | Description |
+|------|--------|----------|-------------|
