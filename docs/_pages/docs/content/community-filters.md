@@ -53,8 +53,8 @@ For example `github.com/SirLich/echo-npc-regolith/echo`.
 | [strip](https://github.com/evilguy50/my-regolith-filters/tree/main/strip) | evilguy50 | nim | filter for striping comments from json, mcfunction, and lang files. |
 | [style_lint](https://github.com/evilguy50/my-regolith-filters/tree/main/style_lint) | evilguy50 | python | filter for automatic project styling. |
 | [title_ui](https://github.com/evilguy50/my-regolith-filters/tree/main/title_ui) | evilguy50 | nim | filter for generating title ui bindings. |
-| [module_importer](https://github.com/ShiCheng-Lu/Regolith-Filters/tree/main/module_importer) | ShiCheng-Lu | nodejs | A regolith filter for import |
 | [command_lang](https://github.com/MCDevKit/regolith-library/tree/main/command_lang) | MCDevKit | shell |  |
 | [json_templating_engine](https://github.com/MCDevKit/regolith-library/tree/main/json_templating_engine) | MCDevKit | java |  |
+| [module_importer](https://github.com/ShiCheng-Lu/Regolith-Filters/tree/main/module_importer) | ShiCheng-Lu | nodejs | A regolith filter for import |
 | [scalable-teams](https://github.com/cda94581/regolith-premade-addons/tree/main/scalable-teams) | cda94581 | nodejs | Version **1.0.0** |
 | [echo](https://github.com/SirLich/echo-npc-regolith/tree/main/echo) | SirLich | python |  |
