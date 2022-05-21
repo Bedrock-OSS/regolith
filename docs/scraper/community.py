@@ -78,7 +78,7 @@ def filterTable(fList):
     return "\n".join(tables)
 
 def updateFilters(ftables, output: str):
-    base = open("./community_base.md", "r").read()
+    base = open("./community_base.txt", "r").read()
     if os.path.isfile(output): os.remove(output)
     updated = open(output, "x")
     updated.write(base)
