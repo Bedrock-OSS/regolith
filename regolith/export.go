@@ -1,11 +1,7 @@
 package regolith
 
 import (
-	"io/fs"
-	"os"
 	"path/filepath"
-
-	"github.com/otiai10/copy"
 )
 
 // GetExportPaths returns file paths for exporting behavior pack and
@@ -83,9 +79,11 @@ func GetExportPaths(
 	return
 }
 
-// ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
-// the project's export target. The paths are generated with GetExportPaths.
-func ExportProject(profile Profile, name string, dataPath string) error {
+// RecycledExportProject copies files from the tmp paths (tmp/BP and tmp/RP)
+// into the project's export target. The paths are generated with
+// GetExportPaths. The function uses cached data about the state of the project
+// files to reduce the number of file system operations.
+func RecycledExportProject(profile Profile, name string, dataPath string) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
 	if err != nil {
@@ -108,37 +106,47 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 			rpPath, bpPath)
 	}
 
-	// Clearing output locations
-	// Spooky, I hope file protection works, and it won't do any damage
-	err = os.RemoveAll(bpPath)
-	if err != nil {
-		return WrapErrorf(
-			err, "Failed to clear behavior pack from build path %q.\n"+
-				"Are user permissions correct?", bpPath)
-	}
-	err = os.RemoveAll(rpPath)
-	if err != nil {
-		return WrapErrorf(
-			err, "Failed to clear resource pack from build path %q.\n"+
-				"Are user permissions correct?", rpPath)
-	}
-	err = os.RemoveAll(dataPath)
-	if err != nil {
-		return WrapErrorf(
-			err, "Failed to clear filter data path %q.", dataPath)
-	}
-
 	Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-	err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
+	// err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
+	err = FullRecycledMoveOrCopy(
+		".regolith/tmp/BP", bpPath,
+		RecycledMoveOrCopySettings{
+			canMove:                 true,
+			saveSourceHashes:        true,
+			saveTargetHashes:        true,
+			makeTargetReadOnly:      exportTarget.ReadOnly,
+			copyTargetAclFromParent: true,
+			reloadSourceHashes:      true,
+		})
 	if err != nil {
 		return WrapError(err, "Failed to export behavior pack.")
 	}
 	Logger.Infof("Exporting project to \"%s\".", rpPath)
-	err = MoveOrCopy(".regolith/tmp/RP", rpPath, exportTarget.ReadOnly, true)
+	// err = MoveOrCopy(".regolith/tmp/RP", rpPath, exportTarget.ReadOnly, true)
+	err = FullRecycledMoveOrCopy(
+		".regolith/tmp/RP", rpPath,
+		RecycledMoveOrCopySettings{
+			canMove:                 true,
+			saveSourceHashes:        true,
+			saveTargetHashes:        true,
+			makeTargetReadOnly:      exportTarget.ReadOnly,
+			copyTargetAclFromParent: true,
+			reloadSourceHashes:      true,
+		})
 	if err != nil {
 		return WrapError(err, "Failed to export resource pack.")
 	}
-	err = MoveOrCopy(".regolith/tmp/data", dataPath, false, false)
+	// err = MoveOrCopy(".regolith/tmp/data", dataPath, false, false)
+	err = FullRecycledMoveOrCopy(
+		".regolith/tmp/data", dataPath,
+		RecycledMoveOrCopySettings{
+			canMove:                 true,
+			saveSourceHashes:        true,
+			saveTargetHashes:        false,
+			makeTargetReadOnly:      false,
+			copyTargetAclFromParent: false,
+			reloadSourceHashes:      true,
+		})
 	if err != nil {
 		return WrapError(
 			err, "Failed to move the filter data back to the project's "+
@@ -157,62 +165,6 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 		return WrapError(
 			err, "Failed to update the list of the files edited by Regolith."+
 				"This may cause the next run to fail.")
-	}
-	return nil
-}
-
-// MoveOrCopy tries to move the the source to destination first and in case
-// of failore it copies the files instead.
-func MoveOrCopy(
-	source string, destination string, makeReadOnly bool, copyParentAcl bool,
-) error {
-	if err := os.Rename(source, destination); err != nil {
-		Logger.Infof(
-			"Couldn't move files to \"%s\".\n"+
-				"    Trying to copy files instead...",
-			destination)
-		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
-		err := copy.Copy(source, destination, copyOptions)
-		if err != nil {
-			return WrapErrorf(
-				err, "Couldn't copy data files to \"%s\", aborting.",
-				destination)
-		}
-	} else if copyParentAcl { // No errors with moving files but needs ACL copy
-		parent := filepath.Dir(destination)
-		if _, err := os.Stat(parent); os.IsNotExist(err) {
-			return WrapError(
-				err,
-				"Couldn't copy ACLs - parent directory (used as a source of "+
-					"ACL data) doesn't exist.")
-		}
-		err = copyFileSecurityInfo(parent, destination)
-		if err != nil {
-			return WrapErrorf(
-				err,
-				"Counldn't copy ACLs to the target file \"%s\".",
-				destination,
-			)
-		}
-	}
-	// Make files read only if this option is selected
-	if makeReadOnly {
-		err := filepath.WalkDir(destination,
-			func(s string, d fs.DirEntry, e error) error {
-				if e != nil {
-					return WrapErrorf(
-						e, "Failed to walk directory \"%s\".", destination)
-				}
-				if !d.IsDir() {
-					os.Chmod(s, 0444)
-				}
-				return nil
-			})
-		if err != nil {
-			Logger.Warnf(
-				"Unable to change file permissions of \"%s\" into read-only",
-				destination)
-		}
 	}
 	return nil
 }

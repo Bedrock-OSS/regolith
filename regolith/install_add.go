@@ -10,7 +10,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// TODO - proper error handling (propagate error)
 // addFilter downloads a filter and adds it to the filter definitions list in
 // config and installs it.
 func addFilter(filter string, force bool) error {

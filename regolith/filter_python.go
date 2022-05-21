@@ -33,7 +33,7 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 	return filter, nil
 }
 
-func (f *PythonFilter) Run(context RunContext) error {
+func (f *PythonFilter) run(context RunContext) error {
 	// Run filter
 	pythonCommand, err := findPython()
 	if err != nil {
@@ -65,6 +65,13 @@ func (f *PythonFilter) Run(context RunContext) error {
 		return WrapError(err, "Failed to run Python script.")
 	}
 	return nil
+}
+
+func (f *PythonFilter) Run(context RunContext) (bool, error) {
+	if err := f.run(context); err != nil {
+		return false, err
+	}
+	return context.IsInterrupted(), nil
 }
 
 func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {

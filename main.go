@@ -56,6 +56,18 @@ func main() {
 				},
 			},
 			{
+				Name:  "watch",
+				Usage: "Watches the project files and runs specified Regolith profile when they change.",
+				Action: func(c *cli.Context) error {
+					args := c.Args().Slice()
+					var profile string
+					if len(args) != 0 {
+						profile = args[0]
+					}
+					return regolith.Watch(profile, debug)
+				},
+			},
+			{
 				Name: "update",
 				Usage: `It updates filters listed in "filters" parameter. The
 				names of the filters must be already present in the
@@ -121,7 +133,17 @@ func main() {
 				Name:  "clean",
 				Usage: "Cleans cache from the .regolith folder.",
 				Action: func(c *cli.Context) error {
-					return regolith.Clean(debug)
+					clearPathStates := c.Bool("path-states")
+					return regolith.Clean(debug, clearPathStates)
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "path-states",
+						Aliases: []string{"p"},
+						Usage: "Deletes file used for caching contents of " +
+							"paths used by Regolith (useful when Regolith " +
+							"doesn't export files propertly).",
+					},
 				},
 			},
 			{
