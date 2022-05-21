@@ -5,10 +5,15 @@ type ProfileFilter struct {
 	Profile string `json:"-"`
 }
 
-func (f *ProfileFilter) Run(context RunContext) error {
-	profile := context.Config.Profiles[f.Profile]
+func (f *ProfileFilter) Run(context RunContext) (bool, error) {
 	Logger.Infof("Running %q nested profile...", f.Profile)
-	return RunProfileImpl(profile, f.Profile, *context.Config, &context)
+	return WatchProfileImpl(RunContext{
+		Profile:             f.Profile,
+		AbsoluteLocation:    context.AbsoluteLocation,
+		Config:              context.Config,
+		Parent:              &context,
+		interruptionChannel: context.interruptionChannel,
+	})
 }
 
 func (f *ProfileFilter) Check(context RunContext) error {

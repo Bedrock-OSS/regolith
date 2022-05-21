@@ -30,7 +30,7 @@ func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*N
 	return filter, nil
 }
 
-func (f *NodeJSFilter) Run(context RunContext) error {
+func (f *NodeJSFilter) run(context RunContext) error {
 	// Run filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
@@ -64,6 +64,13 @@ func (f *NodeJSFilter) Run(context RunContext) error {
 		}
 	}
 	return nil
+}
+
+func (f *NodeJSFilter) Run(context RunContext) (bool, error) {
+	if err := f.run(context); err != nil {
+		return false, err
+	}
+	return context.IsInterrupted(), nil
 }
 
 func (f *NodeJSFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {

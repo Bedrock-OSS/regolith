@@ -15,3 +15,21 @@ const exeSuffix = ""
 func copyFileSecurityInfo(source string, target string) error {
 	return nil
 }
+
+type DirWatcher struct;
+
+func NewDirWatcher(path string) (*DirWatcher, error) {
+	return nil, fmt.Errorf("Not implemented for this system.")
+}
+
+func (d *DirWatcher) WaitForChange() error {
+	return fmt.Errorf("Not implemented for this system.")
+}
+
+func (d *DirWatcher) WaitForChangeGroup(groupTimeout uint32) error {
+	return fmt.Errorf("Not implemented for this system.")
+}
+
+func (d *DirWatcher) Close() error {
+	return fmt.Errorf("Not implemented for this system.")
+}

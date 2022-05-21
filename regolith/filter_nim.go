@@ -31,7 +31,7 @@ func NimFilterDefinitionFromObject(
 	return filter, nil
 }
 
-func (f *NimFilter) Run(context RunContext) error {
+func (f *NimFilter) run(context RunContext) error {
 	// Run filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
@@ -67,6 +67,13 @@ func (f *NimFilter) Run(context RunContext) error {
 		}
 	}
 	return nil
+}
+
+func (f *NimFilter) Run(context RunContext) (bool, error) {
+	if err := f.run(context); err != nil {
+		return false, err
+	}
+	return context.IsInterrupted(), nil
 }
 
 func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {

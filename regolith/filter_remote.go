@@ -3,13 +3,14 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/go-getter"
-	"github.com/otiai10/copy"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+
+	"github.com/hashicorp/go-getter"
+	"github.com/otiai10/copy"
 )
 
 type RemoteFilterDefinition struct {
@@ -44,7 +45,7 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	return result, nil
 }
 
-func (f *RemoteFilter) Run(context RunContext) error {
+func (f *RemoteFilter) run(context RunContext) error {
 	// All other filters require safe mode to be turned off
 	if f.Definition.Url != StandardLibraryUrl && !IsUnlocked() {
 		return WrappedErrorf(
@@ -81,7 +82,14 @@ func (f *RemoteFilter) Run(context RunContext) error {
 			continue
 		}
 		// Overwrite the venvSlot with the parent value
-		err := filter.Run(RunContext{Config: context.Config, AbsoluteLocation: absolutePath, Profile: context.Profile, Parent: context.Parent})
+		// TODO - remote filters can contain multiple filters, the interruption
+		// chceck should be performed after every subfilter
+		_, err := filter.Run(RunContext{
+			Config:           context.Config,
+			AbsoluteLocation: absolutePath,
+			Profile:          context.Profile,
+			Parent:           context.Parent,
+		})
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to run %s.",
@@ -89,6 +97,13 @@ func (f *RemoteFilter) Run(context RunContext) error {
 		}
 	}
 	return nil
+}
+
+func (f *RemoteFilter) Run(context RunContext) (bool, error) {
+	if err := f.run(context); err != nil {
+		return false, err
+	}
+	return context.IsInterrupted(), nil
 }
 
 func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
@@ -292,10 +307,6 @@ func (i *RemoteFilterDefinition) Download(isForced bool) error {
 	Logger.Infof("Downloading filter %s...", i.Id)
 
 	// Download the filter using Git Getter
-	// TODO:
-	// Can we somehow detect whether this is a failure from git being not
-	// installed, or a failure from
-	// the repo/folder not existing?
 	if !hasGit() {
 		return WrappedError(gitNotInstalled)
 	}

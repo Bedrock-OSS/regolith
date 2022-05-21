@@ -32,8 +32,14 @@ func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*Jav
 	filter.Script = script
 	return filter, nil
 }
+func (f *JavaFilter) Run(context RunContext) (bool, error) {
+	if err := f.run(context); err != nil {
+		return false, PassError(err)
+	}
+	return context.IsInterrupted(), nil
+}
 
-func (f *JavaFilter) Run(context RunContext) error {
+func (f *JavaFilter) run(context RunContext) error {
 	// Run the filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
