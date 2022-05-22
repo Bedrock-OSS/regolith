@@ -73,7 +73,7 @@ Regolith projects are structured such that every filter will be run inside of a 
 The general structure will look like:
 
 ```
-temp folder
+tmp folder
  - RP
    - manifest.json
    - ... other files
