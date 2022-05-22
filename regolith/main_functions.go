@@ -159,7 +159,7 @@ func UpdateAll(debug bool) error {
 func runOrWatch(profileName string, debug, watch bool) error {
 	InitLogging(debug)
 	if profileName == "" {
-		profileName = "dev"
+		profileName = "default"
 	}
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
@@ -261,7 +261,7 @@ func Init(debug bool) error {
 			DataPath:          "./packs/data",
 			FilterDefinitions: map[string]FilterInstaller{},
 			Profiles: map[string]Profile{
-				"dev": {
+				"default": {
 					FilterCollection: FilterCollection{
 						Filters: []FilterRunner{},
 					},

@@ -7,7 +7,7 @@
   },
   "regolith": {
     "profiles": {
-      "dev": {
+      "default": {
         "filters": [],
         "export": {
           "target": "development",
