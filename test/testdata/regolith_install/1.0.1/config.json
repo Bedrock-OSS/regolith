@@ -14,7 +14,7 @@
       }
     },
     "profiles": {
-      "dev": {
+      "default": {
         "export": {
           "readOnly": false,
           "target": "development"
