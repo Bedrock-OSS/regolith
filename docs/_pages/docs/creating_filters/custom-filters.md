@@ -27,7 +27,7 @@ The accepted flow for Regolith is to store configuration scripts and configs ins
 
 ## Registering Custom Filter
 
-Now you can register your script by placing the filter into `filterDefinitions`. Here is a full example, which defines a new filter named "test", and runs it in the "dev" profile.
+Now you can register your script by placing the filter into `filterDefinitions`. Here is a full example, which defines a new filter named "test", and runs it in the "default" profile.
 
 ```json
 {
@@ -39,7 +39,7 @@ Now you can register your script by placing the filter into `filterDefinitions`.
   },
   "regolith": {
     "profiles": {
-      "dev": {
+      "default": {
         "filters": [
           {
             "filter": "test"

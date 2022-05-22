@@ -45,7 +45,7 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
   },
   "regolith": {
     "profiles": {
-      "dev": {
+      "default": {
         "filters": [],
         "export": {
           "target": "development",
@@ -75,12 +75,12 @@ If you don't have an addon prepared, you may also create a fresh one directly in
 
 ## Running Regolith
 
-To run regolith, open up a terminal and type `regolith run`. This will run the default profile (dev) from `config.json`. When you run this command, Regolith will copy/paste your addon into the `development` folders inside of `com.mojang`. If you navigate there, you should be able to see your pack folders, with a name like `project_name_bp`, and `project_name_rp`.
+To run regolith, open up a terminal and type `regolith run`. This will run the default profile (default) from `config.json`. When you run this command, Regolith will copy/paste your addon into the `development` folders inside of `com.mojang`. If you navigate there, you should be able to see your pack folders, with a name like `project_name_bp`, and `project_name_rp`.
 
 {: .notice--warning}
 Every time you want to update your addon, re-run this command.
 
-Later on, you can experiment with creating multiple [profiles](/regolith/docs/profiles) -for example, one for `dev` and one for `packaging`.
+Later on, you can experiment with creating multiple [profiles](/regolith/docs/profiles) -for example, one for `default` and one for `packaging`.
 
 ## Adding your first Filter
 
@@ -95,12 +95,12 @@ The `install` command relies on `git`. [You may download git here](https://git-s
 
 You can install this filter by running `regolith install texture_list`, which will make the filter available for use. 
 
-The last step is selecting where/when the filter will run. In our case, we want to run the filter every time we export using the default `dev` profile.
+The last step is selecting where/when the filter will run. In our case, we want to run the filter every time we export using the default `default` profile.
 
-You should adjust the dev profile in `config.json` to look like this:
+You should adjust the default profile in `config.json` to look like this:
 
 ```json
-"dev": {
+"default": {
   "export": {
     "readOnly": false,
     "target": "development"

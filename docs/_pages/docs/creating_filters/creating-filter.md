@@ -41,7 +41,7 @@ At this point, you need to edit your `config.json` so that `giant_mobs` is regis
   },
   "regolith": {
     "profiles": {
-      "dev": {
+      "default": {
         "filters": [
           {
             "filter": "giant_mobs"
@@ -64,7 +64,7 @@ At this point, you need to edit your `config.json` so that `giant_mobs` is regis
 }
 ```
 
-You can now run `regolith run dev`. If everything went well, you should be able to navigate into Minecraft, and create a new world with your RP and BP added. Every time you want to test, re-run `regolith run dev`.
+You can now run `regolith run default`. If everything went well, you should be able to navigate into Minecraft, and create a new world with your RP and BP added. Every time you want to test, re-run `regolith run default`. The "default" profile is special, so you can run it without specifying a profile name (`regolith run`).
 
 ## Understanding Regolith
 

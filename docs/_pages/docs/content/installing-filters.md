@@ -36,7 +36,7 @@ The `install` command relies on `git`. [You may download git here](https://git-s
 After installing, the filter will appear inside of `filter_definitions` of `config.json`. You can now add this filter to a profile like this:
 
 ```json
-"dev": {
+"default": {
   "export": {
     "readOnly": false,
     "target": "development"
