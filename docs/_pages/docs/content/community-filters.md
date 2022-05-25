@@ -26,17 +26,17 @@ For example `github.com/SirLich/echo-npc-regolith/echo`.
 
 | Name | Author | Language | Description |
 |------|--------|----------|-------------|
-| [esbuild_executor](https://github.com/MajestikButter/Regolith-Filters/tree/main/esbuild_executor) | MajestikButter | nodejs | A regolith filter for using esbuild |
-| [json_formatter](https://github.com/MajestikButter/Regolith-Filters/tree/main/json_formatter) | MajestikButter | nodejs | A regolith filter for formatting JSON files |
-| [js_formatter](https://github.com/MajestikButter/Regolith-Filters/tree/main/js_formatter) | MajestikButter | nodejs | A regolith filter for formatting JavaScript files |
-| [ts_transpiler](https://github.com/MajestikButter/Regolith-Filters/tree/main/ts_transpiler) | MajestikButter | nodejs | A regolith filter for transpiling Typescript files |
-| [NBTEnchant](https://github.com/SmokeyStack/MCScripts/tree/main/NBTEnchant) | SmokeyStack | python | This script is used to generate `.mcstructure` files containing edited nbt data that is currently not possible to do ingame. |
 | [functioner](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/functioner) | Hatchibombotar | nodejs | A filter that adds extra syntax to minecraft functions. |
 | [link_manifests](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/link_manifests) | Hatchibombotar | nodejs | Links uuid's from the resource and behaviour pack manifests in the dependencies section. |
 | [molang_insert](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/molang_insert) | Hatchibombotar | nodejs | A filter for regolith that allows you to insert molang. |
 | [pack_commons](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/pack_commons) | Hatchibombotar | nodejs | Intended to allow copying of files into both the resource and behaviour packs |
 | [simple_blocks](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/simple_blocks) | Hatchibombotar | nodejs | A filter that creates blocks from one file. |
 | [templater](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/templater) | Hatchibombotar | nodejs | A templater filter for regolith. |
+| [esbuild_executor](https://github.com/MajestikButter/Regolith-Filters/tree/main/esbuild_executor) | MajestikButter | nodejs | A regolith filter for using esbuild |
+| [json_formatter](https://github.com/MajestikButter/Regolith-Filters/tree/main/json_formatter) | MajestikButter | nodejs | A regolith filter for formatting JSON files |
+| [js_formatter](https://github.com/MajestikButter/Regolith-Filters/tree/main/js_formatter) | MajestikButter | nodejs | A regolith filter for formatting JavaScript files |
+| [ts_transpiler](https://github.com/MajestikButter/Regolith-Filters/tree/main/ts_transpiler) | MajestikButter | nodejs | A regolith filter for transpiling Typescript files |
+| [NBTEnchant](https://github.com/SmokeyStack/MCScripts/tree/main/NBTEnchant) | SmokeyStack | python | This script is used to generate `.mcstructure` files containing edited nbt data that is currently not possible to do ingame. |
 | [custom_project](https://github.com/Nusiq/regolith-filters/tree/master/custom_project) | Nusiq | exe | This filter is experimental. I'm not sure if I'll keep it. |
 | [debug_say_function_name](https://github.com/Nusiq/regolith-filters/tree/master/debug_say_function_name) | Nusiq | python | Adds tellraw command to the functions from specified paths to print `@s`and |
 | [pytemplate](https://github.com/Nusiq/regolith-filters/tree/master/pytemplate) | Nusiq | python | ![](../.resources/pytemplate-title.svg) |
@@ -53,8 +53,8 @@ For example `github.com/SirLich/echo-npc-regolith/echo`.
 | [strip](https://github.com/evilguy50/my-regolith-filters/tree/main/strip) | evilguy50 | nim | filter for striping comments from json, mcfunction, and lang files. |
 | [style_lint](https://github.com/evilguy50/my-regolith-filters/tree/main/style_lint) | evilguy50 | python | filter for automatic project styling. |
 | [title_ui](https://github.com/evilguy50/my-regolith-filters/tree/main/title_ui) | evilguy50 | nim | filter for generating title ui bindings. |
-| [command_lang](https://github.com/MCDevKit/regolith-library/tree/main/command_lang) | MCDevKit | shell |  |
-| [json_templating_engine](https://github.com/MCDevKit/regolith-library/tree/main/json_templating_engine) | MCDevKit | java |  |
-| [module_importer](https://github.com/ShiCheng-Lu/Regolith-Filters/tree/main/module_importer) | ShiCheng-Lu | nodejs | A regolith filter for import |
 | [scalable-teams](https://github.com/cda94581/regolith-premade-addons/tree/main/scalable-teams) | cda94581 | nodejs | Version **1.0.0** |
 | [echo](https://github.com/SirLich/echo-npc-regolith/tree/main/echo) | SirLich | python |  |
+| [module_importer](https://github.com/ShiCheng-Lu/Regolith-Filters/tree/main/module_importer) | ShiCheng-Lu | nodejs | A regolith filter for import |
+| [command_lang](https://github.com/MCDevKit/regolith-library/tree/main/command_lang) | MCDevKit | shell |  |
+| [json_templating_engine](https://github.com/MCDevKit/regolith-library/tree/main/json_templating_engine) | MCDevKit | java |  |
