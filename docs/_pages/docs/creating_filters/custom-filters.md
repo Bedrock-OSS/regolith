@@ -65,6 +65,7 @@ Now you can register your script by placing the filter into `filterDefinitions`.
 You can use the following "runWith" types:
  - [python](/regolith/docs/python-filters)
  - [nodejs](/regolith/docs/nodejs-filters)
+ - [deno](/regolith/docs/deno-filters)
  - [java](/regolith/docs/java-filters)
  - [nim](/regolith/docs/nim-filters)
  - [shell](/regolith/docs/shell-filters)
