@@ -212,6 +212,14 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 				"Unable to create Nim filter from %q filter definition.", id)
 		}
 		return filter, nil
+	case "deno":
+		filter, err := DenoFilterDefinitionFromObject(id, obj)
+		if err != nil {
+			return nil, WrapErrorf(
+				err,
+				"Unable to create Deno filter from %q filter definition.", id)
+		}
+		return filter, nil
 	case "nodejs":
 		filter, err := NodeJSFilterDefinitionFromObject(id, obj)
 		if err != nil {
