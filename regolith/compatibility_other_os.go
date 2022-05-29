@@ -3,6 +3,10 @@
 
 package regolith
 
+import (
+	"fmt"
+)
+
 // venvScriptsPath is a folder name between "venv" and "python" that leads to
 // the python executable.
 const venvScriptsPath = "bin"
@@ -16,7 +20,7 @@ func copyFileSecurityInfo(source string, target string) error {
 	return nil
 }
 
-type DirWatcher struct;
+type DirWatcher struct{}
 
 func NewDirWatcher(path string) (*DirWatcher, error) {
 	return nil, fmt.Errorf("Not implemented for this system.")
