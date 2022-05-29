@@ -28,8 +28,8 @@ In the simplest case, Regolith can be used to move your packs from the project f
 However, Regoliths real value preposition is the ability to run *arbitrary code during this copy*.
 
 We refer to these scripts and programs as `filters`. Here is the flow:
-- `RP`, `BP` and `data` folder are copied into a `temp` folder
-- Every filter is executed in-order, editing the `temp` folder in-place
+- `RP`, `BP` and `data` folder are copied into a `tmp` folder
+- Every filter is executed in-order, editing the `tmp` folder in-place
 - The contents of `RP` and `BP` are moved into your export location
 - The contents of `data` is moved back into your data location
 

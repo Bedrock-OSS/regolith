@@ -7,7 +7,7 @@ sidebar:
   nav: "sidebar"
 ---
 
-Shell Filters allow you to run arbitrary shell commands. This is useful for running packaged scripts (`.exe` files), or for running scripts that are not natively supported in Regolith.
+Shell Filters allow you to run arbitrary shell commands. This is useful for running scripts that are not natively supported in Regolith.
 
 ## Running arbitrary Shell command as Filter
 
