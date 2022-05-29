@@ -1,6 +1,6 @@
 module bedrock-oss.github.com/regolith
 
-go 1.17
+go 1.18
 
 require (
 	github.com/denisbrodbeck/machineid v1.0.1
