@@ -62,3 +62,7 @@ sidebar:
         url: /docs/shell-filters
       - title: "Node JS Filters"
         url: /docs/node-filters
+      - title: "Deno Filters"
+        url: /docs/deno-filters
+      - title: "Profile filters"
+        url: /docs/profile-filters

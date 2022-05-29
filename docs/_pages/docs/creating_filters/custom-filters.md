@@ -27,7 +27,7 @@ The accepted flow for Regolith is to store configuration scripts and configs ins
 
 ## Registering Custom Filter
 
-Now you can register your script by placing the filter into `filterDefinitions`. Here is a full example, which defines a new filter named "test", and runs it in the "dev" profile.
+Now you can register your script by placing the filter into `filterDefinitions`. Here is a full example, which defines a new filter named "test", and runs it in the "default" profile.
 
 ```json
 {
@@ -39,7 +39,7 @@ Now you can register your script by placing the filter into `filterDefinitions`.
   },
   "regolith": {
     "profiles": {
-      "dev": {
+      "default": {
         "filters": [
           {
             "filter": "test"
@@ -64,11 +64,13 @@ Now you can register your script by placing the filter into `filterDefinitions`.
 
 You can use the following "runWith" types:
  - [python](/regolith/docs/python-filters)
- - [nodejs](/regolith/docs/nodejs-filters)
+ - [nodejs](/regolith/docs/node-filters)
  - [deno](/regolith/docs/deno-filters)
  - [java](/regolith/docs/java-filters)
  - [nim](/regolith/docs/nim-filters)
  - [shell](/regolith/docs/shell-filters)
+
+There is also the [profile](/regolith/docs/profile-filters) filter with slightly different syntax. It lets you nest profiles.
 
 Please see the dedicated pages for these run-types for more information!
 

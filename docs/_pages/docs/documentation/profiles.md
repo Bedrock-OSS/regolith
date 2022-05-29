@@ -7,19 +7,19 @@ sidebar:
   nav: "sidebar"
 ---
 
-A `profile` is a collection of filters, settings, and export information. By default, a Regolith project will be initialized with a single profile, called `dev`. You can add additional profiles, as you need them.
+A `profile` is a collection of filters, settings, and export information. By default, a Regolith project will be initialized with a single profile, called `default`. You can add additional profiles, as you need them.
 
 ## Running Profiles
 
-You can use `regolith run` to run the default profile (dev), or use `regolith run <profile name>` to run a specific profile
+You can use `regolith run` to run the default profile (default), or use `regolith run <profile name>` to run a specific profile
 
 ## Why Profiles?
 
 Profiles are useful for creating different run-targets. 
 
-For example, `dev` profile may contain development focused filters, which are not desired for a final build. You can create a `build` or `package` profile, potentially with a different export target to fill this need. 
+For example, `default` profile may contain development focused filters, which are not desired for a final build. You can create a `build` or `package` profile, potentially with a different export target to fill this need. 
 
-You can now run `regolith run dev` normally, and then sometimes `regolith run build` when you need a new final build.
+You can now run `regolith run default` normally, and then sometimes `regolith run build` when you need a new final build.
 
 Here is an example `config.json` with a second profile called `package`.
 
@@ -37,7 +37,7 @@ Here is an example `config.json` with a second profile called `package`.
     "profiles": {
 
       // This is the default profile
-      "dev": {
+      "default": {
         "filters": [
           {"filter": "example_filter"}
         ],

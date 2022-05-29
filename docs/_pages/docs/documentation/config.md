@@ -39,8 +39,8 @@ Example config, with many options explained:
 
     // Profiles are a list of filters and export information, which can be run with 'regolith run <profile>'
     "profiles": {
-      // 'dev' is the default profile. You can add more.
-      "dev": {
+      // 'default' is the default profile. You can add more.
+      "default": {
 
         // Every profile contains a list of filters to run, in order.
         "filters": [

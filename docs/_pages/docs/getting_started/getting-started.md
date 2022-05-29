@@ -30,6 +30,9 @@ In short:
  - `packs/RP` stores your resource pack.
  - `packs/data` is a special folder that filters can use to store data.
  - `config.json` is the configuration file for Regolith.
+ - `.gitignore` is a file which tells [Git source control](https://git-scm.com/)
+   to ignore certain files. It's not a partof of Regolith but we highly
+   recommend using Git to manage your projects.
 
 ## config.json
 
@@ -45,7 +48,7 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
   },
   "regolith": {
     "profiles": {
-      "dev": {
+      "default": {
         "filters": [],
         "export": {
           "target": "development",
@@ -62,7 +65,8 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
 Later on you can play with the additional configuration options, but for now, just set a project name, and author name.
 
 {: .notice}
-We suggest using a name like `dragons` or `cars` for the project name, as opposed to `My Dragon Adventure Map`, since the project name will be used as the folder name for the final export.
+We suggest using a name like `dragons` or `cars` for the project name, as opposed to `My Dragon Adventure Map`, since the project name will be used as the folder name for the final export if you're
+using the "development" [export target](/regolith/docs/export-targets).
 
 ## Creating your Addon
 
@@ -75,12 +79,22 @@ If you don't have an addon prepared, you may also create a fresh one directly in
 
 ## Running Regolith
 
-To run regolith, open up a terminal and type `regolith run`. This will run the default profile (dev) from `config.json`. When you run this command, Regolith will copy/paste your addon into the `development` folders inside of `com.mojang`. If you navigate there, you should be able to see your pack folders, with a name like `project_name_bp`, and `project_name_rp`.
+There are two ways of running Regolith `regolith run` and `regolith watch`.
+They both run a profile defined in `config.json` file.
 
-{: .notice--warning}
-Every time you want to update your addon, re-run this command.
+The `regolith run [profile-name]` command runs provided profile once. If you don't
+specify a profile, it will run the profile named "default".
 
-Later on, you can experiment with creating multiple [profiles](/regolith/docs/profiles) -for example, one for `dev` and one for `packaging`.
+The `regolith watch [profile-name]` command works the same as `regolith run`, but
+it will watch your source files and rerun the profile when they change. If you're
+using `regolith run` you have to do it manually every time.
+
+A single run copies your source files into a temporary folder, runs all of the
+filters of the profile and moves the files to target location defined in the
+"export" property of the profile. By default the export is set to "development",
+which means that the files will be copied to the `development` pack folders of
+`com.mojang`. The names of folders created in this export mode are based on
+the name of the project like `project_name_bp` and `project_name_rp`.
 
 ## Adding your first Filter
 
@@ -95,12 +109,12 @@ The `install` command relies on `git`. [You may download git here](https://git-s
 
 You can install this filter by running `regolith install texture_list`, which will make the filter available for use. 
 
-The last step is selecting where/when the filter will run. In our case, we want to run the filter every time we export using the default `dev` profile.
+The last step is selecting where/when the filter will run. In our case, we want to run the filter every time we export using the default `default` profile.
 
-You should adjust the dev profile in `config.json` to look like this:
+You should adjust the default profile in `config.json` to look like this:
 
 ```json
-"dev": {
+"default": {
   "export": {
     "readOnly": false,
     "target": "development"
