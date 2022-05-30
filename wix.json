@@ -7,7 +7,7 @@
   },
   "files": [
     {
-      "path": "dist/msi_windows_amd64/regolith.exe"
+      "path": "dist/msi_windows_amd64_v1/regolith.exe"
     }
   ],
   "environments": [
