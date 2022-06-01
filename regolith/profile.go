@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/otiai10/copy"
 )
 
 // RecycledSetupTmpFiles set up the workspace for the filters. The function
@@ -71,6 +73,92 @@ func RecycledSetupTmpFiles(config Config, profile Profile) error {
 	return nil
 }
 
+// SetupTmpFiles set up the workspace for the filters.
+func SetupTmpFiles(config Config, profile Profile) error {
+	start := time.Now()
+	// Setup Directories
+	Logger.Debug("Cleaning .regolith/tmp")
+	err := os.RemoveAll(".regolith/tmp")
+	if err != nil {
+		return WrapError(
+			err, "Unable to clean temporary directory: \".regolith/tmp\".")
+	}
+
+	err = os.MkdirAll(".regolith/tmp", 0666)
+	if err != nil {
+		return WrapError(
+			err, "Unable to prepare temporary directory: \"./regolith/tmp\".")
+	}
+
+	// Copy the contents of the 'regolith' folder to '.regolith/tmp'
+	Logger.Debug("Copying project files to .regolith/tmp")
+	// Avoid repetetive code of preparing ResourceFolder, BehaviorFolder
+	// and DataPath with a closure
+	setup_tmp_directory := func(
+		path, short_name, descriptive_name string,
+	) error {
+		if path != "" {
+			stats, err := os.Stat(path)
+			if err != nil {
+				if os.IsNotExist(err) {
+					Logger.Warnf(
+						"%s %q does not exist", descriptive_name, path)
+					err = os.MkdirAll(
+						fmt.Sprintf(".regolith/tmp/%s", short_name), 0666)
+					if err != nil {
+						return WrapErrorf(
+							err,
+							"Failed to create \".regolith/tmp/%s\" directory.",
+							short_name)
+					}
+				}
+			} else if stats.IsDir() {
+				err = copy.Copy(
+					path, fmt.Sprintf(".regolith/tmp/%s", short_name),
+					copy.Options{PreserveTimes: false, Sync: false})
+				if err != nil {
+					return WrapErrorf(
+						err,
+						"Failed to copy %s %q to \".regolith/tmp/%s\".",
+						descriptive_name, path, short_name)
+				}
+			} else { // The folder paths leads to a file
+				return WrappedErrorf(
+					"%s path %q is not a directory", descriptive_name, path)
+			}
+		} else {
+			err = os.MkdirAll(
+				fmt.Sprintf(".regolith/tmp/%s", short_name), 0666)
+			if err != nil {
+				return WrapErrorf(
+					err,
+					"Failed to create \".regolith/tmp/%s\" directory.",
+					short_name)
+			}
+		}
+		return nil
+	}
+
+	err = setup_tmp_directory(config.ResourceFolder, "RP", "resource folder")
+	if err != nil {
+		return WrapErrorf(
+			err, "Failed to setup resource folder in the temporary directory.")
+	}
+	err = setup_tmp_directory(config.BehaviorFolder, "BP", "behavior folder")
+	if err != nil {
+		return WrapErrorf(
+			err, "Failed to setup behavior folder in the temporary directory.")
+	}
+	err = setup_tmp_directory(config.DataPath, "data", "data folder")
+	if err != nil {
+		return WrapErrorf(
+			err, "Failed to setup data folder in the temporary directory.")
+	}
+
+	Logger.Debug("Setup done in ", time.Since(start))
+	return nil
+}
+
 func CheckProfileImpl(profile Profile, profileName string, config Config, parentContext *RunContext) error {
 	// Check whether every filter, uses a supported filter type
 	for _, f := range profile.Filters {
@@ -82,10 +170,10 @@ func CheckProfileImpl(profile Profile, profileName string, config Config, parent
 	return nil
 }
 
-// RunProfile loads the profile from config.json and runs it based on the
+// RecycledRunProfile loads the profile from config.json and runs it based on the
 // context. If context is in the watch mode, it can repeat the process multiple
 // times in case of interruptions (changes in the source files).
-func RunProfile(context RunContext) error {
+func RecycledRunProfile(context RunContext) error {
 	// profileName string, profile *Profile, config *Config
 
 	// saveTmp saves the state of the tmp files. This is useful only if runnig
@@ -159,6 +247,49 @@ start:
 		if err := saveTmp(); err != nil {
 			return PassError(err)
 		}
+		goto start
+	}
+	Logger.Debug("Done in ", time.Since(start))
+	return nil
+}
+
+// RunProfile loads the profile from config.json and runs it based on the
+// context. If context is in the watch mode, it can repeat the process multiple
+// times in case of interruptions (changes in the source files).
+func RunProfile(context RunContext) error {
+	// Clear states to not conflict with recycled mode, error handling not
+	// important
+	ClearCachedStates()
+start:
+	// Prepare tmp files
+	profile, ok := context.GetProfile()
+	if !ok {
+		return WrappedErrorf("Unable to get profile %s", context.Profile)
+	}
+	err := SetupTmpFiles(*context.Config, profile)
+	if err != nil {
+		return WrapError(err, "Unable to setup profile.")
+	}
+	if context.IsInterrupted() {
+		goto start
+	}
+	// Run the profile
+	interrupted, err := WatchProfileImpl(context)
+	if err != nil {
+		return PassError(err)
+	}
+	if interrupted {
+		goto start
+	}
+	// Export files
+	Logger.Info("Moving files to target directory.")
+	start := time.Now()
+	err = ExportProject(
+		profile, context.Config.Name, context.Config.DataPath)
+	if err != nil {
+		return WrapError(err, "Exporting project failed.")
+	}
+	if context.IsInterrupted("data") {
 		goto start
 	}
 	Logger.Debug("Done in ", time.Since(start))

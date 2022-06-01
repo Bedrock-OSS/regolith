@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/otiai10/copy"
 )
 
 // Common warnings
@@ -238,4 +240,60 @@ func isDirEmpty(path string) (bool, error) {
 	}
 	// err is nil -> not empty
 	return false, nil
+}
+
+// MoveOrCopy tries to move the the source to destination first and in case
+// of failore it copies the files instead.
+func MoveOrCopy(
+	source string, destination string, makeReadOnly bool, copyParentAcl bool,
+) error {
+	if err := os.Rename(source, destination); err != nil {
+		Logger.Infof(
+			"Couldn't move files to \"%s\".\n"+
+				"    Trying to copy files instead...",
+			destination)
+		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
+		err := copy.Copy(source, destination, copyOptions)
+		if err != nil {
+			return WrapErrorf(
+				err, "Couldn't copy data files to \"%s\", aborting.",
+				destination)
+		}
+	} else if copyParentAcl { // No errors with moving files but needs ACL copy
+		parent := filepath.Dir(destination)
+		if _, err := os.Stat(parent); os.IsNotExist(err) {
+			return WrapError(
+				err,
+				"Couldn't copy ACLs - parent directory (used as a source of "+
+					"ACL data) doesn't exist.")
+		}
+		err = copyFileSecurityInfo(parent, destination)
+		if err != nil {
+			return WrapErrorf(
+				err,
+				"Counldn't copy ACLs to the target file \"%s\".",
+				destination,
+			)
+		}
+	}
+	// Make files read only if this option is selected
+	if makeReadOnly {
+		err := filepath.WalkDir(destination,
+			func(s string, d fs.DirEntry, e error) error {
+				if e != nil {
+					return WrapErrorf(
+						e, "Failed to walk directory \"%s\".", destination)
+				}
+				if !d.IsDir() {
+					os.Chmod(s, 0444)
+				}
+				return nil
+			})
+		if err != nil {
+			Logger.Warnf(
+				"Unable to change file permissions of \"%s\" into read-only",
+				destination)
+		}
+	}
+	return nil
 }
