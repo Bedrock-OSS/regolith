@@ -10,7 +10,7 @@ sidebar:
 
 Regolith is an Addon Compiler for the Bedrock Edition of Minecraft.
 
-This page introduces Regolith at a conceptual level. If you prefer, you can jump to the [installation instructions](regolith/docs/installing).
+This page introduces Regolith at a conceptual level. If you prefer, you can jump to the [installation instructions](/regolith/docs/installing).
 {: .notice--warning}
 
 Regolith introduces the concept of a "project folder", where your addons are written, including the Resource Pack, Behavior Pack, and any models, textures or configuration files. This single-folder-structure is great for version control, and allows you to keep your "source-of-truth" outside of com.mojang!
