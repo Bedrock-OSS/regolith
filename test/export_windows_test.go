@@ -20,7 +20,7 @@ import (
 // created packs. If they're not the same as the permissions of
 // development_*_packs folders that contain them, the test fails.
 // To compare permissions, this function uses "icacls.exe"
-func TestMoveFilesAcl(t *testing.T) {
+func testMoveFilesAcl(t *testing.T, recycled bool) {
 	// Switching working directories in this test, make sure to go back
 	wd, err := os.Getwd()
 	if err != nil {
@@ -77,7 +77,7 @@ func TestMoveFilesAcl(t *testing.T) {
 		mojangDir, "development_resource_packs", config.Name+"_rp")
 	os.Chdir(workingDir)
 	// THE TEST
-	err = regolith.Run("dev", true)
+	err = regolith.Run("dev", recycled, true)
 	if err != nil {
 		t.Fatal("'regolith init' failed:", err)
 	}
@@ -123,4 +123,12 @@ func TestMoveFilesAcl(t *testing.T) {
 	}
 	assertValidAcl(rpPath)
 	assertValidAcl(bpPath)
+}
+
+func TestMoveFilesAcl(t *testing.T) {
+	testMoveFilesAcl(t, false)
+}
+
+func TestMoveFilesAclRecycled(t *testing.T) {
+	testMoveFilesAcl(t, true)
 }
