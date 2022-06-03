@@ -156,8 +156,13 @@ func UpdateAll(debug bool) error {
 // on the 'watch' parameter. It runs/watches the profile named after
 // 'profileName' parameter. The 'debug' argument determines if the debug
 // messages should be printed or not.
-func runOrWatch(profileName string, debug, watch bool) error {
+func runOrWatch(profileName string, recycled, debug, watch bool) error {
 	InitLogging(debug)
+	// Select the run profile function based on the recycled flag
+	rp := RunProfile
+	if recycled {
+		rp = RecycledRunProfile
+	}
 	if profileName == "" {
 		profileName = "default"
 	}
@@ -190,7 +195,7 @@ func runOrWatch(profileName string, debug, watch bool) error {
 	if watch { // Loop until program termination (CTRL+C)
 		context.StartWatchingSrouceFiles()
 		for {
-			err = RunProfile(context)
+			err = rp(context)
 			if err != nil {
 				Logger.Errorf(
 					"Failed to run profile %q: %s",
@@ -204,7 +209,7 @@ func runOrWatch(profileName string, debug, watch bool) error {
 		}
 		// return nil // Unreachable code
 	}
-	err = RunProfile(context)
+	err = rp(context)
 	if err != nil {
 		return WrapErrorf(err, "Failed to run profile %q", profileName)
 	}
@@ -214,15 +219,15 @@ func runOrWatch(profileName string, debug, watch bool) error {
 
 // Run handles the "regolith run" command. It runs selected profile and exports
 // created resource pack and behvaiour pack to the target destination.
-func Run(profileName string, debug bool) error {
-	return runOrWatch(profileName, debug, false)
+func Run(profileName string, recycled, debug bool) error {
+	return runOrWatch(profileName, recycled, debug, false)
 }
 
 // Watch handles the "regolith watch" command. It watches the project
 // directories and it runs selected profile and exports created resource pack
 // and behvaiour pack to the target destination when the project changes.
-func Watch(profileName string, debug bool) error {
-	return runOrWatch(profileName, debug, true)
+func Watch(profileName string, recycled, debug bool) error {
+	return runOrWatch(profileName, recycled, debug, true)
 }
 
 // Init handles the "regolith init" command. It initializes a new Regolith
