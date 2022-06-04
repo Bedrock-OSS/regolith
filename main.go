@@ -48,11 +48,19 @@ func main() {
 				Usage: "Runs Regolith, and generates compiled RP and BP, which will be exported to the destination specified in the config.",
 				Action: func(c *cli.Context) error {
 					args := c.Args().Slice()
+					recycled := c.Bool("recycled")
 					var profile string
 					if len(args) != 0 {
 						profile = args[0]
 					}
-					return regolith.Run(profile, debug)
+					return regolith.Run(profile, recycled, debug)
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "recycled",
+						Aliases: []string{"r"},
+						Usage:   "Uses different \"recycled\" function for moving files, might be faster in some cases. Not recommended.",
+					},
 				},
 			},
 			{
@@ -60,11 +68,19 @@ func main() {
 				Usage: "Watches the project files and runs specified Regolith profile when they change.",
 				Action: func(c *cli.Context) error {
 					args := c.Args().Slice()
+					recycled := c.Bool("recycled")
 					var profile string
 					if len(args) != 0 {
 						profile = args[0]
 					}
-					return regolith.Watch(profile, debug)
+					return regolith.Watch(profile, recycled, debug)
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "recycled",
+						Aliases: []string{"r"},
+						Usage:   "Uses different \"recycled\" function for moving files, might be faster in some cases. Not recommended.",
+					},
 				},
 			},
 			{
