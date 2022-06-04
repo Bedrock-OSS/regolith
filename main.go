@@ -173,6 +173,7 @@ func main() {
 	}).Run(os.Args)
 	if err != nil {
 		regolith.Logger.Error(err)
+		os.Exit(1)
 	} else {
 		regolith.InitLogging(false)
 		regolith.Logger.Info(color.GreenString("Finished"))
