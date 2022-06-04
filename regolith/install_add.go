@@ -102,7 +102,7 @@ func addFilter(filter string, force bool) error {
 }
 
 // parseInstallFilterArg parses a single argument of the
-// "regolith install --add" command and returns the name, the url and
+// "regolith install" command and returns the name, the url and
 // the version of the filter.
 func parseInstallFilterArg(arg string) (url, name, version string, err error) {
 	// Parse the filter argument
@@ -129,7 +129,11 @@ func parseInstallFilterArg(arg string) (url, name, version string, err error) {
 	} else {
 		// Example inputs: "name_ninja==HEAD", "name_ninja"
 		name = url
-		url = StandardLibraryUrl
+		url, err = ResolveUrl(url)
+		if err != nil {
+			return "", "", "", WrapErrorf(
+				err, "Unable to resolve URL of %q.", url)
+		}
 	}
 	return
 }
