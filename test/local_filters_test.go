@@ -53,7 +53,7 @@ func TestRegolithInit(t *testing.T) {
 
 // TestRegolithRunMissingRp tests the behavior of RunProfile when the packs/RP
 // directory is missing.
-func TestRegolithRunMissingRp(t *testing.T) {
+func testRegolithRunMissingRp(t *testing.T, recycled bool) {
 	// SETUP
 	// Switching working directories in this test, make sure to go back
 	wd, err := os.Getwd()
@@ -86,10 +86,18 @@ func TestRegolithRunMissingRp(t *testing.T) {
 	// Switch to the working directory
 	os.Chdir(tmpDir)
 	// THE TEST
-	err = regolith.Run("dev", true)
+	err = regolith.Run("dev", recycled, true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
+}
+
+func TestRegolithRunMissingRp(t *testing.T) {
+	testRegolithRunMissingRp(t, false)
+}
+
+func TestRegolithRunMissingRpRecycled(t *testing.T) {
+	testRegolithRunMissingRp(t, true)
 }
 
 // TestLocalRequirementsInstallAndRun tests if Regolith properly installs the
@@ -132,13 +140,13 @@ func TestLocalRequirementsInstallAndRun(t *testing.T) {
 	if err := regolith.Unlock(true); err != nil {
 		t.Fatal("'regolith unlock' failed:", err.Error())
 	}
-	if err := regolith.Run("dev", true); err != nil {
+	if err := regolith.Run("dev", false, true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 }
 
 // TextExeFilterRun tests if Regolith can properly run an Exe filter
-func TestExeFilterRun(t *testing.T) {
+func testExeFilterRun(t *testing.T, recycled bool) {
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal("Unable to get current working directory")
@@ -181,7 +189,7 @@ func TestExeFilterRun(t *testing.T) {
 	if err := regolith.Unlock(true); err != nil {
 		t.Fatal("'regolith unlock' failed:", err.Error())
 	}
-	if err := regolith.Run("dev", true); err != nil {
+	if err := regolith.Run("dev", recycled, true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 	// Load expected result
@@ -199,10 +207,18 @@ func TestExeFilterRun(t *testing.T) {
 	comparePathMaps(expectedPaths, actualPaths, t)
 }
 
+func TestExeFilterRun(t *testing.T) {
+	testExeFilterRun(t, false)
+}
+
+func TestExeFilterRunRecycled(t *testing.T) {
+	testExeFilterRun(t, true)
+}
+
 // TestProfileFilterRun tests valid and invalid profile filters. The invalid
 // profile filter has circular dependencies and should fail, the valid profile
 // filter runs the same exe file as the TestExeFilterRun test.
-func TestProfileFilterRun(t *testing.T) {
+func testProfileFilterRun(t *testing.T, recycled bool) {
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal("Unable to get current working directory")
@@ -247,14 +263,16 @@ func TestProfileFilterRun(t *testing.T) {
 	}
 	t.Log("Running invalid profile filter with circular " +
 		"dependencies (this should fail)")
-	if err := regolith.Run("invalid_circular_profile_1", true); err == nil {
+	if err := regolith.Run(
+		"invalid_circular_profile_1", recycled, true); err == nil {
 		t.Fatal("'regolith run' didn't return an error after running"+
 			" a circular profile filter:", err.Error())
 	} else {
 		t.Log("Task failed successfully")
 	}
 	t.Log("Running valid profile filter ")
-	if err := regolith.Run("correct_nested_profile", true); err != nil {
+	if err := regolith.Run(
+		"correct_nested_profile", recycled, true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 	// Load expected result
@@ -270,4 +288,12 @@ func TestProfileFilterRun(t *testing.T) {
 	}
 	// Compare the results
 	comparePathMaps(expectedPaths, actualPaths, t)
+}
+
+func TestProfileFilterRun(t *testing.T) {
+	testProfileFilterRun(t, false)
+}
+
+func TestProfileFilterRunRecycled(t *testing.T) {
+	testProfileFilterRun(t, true)
 }
