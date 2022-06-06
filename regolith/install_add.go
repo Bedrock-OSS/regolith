@@ -10,9 +10,24 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+type parsedInstallFilterArg struct {
+	// raw is the raw value of the filter argument before processing.
+	raw string
+	// url is the URL to the repository with the filter
+	url string
+	// name is the name of the filter (name of the subfoder in th repository)
+	name string
+	// version is the version string of the filter ("HEAD", semver, etc.)
+	version string
+	// usedResovler is true if the URL was resolved using the resolver
+	usedResolver bool
+}
+
 // addFilter downloads a filter and adds it to the filter definitions list in
 // config and installs it.
-func addFilter(filter string, force bool) error {
+func addFilter(
+	parsedArg parsedInstallFilterArg, force bool,
+) error {
 	// Load the config file as a map. Loading as Config object could break some
 	// of the custom data that could potentially be in the config file.
 	// Open the filter definitions map.
@@ -40,13 +55,9 @@ func addFilter(filter string, force bool) error {
 		filterDefinitions, ok = regolithProject["filterDefinitions"].(map[string]interface{})
 		if !ok {
 			return WrappedError(
-				"The \"filterDefinitions\" property of the config not a map")
+				"The \"filterDefinitions\" property of the config is not a " +
+					"map")
 		}
-	}
-	filterUrl, filterName, version, err := parseInstallFilterArg(filter)
-	if err != nil {
-		return WrapErrorf(
-			err, "Unable to parse filter name and version from %q.", filter)
 	}
 	// Get dataPath
 	dataPath := "./packs/data"
@@ -56,35 +67,34 @@ func addFilter(filter string, force bool) error {
 		regolithProject["dataPath"] = dataPath
 	}
 	// Check if the filter is already installed
-	if _, ok := filterDefinitions[filterName]; ok && !force {
+	if _, ok := filterDefinitions[parsedArg.name]; ok && !force {
 		return WrappedErrorf(
 			"The filter %q is already on the filter definitions list.\n"+
 				"Please remove it first before installing it again or use "+
-				"the --force option.", filterName)
+				"the --force option.", parsedArg.name)
 	}
 	// Add the filter info to filter definitions
 	filterDefinition, err := FilterDefinitionFromTheInternet(
-		filterUrl, filterName, version)
+		parsedArg.url, parsedArg.name, parsedArg.version)
 	if err != nil {
 		return WrapErrorf(
-			err, "Unable to get filter definition %q.", filter)
+			err, "Unable to get filter definition of %q filter.",
+			parsedArg.raw)
 	}
 	err = filterDefinition.Download(force)
 	if err != nil {
 		return WrapErrorf(
-			err, "Unable to download filter %q.", filter)
+			err, "Unable to download filter of %q filter.",
+			parsedArg.raw)
 	}
 	filterDefinition.CopyFilterData(dataPath)
-	// The default URL don't need to be added to the config file
-	if filterDefinition.Url == StandardLibraryUrl {
-		filterDefinition.Url = ""
-	}
+
 	// The "HEAD" and "latest" keywords should be the same in the config file
 	// don't lock them to the actual versions
-	if version == "HEAD" || version == "latest" {
-		filterDefinition.Version = version
+	if parsedArg.version == "HEAD" || parsedArg.version == "latest" {
+		filterDefinition.Version = parsedArg.version
 	}
-	filterDefinitions[filterName] = filterDefinition
+	filterDefinitions[parsedArg.name] = filterDefinition
 	// Install the dependencies of the filter
 	err = filterDefinition.InstallDependencies(nil)
 	if err != nil {
@@ -104,17 +114,21 @@ func addFilter(filter string, force bool) error {
 // parseInstallFilterArg parses a single argument of the
 // "regolith install" command and returns the name, the url and
 // the version of the filter.
-func parseInstallFilterArg(arg string) (url, name, version string, err error) {
+func parseInstallFilterArg(
+	arg string, canUpdateResolver bool,
+) (*parsedInstallFilterArg, error) {
 	// Parse the filter argument
+	var url, name, version string
+	var err error
+	usedResolver := false
 	if strings.Contains(arg, "==") {
 		splitStr := strings.Split(arg, "==")
 		if len(splitStr) != 2 {
-			err = WrappedErrorf(
+			return nil, WrappedErrorf(
 				"Unable to parse argument %q as filter data. "+
 					"The argument should contain an URL and optionally a "+
 					"version number separated by '=='.",
 				arg)
-			return "", "", "", err
 		}
 		url, version = splitStr[0], splitStr[1]
 	} else {
@@ -128,14 +142,26 @@ func parseInstallFilterArg(arg string) (url, name, version string, err error) {
 		url = strings.Join(splitStr[:len(splitStr)-1], "/")
 	} else {
 		// Example inputs: "name_ninja==HEAD", "name_ninja"
+		if canUpdateResolver {
+			err := DownloadResolverMap()
+			if err != nil {
+				Logger.Warn("Failed to download resolver map.")
+			}
+		}
 		name = url
 		url, err = ResolveUrl(url)
 		if err != nil {
-			return "", "", "", WrapErrorf(
+			return nil, WrapErrorf(
 				err, "Unable to resolve URL of %q.", url)
 		}
+		usedResolver = true
 	}
-	return
+	return &parsedInstallFilterArg{
+		url:          url,
+		name:         name,
+		version:      version,
+		usedResolver: usedResolver,
+	}, nil
 }
 
 func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
