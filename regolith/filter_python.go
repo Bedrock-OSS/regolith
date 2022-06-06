@@ -116,6 +116,16 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 		if err != nil {
 			return WrapError(err, "Failed to create venv.")
 		}
+		// Update pip of the venv
+		venvPythonCommand := filepath.Join(
+			venvPath, venvScriptsPath, "python"+exeSuffix)
+		err = RunSubProcess(
+			venvPythonCommand,
+			[]string{"-m", "pip", "install", "--upgrade", "pip"},
+			filterPath, "", ShortFilterName(f.Id))
+		if err != nil {
+			Logger.Warn("Failed to upgrade pip in venv.")
+		}
 		Logger.Info("Installing pip dependencies...")
 		err = RunSubProcess(
 			filepath.Join(venvPath, venvScriptsPath, "pip"+exeSuffix),
