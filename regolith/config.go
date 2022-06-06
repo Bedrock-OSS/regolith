@@ -237,7 +237,18 @@ func (c *Config) InstallFilters(isForced bool) error {
 	if err != nil {
 		return WrapError(err, "Downloading remote filters has failed.")
 	}
+	resolverUpdated := false
 	for filterName, filterDefinition := range c.FilterDefinitions {
+		// Only remote filters require resolver, and we only need to download
+		// it once
+		if _, ok := filterDefinition.(*RemoteFilterDefinition); ok && !resolverUpdated {
+			err = DownloadResolverMap()
+			if err != nil {
+				Logger.Warn("Failed to download resolver map.")
+			}
+			resolverUpdated = true
+		}
+		// Install dependencies
 		Logger.Infof("Installing %q filter dependencies...", filterName)
 		err = filterDefinition.InstallDependencies(nil)
 		if err != nil {

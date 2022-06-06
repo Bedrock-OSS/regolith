@@ -34,9 +34,42 @@ func Install(filters []string, force, debug bool) error {
 	if !hasGit() {
 		Logger.Warn(gitNotInstalled)
 	}
-	for _, filter := range filters {
-		if err := addFilter(filter, force); err != nil {
-			return WrapErrorf(err, "Failed to install filter %q.", filter)
+	// resolverUpdated is a boolean that determines if the resovler map file
+	// was downloaded during the execution of this function.
+	resolverUpdated := false
+	// resolvedArgs is a map with parsed argumetns, the keys are the filter
+	// url and name (as this kind of repetition is not allowed). This map is
+	// used to search for duplicates.
+	parsedArgs := make(map[[2]string]*parsedInstallFilterArg)
+	// Parse the args
+	for _, rawFilterArg := range filters {
+		parsedArg, err := parseInstallFilterArg(
+			rawFilterArg,
+			!resolverUpdated) // download resolver only once in a loop
+		if err != nil {
+			return WrapErrorf(
+				err, "Unable to parse filter name and version from %q.",
+				rawFilterArg)
+		}
+		if parsedArg.usedResolver {
+			resolverUpdated = true
+		}
+		key := [2]string{parsedArg.url, parsedArg.name}
+		if parsedArgs[key] != nil {
+			return WrapErrorf(
+				err, "Duplicate filter:\n URL: %s\n name: %s",
+				parsedArg.url, parsedArg.name)
+		}
+		parsedArgs[key] = parsedArg
+
+	}
+	// TODO - Possible async download here, I'm not sure if it would actually
+	// be faster unless you provide a lot of filters at once. Modifying
+	// config.json must be reomved from addFilter before adding that feature.
+	for _, parsedArg := range parsedArgs {
+		if err := addFilter(*parsedArg, force); err != nil {
+			return WrapErrorf(
+				err, "Failed to install filter %q.", parsedArg.raw)
 		}
 	}
 	Logger.Info("Successfully installed the filters.")
@@ -95,6 +128,7 @@ func Update(filters []string, debug bool) error {
 	if err := firstErr(err1, err2); err != nil {
 		return WrapError(err, "Failed to load config.json.")
 	}
+	resolverUpdated := false
 	for _, filterName := range filters {
 		filterDefinition, ok := config.FilterDefinitions[filterName]
 		if !ok {
@@ -102,6 +136,15 @@ func Update(filters []string, debug bool) error {
 				"Filter %q is not installed and therefore cannot be updated.",
 				filterName)
 			continue
+		}
+		// Only remote filters require resolver, and we only need to download
+		// it once
+		if _, ok := filterDefinition.(*RemoteFilterDefinition); ok && !resolverUpdated {
+			err := DownloadResolverMap()
+			if err != nil {
+				Logger.Warn("Failed to download resolver map.")
+			}
+			resolverUpdated = true
 		}
 		remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition)
 		if !ok {
@@ -137,11 +180,19 @@ func UpdateAll(debug bool) error {
 	if err := firstErr(err1, err2); err != nil {
 		return WrapError(err, "Failed to load config.json.")
 	}
+	resolverUpdated := false
 	for filterName, filterDefinition := range config.FilterDefinitions {
 		remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition)
 		if !ok { // Skip updating non-remote filters.
 			continue
+		} else if !resolverUpdated {
+			err := DownloadResolverMap()
+			if err != nil {
+				Logger.Warn("Failed to download resolver map.")
+			}
+			resolverUpdated = true
 		}
+
 		if err := remoteFilter.Update(); err != nil {
 			Logger.Error(
 				WrapErrorf(
