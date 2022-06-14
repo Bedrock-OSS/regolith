@@ -103,7 +103,7 @@ func (f *JavaFilterDefinition) Check(context RunContext) error {
 			"Java not found, download and install it"+
 				" from https://adoptopenjdk.net/")
 	}
-	cmd, err := exec.Command("java", "--version").Output()
+	cmd, err := exec.Command("java", "-version").Output()
 	if err != nil {
 		return WrapError(err, "Failed to check Java version")
 	}
