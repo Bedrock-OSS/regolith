@@ -27,17 +27,87 @@ import (
 // should be printed.
 func Install(filters []string, force, debug bool) error {
 	InitLogging(debug)
-	if len(filters) == 0 {
-		return WrappedError("No filters specified.")
-	}
 	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalled)
 	}
-	for _, filter := range filters {
-		if err := addFilter(filter, force); err != nil {
-			return WrapErrorf(err, "Failed to install filter %q.", filter)
+	// Parse arguments into download tasks
+	parsedArgs, err := parseInstallFilterArgs(filters)
+	if err != nil {
+		return WrapError(err, "Failed to parse arguments.")
+	}
+	config, err := LoadConfigAsMap()
+	if err != nil {
+		return WrapError(err, "Unable to load config file.")
+	}
+	// Get parts of config file required for installation
+	dataPath, err := dataPathFromConfigMap(config)
+	if err != nil {
+		return WrapError(err, "Failed to get data path from config file.")
+	}
+	filterDefinitions, err := filterDefinitionsFromConfigMap(config)
+	if err != nil {
+		return WrapError(
+			err, "Failed to get filter definitions from config file.")
+	}
+	// Check if the filters are already installed if force mode is disabled
+	if !force {
+		for _, parsedArg := range parsedArgs {
+			_, ok := filterDefinitions[parsedArg.name]
+			if ok {
+				return WrappedErrorf(
+					"The filter %q is already on the filter definitions list.\n"+
+						"Please remove it first before installing it again or use "+
+						"the --force option.", parsedArg.name)
+			}
 		}
+	}
+	// Convert to filter definitions for download
+	filterInstallers := make(map[string]FilterInstaller, 0)
+	for _, parsedArg := range parsedArgs {
+		// Get the filter definition from the Internet
+		remoteFilterDefinition, err := FilterDefinitionFromTheInternet(
+			parsedArg.url, parsedArg.name, parsedArg.version)
+		if err != nil {
+			return WrapErrorf(
+				err, "Unable to get filter definition of %q filter.",
+				parsedArg.name)
+		}
+		if parsedArg.version == "HEAD" || parsedArg.version == "latest" {
+			// The "HEAD" and "latest" keywords should be the same in the
+			// config file don't lock them to the actual versions
+			remoteFilterDefinition.Version = parsedArg.version
+		}
+		if err != nil {
+			return WrapErrorf(
+				err,
+				"Unable to download filter: \"%s\"\n"+
+					"Some of the files might still be in cache.\n"+
+					"Run \"regolith clean\" to fix invalid cache state.",
+				parsedArg.name)
+		}
+		filterInstallers[parsedArg.name] = remoteFilterDefinition
+	}
+	// Download the filter definitions
+	err = installFilters(filterInstallers, force, dataPath)
+	if err != nil {
+		return WrapError(err, "Failed to install filters.")
+	}
+	// Add the filters to the config
+	for name, downloadedFilter := range filterInstallers {
+		// Add the filter to config file
+		filterDefinitions[name] = downloadedFilter
+	}
+	// Save the config file
+	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
+	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
+	if err != nil {
+		return WrapErrorf(
+			err,
+			"Successfully downloaded %v filters"+
+				"but failed to update the config file.\n"+
+				"Run \"regolith clean\" to fix invalid cache state.",
+			len(parsedArgs))
 	}
 	Logger.Info("Successfully installed the filters.")
 	return nil
@@ -58,16 +128,12 @@ func InstallAll(force, debug bool) error {
 	if !hasGit() {
 		Logger.Warn(gitNotInstalled)
 	}
-	configJson, err := LoadConfigAsMap()
-	if err != nil {
+	configMap, err1 := LoadConfigAsMap()
+	config, err2 := ConfigFromObject(configMap)
+	if err := firstErr(err1, err2); err != nil {
 		return WrapError(err, "Failed to load config.json.")
 	}
-	config, err := ConfigFromObject(configJson)
-
-	if err != nil {
-		return WrapError(err, "Failed to parse \"config.json\" file.")
-	}
-	err = config.InstallFilters(force)
+	err := installFilters(config.FilterDefinitions, force, config.DataPath)
 	if err != nil {
 		return WrapError(err, "Could not install filters.")
 	}
@@ -83,37 +149,34 @@ func InstallAll(force, debug bool) error {
 // should be printed.
 func Update(filters []string, debug bool) error {
 	InitLogging(debug)
-	if len(filters) == 0 {
-		return WrappedError("No filters specified.")
-	}
 	Logger.Info("Updating filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalled)
+	}
+	if len(filters) == 0 {
+		return WrappedError("No filters specified.")
 	}
 	configMap, err1 := LoadConfigAsMap()
 	config, err2 := ConfigFromObject(configMap)
 	if err := firstErr(err1, err2); err != nil {
 		return WrapError(err, "Failed to load config.json.")
 	}
+	// Filter out the filters that are not present in the 'filters' list
+	filterInstallers := make(map[string]FilterInstaller, 0)
 	for _, filterName := range filters {
-		filterDefinition, ok := config.FilterDefinitions[filterName]
+		filterInstaller, ok := config.FilterDefinitions[filterName]
 		if !ok {
 			Logger.Warnf(
 				"Filter %q is not installed and therefore cannot be updated.",
 				filterName)
 			continue
 		}
-		remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition)
-		if !ok {
-			Logger.Warnf(
-				"Filter %q is not a remote filter and therefore cannot be updated.",
-				filterName)
-			continue
-		}
-		if err := remoteFilter.Update(); err != nil {
-			Logger.Error(
-				WrapErrorf(err, "Failed to update filter %q.", filterName))
-		}
+		filterInstallers[filterName] = filterInstaller
+	}
+	// Update the filters from the list
+	err := updateFilters(filterInstallers)
+	if err != nil {
+		return WrapError(err, "Could not update filters.")
 	}
 	Logger.Info("Successfully updated the filters.")
 	return nil
@@ -131,24 +194,16 @@ func UpdateAll(debug bool) error {
 	if !hasGit() {
 		Logger.Warn(gitNotInstalled)
 	}
-	Logger.Infof("Updating filters...")
 	configMap, err1 := LoadConfigAsMap()
 	config, err2 := ConfigFromObject(configMap)
 	if err := firstErr(err1, err2); err != nil {
 		return WrapError(err, "Failed to load config.json.")
 	}
-	for filterName, filterDefinition := range config.FilterDefinitions {
-		remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition)
-		if !ok { // Skip updating non-remote filters.
-			continue
-		}
-		if err := remoteFilter.Update(); err != nil {
-			Logger.Error(
-				WrapErrorf(
-					err, "Failed to update filter %q.", filterName))
-		}
+	err := updateFilters(config.FilterDefinitions)
+	if err != nil {
+		return WrapError(err, "Could not install filters.")
 	}
-	Logger.Info("Successfully updated the filters.")
+	Logger.Info("Successfully installed the filters.")
 	return nil
 }
 
