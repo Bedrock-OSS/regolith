@@ -3,7 +3,6 @@ package regolith
 import (
 	"encoding/json"
 	"path/filepath"
-	"strconv"
 )
 
 type ExeFilterDefinition struct {
@@ -92,9 +91,6 @@ func (f *ExeFilter) run(
 func executeExeFile(id string,
 	exe string, args []string, filterDir string, workingDir string,
 ) error {
-	for i, arg := range args {
-		args[i] = strconv.Quote(arg)
-	}
 	exe = filepath.Join(filterDir, exe)
 	Logger.Debugf("Running exe file %s:", exe)
 	err := RunSubProcess(exe, args, filterDir, workingDir, id)
