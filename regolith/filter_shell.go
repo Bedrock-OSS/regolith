@@ -3,7 +3,6 @@ package regolith
 import (
 	"encoding/json"
 	"os/exec"
-	"strconv"
 	"strings"
 )
 
@@ -101,9 +100,6 @@ func (f *ShellFilter) run(
 func executeCommand(id string,
 	command string, args []string, filterDir string, workingDir string,
 ) error {
-	for i, arg := range args {
-		args[i] = strconv.Quote(arg)
-	}
 	joined := strings.Join(append([]string{command}, args...), " ")
 	Logger.Debugf("Executing command: %s", joined)
 	shell, arg, err := findShell()
