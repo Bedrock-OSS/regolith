@@ -56,7 +56,7 @@ func FullRecycledMoveOrCopy(
 ) error {
 	var err error
 	settings.loadDefaults()
-	// Create source and target paths if they don't exist
+	// Create source and target paths
 	err = os.MkdirAll(sourcePath, 0755)
 	if err != nil {
 		return WrapErrorf(err, "Failed to create path \"%s\"", sourcePath)
@@ -65,14 +65,12 @@ func FullRecycledMoveOrCopy(
 	if err != nil {
 		return WrapErrorf(err, "Failed to create path \"%s\"", targetPath)
 	}
-	// Try to load the states from the file if they are not loaded yet
+	// Load source state
 	if settings.sourceState == nil {
-		// Try to load from cache if allowed
 		if !settings.reloadSourceHashes {
 			settings.sourceState, _ = LoadStateFromCache(
 				settings.hashPairsPath, sourcePath)
 		}
-		// If still nil, generate from path
 		if settings.sourceState == nil {
 			settings.sourceState, err = GetStateFromPath(sourcePath, settings.hash)
 			if err != nil {
@@ -82,13 +80,12 @@ func FullRecycledMoveOrCopy(
 			}
 		}
 	}
+	// Load target state
 	if settings.targetState == nil {
-		// Try to load from cache if allowed
 		if !settings.reloadTargetHashes {
 			settings.targetState, _ = LoadStateFromCache(
 				settings.hashPairsPath, targetPath)
 		}
-		// If still nil, generate from path
 		if settings.targetState == nil {
 			settings.targetState, err = GetStateFromPath(targetPath, settings.hash)
 			if err != nil {
@@ -98,7 +95,7 @@ func FullRecycledMoveOrCopy(
 			}
 		}
 	}
-
+	// Move/copy the files
 	err = RecycledMoveOrCopy(
 		sourcePath, targetPath, settings.sourceState,
 		settings.targetState, settings.canMove)
@@ -106,7 +103,7 @@ func FullRecycledMoveOrCopy(
 		return PassError(err)
 	}
 
-	// Save the new hashes if necessary
+	// Save the hashes of source
 	if settings.saveSourceHashes {
 		err = SavePathState(
 			settings.hashPairsPath, sourcePath, settings.sourceState)
@@ -114,6 +111,7 @@ func FullRecycledMoveOrCopy(
 			return WrapError(err, "Failed to save the state of the files.")
 		}
 	}
+	// Save the hashes of target
 	if settings.saveTargetHashes {
 		err = SavePathState(
 			settings.hashPairsPath, targetPath, settings.targetState)
@@ -121,6 +119,7 @@ func FullRecycledMoveOrCopy(
 			return WrapError(err, "Failed to save the state of the files.")
 		}
 	}
+	// Set the ACL of the target
 	if settings.copyTargetAclFromParent {
 		parent := filepath.Dir(targetPath)
 		err = copyFileSecurityInfo(parent, targetPath)
@@ -130,6 +129,7 @@ func FullRecycledMoveOrCopy(
 				parent, targetPath)
 		}
 	}
+	// Set the read-only flag of the target
 	if settings.makeTargetReadOnly {
 		err := filepath.WalkDir(targetPath,
 			func(s string, d fs.DirEntry, e error) error {
@@ -152,19 +152,19 @@ func FullRecycledMoveOrCopy(
 }
 
 // RecycledMoveOrCopy moves or copies files from source to the target directory
-// so that after the operation the state of the target directory as the state
-// of the source directory before the operation. It tries to leverage the
-// similarity of the source and target to minimize the number of files that
-// need to be copied. If canMove flag is set to true, the function doesn't
-// care to preserve the state of the source directory.
+// so that after the operation the state of the target directory is the same
+// as the state of the source directory before the operation. It tries to
+// leverage the similarity of the source and target to minimize the number of
+// files that need to be copied. If canMove flag is set to true, the function
+// doesn't care to preserve the state of the source directory.
 //
 // sourceState and targetState are lists of PathHashPairs that provide
 // pre-calculated hashes of the files in sourcePath or targetPath.
 // The function assumes that the hashes are complete, correct and that they're
-// sorted alphabetically by the path string. The paths in sourceState and
-// targetState are relative to sourcePath and targetPath respectively (if
-// sourceState and targetState are the same then both paths have the same
-// content).
+// sorted in the order defined by the os.WalkDir function by the path string.
+// The paths in sourceState and targetState are relative to sourcePath and
+// targetPath respectively (if sourceState and targetState are the same then
+// both paths have the same content).
 //
 // canMove specifies whether the function is allowed to move files.
 //
@@ -183,7 +183,8 @@ func FullRecycledMoveOrCopy(
 //        - mv - move the element from source to target
 //        - END - end of the list
 // It also handles the situations where "mv" fails to move and copies file
-// instead (but this is not described in the pseudocode)
+// instead or when S or T is a directory and the function needs to handle the
+// removed children (but this is not described in the pseudocode)
 func RecycledMoveOrCopy(
 	sourcePath, targetPath string,
 	sourceState, targetState *list.List,
@@ -218,12 +219,6 @@ func RecycledMoveOrCopy(
 			addPathToState(targetState, t, s.Value.(PathHashPair))
 			// Remove s from sourceState if necessary and advance 's'
 			if moved {
-				// If the file left an empty directory behind, remove it and all of
-				// its parent empty directories if there are any.
-				if err := removeEmptyDirectoryChain(sourcePath, filepath.Dir(fullSPath)); err != nil {
-					return WrapErrorf(
-						err, "Failed to remove empty directory and its empty parent directories.")
-				}
 				movedFiles++
 				s, err = removePathFromState(sourceState, s)
 				if err != nil {
@@ -244,12 +239,6 @@ func RecycledMoveOrCopy(
 			if err != nil {
 				return WrapErrorf(
 					err, "Failed to remove \"%s\".", fullTPath)
-			}
-			// If the file left an empty directory behind, remove it and all of
-			// its parent empty directories if there are any.
-			if err := removeEmptyDirectoryChain(targetPath, filepath.Dir(fullTPath)); err != nil {
-				return WrapErrorf(
-					err, "Failed to remove empty directory and its empty parent directories.")
 			}
 			deletedFiles++
 			// Remove the element from targetState and advance 't'
@@ -289,12 +278,6 @@ func RecycledMoveOrCopy(
 						return WrapErrorf(
 							err, "Failed to remove \"%s\" from sourceState.",
 							fullSPath)
-					}
-					// If the file left an empty directory behind, remove it and all of
-					// its parent empty directories if there are any.
-					if err := removeEmptyDirectoryChain(sourcePath, filepath.Dir(fullSPath)); err != nil {
-						return WrapErrorf(
-							err, "Failed to remove empty directory and its empty parent directories.")
 					}
 				} else {
 					copiedFiles++
@@ -378,24 +361,6 @@ func GetStateFromPath(dirPath string, hash hash.Hash) (*list.List, error) {
 			if err != nil {
 				return WrapErrorf(err, "Failed to walk \"%s\".", path)
 			}
-			if isDir, err := isDirectory(path); err != nil {
-				return WrapErrorf(
-					err, "Failed to determine if \"%s\" is a directory.",
-					path)
-			} else if isDir { // Check if the directory is non-empty
-				files, err := ioutil.ReadDir(path)
-				if err != nil {
-					return WrapErrorf(
-						err,
-						"Failed to check if directory is empty \"%s\".", path)
-				}
-				if len(files) != 0 {
-					// No need to save info about non-empty directories because
-					// their existance is implied by the existance of their
-					// children.
-					return nil
-				}
-			}
 			hashStr, err := getPathHash(path, hash)
 			if err != nil {
 				return WrapErrorf(err, "Failed to get hash for \"%s\".", path)
@@ -463,6 +428,8 @@ func SaveStateInDefaultCache(path string) error {
 // calculates the state of the target path (a list of the PathHashPairs sorted
 // by paths). The hash is used to calculate the hashes for the PathHashPairs
 // of the state. The target path should be empty.
+//
+// TODO - this function is used only in the tests.
 func DeepCopyAndGetState(
 	source, target string, hash hash.Hash,
 ) (*list.List, error) {
@@ -474,24 +441,6 @@ func DeepCopyAndGetState(
 			}
 			relPath, _ := filepath.Rel(source, path) // shouldn't error
 			currTarget := filepath.Join(target, relPath)
-			if isDir, err := isDirectory(path); err != nil {
-				return WrapErrorf(
-					err, "Failed to determine if \"%s\" is a directory.",
-					path)
-			} else if isDir { // Check if the directory is non-empty
-				files, err := ioutil.ReadDir(path)
-				if err != nil {
-					return WrapErrorf(
-						err,
-						"Failed to check if directory is empty \"%s\".", path)
-				}
-				if len(files) != 0 {
-					// No need to save info about non-empty directories because
-					// their existance is implied by the existance of their
-					// children.
-					return nil
-				}
-			}
 			hashStr, err := shallowCopyAndGetHash(path, currTarget, hash)
 			if err != nil {
 				return WrapErrorf(
@@ -516,6 +465,7 @@ func DeepCopyAndGetState(
 // target (the copy is shallow so the contents of the source directory don't
 // matter).
 func shallowMoveOrCopy(source, target string, canMove bool) (bool, error) {
+	// Check if source is a directory
 	isDir, err := isDirectory(source)
 	if err != nil {
 		return false, WrapErrorf(
@@ -566,21 +516,24 @@ func shallowMoveOrCopy(source, target string, canMove bool) (bool, error) {
 func removePathFromState(
 	state *list.List, element *list.Element,
 ) (*list.Element, error) {
+	// Closure definitions
 	removeElement := func() { // Shortcut for removing the 'element'
 		nextElement := element.Next()
 		state.Remove(element)
 		element = nextElement
 	}
-	// Remove the first element
+	// Get the properties of the root element
 	rootPath := element.Value.(PathHashPair).Path
 	rootIsDir := element.Value.(PathHashPair).Hash == ""
+	// Delete the root element
 	removeElement()
-	// Check if the first element is a directory
+	// If the element wasn't directory then we're done
 	if !rootIsDir {
 		return element, nil
 	}
-	// If the first element is a directory, remove the children
-	for element != nil { // element is nil when whe reach the end of the list
+	// Remove the children
+	for element != nil { // Loop until we reach the end of the list
+		// Get properties of current element
 		elementPath := element.Value.(PathHashPair).Path
 		isRel, err := isRelative(elementPath, rootPath)
 		if err != nil {
@@ -588,6 +541,7 @@ func removePathFromState(
 				err, "Failed to check if \"%s\" is relative to \"%s\".",
 				elementPath, rootPath)
 		}
+		// If the current element is not relative to root we're done
 		if !isRel {
 			break
 		}
@@ -609,16 +563,17 @@ func addPathToState(
 	}
 }
 
-// getPathHash returns a hash of the file at path. If the file doesn't
-// exist, it returns an empty string and an error. If the file is a directory,
-// it returns an empty string and nil. If the file is a regular file, it
-// returns the hash and nil.
+// getPathHash returns a hash of the file at path. If the file is a directory,
+// it returns an empty string. If the file is a regular file, it
+// returns the hash value.
 func getPathHash(path string, hash hash.Hash) (string, error) {
+	// If directory return an empty string
 	if stat, err := os.Stat(path); err != nil {
 		return "", WrapErrorf(err, "Failed to stat \"%s\".", path)
 	} else if stat.IsDir() {
-		return "", nil // Use empty string as a hash for directories.
+		return "", nil
 	}
+	// Not a directory, return a hash
 	file, err := os.Open(path)
 	if err != nil {
 		return "", WrapErrorf(err, "Failed to open \"%s\".", path)
@@ -639,8 +594,7 @@ func getPathHash(path string, hash hash.Hash) (string, error) {
 func shallowCopyAndGetHash(
 	source, target string, hash hash.Hash,
 ) (string, error) {
-	// Check if source is a directory, if it is the hash will be empty stirng
-	// create matching directory in target.
+	// If source is a dir, create dir in target and return empty string
 	stat, err := os.Stat(source)
 	if err != nil {
 		return "", WrapErrorf(err, "Failed to stat \"%s\".", source)
@@ -650,19 +604,21 @@ func shallowCopyAndGetHash(
 		return "", nil
 	}
 
-	// Source is a file
+	// Make parent directory of target
 	err = os.MkdirAll(filepath.Dir(target), 0755)
 	if err != nil {
 		return "", WrapErrorf(
 			err, "Failed to create \"%s\".", target)
 	}
 	buf := make([]byte, copyFileBufferSize)
+	// Open source for reading
 	sourceF, err := os.Open(source)
 	if err != nil {
 		return "", WrapErrorf(
 			err, "Failed to open \"%s\" for reading.", source)
 	}
 	defer sourceF.Close()
+	// Open target for writing
 	targetF, err := os.Create(target)
 	if err != nil {
 		return "", WrapErrorf(
@@ -670,6 +626,7 @@ func shallowCopyAndGetHash(
 	}
 	defer targetF.Close()
 	hash.Reset()
+	// Copy while hashing
 	for {
 		n, err := sourceF.Read(buf)
 		if err != nil && err != io.EOF {
@@ -684,6 +641,7 @@ func shallowCopyAndGetHash(
 		}
 	}
 	targetF.Sync()
+	// Return the hash in text format
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
@@ -716,24 +674,28 @@ func isRelative(path, dir string) (bool, error) {
 // copyFile copies a file from source to target. If it's necessary it creates
 // the target directory.
 func copyFile(source, target string) error {
+	// Make parent directory of target
 	err := os.MkdirAll(filepath.Dir(target), 0755)
 	if err != nil {
 		return WrapErrorf(
 			err, "Failed to create \"%s\".", target)
 	}
 	buf := make([]byte, copyFileBufferSize)
+	// Open source for reading
 	sourceF, err := os.Open(source)
 	if err != nil {
 		return WrapErrorf(
 			err, "Failed to open \"%s\" for reading.", source)
 	}
 	defer sourceF.Close()
+	// Open target for writing
 	targetF, err := os.Create(target)
 	if err != nil {
 		return WrapErrorf(
 			err, "Failed to open \"%s\" for writing.", target)
 	}
 	defer targetF.Close()
+	// Copy the file
 	for {
 		n, err := sourceF.Read(buf)
 		if err != nil && err != io.EOF {
@@ -779,6 +741,10 @@ func stateToPathHashPairSlice(l *list.List) ([]PathHashPair, error) {
 // relative the root. If the path is an empty directory, it gets removed,
 // if the parent of that path is also an empty directory relative to the
 // root, it also gets removed and so on.
+//
+// TODO - this function is not used anywhere but it might be useful to cleanup
+// empty directories from the source files (having them is bad practice if
+// you're using git).
 func removeEmptyDirectoryChain(root string, path string) error {
 	for {
 
