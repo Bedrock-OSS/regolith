@@ -2,138 +2,182 @@
 package regolith
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"os/exec"
 	"strings"
 
 	"golang.org/x/mod/semver"
 )
 
-// addFilter downloads a filter and adds it to the filter definitions list in
-// config and installs it.
-func addFilter(filter string, force bool) error {
-	// Load the config file as a map. Loading as Config object could break some
-	// of the custom data that could potentially be in the config file.
-	// Open the filter definitions map.
-	config, err := LoadConfigAsMap()
+type parsedInstallFilterArg struct {
+	// raw is the raw value of the filter argument before processing.
+	raw string
+	// url is the URL to the repository with the filter
+	url string
+	// name is the name of the filter (name of the subfoder in th repository)
+	name string
+	// version is the version string of the filter ("HEAD", semver, etc.)
+	version string
+}
+
+// installFilters installs the filters from the list and their dependencies,
+// and copies their data to the data path. If the filter is already installed,
+// it returns an error unless the force flag is set.
+func installFilters(
+	filterDefinitions map[string]FilterInstaller, force bool,
+	dataPath string,
+) error {
+	err := CreateDirectoryIfNotExists(".regolith/cache/filters", true)
 	if err != nil {
-		return WrapError(err, "Unable to load config file.")
+		return PassError(err)
 	}
-	var regolithProject map[string]interface{}
-	if _, ok := config["regolith"]; !ok {
-		regolithProject = make(map[string]interface{})
-		config["regolith"] = regolithProject
-	} else {
-		regolithProject, ok = config["regolith"].(map[string]interface{})
-		if !ok {
-			return WrappedError(
-				"The \"regolith\" property of the config file not a map.")
+	err = CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
+	if err != nil {
+		return PassError(err)
+	}
+
+	// Download all of the remote filters
+	resolverUpdated := false
+	for name, filterDefinition := range filterDefinitions {
+		Logger.Infof("Downloading %q filter...", name)
+		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
+			// Download resolver once if remote filter is found
+			if !resolverUpdated {
+				err = DownloadResolverMap()
+				if err != nil {
+					Logger.Warn("Failed to download resolver map.")
+				}
+				resolverUpdated = true
+			}
+			// Download the remote filter
+			err := remoteFilter.Download(force)
+			if err != nil {
+				return WrapErrorf(
+					err, "Could not download %q!", name)
+			}
+			// Copy the data of the remote filter to the data path
+			remoteFilter.CopyFilterData(dataPath)
 		}
-	}
-	// Get filter definitions map
-	var filterDefinitions map[string]interface{}
-	if _, ok := regolithProject["filterDefinitions"]; !ok {
-		filterDefinitions = make(map[string]interface{})
-		regolithProject["filterDefinitions"] = filterDefinitions
-	} else {
-		filterDefinitions, ok = regolithProject["filterDefinitions"].(map[string]interface{})
-		if !ok {
-			return WrappedError(
-				"The \"filterDefinitions\" property of the config not a map")
+		// Install the dependencies of the filter
+		Logger.Infof("Installing %q filter dependencies...", name)
+		err = filterDefinition.InstallDependencies(nil)
+		if err != nil {
+			return WrapErrorf(
+				err, "Failed to install dependencies for %q filter.", name)
 		}
-	}
-	filterUrl, filterName, version, err := parseInstallFilterArg(filter)
-	if err != nil {
-		return WrapErrorf(
-			err, "Unable to parse filter name and version from %q.", filter)
-	}
-	// Get dataPath
-	dataPath := "./packs/data"
-	if dp, ok := regolithProject["dataPath"].(string); ok {
-		dataPath = dp
-	} else {
-		regolithProject["dataPath"] = dataPath
-	}
-	// Check if the filter is already installed
-	if _, ok := filterDefinitions[filterName]; ok && !force {
-		return WrappedErrorf(
-			"The filter %q is already on the filter definitions list.\n"+
-				"Please remove it first before installing it again or use "+
-				"the --force option.", filterName)
-	}
-	// Add the filter info to filter definitions
-	filterDefinition, err := FilterDefinitionFromTheInternet(
-		filterUrl, filterName, version)
-	if err != nil {
-		return WrapErrorf(
-			err, "Unable to get filter definition %q.", filter)
-	}
-	err = filterDefinition.Download(force)
-	if err != nil {
-		return WrapErrorf(
-			err, "Unable to download filter %q.", filter)
-	}
-	filterDefinition.CopyFilterData(dataPath)
-	// The default URL don't need to be added to the config file
-	if filterDefinition.Url == StandardLibraryUrl {
-		filterDefinition.Url = ""
-	}
-	// The "HEAD" and "latest" keywords should be the same in the config file
-	// don't lock them to the actual versions
-	if version == "HEAD" || version == "latest" {
-		filterDefinition.Version = version
-	}
-	filterDefinitions[filterName] = filterDefinition
-	// Install the dependencies of the filter
-	err = filterDefinition.InstallDependencies(nil)
-	if err != nil {
-		return WrapErrorf(
-			err, "Unable to instsall dependencies of filter %q.",
-			filterDefinition.Id)
-	}
-	// Save the config file
-	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
-	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
-	if err != nil {
-		return WrapError(err, "Unable to save the config file.")
 	}
 	return nil
 }
 
-// parseInstallFilterArg parses a single argument of the
-// "regolith install --add" command and returns the name, the url and
-// the version of the filter.
-func parseInstallFilterArg(arg string) (url, name, version string, err error) {
-	// Parse the filter argument
-	if strings.Contains(arg, "==") {
-		splitStr := strings.Split(arg, "==")
-		if len(splitStr) != 2 {
-			err = WrappedErrorf(
-				"Unable to parse argument %q as filter data. "+
-					"The argument should contain an URL and optionally a "+
-					"version number separated by '=='.",
-				arg)
-			return "", "", "", err
+// updateFilters updates the filters from the list.
+func updateFilters(
+	remoteFilterDefinitions map[string]FilterInstaller,
+) error {
+	err := CreateDirectoryIfNotExists(".regolith/cache/filters", true)
+	if err != nil {
+		return PassError(err)
+	}
+	err = CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
+	if err != nil {
+		return PassError(err)
+	}
+	resolverUpdated := false
+	// Download all of the remote filters
+	for name, filterDefinition := range remoteFilterDefinitions {
+		Logger.Infof("Updating %q filter...", name)
+		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
+			// Download resolver once if remote filter is found
+			if !resolverUpdated {
+				err = DownloadResolverMap()
+				if err != nil {
+					Logger.Warn("Failed to download resolver map.")
+				}
+				resolverUpdated = true
+			}
+			// Update the filter
+			err := remoteFilter.Update()
+			if err != nil {
+				return WrapErrorf(
+					err, "Could not update %q!", name)
+			}
 		}
-		url, version = splitStr[0], splitStr[1]
-	} else {
-		url = arg
 	}
-	// Check if identifier is an URL. The last part of the URL is the name
-	// of the filter
-	if strings.Contains(url, "/") {
-		splitStr := strings.Split(url, "/")
-		name = splitStr[len(splitStr)-1]
-		url = strings.Join(splitStr[:len(splitStr)-1], "/")
-	} else {
-		// Example inputs: "name_ninja==HEAD", "name_ninja"
-		name = url
-		url = StandardLibraryUrl
-	}
-	return
+	return nil
 }
 
+// parseInstallFilterArgs parses a list of arguments of the
+// "regolith install" command and returns a list of download tasks.
+func parseInstallFilterArgs(
+	filters []string,
+) ([]*parsedInstallFilterArg, error) {
+	result := []*parsedInstallFilterArg{}
+	if len(filters) == 0 {
+		return nil, WrappedError("No filters specified.")
+	}
+
+	// Parse the filter argument
+	var url, name, version string
+	var err error
+	updatedResolver := false
+	// resolvedArgs is used for finding duplicates (duplicate is a filter with
+	// the same name and url)
+	parsedArgs := make(map[[2]string]struct{})
+
+	for _, arg := range filters {
+		if strings.Contains(arg, "==") {
+			splitStr := strings.Split(arg, "==")
+			if len(splitStr) != 2 {
+				return nil, WrappedErrorf(
+					"Unable to parse argument %q as filter data. "+
+						"The argument should contain an URL and optionally a "+
+						"version number separated by '=='.",
+					arg)
+			}
+			url, version = splitStr[0], splitStr[1]
+		} else {
+			url = arg
+		}
+		// Check if identifier is an URL. The last part of the URL is the name
+		// of the filter
+		if strings.Contains(url, "/") {
+			splitStr := strings.Split(url, "/")
+			name = splitStr[len(splitStr)-1]
+			url = strings.Join(splitStr[:len(splitStr)-1], "/")
+		} else {
+			// Example inputs: "name_ninja==HEAD", "name_ninja"
+			if !updatedResolver {
+				err := DownloadResolverMap()
+				if err != nil {
+					Logger.Warn("Failed to download resolver map.")
+				}
+				updatedResolver = true
+			}
+			name = url
+			url, err = ResolveUrl(url)
+			if err != nil {
+				return nil, WrapErrorf(
+					err, "Unable to resolve URL of %q.", url)
+			}
+		}
+		key := [2]string{url, name}
+		if _, ok := parsedArgs[key]; ok {
+			return nil, WrapErrorf(
+				err, "Duplicate filter:\n URL: %s\n name: %s",
+				url, name)
+		}
+		parsedArgs[key] = struct{}{}
+		result = append(result, &parsedInstallFilterArg{
+			url:     url,
+			name:    name,
+			version: version,
+		})
+	}
+
+	return result, nil
+}
+
+// GetRemoteFilterDownloadRef returns a reference for go-getter to be used
+// to download a filter, based on the url, name and version properties from
+// from the "regolith install" command arguments.
 func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 	// The custom type and a function is just to reduce the amount of code by
 	// changing the function signature. In order to pass it in the 'vg' list.

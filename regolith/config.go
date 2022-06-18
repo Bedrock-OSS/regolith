@@ -1,11 +1,5 @@
 package regolith
 
-import (
-	"io/ioutil"
-
-	"muzzammil.xyz/jsonc"
-)
-
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
 const ConfigFilePath = "config.json"
 const GitIgnore = "/build\n/.regolith"
@@ -53,24 +47,6 @@ type RegolithProject struct {
 	Profiles          map[string]Profile         `json:"profiles,omitempty"`
 	FilterDefinitions map[string]FilterInstaller `json:"filterDefinitions"`
 	DataPath          string                     `json:"dataPath,omitempty"`
-}
-
-// LoadConfigAsMap loads the config.json file as map[string]interface{}
-func LoadConfigAsMap() (map[string]interface{}, error) {
-	file, err := ioutil.ReadFile(ConfigFilePath)
-	if err != nil {
-		return nil, WrapErrorf(
-			err,
-			"%q not found (use \"regolith init\" to initialize the project).",
-			ConfigFilePath)
-	}
-	var configJson map[string]interface{}
-	err = jsonc.Unmarshal(file, &configJson)
-	if err != nil {
-		return nil, WrapErrorf(
-			err, "Could not load %q as a JSON file.", ConfigFilePath)
-	}
-	return configJson, nil
 }
 
 // ConfigFromObject creates a "Config" object from map[string]interface{}
@@ -215,65 +191,4 @@ func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
 	readOnly, _ := obj["readOnly"].(bool)
 	result.ReadOnly = readOnly
 	return result, nil
-}
-
-// InstallFilters handles the "regolith install" command (without the --add
-// flag). It downloads all of the filters from "filter_definitions"
-// of the Config and/or installs their dependencies.
-// isForced toggles the force mode. The force mode overwrites existing
-// dependencies. Non-force mode only installs dependencies that are not
-// already installed.
-func (c *Config) InstallFilters(isForced bool) error {
-	err := CreateDirectoryIfNotExists(".regolith/cache/filters", true)
-	if err != nil {
-		return PassError(err)
-	}
-	err = CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
-	if err != nil {
-		return PassError(err)
-	}
-
-	err = c.DownloadRemoteFilters(isForced)
-	if err != nil {
-		return WrapError(err, "Downloading remote filters has failed.")
-	}
-	for filterName, filterDefinition := range c.FilterDefinitions {
-		Logger.Infof("Installing %q filter dependencies...", filterName)
-		err = filterDefinition.InstallDependencies(nil)
-		if err != nil {
-			return WrapErrorf(
-				err, "Failed to install dependencies for %q filter.",
-				filterName)
-		}
-	}
-	return nil
-}
-
-// DownloadRemoteFilters downloads all of the remote filters from
-// "filter_definitions" of the Confing.
-// isForced toggles the force mode described in InstallFilters.
-func (c *Config) DownloadRemoteFilters(isForced bool) error {
-	err := CreateDirectoryIfNotExists(".regolith/cache/filters", true)
-	if err != nil {
-		return PassError(err)
-	}
-	err = CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
-	if err != nil {
-		return PassError(err)
-	}
-
-	for name := range c.FilterDefinitions {
-		filterDefinition := c.FilterDefinitions[name]
-		Logger.Infof("Downloading %q filter...", name)
-		switch remoteFilter := filterDefinition.(type) {
-		case *RemoteFilterDefinition:
-			err := remoteFilter.Download(isForced)
-			if err != nil {
-				return WrapErrorf(
-					err, "could not download %q!", name)
-			}
-			remoteFilter.CopyFilterData(c.DataPath)
-		}
-	}
-	return nil
 }
