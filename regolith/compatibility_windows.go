@@ -94,15 +94,22 @@ func (d *DirWatcher) WaitForChange() error {
 	return nil
 }
 
-// WaitForChangeGroup locks a goroutine until it recives a change notification
-// then it continues locking as long as other changes keep coming with
-// intercals less than the given timeout. It's useful for grouping some of the
-// notifications that are reported together.
-func (d *DirWatcher) WaitForChangeGroup(groupTimeout uint32) error {
+// WaitForChangeGroup locks a goroutine until it recives a change notification.
+// When that happens it sends the interruptionMessage to the
+// interruptionChannel.
+// Then it continues locking as long as other changes keep coming with
+// intercals less than the given timeout, to group notifications that come
+// in short intervals together.
+func (d *DirWatcher) WaitForChangeGroup(
+	groupTimeout uint32, interruptionChannel chan string,
+	interruptionMessage string,
+) error {
 	err := d.WaitForChange()
 	if err != nil {
 		return err
 	}
+	// Instantly report the change
+	interruptionChannel <- interruptionMessage
 	// Consume all changes for groupDelay duration
 	for {
 		event, err := windows.WaitForSingleObject(d.handle, groupTimeout)

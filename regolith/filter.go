@@ -65,11 +65,11 @@ func (c *RunContext) StartWatchingSrouceFiles() error {
 		watcher *DirWatcher, sourceName string,
 	) {
 		for {
-			err := watcher.WaitForChangeGroup(100)
+			err := watcher.WaitForChangeGroup(
+				100, c.interruptionChannel, sourceName)
 			if err != nil {
 				return
 			}
-			c.interruptionChannel <- sourceName
 		}
 	}
 	go yieldChanges(rpWatcher, "rp")
