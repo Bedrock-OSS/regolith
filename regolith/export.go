@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -209,10 +210,23 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 			err, "Failed to clear resource pack from build path %q.\n"+
 				"Are user permissions correct?", rpPath)
 	}
-	err = os.RemoveAll(dataPath)
+	// The root of the data path cannot be deleted because the
+	// "regolith watch" function would stop watching the file changes
+	// (due to Windows API limitation).
+	files, err := ioutil.ReadDir(dataPath)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to clear filter data path %q.", dataPath)
+			err, "Failed to read the files from the data path %q",
+			dataPath)
+	}
+	for _, file := range files {
+		filePath := filepath.Join(dataPath, file.Name())
+		err = os.RemoveAll(filePath)
+		if err != nil {
+			return WrapErrorf(
+				err, "Failed to clear filter path from data path %q.",
+				filePath)
+		}
 	}
 
 	Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
