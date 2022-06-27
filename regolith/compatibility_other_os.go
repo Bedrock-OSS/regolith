@@ -26,7 +26,10 @@ func NewDirWatcher(path string) (*DirWatcher, error) {
 	return nil, fmt.Errorf("Not implemented for this system.")
 }
 
-func (d *DirWatcher) WaitForChange() error {
+func (d *DirWatcher) WaitForChangeGroup(
+	groupTimeout uint32, interruptionChannel chan string,
+	interruptionMessage string,
+) error {
 	return fmt.Errorf("Not implemented for this system.")
 }
 
