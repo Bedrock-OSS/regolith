@@ -2,3 +2,4 @@
 /vendor/
 *.exe
 local
+docs/scraper/__pycache__/

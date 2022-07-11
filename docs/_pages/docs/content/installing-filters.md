@@ -18,7 +18,7 @@ To start using a filter, you need to do four things:
 
 Filters are written in [programming languages](https://www.wikiwand.com/en/Programming_language). These languages may not be installed on your computer by default. Before installing a filter, you should ensure you have the proper programming language installed. The "Filter Types" documentation has detailed installation instructions for every regolith-supported language!
 
-For example if the filter relies on python, you can find [installation instructions here](regolith/docs/python-filters).
+For example if the filter relies on python, you can find installation instructions [here](/regolith/docs/python-filters).
 
 ### Installing a Filter
 
@@ -29,7 +29,7 @@ Regolith contains a powerful installation command, which will download a filter 
 The value of `filter_identifier` will depend on where the filter is hosted, but in general the format is: `github.com/<user>/<repository>/<folder>`
 
 {: .notice--warning}
-The `install` command relies on `git`. [You may download git here](https://git-scm.com/download/win).
+The `install` command relies on `git`. You may download git [here](https://git-scm.com/download/win).
 
 ### Adding Filter to Profile
 

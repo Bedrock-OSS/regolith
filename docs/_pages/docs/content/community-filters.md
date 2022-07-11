@@ -7,6 +7,8 @@ sidebar:
   nav: "sidebar"
 ---
 
+<!-- This page is auto-generated. To edit it, you'll need to change the community_base.txt -->
+
 The beauty of Regolith is that filters can be written and shared by anyone! This page contains an uncurated list of community filters. If your filter doesn't appear here, [let us know](https://discord.com/invite/XjV87YN)!
 
 ## Installing Community Filters
@@ -43,18 +45,19 @@ For example `github.com/SirLich/echo-npc-regolith/echo`.
 | [subfunctions](https://github.com/Nusiq/regolith-filters/tree/master/subfunctions) | Nusiq | python | ![](../.resources/subfunctions-title.svg) |
 | [system_template](https://github.com/Nusiq/regolith-filters/tree/master/system_template) | Nusiq | python | WARNING! THIS FILTER USES THE PYTHON `eval()` FUNCTION TO GENERATE CODE. IF |
 | [extend-vanilla-entities](https://github.com/littlechestnutgames/regolith-filters/tree/main/extend-vanilla-entities) | littlechestnutgames | python |  |
-| [e-backup](https://github.com/cda94581/regolith-filters/tree/main/e-backup) | cda94581 | nodejs | Version **0.0.1** |
-| [export](https://github.com/cda94581/regolith-filters/tree/main/export) | cda94581 | nodejs | Version **0.0.2** |
-| [minimize](https://github.com/cda94581/regolith-filters/tree/main/minimize) | cda94581 | nodejs | Version **0.0.2** |
-| [namespace](https://github.com/cda94581/regolith-filters/tree/main/namespace) | cda94581 | nodejs | Version **0.0.6** |
+| [e-backup](https://github.com/cda94581/regolith-filters/tree/main/e-backup) | cda94581 | nodejs | Backups your export target in case you made a mistake. |
+| [export](https://github.com/cda94581/regolith-filters/tree/main/export) | cda94581 | nodejs | Exports your add-on into a ".mcaddon" automatically. |
+| [minimize](https://github.com/cda94581/regolith-filters/tree/main/minimize) | cda94581 | nodejs | Minimize all file JSONs. Can save a tiny bit of space. Also kinda pointless but whatever. |
+| [namespace](https://github.com/cda94581/regolith-filters/tree/main/namespace) | cda94581 | nodejs | Automatically apply and replace namespaces to each block, item, entity, recipe, attachable, particle, and fog. Useful for temporary namespaces before deployment. |
 | [classes](https://github.com/evilguy50/my-regolith-filters/tree/main/classes) | evilguy50 | nim | filter for adding OOP class like structure to functions. |
 | [ds_store](https://github.com/evilguy50/my-regolith-filters/tree/main/ds_store) | evilguy50 | nim | filter for removing .DS_Store files. |
+| [new_exec](https://github.com/evilguy50/my-regolith-filters/tree/main/new_exec) | evilguy50 | nodejs |  |
 | [shorthand](https://github.com/evilguy50/my-regolith-filters/tree/main/shorthand) | evilguy50 | python | filter for having shorthand syntax inside of functions. |
 | [strip](https://github.com/evilguy50/my-regolith-filters/tree/main/strip) | evilguy50 | nim | filter for striping comments from json, mcfunction, and lang files. |
 | [style_lint](https://github.com/evilguy50/my-regolith-filters/tree/main/style_lint) | evilguy50 | python | filter for automatic project styling. |
 | [title_ui](https://github.com/evilguy50/my-regolith-filters/tree/main/title_ui) | evilguy50 | nim | filter for generating title ui bindings. |
-| [scalable-teams](https://github.com/cda94581/regolith-premade-addons/tree/main/scalable-teams) | cda94581 | nodejs | Version **1.0.0** |
-| [echo](https://github.com/SirLich/echo-npc-regolith/tree/main/echo) | SirLich | python |  |
 | [module_importer](https://github.com/ShiCheng-Lu/Regolith-Filters/tree/main/module_importer) | ShiCheng-Lu | nodejs | A regolith filter for import |
 | [command_lang](https://github.com/MCDevKit/regolith-library/tree/main/command_lang) | MCDevKit | shell |  |
 | [json_templating_engine](https://github.com/MCDevKit/regolith-library/tree/main/json_templating_engine) | MCDevKit | java |  |
+| [echo](https://github.com/SirLich/echo-npc-regolith/tree/main/echo) | SirLich | python |  |
+| [scalable-teams](https://github.com/cda94581/regolith-premade-addons/tree/main/scalable-teams) | cda94581 | nodejs | Generates a pre-made teams add-on, scalable and customizable. Appends itself to developed packs. |
