@@ -9,7 +9,7 @@ sidebar:
 
 Regolith allows custom filters to be placed on GitHub. This is perfect for a filter that you want to make public, or potentially share internally in a team.
 
-The standard [filters library](/regolith/docs/standard-filters) is a good reference for how to structure an online filter, but we will also explain here.
+The standard [filters library](/regolith/docs/standard-library) is a good reference for how to structure an online filter, but we will also explain here.
 
 ## Creating Online Filter
 
@@ -23,7 +23,7 @@ You should move your programs and scripts into this folder. When your filter is 
 
 ```json
 {
-  "description": "A Hello World Filter",
+  "description": "A Hello World Filter - this will be displayed as a description on website pages.",
   "filters": [
     {
       "runWith": "python",

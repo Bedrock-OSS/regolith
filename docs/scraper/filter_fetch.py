@@ -4,30 +4,48 @@ Simple script to populate the standard filters page.
 
 import requests
 import community
+import os
 
-STANDARD_PATH = '../_pages/docs/content/standard-filters.md'
-COMMUNITY_PATH = '../_pages/docs/content/community-filters.md'
+STANDARD_PATH = 'docs/_pages/docs/filter_types/standard-library.md'
+COMMUNITY_PATH = 'docs/_pages/docs/content/community-filters.md'
 URL = 'https://api.github.com/repos/bedrock-oss/regolith-filters/contents/'
 IGNORE = ['future']
 BASE_CONTENT = """
 ---
-permalink: /docs/standard-filters
+permalink: /docs/standard-library
 layout: single
 classes: wide
-title: Standard Filters
+title: Standard Library
 sidebar:
   nav: "sidebar"
 ---
+
+<!-- This page is auto-generated. To edit it, you'll need to change the filter_fetch.py -->
 
 The Standard Library is a special set of filters, approved or written by the Regolith maintainers. Standard Filters offers the safest, easiest, and best support. 
 
 Please be aware that when running in safe mode, standard filters are the only filters allowed.
 
-## Installing
-
-You may install standard filters by name. For example: `regolith install name_ninja`
+## Standard Filters
 
 """.lstrip()
+
+BASE_CONTENT_NEXT = """
+The full, up to date list of filters can be found on our github. We are looking into maintaining a list here, but for now please visit our github. 
+
+## Using a Standard Filter
+
+You may install standard filters by name. For example: `regolith install name_ninja`.
+
+The syntax for standard filters usage is like this:
+
+```json
+{
+  "filter": "<filter_name>",
+  "settings" { ... } // Optional
+}
+```
+"""
 
 
 # Base URL, which will be used to generate the links
@@ -64,7 +82,6 @@ def main():
     """
     with open(STANDARD_PATH, 'w') as page:
         page.write(BASE_CONTENT)
-        page.write("\n")
         page.write('| Filter | Description |\n')
         page.write('| ------ | ----------- |\n')
 
@@ -73,7 +90,8 @@ def main():
                 continue
             page.write('| [{}]({}) | {} |\n'.format(
                 filter_name, get_filter_link(filter_name), get_filter_description(filter_name)))
-    
+        page.write(BASE_CONTENT_NEXT)
+
     cFilters = community.comFilters()
     community.updateFilters(community.filterTable(cFilters), COMMUNITY_PATH)
 
