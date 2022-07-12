@@ -89,7 +89,7 @@ func Install(filters []string, force, debug bool) error {
 		filterInstallers[parsedArg.name] = remoteFilterDefinition
 	}
 	// Download the filter definitions
-	err = installFilters(filterInstallers, force, dataPath)
+	err = installFilters(filterInstallers, force, dataPath, ".regolith")
 	if err != nil {
 		return WrapError(err, "Failed to install filters.")
 	}
@@ -133,7 +133,7 @@ func InstallAll(force, debug bool) error {
 	if err := firstErr(err1, err2); err != nil {
 		return WrapError(err, "Failed to load config.json.")
 	}
-	err := installFilters(config.FilterDefinitions, force, config.DataPath)
+	err := installFilters(config.FilterDefinitions, force, config.DataPath, ".regolith")
 	if err != nil {
 		return WrapError(err, "Could not install filters.")
 	}
@@ -174,7 +174,7 @@ func Update(filters []string, debug bool) error {
 		filterInstallers[filterName] = filterInstaller
 	}
 	// Update the filters from the list
-	err := updateFilters(filterInstallers)
+	err := updateFilters(filterInstallers, ".regolith")
 	if err != nil {
 		return WrapError(err, "Could not update filters.")
 	}
@@ -199,7 +199,7 @@ func UpdateAll(debug bool) error {
 	if err := firstErr(err1, err2); err != nil {
 		return WrapError(err, "Failed to load config.json.")
 	}
-	err := updateFilters(config.FilterDefinitions)
+	err := updateFilters(config.FilterDefinitions, ".regolith")
 	if err != nil {
 		return WrapError(err, "Could not install filters.")
 	}
@@ -236,7 +236,7 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 			"Profile %q does not exist in the configuration.", profileName)
 	}
 	// Check the filters of the profile
-	err = CheckProfileImpl(profile, profileName, *config, nil)
+	err = CheckProfileImpl(profile, profileName, *config, nil, ".regolith")
 	if err != nil {
 		return err
 	}
@@ -246,6 +246,7 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 		Config:           config,
 		Parent:           nil,
 		Profile:          profileName,
+		DotRegolithPath:  ".regolith",
 	}
 	if watch { // Loop until program termination (CTRL+C)
 		context.StartWatchingSrouceFiles()
@@ -338,9 +339,15 @@ func Init(debug bool) error {
 	if err != nil {
 		return WrapErrorf(err, "Failed to write data to %q", ConfigFilePath)
 	}
-
+	var ConfigurationFolders = []string{
+		"packs",
+		"packs/data",
+		"packs/BP",
+		"packs/RP",
+		filepath.Join(".regolith", "cache/venvs"),
+	}
 	for _, folder := range ConfigurationFolders {
-		err = os.Mkdir(folder, 0666)
+		err = os.MkdirAll(folder, 0666)
 		if err != nil {
 			Logger.Error("Could not create folder: %s", folder, err)
 		}
@@ -351,26 +358,27 @@ func Init(debug bool) error {
 }
 
 // Clean handles the "regolith clean" command. It cleans the cache from the
-// ".regolith" directory.
+// dotRegolithPath directory.
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
 func Clean(debug bool, cachedStatesOnly bool) error {
 	InitLogging(debug)
 	Logger.Infof("Cleaning cache...")
+	dotRegolithPath := ".regolith"
 	if cachedStatesOnly {
 		err := ClearCachedStates()
 		if err != nil {
 			return WrapError(err, "Failed to remove cached path states.")
 		}
 	} else {
-		err := os.RemoveAll(".regolith")
+		err := os.RemoveAll(dotRegolithPath)
 		if err != nil {
-			return WrapError(err, "failed to remove .regolith folder")
+			return WrapErrorf(err, "failed to remove %q folder", dotRegolithPath)
 		}
-		err = os.Mkdir(".regolith", 0666)
+		err = os.MkdirAll(dotRegolithPath, 0666)
 		if err != nil {
-			return WrapError(err, "failed to recreate .regolith folder")
+			return WrapErrorf(err, "failed to recreate %q folder", dotRegolithPath)
 		}
 	}
 	Logger.Infof("Cache cleaned.")
@@ -400,7 +408,7 @@ func Unlock(debug bool) error {
 		return WrappedError("Failed to get machine ID for the lock file.")
 	}
 
-	lockfilePath := ".regolith/cache/lockfile.txt"
+	lockfilePath := filepath.Join(".regolith", "cache/lockfile.txt")
 	Logger.Infof("Creating the lock file in %s...", lockfilePath)
 	if _, err := os.Stat(lockfilePath); err == nil {
 		return WrappedErrorf(

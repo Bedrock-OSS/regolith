@@ -4,16 +4,6 @@ const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
 const ConfigFilePath = "config.json"
 const GitIgnore = "/build\n/.regolith"
 
-var ConfigurationFolders = []string{
-	"packs",
-	"packs/data",
-	"packs/BP",
-	"packs/RP",
-	".regolith",
-	".regolith/cache",
-	".regolith/cache/venvs",
-}
-
 // Config represents the full configuration file of Regolith, as saved in
 // "config.json".
 type Config struct {
@@ -47,6 +37,7 @@ type RegolithProject struct {
 	Profiles          map[string]Profile         `json:"profiles,omitempty"`
 	FilterDefinitions map[string]FilterInstaller `json:"filterDefinitions"`
 	DataPath          string                     `json:"dataPath,omitempty"`
+	UseAppData        bool                       `json:"useAppData,omitempty"`
 }
 
 // ConfigFromObject creates a "Config" object from map[string]interface{}

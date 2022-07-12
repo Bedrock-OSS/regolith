@@ -31,7 +31,7 @@ func ExeFilterDefinitionFromObject(
 }
 
 func (f *ExeFilter) Run(context RunContext) (bool, error) {
-	if err := f.run(f.Settings, context.AbsoluteLocation); err != nil {
+	if err := f.run(f.Settings, context); err != nil {
 		return false, PassError(err)
 	}
 	return context.IsInterrupted(), nil
@@ -52,7 +52,7 @@ func (f *ExeFilterDefinition) CreateFilterRunner(
 }
 
 func (f *ExeFilterDefinition) InstallDependencies(
-	parent *RemoteFilterDefinition,
+	*RemoteFilterDefinition, string,
 ) error {
 	return nil
 }
@@ -67,20 +67,21 @@ func (f *ExeFilter) Check(context RunContext) error {
 
 func (f *ExeFilter) run(
 	settings map[string]interface{},
-	absoluteLocation string,
+	context RunContext,
 ) error {
 	var err error = nil
 	if len(settings) == 0 {
 		err = executeExeFile(f.Id,
 			f.Definition.Exe,
-			f.Arguments, absoluteLocation,
-			GetAbsoluteWorkingDirectory())
+			f.Arguments, context.AbsoluteLocation,
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
 		err = executeExeFile(f.Id,
 			f.Definition.Exe,
 			append([]string{string(jsonSettings)}, f.Arguments...),
-			absoluteLocation, GetAbsoluteWorkingDirectory())
+			context.AbsoluteLocation, GetAbsoluteWorkingDirectory(
+				context.DotRegolithPath))
 	}
 	if err != nil {
 		return WrapError(err, "Failed to run shell filter.")

@@ -41,7 +41,7 @@ func (f *NodeJSFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -56,7 +56,7 @@ func (f *NodeJSFilter) run(context RunContext) error {
 					f.Definition.Script,
 				string(jsonSettings)}, f.Arguments...),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -85,11 +85,11 @@ func (f *NodeJSFilterDefinition) CreateFilterRunner(runConfiguration map[string]
 	return filter, nil
 }
 
-func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
+func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition, dotRegolithPath string) error {
 	installLocation := ""
 	// Install dependencies
 	if parent != nil {
-		installLocation = parent.GetDownloadPath()
+		installLocation = parent.GetDownloadPath(dotRegolithPath)
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
