@@ -2,12 +2,13 @@ package regolith
 
 import (
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/denisbrodbeck/machineid"
 )
 
 // Returns true if safe mode is unlocked
-func IsUnlocked() bool {
+func IsUnlocked(dotRegolithPath string) bool {
 	// TODO - maybe consider caching this result to avoid reading the file every time
 	id, err := GetMachineId()
 	if err != nil {
@@ -15,7 +16,7 @@ func IsUnlocked() bool {
 		return false
 	}
 
-	lockedId, err := ioutil.ReadFile(".regolith/cache/lockfile.txt")
+	lockedId, err := ioutil.ReadFile(filepath.Join(dotRegolithPath, "cache/lockfile.txt"))
 	if err != nil {
 		return false
 	}

@@ -13,6 +13,7 @@ func (f *ProfileFilter) Run(context RunContext) (bool, error) {
 		Config:              context.Config,
 		Parent:              &context,
 		interruptionChannel: context.interruptionChannel,
+		DotRegolithPath:     context.DotRegolithPath,
 	})
 }
 
@@ -30,5 +31,7 @@ func (f *ProfileFilter) Check(context RunContext) error {
 		}
 		parent = parent.Parent
 	}
-	return CheckProfileImpl(profile, f.Profile, *context.Config, &context)
+	return CheckProfileImpl(
+		profile, f.Profile, *context.Config, &context,
+		context.DotRegolithPath)
 }

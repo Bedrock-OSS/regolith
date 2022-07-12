@@ -2,6 +2,8 @@ package regolith
 
 import (
 	"bufio"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -172,9 +174,9 @@ func CreateDirectoryIfNotExists(directory string, mustSucceed bool) error {
 	return nil
 }
 
-// GetAbsoluteWorkingDirectory returns an absolute path to .regolith/tmp
-func GetAbsoluteWorkingDirectory() string {
-	absoluteWorkingDir, _ := filepath.Abs(".regolith/tmp")
+// GetAbsoluteWorkingDirectory returns an absolute path to [dotRegolithPath]/tmp
+func GetAbsoluteWorkingDirectory(dotRegolithPath string) string {
+	absoluteWorkingDir, _ := filepath.Abs(filepath.Join(dotRegolithPath, "tmp"))
 	return absoluteWorkingDir
 }
 
@@ -296,4 +298,26 @@ func MoveOrCopy(
 		}
 	}
 	return nil
+}
+
+// GetDotRegolith returns the path to the directory where Regolith stores
+// its project data (like filters, Python venvs, etc.). If useAppData is set to
+// false it returns relative director: ".regolith" otherwise it returns path
+// inside the AppData directory. Based on the hash value of the
+// project's root directory
+func GetDotRegolith(useAppData bool, projectsRoot, dotRegolithPath string) (string, error) {
+	if !useAppData {
+		return dotRegolithPath, nil
+	}
+	path, err := os.UserCacheDir()
+	if err != nil {
+		return "", WrappedError("Unable to get user cache dir")
+	}
+	// Get the md5 of the project path
+	hash := md5.New()
+	hash.Write([]byte(path))
+	hashInBytes := hash.Sum(nil)
+	projectPath := hex.EncodeToString(hashInBytes)
+	// %userprofile%/AppData/Local/regolith/<md5 of project path>
+	return filepath.Join(path, "regolith/regolith-projects", projectPath), nil
 }
