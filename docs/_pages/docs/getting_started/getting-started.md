@@ -14,7 +14,7 @@ You can test for installation by running `regolith` inside of a terminal. This g
 If you run into issues installing, you can check our [troubleshooting guide](/regolith/docs/troubleshooting) for tips.
 
 {: .notice--warning}
-**Warning:** Regolith is a command line application. It assumes some familiarity with how to navigate and use the command line. You can get a [refresher](https://tutorial.djangogirls.org/en/intro_to_command_line/) here.
+**Warning:** Regolith is a command line application. It assumes some familiarity with how to navigate and use the command line. You can get a refresher [here](https://tutorial.djangogirls.org/en/intro_to_command_line/).
 
 
 ## Creating a new Project
@@ -98,14 +98,14 @@ the name of the project like `project_name_bp` and `project_name_rp`.
 
 ## Adding your first Filter
 
-Regolith contains a very powerful filter system, that allows you write filters in many languages, as well as running existing filters from the internet. For now, we will simply use the [standard library](/regolith/docs/standard-filters), which is a set of approved filters that we maintain. 
+Regolith contains a very powerful filter system, that allows you to write filters in many languages, as well as running existing filters from the internet. For now, we will simply use the [standard library](/regolith/docs/standard-library), which is a set of approved filters that we maintain. 
 
-As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, read [here](https://wiki.bedrock.dev/visuals/textures-list.html).
+As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, read [here](https://wiki.bedrock.dev/concepts/texture-list.html).
 
 ### Installing
 
 {: .notice--warning}
-The `install` command relies on `git`. [You may download git here](https://git-scm.com/download/win).
+The `install` command relies on `git`. You may download git [here](https://git-scm.com/download/win).
 
 You can install this filter by running `regolith install texture_list`, which will make the filter available for use. 
 
@@ -121,7 +121,7 @@ You should adjust the default profile in `config.json` to look like this:
   },
   "filters": [
     {
-      "filter": "texture_list",
+      "filter": "texture_list"
     }
   ]
 }
@@ -134,13 +134,13 @@ Now, you can re-run `regolith run`.
 Check `com.mojang`, and open the new `texture_list.json` file in `RP/textures/texture_list.json`. Every time you run regolith, this file will be re-created, based on your current textures. No need to manually edit it ever again!
 
 {: .notice--warning}
-`Warning:` If your resource pack already contains `texture_list.json`, you should delete it. You don't need to manually worry about it anymore -Regolith will handle it!
+`Warning:` If your resource pack already contains `texture_list.json`, you should delete it. You don't need to manually worry about it anymore - Regolith will handle it!
 
 {: .notice--warning}
 `Warning:` If your project doesn't have any textures, than `texture_list.json` will simply create a blank file `[]`. Consider adding some textures to see the filter at work!
 
 ## Whats Next
 
-Now that you've created your first Regolith project, and installed your first filters, you are well on your way to being a Regolith expert! You should check out the [standard library](/regolith/docs/standard-filters), to see if additional filters might be useful for you.
+Now that you've created your first Regolith project, and installed your first filters, you are well on your way to being a Regolith expert! You should check out the [standard library](/regolith/docs/standard-library), to see if additional filters might be useful for you.
 
 Otherwise, you can learn about writing [custom filters](/regolith/docs/custom-filters).

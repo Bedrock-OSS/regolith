@@ -45,13 +45,13 @@ The most common cause of this issue is incorrect installation. Here are some tro
 
 The most common reason Regolith will crash is from a broken filter. The first step in debugging, is identifying which filter is failing. You can do so by navigating to the Regolith output log, and finding which filter caused the crash. 
 
-Filter errors will be printed like `[filter][error] ... `.
+Filter errors will be printed like `[error][filter] ... `.
 
 ## Python Not Found
 
 If you get a message like `[+]: Python not found, download and install it from https://www.python.org/downloads/`, this means that Python either not installed, or is not available on the path. 
 
-We provide [installation instructions](regolith/docs/python-filters), to help you get Python installed correctly on your system. Please be aware that Python installed via the Microsoft Store will not work with Regolith, as it generally doesn't add itself to path.
+We provide [installation instructions](/regolith/docs/python-filters), to help you get Python installed correctly on your system. Please be aware that Python installed via the Microsoft Store will not work with Regolith, as it generally doesn't add itself to path.
 
 
 
