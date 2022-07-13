@@ -24,8 +24,6 @@ sidebar:
     children:
       - title: "Installing Filters"
         url: /docs/installing-filters
-      - title: "Standard Filters"
-        url: /docs/standard-filters
       - title: "Community Filters"
         url: /docs/community-filters
   - title: Documentation

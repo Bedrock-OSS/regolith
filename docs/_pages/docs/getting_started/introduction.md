@@ -39,7 +39,7 @@ Since the data folder is saved back to your project, you can store persistent da
 
 ## Filters
 
-A filter is any program or script that takes the files inside of your RP and BP and *transforms* them in some way. Many of these filters have already been written, and are included as part of the [standard library](regolith/docs/standard-filters). 
+A filter is any program or script that takes the files inside of your RP and BP and *transforms* them in some way. Many of these filters have already been written, and are included as part of the [standard library](/regolith/docs/standard-library). 
 
 For example, one of our standard filters is called `texture_convert`, which *filters* image formats for photo editing programs, and converts them into `.png` files.
 
@@ -47,7 +47,7 @@ With this filter turned on, you can place Photoshop, Krita, or Gimp files direct
 
 ### Creating your own Filters
 
-You can write filters in Python, Javescript, Java, or any other language, using our shell integration. You can learn more about [creating custom filters here](/regolith/docs/custom-filters).
+You can write filters in Python, JavaScript, Java, or any other language, using our shell integration. You can learn more about creating custom filters [here](/regolith/docs/custom-filters).
 
 ## Why Regolith?
 
@@ -66,7 +66,7 @@ function <aaa>:
 # Some other code
 ```
 
-With Regolith, you are empowered to write addons with an extended syntax -and Bedrock won't even know the difference!
+With Regolith, you are empowered to write addons with an extended syntax - and Bedrock won't even know the difference!
 
 ### Non-Destructive Editing
 
