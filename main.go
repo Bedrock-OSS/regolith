@@ -147,18 +147,28 @@ func main() {
 			},
 			{
 				Name:  "clean",
-				Usage: "Cleans cache from the .regolith folder.",
+				Usage: "Cleans Regolith cache.",
 				Action: func(c *cli.Context) error {
 					clearPathStates := c.Bool("path-states")
-					return regolith.Clean(debug, clearPathStates)
+					allAppData := c.Bool("all-app-data")
+					return regolith.Clean(debug, allAppData, clearPathStates)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "path-states",
 						Aliases: []string{"p"},
 						Usage: "Deletes file used for caching contents of " +
-							"paths used by Regolith (useful when Regolith " +
-							"doesn't export files propertly).",
+							"paths used by Regolith. This is useful when you " +
+							"work in --recycled mode and Regolith doesn't " +
+							"export files propertly).",
+					},
+					&cli.BoolFlag{
+						Name:    "all-app-data",
+						Aliases: []string{},
+						Usage: "Deletes all of the cached files for all of " +
+							"the projects that are set to be cached in the " +
+							"app data directory. This is useful to clean up " +
+							"leftover files from old projects.",
 					},
 				},
 			},

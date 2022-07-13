@@ -151,6 +151,16 @@ func RegolithProjectFromObject(
 		}
 		result.Profiles[profileName] = profileValue
 	}
+	// UseAppData (optional, false by default)
+	useAppData := false
+	if _, ok := obj["useAppData"]; ok {
+		useAppData, ok = obj["useAppData"].(bool)
+		if !ok {
+			return result, WrappedError(
+				"The \"useAppData\" property is not a boolean.")
+		}
+	}
+	result.UseAppData = useAppData
 	return result, nil
 }
 
