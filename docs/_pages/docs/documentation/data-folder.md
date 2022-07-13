@@ -7,7 +7,7 @@ sidebar:
   nav: "sidebar"
 ---
 
-The Regolith `data folder` is a special folder where configuration files can be stored.
+The Regolith `data` folder is a special folder where configuration files can be stored.
 
 ## Location
 

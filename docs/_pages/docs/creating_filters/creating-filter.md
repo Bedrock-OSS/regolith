@@ -7,7 +7,7 @@ sidebar:
   nav: "sidebar"
 ---
 
-This step-by-step tutorial will guide you through the creation of your first Regolith filter, in the Python programming language. If you're new to Regolith, you may enjoy trying out some of our [standard filters](/regolith/docs/standard-filters) first.
+This step-by-step tutorial will guide you through the creation of your first Regolith filter, in the Python programming language. If you're new to Regolith, you may enjoy trying out some of our [standard filters](/regolith/docs/standard-library) first.
 
 This page is an in-depth tutorial for Regolith filter creation, including detailed information about data-flow and semantics. If you just want to get started programming, you may consider checking out the documentation on [custom filters.](/regolith/docs/custom-filters)
 {: .notice--warning}
@@ -94,7 +94,6 @@ In this filter, we are going to "filter" every entity in the project, and double
 
 To get started, you should structure your python file a bit better:
 
-py
 ```
 def main():
   print("put code here!")
