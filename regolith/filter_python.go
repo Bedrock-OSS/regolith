@@ -41,7 +41,7 @@ func (f *PythonFilter) run(context RunContext) error {
 	}
 	scriptPath := filepath.Join(context.AbsoluteLocation, f.Definition.Script)
 	if needsVenv(filepath.Dir(scriptPath)) {
-		venvPath, err := f.Definition.resolveVenvPath()
+		venvPath, err := f.Definition.resolveVenvPath(context.DotRegolithPath)
 		if err != nil {
 			return WrapError(err, "Failed to resolve venv path.")
 		}
@@ -60,7 +60,9 @@ func (f *PythonFilter) run(context RunContext) error {
 		)
 	}
 	err = RunSubProcess(
-		pythonCommand, args, context.AbsoluteLocation, GetAbsoluteWorkingDirectory(), ShortFilterName(f.Id))
+		pythonCommand, args, context.AbsoluteLocation,
+		GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+		ShortFilterName(f.Id))
 	if err != nil {
 		return WrapError(err, "Failed to run Python script.")
 	}
@@ -86,11 +88,13 @@ func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]
 	return filter, nil
 }
 
-func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
+func (f *PythonFilterDefinition) InstallDependencies(
+	parent *RemoteFilterDefinition, dotRegolithPath string,
+) error {
 	installLocation := ""
 	// Install dependencies
 	if parent != nil {
-		installLocation = parent.GetDownloadPath()
+		installLocation = parent.GetDownloadPath(dotRegolithPath)
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
@@ -101,7 +105,7 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	// Install the filter dependencies
 	filterPath := filepath.Dir(scriptPath)
 	if needsVenv(filterPath) {
-		venvPath, err := f.resolveVenvPath()
+		venvPath, err := f.resolveVenvPath(dotRegolithPath)
 		if err != nil {
 			return WrapError(err, "Failed to resolve venv path.")
 		}
@@ -165,9 +169,9 @@ func (f *PythonFilter) CopyArguments(parent *RemoteFilter) {
 	f.Definition.VenvSlot = parent.Definition.VenvSlot
 }
 
-func (f *PythonFilterDefinition) resolveVenvPath() (string, error) {
+func (f *PythonFilterDefinition) resolveVenvPath(dotRegolithPath string) (string, error) {
 	resolvedPath, err := filepath.Abs(
-		filepath.Join(".regolith/cache/venvs", strconv.Itoa(f.VenvSlot)))
+		filepath.Join(filepath.Join(dotRegolithPath, "cache/venvs"), strconv.Itoa(f.VenvSlot)))
 	if err != nil {
 		return "", WrapErrorf(
 			err, "Unable to create venv for VenvSlot %v.", f.VenvSlot)

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-const EditedFilesPath = ".regolith/cache/edited_files.json"
+const EditedFilesPath = "cache/edited_files.json"
 
 // PathList is an alias for []string. It's used to store a list of file paths.
 type filesList = []string
@@ -21,8 +21,8 @@ type EditedFiles struct {
 
 // LoadEditedFiles data from edited_files.json or returns an empty object
 // if file doesn't exist.
-func LoadEditedFiles() EditedFiles {
-	data, err := os.ReadFile(EditedFilesPath)
+func LoadEditedFiles(dotRegolithPath string) EditedFiles {
+	data, err := os.ReadFile(filepath.Join(dotRegolithPath, EditedFilesPath))
 	if err != nil {
 		return NewEditedFiles()
 	}
@@ -35,24 +35,24 @@ func LoadEditedFiles() EditedFiles {
 }
 
 // Dump dumps EditedFiles to EditedFilesPath in JSON format.
-func (f *EditedFiles) Dump() error {
+func (f *EditedFiles) Dump(dotRegolithPath string) error {
 	result, err := json.MarshalIndent(f, "", "\t")
 	if err != nil {
 		return WrapError(err, "Failed to marshal edited files list JSON.")
 	}
 	// Create parent directory of EditedFilesPath
-	parentDir := filepath.Dir(EditedFilesPath)
+	efp := filepath.Join(dotRegolithPath, EditedFilesPath)
+	parentDir := filepath.Dir(efp)
 	err = os.MkdirAll(parentDir, 0666)
 	if err != nil {
 		return WrapErrorf(
 			err, "Failed to create \"%s\" directory for edited files list.",
 			parentDir)
 	}
-	err = os.WriteFile(EditedFilesPath, result, 0666)
+	err = os.WriteFile(efp, result, 0666)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to save edited files list in \"%s\".",
-			EditedFilesPath)
+			err, "Failed to save edited files list in \"%s\".", efp)
 	}
 	return nil
 }

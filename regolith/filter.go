@@ -17,6 +17,7 @@ type RunContext struct {
 	Config           *Config
 	Profile          string
 	Parent           *RunContext
+	DotRegolithPath  string
 
 	// interruptionChannel is a channel that is used to notify about changes
 	// in the sourec files, in order to trigger a restart of the program in
@@ -145,7 +146,7 @@ func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
 }
 
 type FilterInstaller interface {
-	InstallDependencies(parent *RemoteFilterDefinition) error
+	InstallDependencies(parent *RemoteFilterDefinition, dotRegolithPath string) error
 	Check(context RunContext) error
 	CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error)
 }

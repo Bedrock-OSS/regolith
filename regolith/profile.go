@@ -14,18 +14,19 @@ import (
 // RecycledSetupTmpFiles set up the workspace for the filters. The function
 // uses cached data about the state of the project files to reduce the number
 // of file system operations.
-func RecycledSetupTmpFiles(config Config, profile Profile) error {
+func RecycledSetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error {
 	start := time.Now()
-	err := os.MkdirAll(".regolith/tmp", 0666)
+	tmpPath := filepath.Join(dotRegolithPath, "tmp")
+	err := os.MkdirAll(tmpPath, 0666)
 	if err != nil {
-		return WrapError(
-			err, "Unable to prepare temporary directory: \"./regolith/tmp\".")
+		return WrapErrorf(
+			err, "Unable to prepare temporary directory: \"%s\".", tmpPath)
 	}
-	// Copy the contents of the 'regolith' folder to '.regolith/tmp'
+	// Copy the contents of the 'regolith' folder to '[dotRegolith]/tmp'
 	if config.ResourceFolder != "" {
-		Logger.Debug("Copying project files to .regolith/tmp")
+		Logger.Debugf("Copying project files to \"%s\"", tmpPath)
 		err = FullRecycledMoveOrCopy(
-			config.ResourceFolder, ".regolith/tmp/RP",
+			config.ResourceFolder, filepath.Join(tmpPath, "RP"),
 			RecycledMoveOrCopySettings{
 				canMove:                 false,
 				saveSourceHashes:        false,
@@ -40,7 +41,7 @@ func RecycledSetupTmpFiles(config Config, profile Profile) error {
 	}
 	if config.BehaviorFolder != "" {
 		err = FullRecycledMoveOrCopy(
-			config.BehaviorFolder, ".regolith/tmp/BP",
+			config.BehaviorFolder, filepath.Join(tmpPath, "BP"),
 			RecycledMoveOrCopySettings{
 				canMove:                 false,
 				saveSourceHashes:        false,
@@ -55,7 +56,7 @@ func RecycledSetupTmpFiles(config Config, profile Profile) error {
 	}
 	if config.DataPath != "" {
 		err = FullRecycledMoveOrCopy(
-			config.DataPath, ".regolith/tmp/data",
+			config.DataPath, filepath.Join(tmpPath, "data"),
 			RecycledMoveOrCopySettings{
 				canMove:                 false,
 				saveSourceHashes:        false,
@@ -74,66 +75,67 @@ func RecycledSetupTmpFiles(config Config, profile Profile) error {
 }
 
 // SetupTmpFiles set up the workspace for the filters.
-func SetupTmpFiles(config Config, profile Profile) error {
+func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error {
 	start := time.Now()
 	// Setup Directories
-	Logger.Debug("Cleaning .regolith/tmp")
-	err := os.RemoveAll(".regolith/tmp")
+	tmpPath := filepath.Join(dotRegolithPath, "tmp")
+	Logger.Debugf("Cleaning \"%s\"", tmpPath)
+	err := os.RemoveAll(tmpPath)
 	if err != nil {
-		return WrapError(
-			err, "Unable to clean temporary directory: \".regolith/tmp\".")
+		return WrapErrorf(
+			err, "Unable to clean temporary directory: \"%s\".", tmpPath)
 	}
 
-	err = os.MkdirAll(".regolith/tmp", 0666)
+	err = os.MkdirAll(tmpPath, 0666)
 	if err != nil {
-		return WrapError(
-			err, "Unable to prepare temporary directory: \"./regolith/tmp\".")
+		return WrapErrorf(
+			err, "Unable to prepare temporary directory: \"%s\".", tmpPath)
 	}
 
-	// Copy the contents of the 'regolith' folder to '.regolith/tmp'
-	Logger.Debug("Copying project files to .regolith/tmp")
+	// Copy the contents of the 'regolith' folder to '[dotRegolithPath]/tmp'
+	Logger.Debugf("Copying project files to \"%s\"", tmpPath)
 	// Avoid repetetive code of preparing ResourceFolder, BehaviorFolder
 	// and DataPath with a closure
 	setup_tmp_directory := func(
-		path, short_name, descriptive_name string,
+		path, shortName, descriptiveName string,
 	) error {
+		p := filepath.Join(tmpPath, shortName)
 		if path != "" {
 			stats, err := os.Stat(path)
 			if err != nil {
 				if os.IsNotExist(err) {
 					Logger.Warnf(
-						"%s %q does not exist", descriptive_name, path)
-					err = os.MkdirAll(
-						fmt.Sprintf(".regolith/tmp/%s", short_name), 0666)
+						"%s %q does not exist", descriptiveName, path)
+					err = os.MkdirAll(p, 0666)
 					if err != nil {
 						return WrapErrorf(
 							err,
-							"Failed to create \".regolith/tmp/%s\" directory.",
-							short_name)
+							"Failed to create \"%s\" directory.",
+							p)
 					}
 				}
 			} else if stats.IsDir() {
 				err = copy.Copy(
-					path, fmt.Sprintf(".regolith/tmp/%s", short_name),
+					path,
+					p,
 					copy.Options{PreserveTimes: false, Sync: false})
 				if err != nil {
 					return WrapErrorf(
 						err,
-						"Failed to copy %s %q to \".regolith/tmp/%s\".",
-						descriptive_name, path, short_name)
+						"Failed to copy %s %q to %q.",
+						descriptiveName, path, p)
 				}
 			} else { // The folder paths leads to a file
 				return WrappedErrorf(
-					"%s path %q is not a directory", descriptive_name, path)
+					"%s path %q is not a directory", descriptiveName, path)
 			}
 		} else {
-			err = os.MkdirAll(
-				fmt.Sprintf(".regolith/tmp/%s", short_name), 0666)
+			err = os.MkdirAll(p, 0666)
 			if err != nil {
 				return WrapErrorf(
 					err,
-					"Failed to create \".regolith/tmp/%s\" directory.",
-					short_name)
+					"Failed to create %q directory.",
+					p)
 			}
 		}
 		return nil
@@ -159,10 +161,18 @@ func SetupTmpFiles(config Config, profile Profile) error {
 	return nil
 }
 
-func CheckProfileImpl(profile Profile, profileName string, config Config, parentContext *RunContext) error {
+func CheckProfileImpl(
+	profile Profile, profileName string, config Config,
+	parentContext *RunContext, dotRegolithPath string,
+) error {
 	// Check whether every filter, uses a supported filter type
 	for _, f := range profile.Filters {
-		err := f.Check(RunContext{Config: &config, Parent: parentContext, Profile: profileName})
+		err := f.Check(RunContext{
+			Config:          &config,
+			Parent:          parentContext,
+			Profile:         profileName,
+			DotRegolithPath: dotRegolithPath,
+		})
 		if err != nil {
 			return WrapErrorf(err, "Filter check failed.")
 		}
@@ -179,9 +189,9 @@ func RecycledRunProfile(context RunContext) error {
 	// saveTmp saves the state of the tmp files. This is useful only if runnig
 	// in the watch mode.
 	saveTmp := func() error {
-		err1 := SaveStateInDefaultCache(".regolith/tmp/RP")
-		err2 := SaveStateInDefaultCache(".regolith/tmp/BP")
-		err3 := SaveStateInDefaultCache(".regolith/tmp/data")
+		err1 := SaveStateInDefaultCache(filepath.Join(context.DotRegolithPath, "tmp/RP"))
+		err2 := SaveStateInDefaultCache(filepath.Join(context.DotRegolithPath, "tmp/BP"))
+		err3 := SaveStateInDefaultCache(filepath.Join(context.DotRegolithPath, "tmp/data"))
 		if err := firstErr(err1, err2, err3); err != nil {
 			err1 := ClearCachedStates() // Just to be safe - clear cached states
 			if err1 != nil {
@@ -202,7 +212,7 @@ start:
 	if !ok {
 		return WrappedErrorf("Unable to get profile %s", context.Profile)
 	}
-	err := RecycledSetupTmpFiles(*context.Config, profile)
+	err := RecycledSetupTmpFiles(*context.Config, profile, context.DotRegolithPath)
 	if err != nil {
 		err1 := ClearCachedStates() // Just to be safe clear cached states
 		if err1 != nil {
@@ -233,7 +243,7 @@ start:
 	Logger.Info("Moving files to target directory.")
 	start := time.Now()
 	err = RecycledExportProject(
-		profile, context.Config.Name, context.Config.DataPath)
+		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath)
 	if err != nil {
 		err1 := ClearCachedStates() // Just to be safe clear cached states
 		if err1 != nil {
@@ -266,7 +276,7 @@ start:
 	if !ok {
 		return WrappedErrorf("Unable to get profile %s", context.Profile)
 	}
-	err := SetupTmpFiles(*context.Config, profile)
+	err := SetupTmpFiles(*context.Config, profile, context.DotRegolithPath)
 	if err != nil {
 		return WrapError(err, "Unable to setup profile.")
 	}
@@ -285,7 +295,7 @@ start:
 	Logger.Info("Moving files to target directory.")
 	start := time.Now()
 	err = ExportProject(
-		profile, context.Config.Name, context.Config.DataPath)
+		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath)
 	if err != nil {
 		return WrapError(err, "Exporting project failed.")
 	}
@@ -338,8 +348,8 @@ func WatchProfileImpl(context RunContext) (bool, error) {
 
 // SubfilterCollection returns a collection of filters from a
 // "filter.json" file of a remote filter.
-func (f *RemoteFilter) SubfilterCollection() (*FilterCollection, error) {
-	path := filepath.Join(f.GetDownloadPath(), "filter.json")
+func (f *RemoteFilter) SubfilterCollection(dotRegolithPath string) (*FilterCollection, error) {
+	path := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
 	result := &FilterCollection{Filters: []FilterRunner{}}
 	file, err := ioutil.ReadFile(path)
 

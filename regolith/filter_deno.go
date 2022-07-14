@@ -40,7 +40,7 @@ func (f *DenoFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -56,7 +56,7 @@ func (f *DenoFilter) run(context RunContext) error {
 					f.Definition.Script,
 				string(jsonSettings)}, f.Arguments...),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -102,7 +102,7 @@ func (f *DenoFilterDefinition) Check(context RunContext) error {
 }
 
 func (f *DenoFilterDefinition) InstallDependencies(
-	parent *RemoteFilterDefinition,
+	parent *RemoteFilterDefinition, dotRegolithPath string,
 ) error {
 	return nil
 }
