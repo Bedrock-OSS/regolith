@@ -27,7 +27,7 @@ const (
 
 // appDataCachePath is a path to the cache directory relative to the user's
 // app data
-const appDataCachePath = "regolith/projects-cache"
+const appDataCachePath = "regolith/project-cache"
 
 func StringArrayContains(arr []string, str string) bool {
 	for _, a := range arr {

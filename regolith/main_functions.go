@@ -484,8 +484,8 @@ func CleanCurrentProject(cachedStatesOnly bool) error {
 	return nil
 }
 
-func CleanAllAppData() error {
-	Logger.Infof("Cleaning all regolith cache files from user app data...")
+func CleanUserCache() error {
+	Logger.Infof("Cleaning all Regolith cache files from user app data...")
 	// App data enabled - use user cache dir
 	userCache, err := os.UserCacheDir()
 	if err != nil {
@@ -507,14 +507,14 @@ func CleanAllAppData() error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Clean(debug, allAppData, cachedStatesOnly bool) error {
+func Clean(debug, userCache, cachedStatesOnly bool) error {
 	InitLogging(debug)
-	if allAppData {
+	if userCache {
 		if cachedStatesOnly {
 			return WrappedError(
-				"Cannot mix --all-app-data and --cached-states-only flags.")
+				"Cannot mix --user-cache and --cached-states-only flags.")
 		}
-		return CleanAllAppData()
+		return CleanUserCache()
 	} else {
 		return CleanCurrentProject(cachedStatesOnly)
 	}
