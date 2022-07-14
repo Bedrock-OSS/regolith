@@ -42,7 +42,7 @@ func (f *NimFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -59,7 +59,7 @@ func (f *NimFilter) run(context RunContext) error {
 				string(jsonSettings)},
 				f.Arguments...),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -88,11 +88,13 @@ func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]int
 	return filter, nil
 }
 
-func (f *NimFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
+func (f *NimFilterDefinition) InstallDependencies(
+	parent *RemoteFilterDefinition, dotRegolithPath string,
+) error {
 	installLocation := ""
 	// Install dependencies
 	if parent != nil {
-		installLocation = parent.GetDownloadPath()
+		installLocation = parent.GetDownloadPath(dotRegolithPath)
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))

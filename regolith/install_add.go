@@ -3,6 +3,7 @@ package regolith
 
 import (
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/mod/semver"
@@ -24,13 +25,13 @@ type parsedInstallFilterArg struct {
 // it returns an error unless the force flag is set.
 func installFilters(
 	filterDefinitions map[string]FilterInstaller, force bool,
-	dataPath string,
+	dataPath, dotRegolithPath string,
 ) error {
-	err := CreateDirectoryIfNotExists(".regolith/cache/filters", true)
+	err := CreateDirectoryIfNotExists(filepath.Join(dotRegolithPath, "cache/filters"), true)
 	if err != nil {
 		return PassError(err)
 	}
-	err = CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
+	err = CreateDirectoryIfNotExists(filepath.Join(dotRegolithPath, "cache/venvs"), true)
 	if err != nil {
 		return PassError(err)
 	}
@@ -49,17 +50,17 @@ func installFilters(
 				resolverUpdated = true
 			}
 			// Download the remote filter
-			err := remoteFilter.Download(force)
+			err := remoteFilter.Download(force, dotRegolithPath)
 			if err != nil {
 				return WrapErrorf(
 					err, "Could not download %q!", name)
 			}
 			// Copy the data of the remote filter to the data path
-			remoteFilter.CopyFilterData(dataPath)
+			remoteFilter.CopyFilterData(dataPath, dotRegolithPath)
 		}
 		// Install the dependencies of the filter
 		Logger.Infof("Installing %q filter dependencies...", name)
-		err = filterDefinition.InstallDependencies(nil)
+		err = filterDefinition.InstallDependencies(nil, dotRegolithPath)
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to install dependencies for %q filter.", name)
@@ -70,13 +71,13 @@ func installFilters(
 
 // updateFilters updates the filters from the list.
 func updateFilters(
-	remoteFilterDefinitions map[string]FilterInstaller,
+	remoteFilterDefinitions map[string]FilterInstaller, dotRegolithPath string,
 ) error {
-	err := CreateDirectoryIfNotExists(".regolith/cache/filters", true)
+	err := CreateDirectoryIfNotExists(filepath.Join(dotRegolithPath, "cache/filters"), true)
 	if err != nil {
 		return PassError(err)
 	}
-	err = CreateDirectoryIfNotExists(".regolith/cache/venvs", true)
+	err = CreateDirectoryIfNotExists(filepath.Join(dotRegolithPath, "cache/venvs"), true)
 	if err != nil {
 		return PassError(err)
 	}
@@ -94,7 +95,7 @@ func updateFilters(
 				resolverUpdated = true
 			}
 			// Update the filter
-			err := remoteFilter.Update()
+			err := remoteFilter.Update(dotRegolithPath)
 			if err != nil {
 				return WrapErrorf(
 					err, "Could not update %q!", name)

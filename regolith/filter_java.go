@@ -52,7 +52,7 @@ func (f *JavaFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -69,7 +69,7 @@ func (f *JavaFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -91,7 +91,7 @@ func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]in
 	return filter, nil
 }
 
-func (f *JavaFilterDefinition) InstallDependencies(*RemoteFilterDefinition) error {
+func (f *JavaFilterDefinition) InstallDependencies(*RemoteFilterDefinition, string) error {
 	return nil
 }
 
