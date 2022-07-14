@@ -150,8 +150,8 @@ func main() {
 				Usage: "Cleans Regolith cache.",
 				Action: func(c *cli.Context) error {
 					clearPathStates := c.Bool("path-states")
-					allAppData := c.Bool("all-app-data")
-					return regolith.Clean(debug, allAppData, clearPathStates)
+					userCache := c.Bool("user-cache")
+					return regolith.Clean(debug, userCache, clearPathStates)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -163,12 +163,12 @@ func main() {
 							"export files propertly).",
 					},
 					&cli.BoolFlag{
-						Name:    "all-app-data",
+						Name:    "user-cache",
 						Aliases: []string{},
-						Usage: "Deletes all of the cached files for all of " +
-							"the projects that are set to be cached in the " +
-							"app data directory. This is useful to clean up " +
-							"leftover files from old projects.",
+						Usage: "Clears data of the projects cached in the " +
+							"user app data folder. This is useful to clean " +
+							"up leftover files from old projects that use " +
+							"the \"useAppData\" option.",
 					},
 				},
 			},
