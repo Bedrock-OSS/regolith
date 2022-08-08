@@ -113,4 +113,6 @@ This is useful for passing user-defined settings into your filter. Simply handle
 
 ## Filter Environment Variables
 
-Every filter process ran by regolith has an additional environment variable, called `FILTER_DIR`. This environment variable contains an absolute path to the cache directory, where currently ran filter is. You may use this to build out additional behavior, if desired.
+Every filter process ran by regolith has following additional environment variables:
+ - `FILTER_DIR` - This environment variable contains an absolute path to the cache directory, where currently ran filter is.
+ - `ROOT_DIR` - This environemnt variable contains an absolute path to the project root directory, where config.json file is.
