@@ -243,7 +243,7 @@ start:
 	Logger.Info("Moving files to target directory.")
 	start := time.Now()
 	err = RecycledExportProject(
-		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath)
+		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath, context.Config.WslUser)
 	if err != nil {
 		err1 := ClearCachedStates() // Just to be safe clear cached states
 		if err1 != nil {
@@ -295,7 +295,7 @@ start:
 	Logger.Info("Moving files to target directory.")
 	start := time.Now()
 	err = ExportProject(
-		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath)
+		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath, context.Config.WslUser)
 	if err != nil {
 		return WrapError(err, "Exporting project failed.")
 	}

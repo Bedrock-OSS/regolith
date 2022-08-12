@@ -10,10 +10,10 @@ import (
 // resource pack based on exportTarget (a structure with data related to
 // export settings) and the name of the project.
 func GetExportPaths(
-	exportTarget ExportTarget, name string,
+	exportTarget ExportTarget, name string, WslUser string,
 ) (bpPath string, rpPath string, err error) {
 	if exportTarget.Target == "development" {
-		comMojang, err := FindMojangDir()
+		comMojang, err := FindMojangDir(WslUser)
 		if err != nil {
 			return "", "", WrapError(
 				err, "Failed to find \"com.mojang\" directory.")
@@ -49,7 +49,7 @@ func GetExportPaths(
 			rpPath = filepath.Join(
 				exportTarget.WorldPath, "resource_packs", name+"_rp")
 		} else if exportTarget.WorldName != "" {
-			dir, err := FindMojangDir()
+			dir, err := FindMojangDir(WslUser)
 			if err != nil {
 				return "", "", WrapError(
 					err, "Failed to find \"com.mojang\" directory.")
@@ -86,10 +86,10 @@ func GetExportPaths(
 // GetExportPaths. The function uses cached data about the state of the project
 // files to reduce the number of file system operations.
 func RecycledExportProject(
-	profile Profile, name, dataPath, dotRegolithPath string,
+	profile Profile, name, dataPath, dotRegolithPath string, WslUser string,
 ) error {
 	exportTarget := profile.ExportTarget
-	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
+	bpPath, rpPath, err := GetExportPaths(exportTarget, name, WslUser)
 	if err != nil {
 		return WrapError(
 			err, "Failed to get generate export paths.")
@@ -173,10 +173,10 @@ func RecycledExportProject(
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export target. The paths are generated with GetExportPaths.
 func ExportProject(
-	profile Profile, name, dataPath, dotRegolithPath string,
+	profile Profile, name, dataPath, dotRegolithPath string, WslUser string,
 ) error {
 	exportTarget := profile.ExportTarget
-	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
+	bpPath, rpPath, err := GetExportPaths(exportTarget, name, WslUser)
 	if err != nil {
 		return WrapError(
 			err, "Failed to get generate export paths.")
