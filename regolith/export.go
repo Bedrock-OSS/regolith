@@ -1,7 +1,6 @@
 package regolith
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -214,19 +213,25 @@ func ExportProject(
 	// The root of the data path cannot be deleted because the
 	// "regolith watch" function would stop watching the file changes
 	// (due to Windows API limitation).
-	files, err := ioutil.ReadDir(dataPath)
+	paths, err := os.ReadDir(dataPath)
 	if err != nil {
 		return WrapErrorf(
 			err, "Failed to read the files from the data path %q",
 			dataPath)
 	}
-	for _, file := range files {
-		filePath := filepath.Join(dataPath, file.Name())
-		err = os.RemoveAll(filePath)
+	revertibleOps, err := NewRevertableFsOperaitons(
+		filepath.Join(dotRegolithPath, ".dataBackup"))
+	if err != nil {
+		return PassError(err)
+	}
+	for _, path := range paths {
+		path := filepath.Join(dataPath, path.Name())
+		err = revertibleOps.DeleteDir(path)
 		if err != nil {
+			revertibleOps.Undo()
 			return WrapErrorf(
 				err, "Failed to clear filter path from data path %q.",
-				filePath)
+				path)
 		}
 	}
 
@@ -240,8 +245,10 @@ func ExportProject(
 	if err != nil {
 		return WrapError(err, "Failed to export resource pack.")
 	}
-	err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/data"), dataPath, false, false)
+	err = revertibleOps.MoveoOrCopyDir(
+		filepath.Join(dotRegolithPath, "tmp/data"), dataPath)
 	if err != nil {
+		revertibleOps.Undo()
 		return WrapError(
 			err, "Failed to move the filter data back to the project's "+
 				"data folder.")
@@ -259,6 +266,9 @@ func ExportProject(
 		return WrapError(
 			err, "Failed to update the list of the files edited by Regolith."+
 				"This may cause the next run to fail.")
+	}
+	if err := revertibleOps.Close(); err != nil {
+		return PassError(err)
 	}
 	return nil
 }
