@@ -38,6 +38,7 @@ type RegolithProject struct {
 	FilterDefinitions map[string]FilterInstaller `json:"filterDefinitions"`
 	DataPath          string                     `json:"dataPath,omitempty"`
 	UseAppData        bool                       `json:"useAppData,omitempty"`
+	WslUser           string                     `json:"wslUser,omitempty"`
 }
 
 // ConfigFromObject creates a "Config" object from map[string]interface{}
@@ -161,6 +162,16 @@ func RegolithProjectFromObject(
 		}
 	}
 	result.UseAppData = useAppData
+	// wslUser (optional, empty string by default)
+	wslUser := ""
+	if _, ok := obj["wslUser"]; ok {
+		wslUser, ok = obj["wslUser"].(string)
+		if !ok {
+			return result, WrappedError(
+				"The \"wslUser\" property is not a string.")
+		}
+	}
+	result.WslUser = wslUser
 	return result, nil
 }
 
