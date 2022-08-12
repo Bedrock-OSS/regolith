@@ -40,3 +40,8 @@ func (d *DirWatcher) WaitForChangeGroup(
 func (d *DirWatcher) Close() error {
 	return fmt.Errorf("Not implemented for this system.")
 }
+
+func FindMojangDir() (string, error) {
+	return "", WrappedErrorf(
+		"Unsupported operating system: '%s'", runtime.GOOS)
+}

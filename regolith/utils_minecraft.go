@@ -56,28 +56,6 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 	return result, nil
 }
 
-func FindMojangDir() (string, error) {
-	if runtime.GOOS != "windows" {
-		return "", WrappedErrorf(
-			"Unsupported operating system: '%s'", runtime.GOOS)
-	}
-	result := filepath.Join(
-		os.Getenv("LOCALAPPDATA"), "Packages",
-		"Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games",
-		"com.mojang")
-	if _, err := os.Stat(result); err != nil {
-		if os.IsNotExist(err) {
-			return "", WrapErrorf(
-				err, "The \"com.mojang\" folder is not at \"%s\".\n"+
-					"Does your system have multiple user accounts?", result)
-		}
-		return "", WrapErrorf(
-			err, "Unable to access \"%s\".\n"+
-				"Are your user permissions correct?", result)
-	}
-	return result, nil
-}
-
 func FindPreviewDir() (string, error) {
 	if runtime.GOOS != "windows" {
 		return "", WrappedErrorf(
