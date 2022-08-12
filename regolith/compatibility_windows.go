@@ -4,6 +4,9 @@
 package regolith
 
 import (
+	"os"
+	"path/filepath"
+
 	"golang.org/x/sys/windows"
 )
 
@@ -133,4 +136,23 @@ func (d *DirWatcher) WaitForChangeGroup(
 // Close closes DirWatcher handle.
 func (d *DirWatcher) Close() error {
 	return windows.CloseHandle(d.handle)
+}
+
+// FindMojangDir returns path to the com.mojang folder.
+func FindMojangDir() (string, error) {
+	result := filepath.Join(
+		os.Getenv("LOCALAPPDATA"), "Packages",
+		"Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games",
+		"com.mojang")
+	if _, err := os.Stat(result); err != nil {
+		if os.IsNotExist(err) {
+			return "", WrapErrorf(
+				err, "The \"com.mojang\" folder is not at \"%s\".\n"+
+					"Does your system have multiple user accounts?", result)
+		}
+		return "", WrapErrorf(
+			err, "Unable to access \"%s\".\n"+
+				"Are your user permissions correct?", result)
+	}
+	return result, nil
 }
