@@ -82,7 +82,13 @@ Example config, with many options explained:
     },
 
     // The path to your regolith data folder, which contains configuration files for your filter.
-    "dataPath": "./packs/data"
+    "dataPath": "./packs/data",
+
+    // (Only WSL users need to worry about this. If you don't know what WSL is, then you're almost certainly not using it)
+    // "wslUser" sets the username Regolith will try to use to access your com.mojang folder.
+    // This is optional, and defaults to the default non-Windows behavior.
+    // The "username" here should come from the path `C:\Users\<username>\AppData\...`.
+    "wslUser": "username"
   }
 }
 ```
