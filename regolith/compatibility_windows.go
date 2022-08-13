@@ -138,21 +138,38 @@ func (d *DirWatcher) Close() error {
 	return windows.CloseHandle(d.handle)
 }
 
-// FindMojangDir returns path to the com.mojang folder.
-func FindMojangDir() (string, error) {
+func comMojangDir(preview bool) (string, error) {
+	packagesDir := "Microsoft.MinecraftUWP_8wekyb3d8bbwe"
+	if preview {
+		packagesDir = "Microsoft.MinecraftWindowsBeta_8wekyb3d8bbwe"
+	}
 	result := filepath.Join(
 		os.Getenv("LOCALAPPDATA"), "Packages",
-		"Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games",
+		packagesDir, "LocalState", "games",
 		"com.mojang")
 	if _, err := os.Stat(result); err != nil {
 		if os.IsNotExist(err) {
+			mcName := "Minecraft"
+			if preview {
+				mcName = "Minecraft Preview"
+			}
 			return "", WrapErrorf(
-				err, "The \"com.mojang\" folder is not at \"%s\".\n"+
-					"Does your system have multiple user accounts?", result)
+				err, "The %s \"com.mojang\" folder is not at \"%s\".\n"+
+					"Does your system have multiple user accounts?", mcName, result)
 		}
 		return "", WrapErrorf(
 			err, "Unable to access \"%s\".\n"+
 				"Are your user permissions correct?", result)
 	}
 	return result, nil
+}
+
+// FindMojangDir returns path to the com.mojang folder.
+func FindMojangDir() (string, error) {
+	return comMojangDir(false)
+}
+
+// FindMojangDir returns path to the com.mojang folder for Minecraft Preview.
+func FindPreviewDir() (string, error) {
+	return comMojangDir(true)
 }
