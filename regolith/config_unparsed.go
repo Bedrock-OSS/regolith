@@ -15,9 +15,10 @@ import (
 func LoadConfigAsMap() (map[string]interface{}, error) {
 	file, err := ioutil.ReadFile(ConfigFilePath)
 	if err != nil {
-		return nil, WrapErrorf(
-			err,
-			"%q not found (use \"regolith init\" to initialize the project).",
+		return nil, WrappedErrorf( // We don't need to pass OS error. It's confusing.
+			"Failed to open %q. This directory is not a Regolith project.\n"+
+				"Please make sure to run this command in a Regolith project directory.\n"+
+				"If you want to create new Regolith project here, use \"regolith init\".",
 			ConfigFilePath)
 	}
 	var configJson map[string]interface{}

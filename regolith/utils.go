@@ -421,7 +421,9 @@ func GetDotRegolith(useAppData, silent bool, projectRoot string) (string, error)
 	dotRegolithPath := filepath.Join(
 		userCache, appDataCachePath, projectPathHash)
 	if !silent {
-		Logger.Infof("Regolith cache will be stored in: %s", dotRegolithPath)
+		Logger.Infof(
+			"Regolith project cache is in:\n\t%s",
+			dotRegolithPath)
 	}
 	return dotRegolithPath, nil
 }
