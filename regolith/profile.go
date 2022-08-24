@@ -354,7 +354,14 @@ func (f *RemoteFilter) SubfilterCollection(dotRegolithPath string) (*FilterColle
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, WrapErrorf(err, "Couldn't read %q.", path)
+		return nil, WrappedErrorf( // Don't pass OS error here. It's often confusing
+			"Couldn't read filter data from path:\n"+
+				"%s\n"+
+				"Did you install the filter?\n"+
+				"You can install all of the filters by running:\n"+
+				"regolith install-all",
+			path,
+		)
 	}
 
 	var filterCollection map[string]interface{}

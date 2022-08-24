@@ -550,6 +550,12 @@ func Unlock(debug bool) error {
 		return WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
+	// Create parent of the lockfile.txt path if it doesn't exist
+	err = CreateDirectoryIfNotExists(
+		filepath.Join(dotRegolithPath, "cache"), true)
+	if err != nil {
+		return PassError(err)
+	}
 	id, err := GetMachineId()
 	if err != nil {
 		return WrappedError("Failed to get machine ID for the lock file.")
@@ -560,8 +566,8 @@ func Unlock(debug bool) error {
 	if _, err := os.Stat(lockfilePath); err == nil {
 		return WrappedErrorf(
 			"Failed to create the lock file because it already exists.\n"+
-				"Please remove the file manually.\n"+
-				"The lock file is located at %q.", lockfilePath)
+				"If you want to make a new one. Please remove the file manually.\n"+
+				"The lock file is located at:\n%s", lockfilePath)
 	}
 	err = ioutil.WriteFile(lockfilePath, []byte(id), 0666)
 	if err != nil {
