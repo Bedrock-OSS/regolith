@@ -4,16 +4,80 @@ import (
 	"bytes"
 	"io"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/otiai10/copy"
 )
 
-const copyFileBufferSize = 1_000_000 // 1 MB
-const directoryNotEmptyOrNewError = "\"%s\" must be a new path or an empty directory."
-const filepathAbsFailError = "Failed to get full path to \"%s\""
+const (
+	copyFileBufferSize = 1_000_000 // 1 MB
+
+	// Error message to display when when expecting an empty or unexisting directory
+	assertEmptyOrNewDirError = "Expected a path to an empty or unexisting directory:\n%s"
+
+	// Error message for filepath.Abs() function.
+	filepathAbsError = "Failed to get absolute path to:\n%s"
+
+	// Error message for os.Stat failore
+	osStatErrorAny = "Failed to access file info for path:\n%s"
+
+	// Error message for file or directory that doesn't exist
+	osStatErrorIsNotExist = "Following path doesn't exist:\n%s"
+
+	// Error message for os.Stat when the funciton should fail because it's
+	// expected that the target path doesn't exist
+	osStatExistsError = "Path already exists:\n%s"
+
+	// Error message for handling failores of os.Rename
+	osRenameError = "Failed to move file or directory:\nSource: %s\nTarget: %s"
+
+	// Error message for handling failores of os.Copy
+	osCopyError = "Failed to copy file or directory:\nSource: %s\nTarget: %s"
+
+	// Error message displayed when mkdir (or similar function) fails
+	osMkdirError = "Failed to create directory:\n%s"
+
+	// Common Error message to be reused on top of IsDirEmpty
+	isDirEmptyError = "Failed to check if path is an empty directory.\nPath: %s"
+
+	// Error used when an empty directory is expected but it's not
+	isDirEmptyNotEmptyError = "Path is an empty directory.\nPath: %s"
+
+	// Error used when copyFileSecurityInfo fails
+	copyFileSecurityInfoError = "Failed to copy ACL.\nSource: %s\nTarget: %s"
+
+	// Error used when RevertableFsOperations.Delete fails
+	revertableFsOperationsDeleteError = "Failed to delete file.\nPath: %s"
+
+	// Error used when filepath.Rel fails
+	filepathRelError = "Failed to get relative path.\nBase: %s\nTarget: %s"
+
+	// Error used when os.Remove (or similar function) fails
+	osRemoveError = "Failed to delete file or directory.\nPath: %s"
+
+	// Error used when MoveOrCopy function fails
+	moveOrCopyError = "Failed to move or copy file or directory.\nSource: %s\nTarget: %s"
+
+	// Error used when expecting a directory but it's not
+	isDirNotADirError = "Path is not a directory.\nPath: %s"
+
+	// Error used when os.Open fails
+	osOpenError = "Failed to open.\nPath: %s"
+
+	// Error used when os.Create fails
+	osCreateError = "Failed to open for writing.\nPath: %s"
+
+	// Error used when program fails to read from opened file
+	fileReadError = "Failed to read from file.\nPath: %s"
+
+	// Error used when program fails to write to opened file
+	fileWriteError = "Failed to write to file.\nPath: %s"
+)
 
 // RevertableFsOperations is a struct that performs file system operations,
 // keeps track of them, and can undo them if something goes wrong.
@@ -35,12 +99,13 @@ func NewRevertableFsOperaitons(backupPath string) (*RevertableFsOperations, erro
 	// during runtime
 	fullBackupPath, err := filepath.Abs(backupPath)
 	if err != nil {
-		return nil, WrapErrorf(err, filepathAbsFailError, backupPath)
+		return nil, WrapErrorf(err, filepathAbsError, backupPath)
 	}
 	// Create empty directory for the backup files in the backup path
 	err = createBackupPath(fullBackupPath)
 	if err != nil {
-		return nil, PassError(err)
+		return nil, WrapErrorf(
+			err, "Failed to create backup folder.\n\tPath: %s", fullBackupPath)
 	}
 
 	return &RevertableFsOperations{
@@ -56,11 +121,19 @@ func (r *RevertableFsOperations) Close() error {
 	err := os.RemoveAll(r.backupPath)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to clean the backup directory \"%s\".\n"+
-				"If there are any file left in that directory, please "+
-				"clean them manually.", r.backupPath)
+			err,
+			"Failed to clean the backup directory.\n"+
+				"Path: %s\n"+
+				"This is a directory that Regolith uses to store backup files"+
+				" in case of failure while performing file system operations.\n"+
+				"Regolith uses them to restore the state of the file system "+
+				"when an operation like copy or delete fails.\n"+
+				"If your project is missing files, you can check "+
+				"this directory.\n"+
+				"Please clean this directory manually before running "+
+				"Regolith again.",
+			r.backupPath)
 	}
-
 	return nil
 }
 
@@ -73,8 +146,7 @@ func (r *RevertableFsOperations) Undo() error {
 		undo, r.undoOperations = r.undoOperations[i], r.undoOperations[:i]
 		err := undo()
 		if err != nil {
-			return WrapError(
-				err, "Failed to undo file system operations.")
+			return WrapError(err, "Failed to undo operation.")
 		}
 	}
 	return nil
@@ -87,17 +159,21 @@ func (r *RevertableFsOperations) Delete(path string) error {
 		if os.IsNotExist(err) {
 			return nil
 		}
-		return WrapErrorf(err, "Failed to check if file exists: %s", path)
+		return WrapErrorf(err, osStatErrorAny, path)
 	}
 	tmpPath := r.getTempFilePath(path)
 	err := ForceMoveFile(path, tmpPath)
 	if err != nil {
-		return WrapErrorf(err, "Failed to delete directory: %s", path)
+		return WrapErrorf(
+			err,
+			"Failed to create backup for file.\nPath: %s",
+			path)
 	}
 	r.undoOperations = append(r.undoOperations, func() error {
 		err := ForceMoveFile(tmpPath, path)
 		if err != nil {
-			return PassError(err)
+			return WrapErrorf(err, "Failed to forcefully move file."+
+				"\nSource: %s\nTarget: %s", tmpPath, path)
 		}
 		return nil
 	})
@@ -110,21 +186,19 @@ func (r *RevertableFsOperations) Delete(path string) error {
 // and it's able to undo the operation even if an error occures in the middle
 // of its execution.
 func (r *RevertableFsOperations) DeleteDir(path string) error {
+	// TODO - maybe Delete should be able to delete both directories and files and DeleteDir should be private
 	stat, err := os.Stat(path)
 	if err == nil && !stat.IsDir() {
 		err = r.Delete(path)
 		if err != nil {
-			return PassError(err)
+			return WrapErrorf(err, revertableFsOperationsDeleteError, path)
 		}
 		return nil
 	}
 	deleteFunc := func(currPath string, info fs.FileInfo, err error) error {
-		if r == nil {
-			panic("NO CO KURWA")
-		}
 		err = r.Delete(currPath)
 		if err != nil {
-			return PassError(err)
+			return WrapErrorf(err, revertableFsOperationsDeleteError, currPath)
 		}
 		return nil
 	}
@@ -135,7 +209,7 @@ func (r *RevertableFsOperations) DeleteDir(path string) error {
 	}
 	stat, err = os.Stat(path)
 	if err != nil {
-		return PassError(err)
+		return WrapErrorf(err, osStatErrorAny, path)
 	}
 	err = deleteFunc(path, stat, nil)
 	if err != nil {
@@ -167,6 +241,8 @@ func (r *RevertableFsOperations) Copy(source, target string) error {
 	}
 	err = r.copy(source, target)
 	if err != nil {
+		// PasseError copy function shouldn't say that copy failed, the
+		// error messages like that are handled outside of the function
 		return PassError(err)
 	}
 	return nil
@@ -188,6 +264,8 @@ func (r *RevertableFsOperations) MoveOrCopy(source, target string) error {
 	if err != nil {
 		err = r.copy(source, target)
 		if err != nil {
+			// PasseError copy function shouldn't say that copy failed, the
+			// error messages like that are handled outside of the function
 			return PassError(err)
 		}
 		return nil
@@ -204,15 +282,18 @@ func (r *RevertableFsOperations) MoveOrCopy(source, target string) error {
 func (r *RevertableFsOperations) MkdirAll(path string) error {
 	fullPath, err := filepath.Abs(path)
 	if err != nil {
-		return WrapErrorf(err, filepathAbsFailError, path)
+		return WrapErrorf(err, filepathAbsError, path)
 	}
 
 	// Get the root directory of newly created paths for undo operation
 	undoPath, found, err := GetFirstUnexistingSubpath(fullPath)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to check if path \"%s\" is valid for creating a "+
-				"directory.", path)
+			err,
+			"Failed to define an undo operation for creating nested "+
+				"directories.\n"+
+				"Unable to find out which parts of the path are new.\n"+
+				"Path: %s", path)
 	}
 
 	if found {
@@ -241,26 +322,25 @@ func (r *RevertableFsOperations) MoveoOrCopyDir(source, target string) error {
 	// Check if target is empty or doesn't exist
 	fullTargetPath, err := filepath.Abs(target)
 	if err != nil {
-		return WrapErrorf(err, directoryNotEmptyOrNewError, target)
+		return WrapErrorf(err, filepathAbsError, target)
 	}
-	// Check if target is an existing empty directory, or non-existing
-	// directory
+	// Make sure that the directory is empty or doesn't exist
 	stat, err := os.Stat(fullTargetPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return WrapErrorf(err, directoryNotEmptyOrNewError, target)
+			return WrapErrorf(err, assertEmptyOrNewDirError, target)
 		} // else we can continue
 	} else {
 		// Target path exists, it must be an empty directory
 		if !stat.IsDir() {
-			return WrappedErrorf(directoryNotEmptyOrNewError, fullTargetPath)
+			return WrappedErrorf(assertEmptyOrNewDirError, fullTargetPath)
 		}
 		empty, err := IsDirEmpty(fullTargetPath)
 		if err != nil {
-			return WrapErrorf(err, directoryNotEmptyOrNewError, fullTargetPath)
+			return WrapErrorf(err, assertEmptyOrNewDirError, fullTargetPath)
 		}
 		if !empty {
-			return WrappedErrorf(directoryNotEmptyOrNewError, fullTargetPath)
+			return WrappedErrorf(assertEmptyOrNewDirError, fullTargetPath)
 		} // else we can continue
 	}
 
@@ -269,24 +349,26 @@ func (r *RevertableFsOperations) MoveoOrCopyDir(source, target string) error {
 		source, func(currSourcePath string, info os.FileInfo, err error) error {
 			sourceRelativePath, err := filepath.Rel(source, currSourcePath)
 			if err != nil {
-				return PassError(err)
+				return WrapErrorf(
+					err, filepathRelError, source, currSourcePath)
 			}
 			currTargetPath := filepath.Join(target, sourceRelativePath)
 			if info.IsDir() {
 				err = r.MkdirAll(currTargetPath)
 				if err != nil {
-					return PassError(err)
+					return WrapErrorf(err, osMkdirError, currTargetPath)
 				}
 				// It's safe because this won't remove non-empty path
 				err = os.Remove(currSourcePath)
 				if err != nil {
-					return PassError(err)
+					return WrapErrorf(err, osRemoveError, currSourcePath)
 				}
 				return nil
 			}
 			err = r.MoveOrCopy(currSourcePath, currTargetPath)
 			if err != nil {
-				return PassError(err)
+				return WrapErrorf(
+					err, moveOrCopyError, currSourcePath, currTargetPath)
 			}
 			return nil
 		})
@@ -302,17 +384,17 @@ func (r *RevertableFsOperations) MoveoOrCopyDir(source, target string) error {
 func moveOrCopyAssertions(source, target string) error {
 	if _, err := os.Stat(source); err != nil {
 		if os.IsNotExist(err) {
-			return WrapErrorf(err, "Source file doesn't exist: %s", source)
+			return WrapErrorf(err, osStatErrorIsNotExist, source)
 		}
-		return WrapErrorf(err, "Failed to check if file exists: %s", source)
+		return WrapErrorf(err, osStatErrorAny, source)
 	}
 	stat, err := os.Stat(target)
 	if stat != nil {
-		return WrappedErrorf("Target path already exists %s", target)
+		return WrappedErrorf(osStatExistsError, target)
 	} else if err != nil {
 		if !os.IsNotExist(err) {
 			return WrapErrorf(
-				err, "Failed to check if file exists: %s", target)
+				err, osStatErrorAny, target)
 		}
 		// Skip IsNotExist errors because it's ok if target doesn't exist
 	}
@@ -325,12 +407,12 @@ func (r *RevertableFsOperations) move(source, target string) error {
 	err := os.MkdirAll(filepath.Dir(target), 0755)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to create \"%s\".", target)
+			err, osMkdirError, target)
 	}
 	err = os.Rename(source, target)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to move file %s to %s", source, target)
+			err, osRenameError, source, target)
 	}
 	r.undoOperations = append(r.undoOperations, func() error {
 		return os.Rename(target, source)
@@ -342,8 +424,9 @@ func (r *RevertableFsOperations) move(source, target string) error {
 func (r *RevertableFsOperations) copy(source, target string) error {
 	err := CopyFile(source, target)
 	if err != nil {
-		return WrapErrorf(
-			err, "Failed to copy file \"%s\" to \"%s\"", source, target)
+		// PasseError copy function shouldn't say that copy failed, the
+		// error messages like that are handled outside of the function
+		return PassError(err)
 	}
 	r.undoOperations = append(r.undoOperations, func() error {
 		return os.Remove(target)
@@ -368,27 +451,28 @@ func createBackupPath(path string) error {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(path, 0755)
 			if err != nil {
-				return WrapErrorf(
-					err, "Failed to create backup directory: %s", path)
+				return WrapErrorf(err, osMkdirError, path)
 			}
 		} else {
-			return WrapErrorf(
-				err, "Failed to check if backup directory exists: %s",
-				path)
+			return WrapErrorf(err, osStatErrorAny, path)
 		}
 	} else if !stat.IsDir() {
 		return WrapErrorf(
-			err, "Unable to create backups in \"%s\" because it's not a directory.",
+			err,
+			"Unable to use path for backups because it's not a directory.\n"+
+				"Path: %s",
 			path)
 	} else {
 		isEmpty, err := IsDirEmpty(path)
 		if err != nil {
-			return WrapErrorf(err, "Failed to check if backup directory is "+
-				"empty: %s", path)
+			return WrapErrorf(err, isDirEmptyError, path)
 		}
 		if !isEmpty {
-			return WrapErrorf(err, "Unable to create backups in \"%s\" "+
-				"because the directory is not empty.", path)
+			return WrapErrorf(
+				err,
+				"Unable to use path for backups because it's not an empty "+
+					"directory.\nPath: %s",
+				path)
 		}
 	}
 	return nil
@@ -403,7 +487,7 @@ func GetFirstUnexistingSubpath(path string) (string, bool, error) {
 	path = filepath.Clean(path)
 	fullPath, err := filepath.Abs(path)
 	if err != nil {
-		WrapErrorf(err, filepathAbsFailError, path)
+		WrapErrorf(err, filepathAbsError, path)
 	}
 	pathParts := strings.Split(fullPath, string(os.PathSeparator))
 	currPath := pathParts[0] // There is always at least 1 item
@@ -419,7 +503,11 @@ func GetFirstUnexistingSubpath(path string) (string, bool, error) {
 			}
 		} else if !stat.IsDir() {
 			return "", false, WrappedErrorf(
-				"Subpath %s of %s is not a directory",
+				"Found a subpath that is not a directory.\n"+
+					"Subpath: %s\n"+
+					"Full path: %s\n"+
+					"Unable to continue searching for further subpaths "+
+					"because files can't have subpaths.",
 				currPath, path)
 		}
 	}
@@ -432,22 +520,25 @@ func GetFirstUnexistingSubpath(path string) (string, bool, error) {
 func IsDirEmpty(path string) (bool, error) {
 	if stat, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
-			return false, WrappedErrorf("Path %q does not exist.", path)
+			return false, WrappedErrorf(osStatErrorIsNotExist, path)
 		}
-		return false, WrapErrorf(err, "Failed to stat %q.", path)
+		return false, WrapErrorf(err, osStatErrorAny, path)
 	} else if !stat.IsDir() {
-		return false, WrappedErrorf("Path %q is not a directory.", path)
+		return false, WrappedErrorf(isDirNotADirError, path)
 	}
 	f, err := os.Open(path)
 	if err != nil {
-		return false, WrapErrorf(err, "Failed to open %q.", path)
+		return false, WrapErrorf(err, osOpenError, path)
 	}
 	defer f.Close()
 	_, err = f.Readdirnames(1)
 	if err == io.EOF {
 		return true, nil
 	} else if err != nil {
-		return false, PassError(err)
+		return false, WrapErrorf(
+			err,
+			"Failed to access subdirectories list.\n"+
+				"Path: %s", path)
 	}
 	// err is nil -> not empty
 	return false, nil
@@ -459,23 +550,23 @@ func AreFilesEqual(a, b string) (bool, error) {
 	const bufferSize = 4000 // 4kB
 	aStat, err := os.Stat(a)
 	if err != nil {
-		return false, WrapErrorf(err, "Failed to stat file: %s", a)
+		return false, WrapErrorf(err, osStatErrorAny, a)
 	}
 	bStat, err := os.Stat(b)
 	if err != nil {
-		return false, WrapErrorf(err, "Failed to stat file: %s", b)
+		return false, WrapErrorf(err, osStatErrorAny, b)
 	}
 	if aStat.Size() != bStat.Size() {
 		return false, nil
 	}
 	aFile, err := os.Open(a)
 	if err != nil {
-		return false, WrapErrorf(err, "Failed to open file: %s", a)
+		return false, WrapErrorf(err, osOpenError, a)
 	}
 	defer aFile.Close()
 	bFile, err := os.Open(b)
 	if err != nil {
-		return false, WrapErrorf(err, "Failed to open file: %s", b)
+		return false, WrapErrorf(err, osOpenError, b)
 	}
 	defer bFile.Close()
 	aBuff := make([]byte, bufferSize)
@@ -483,11 +574,11 @@ func AreFilesEqual(a, b string) (bool, error) {
 	for {
 		aRead, err := aFile.Read(aBuff)
 		if err != nil && err != io.EOF {
-			return false, WrapErrorf(err, "Failed to read file: %s", a)
+			return false, WrapErrorf(err, fileReadError, a)
 		}
 		bRead, err := bFile.Read(bBuff)
 		if err != nil && err != io.EOF {
-			return false, WrapErrorf(err, "Failed to read file: %s", b)
+			return false, WrapErrorf(err, fileReadError, b)
 		}
 		if !bytes.Equal(aBuff[:aRead], bBuff[:bRead]) {
 			return false, nil
@@ -506,35 +597,35 @@ func CopyFile(source, target string) error {
 	err := os.MkdirAll(filepath.Dir(target), 0755)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to create \"%s\".", target)
+			err, osMkdirError, target)
 	}
 	buf := make([]byte, copyFileBufferSize)
 	// Open source for reading
 	sourceF, err := os.Open(source)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to open \"%s\" for reading.", source)
+			err, osOpenError, source)
 	}
 	defer sourceF.Close()
 	// Open target for writing
 	targetF, err := os.Create(target)
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to open \"%s\" for writing.", target)
+			err, osCreateError, target)
 	}
 	defer targetF.Close()
 	// Copy the file
 	for {
 		n, err := sourceF.Read(buf)
 		if err != nil && err != io.EOF {
-			return WrapErrorf(err, "Failed to read from \"%s\".", source)
+			return WrapErrorf(err, fileReadError, source)
 		}
 		if n == 0 {
 			break
 		}
 
 		if _, err := targetF.Write(buf[:n]); err != nil {
-			return WrapErrorf(err, "Failed to write to \"%s\".", target)
+			return WrapErrorf(err, fileWriteError, target)
 		}
 	}
 	targetF.Sync()
@@ -553,25 +644,26 @@ func ForceMoveFile(source, target string) error {
 	// Failed to rename try to copy
 	stat, err := os.Stat(source)
 	if err != nil {
-		return WrapErrorf(err, "Failed to stat file: %s", source)
+		return WrapErrorf(err, osStatErrorAny, source)
 	} else if stat.IsDir() {
 		err = os.MkdirAll(target, 0755)
 		if err != nil {
-			return WrapErrorf(err, "Failed to create directory: %s", target)
+			return WrapErrorf(err, osMkdirError, target)
 		}
 		os.Remove(source) // Only works for empty directories
 		if err != nil {
-			return WrapErrorf(err, "Failed to remove directory: %s", source)
+			return WrapErrorf(err, osRemoveError, source)
 		}
 	}
 	if err := CopyFile(source, target); err != nil {
-		return WrapErrorf(err, "Failed to copy file \"%s\" to \"%s\"",
-			source, target)
+		return WrapErrorf(err, osCopyError, source, target)
 	}
 	if err := os.RemoveAll(source); err != nil {
 		return WrapErrorf(
 			err,
-			"Failed to remove file \"%s\" after it was copied to \"%s\"",
+			"Failed to remove file copied.\n"+
+				"File to remove: %s\n"+
+				"Copied file: %s",
 			source, target)
 	}
 	return nil
@@ -619,6 +711,154 @@ func postorderWalkDir(path string, info os.FileInfo, fn filepath.WalkFunc) error
 		err = fn(subpath, stat, err)
 		if err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// move moves files from source to destination. If both source and destination
+// are directories, and the destination is empty, it will move the files from
+// source to destination directly (without deleting the destination first).
+// Moving the subdirectories to destination one by one instead of deleting it
+// and renaming entire directory. This is important because, the deletion of
+// the destination would break observation of the destination directory.
+// This function is used by MoveOrCopy.
+func move(source, destination string) error {
+	// Check if source and destination are directories
+	sourceInfo, err1 := os.Stat(source)
+	destinationInfo, err2 := os.Stat(destination)
+
+	// TODO - this part of code could be moved to another function. It's too much.
+	if err1 == nil && err2 == nil && sourceInfo.IsDir() && destinationInfo.IsDir() {
+		// Target must be empty
+		if empty, err := IsDirEmpty(destination); err != nil {
+			return WrapErrorf(err, isDirEmptyError, destination)
+		} else if !empty {
+			return WrapErrorf(err, isDirEmptyNotEmptyError, destination)
+		}
+		// Move all files in source to destination
+		files, err := ioutil.ReadDir(source)
+		movedFiles := make([][2]string, 100)
+		movingFailed := false
+		var errMoving error
+		for _, file := range files {
+			src := filepath.Join(source, file.Name())
+			dst := filepath.Join(destination, file.Name())
+			errMoving = os.Rename(src, dst)
+			if errMoving != nil {
+				errMoving = WrapErrorf(
+					errMoving, osRenameError, src, dst)
+				Logger.Warn(
+					"Failed to move content of directory.\n"+
+						"\tSource: %s\n"+
+						"\tTarget: %s\n\n"+
+						"\tOperation failed while moving a file:\n"+
+						"\tSource: %s\n"+
+						"\tTarget: %s\n\n",
+					"\tTrying to recover from error...",
+					source, destination, src, dst)
+				movingFailed = true
+				break
+			}
+			movedFiles = append(movedFiles, [2]string{src, dst})
+		}
+		// If moving failed, rollback the moves
+		if movingFailed {
+			for _, movePair := range movedFiles {
+				err = os.Rename(movePair[1], movePair[0])
+				if err != nil {
+					// This is a critical error that leaves the file system in
+					// an invalid state. It shouldn't happen because it's from
+					// moving files, that we had access to just a moment ago.
+					Logger.Fatalf(
+						"Regolith failed to recover from error which occured "+
+							"while moving files from directory.\b"+
+							"\tSource: %s\n"+
+							"\tTarget: %s\n\n"+
+
+							"\tRecovery failed while moving file.\n"+
+							"\tSource: %s\n"+
+							"\tTarget: %s\n"+
+							"\tError: %s\n\n"+
+
+							"\tThis is a critical error that leaves your "+
+							"files in unorganized manner.\n\n"+
+
+							"\tYou can try to recover the files manually "+
+							"from:\n"+
+							"\tPath: %s\n",
+						source, destination, movePair[1], movePair[0], err,
+						source)
+				}
+			}
+		}
+		return WrapErrorf(
+			errMoving,
+			"Successfully recovered the original state of the directory "+
+				"before crash.\nPath: %s", source)
+	}
+	// Either source or destination is not a directory,
+	// use normal os.Rename
+	err := os.Rename(source, destination)
+	if err != nil {
+		return WrapErrorf(err, osRenameError, source, destination)
+	}
+	return nil
+}
+
+// MoveOrCopy tries to move the the source to destination first and in case
+// of failore it copies the files instead.
+func MoveOrCopy(
+	source string, destination string, makeReadOnly bool, copyParentAcl bool,
+) error {
+	if err := move(source, destination); err != nil {
+		Logger.Warnf(
+			"Failed to move files.\n\tSource: %s\n\tTarget: %s\n"+
+				"This error is not critical. Trying to copy files instead...",
+			source, destination)
+		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
+		err := copy.Copy(source, destination, copyOptions)
+		if err != nil {
+			return WrapErrorf(err, osCopyError, source, destination)
+		}
+	} else if copyParentAcl { // No errors with moving files but needs ACL copy
+		// TODO - this entire code block should be moved into the. copyFileSecurityInfo
+		// printing this Info message below on Linux makes no sense.
+		parent := filepath.Dir(destination)
+		Logger.Infof(
+			"Copying ACL from parent directory.\n\tSource: %s\n\tTarget: %s",
+			parent, destination)
+		if _, err := os.Stat(parent); os.IsNotExist(err) {
+			return WrapErrorf(err, osStatErrorIsNotExist, parent)
+		}
+		err = copyFileSecurityInfo(parent, destination)
+		if err != nil {
+			return WrapErrorf(
+				err, copyFileSecurityInfoError, source, destination)
+		}
+	}
+	// Make files read only if this option is selected
+	if makeReadOnly {
+		Logger.Infof("Changing the access for output path to "+
+			"read-only.\n\tPath: %s", destination)
+		err := filepath.WalkDir(destination,
+			func(s string, d fs.DirEntry, e error) error {
+
+				if e != nil {
+					// Error messag isn't important as it's not passed further
+					// in the code
+					return e
+				}
+				if !d.IsDir() {
+					os.Chmod(s, 0444)
+				}
+				return nil
+			})
+		if err != nil {
+			Logger.Warnf(
+				"Failed to change access of the output path to read-only.\n"+
+					"\tPath: %s",
+				destination)
 		}
 	}
 	return nil
