@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/otiai10/copy"
 )
 
 // Common warnings
@@ -222,145 +219,6 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 	for scanner.Scan() {
 		logFunc("[%s] %s", outputLabel, scanner.Text())
 	}
-}
-
-// move moves files from source to destination. If both source and destination
-// are directories, and the destination is empty, it will move thr files from
-// source to destination directly (without deleting the destination first).
-// Moving the subdirectories to destination one by one instead of deleting it
-// and renaming entire directory is important because, the deletion of the
-// destination would break observation of the destination directory.
-// This function is used by MoveOrCopy.
-func move(source, destination string) error {
-	// Check if source and destination are directories
-	sourceInfo, err1 := os.Stat(source)
-	destinationInfo, err2 := os.Stat(destination)
-	if err1 == nil && err2 == nil &&
-		sourceInfo.IsDir() && destinationInfo.IsDir() {
-		// Target must be empty
-		if empty, err := IsDirEmpty(destination); err != nil {
-			return WrapErrorf(
-				err, "Failed to check if path %s is an empty directory",
-				destination)
-		} else if !empty {
-			return WrapErrorf(
-				err,
-				"Cannot move files to %s because the target directory is not "+
-					"empty.",
-				destination)
-		}
-		// Move all files in source to destination
-		files, err := ioutil.ReadDir(source)
-		movedFiles := make([][2]string, 100)
-		movingFailed := false
-		for _, file := range files {
-			src := filepath.Join(source, file.Name())
-			dst := filepath.Join(destination, file.Name())
-			err = os.Rename(src, dst)
-			if err != nil {
-				Logger.Warn(
-					"Failed to move content of directory %s to %s.\n"+
-						"\tOperation failed while moving %s to %s.\n"+
-						"Trying to recover to state before the move...",
-					source, destination, src, dst)
-				movingFailed = true
-				break
-			}
-			movedFiles = append(movedFiles, [2]string{src, dst})
-		}
-		// If moving failed, rollback the moves
-		if movingFailed {
-			for _, movePair := range movedFiles {
-				err = os.Rename(movePair[1], movePair[0])
-				if err != nil {
-					// This is a critical error that leaves the file system in
-					// an invalid state. It shouldn't happen because it's from
-					// moving files, that we had access to just a moment ago.
-					Logger.Fatalf(
-						"Regolith failed to recover from error which occured "+
-							"while moving files from \"%s\" directory to "+
-							"\"%s\".\n"+
-
-							"\tRecovery failed while moving \"%s\" to "+
-							"\"%s\", with error:\n\t%s\n\n"+
-
-							"\tThis is a critical error that leaves your "+
-							"files in unorganized manner.\n"+
-
-							"\tYou can try to recover the files manually "+
-							"from:\n"+
-							"\t- %s\n"+
-							"\t- %s\n",
-						source, destination, movePair[1], movePair[0], err,
-						source, destination)
-				}
-			}
-		}
-		return nil
-	}
-	// Either source or destination is not a directory,
-	// use normal os.Rename
-	err := os.Rename(source, destination)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// MoveOrCopy tries to move the the source to destination first and in case
-// of failore it copies the files instead.
-func MoveOrCopy(
-	source string, destination string, makeReadOnly bool, copyParentAcl bool,
-) error {
-	if err := move(source, destination); err != nil {
-		Logger.Infof(
-			"Couldn't move files to \"%s\".\n"+
-				"    Trying to copy files instead...",
-			destination)
-		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
-		err := copy.Copy(source, destination, copyOptions)
-		if err != nil {
-			return WrapErrorf(
-				err, "Couldn't copy data files to \"%s\", aborting.",
-				destination)
-		}
-	} else if copyParentAcl { // No errors with moving files but needs ACL copy
-		parent := filepath.Dir(destination)
-		if _, err := os.Stat(parent); os.IsNotExist(err) {
-			return WrapError(
-				err,
-				"Couldn't copy ACLs - parent directory (used as a source of "+
-					"ACL data) doesn't exist.")
-		}
-		err = copyFileSecurityInfo(parent, destination)
-		if err != nil {
-			return WrapErrorf(
-				err,
-				"Counldn't copy ACLs to the target file \"%s\".",
-				destination,
-			)
-		}
-	}
-	// Make files read only if this option is selected
-	if makeReadOnly {
-		err := filepath.WalkDir(destination,
-			func(s string, d fs.DirEntry, e error) error {
-				if e != nil {
-					return WrapErrorf(
-						e, "Failed to walk directory \"%s\".", destination)
-				}
-				if !d.IsDir() {
-					os.Chmod(s, 0444)
-				}
-				return nil
-			})
-		if err != nil {
-			Logger.Warnf(
-				"Unable to change file permissions of \"%s\" into read-only",
-				destination)
-		}
-	}
-	return nil
 }
 
 // GetDotRegolith returns the path to the directory where Regolith stores
