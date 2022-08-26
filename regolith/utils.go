@@ -17,12 +17,6 @@ import (
 	"github.com/fatih/color"
 )
 
-// Common warnings
-const (
-	gitNotInstalled = "Git is not installed. Git is required to download " +
-		"filters.\n You can download Git from https://git-scm.com/downloads"
-)
-
 // appDataCachePath is a path to the cache directory relative to the user's
 // app data
 const appDataCachePath = "regolith/project-cache"

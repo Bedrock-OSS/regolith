@@ -29,7 +29,7 @@ func Install(filters []string, force, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
-		Logger.Warn(gitNotInstalled)
+		Logger.Warn(gitNotInstalledWarning)
 	}
 	// Parse arguments into download tasks
 	parsedArgs, err := parseInstallFilterArgs(filters)
@@ -139,7 +139,7 @@ func InstallAll(force, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
-		Logger.Warn(gitNotInstalled)
+		Logger.Warn(gitNotInstalledWarning)
 	}
 	configMap, err1 := LoadConfigAsMap()
 	config, err2 := ConfigFromObject(configMap)
@@ -172,7 +172,7 @@ func Update(filters []string, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Updating filters...")
 	if !hasGit() {
-		Logger.Warn(gitNotInstalled)
+		Logger.Warn(gitNotInstalledWarning)
 	}
 	if len(filters) == 0 {
 		return WrappedError("No filters specified.")
@@ -220,7 +220,7 @@ func UpdateAll(debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Updating filters...")
 	if !hasGit() {
-		Logger.Warn(gitNotInstalled)
+		Logger.Warn(gitNotInstalledWarning)
 	}
 	configMap, err1 := LoadConfigAsMap()
 	config, err2 := ConfigFromObject(configMap)
