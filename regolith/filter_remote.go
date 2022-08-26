@@ -312,7 +312,7 @@ func (i *RemoteFilterDefinition) Download(
 
 	// Download the filter using Git Getter
 	if !hasGit() {
-		return WrappedError(gitNotInstalled)
+		return WrappedError(gitNotInstalledWarning)
 	}
 	repoVersion, err := GetRemoteFilterDownloadRef(i.Url, i.Id, i.Version)
 	if err != nil {
