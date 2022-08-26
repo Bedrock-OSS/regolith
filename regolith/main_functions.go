@@ -342,7 +342,7 @@ func Init(debug bool) error {
 		return WrapError(
 			err, "Unable to get working directory to initialize project.")
 	}
-	if isEmpty, err := isDirEmpty(wd); err != nil {
+	if isEmpty, err := IsDirEmpty(wd); err != nil {
 		return WrapErrorf(
 			err, "Failed to check if %s is an empty directory.", wd)
 	} else if !isEmpty {
