@@ -65,6 +65,10 @@ const (
 	// Error used when program fails to write to opened file
 	fileWriteError = "Failed to write to file.\nPath: %s"
 
+	// Warning used when Git is not installed
 	gitNotInstalledWarning = "Git is not installed. Git is required to download " +
 		"filters.\n You can download Git from https://git-scm.com/downloads"
+
+	// Error used when certain function is not implemented on this system
+	notImplementedOnThisSystemError = "Not implemented for this system."
 )
