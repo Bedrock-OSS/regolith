@@ -28,6 +28,9 @@ const (
 	// Error message displayed when mkdir (or similar function) fails
 	osMkdirError = "Failed to create directory.\nPath: %s"
 
+	// Error message displayed when os.Getwd fails
+	osGetwdError = "Failed to get current working directory."
+
 	// Common Error message to be reused on top of IsDirEmpty
 	isDirEmptyError = "Failed to check if path is an empty directory.\nPath: %s"
 

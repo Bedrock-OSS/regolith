@@ -339,7 +339,7 @@ func Init(debug bool) error {
 	wd, err := os.Getwd()
 	if err != nil {
 		return WrapError(
-			err, "Unable to get working directory to initialize project.")
+			err, osGetwdError)
 	}
 	if isEmpty, err := IsDirEmpty(wd); err != nil {
 		return WrapErrorf(

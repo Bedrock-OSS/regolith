@@ -146,8 +146,8 @@ func CreateDirectoryIfNotExists(directory string, mustSucceed bool) error {
 		err = os.MkdirAll(directory, 0666)
 		if err != nil {
 			if mustSucceed {
-				return WrapErrorf(
-					err, "Failed to create directory %s.", directory)
+				// Error outside of this function should tell about the path
+				return PassError(err)
 			} else {
 				Logger.Warnf(
 					"Failed to create directory %s: %s.", directory,
@@ -169,11 +169,12 @@ func GetAbsoluteWorkingDirectory(dotRegolithPath string) string {
 func CreateEnvironmentVariables(filterDir string) ([]string, error) {
 	projectDir, err := os.Getwd()
 	if err != nil {
-		return nil, WrapErrorf(err, "Failed to get current working directory.")
+		return nil, WrapErrorf(err, osGetwdError)
 	}
+	// TODO - doesn't os.GetWd() already return an absolute path?
 	projectDir, err = filepath.Abs(projectDir)
 	if err != nil {
-		return nil, WrapErrorf(err, "Failed to get absolute path to current working directory.")
+		return nil, WrapErrorf(err, filepathAbsError, projectDir)
 	}
 	return append(os.Environ(), "FILTER_DIR="+filterDir, "ROOT_DIR="+projectDir), nil
 }
@@ -190,7 +191,9 @@ func RunSubProcess(command string, args []string, filterDir string, workingDir s
 	go LogStd(err, Logger.Errorf, outputLabel)
 	env, err1 := CreateEnvironmentVariables(filterDir)
 	if err1 != nil {
-		return WrapErrorf(err1, "Failed to create environment variables.")
+		return WrapErrorf(
+			err1,
+			"Failed to create FILTER_DIR and ROOT_DIR environment variables.")
 	}
 	cmd.Env = env
 
@@ -225,8 +228,7 @@ func GetDotRegolith(useAppData, silent bool, projectRoot string) (string, error)
 	// Make sure that projectsRoot is an absolute path
 	absoluteProjectRoot, err := filepath.Abs(projectRoot)
 	if err != nil {
-		return "", WrapErrorf(
-			err, "Unable to get absolute of %q.", projectRoot)
+		return "", WrapErrorf(err, filepathAbsError, projectRoot)
 	}
 	// Get the md5 of the project path
 	hash := md5.New()
