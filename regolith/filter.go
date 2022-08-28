@@ -28,9 +28,13 @@ type RunContext struct {
 }
 
 // GetProfile returns the Profile structure from the context.
-func (c *RunContext) GetProfile() (Profile, bool) {
+func (c *RunContext) GetProfile() (Profile, error) {
 	profile, ok := c.Config.Profiles[c.Profile]
-	return profile, ok
+	if !ok {
+		return Profile{}, WrappedErrorf("Profile with specified name doesn't exist.\n"+
+			"Profile name: %s", c.Profile)
+	}
+	return profile, nil
 }
 
 // IsWatchMode returns a value that shows whether the context is in the
