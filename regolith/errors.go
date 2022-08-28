@@ -95,12 +95,34 @@ const (
 	// Error used when RunSubProcess funciton fails
 	runSubProcessError = "Failed to run sub process."
 
+	// Error used when safe mode is when user tries to perform an unsafe
+	// operation with safe mode enabled
+	safeModeEnabledError = "Safe mode is enabled. " +
+		"It's a feature that protects you from running unsafe code.\n" +
+		"You can turn it off using command:\nregolith unlock"
+
+	// Error used when remote filter fails to access its subfilter collection.
+	// The error doesn't print the name of the filter because the
+	// subfilterCollection method is private and it's always a part of some
+	// other, higher level action which provides that information when it
+	// fails.
+	remoteFilterSubfilterCollectionError = "Failed to list subfilters."
+
+	// Error used when GetRemoteFilterDownloadRef function fails
+	getRemoteFilterDownloadRefError = "Failed to get download link for the filter.\n" +
+		"Filter repository Url: %s\n" +
+		"Filter name: %s\n" +
+		"Filter version: %s\n"
+
 	// Warning used when Git is not installed
 	gitNotInstalledWarning = "Git is not installed. Git is required to download " +
 		"filters.\n You can download Git from https://git-scm.com/downloads"
 
 	// Error used when filterFromObject function fails
 	filterFromObjectError = "Failed to parse filter from JSON object."
+
+	// Error used when FilterRunner.Check method fails
+	filterRunnerCheckError = "Filter check failed.\nFilter: %s"
 
 	// Error used when certain function is not implemented on this system
 	notImplementedOnThisSystemError = "Not implemented for this system."

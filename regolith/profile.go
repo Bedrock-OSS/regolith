@@ -348,7 +348,7 @@ func WatchProfileImpl(context RunContext) (bool, error) {
 
 // SubfilterCollection returns a collection of filters from a
 // "filter.json" file of a remote filter.
-func (f *RemoteFilter) SubfilterCollection(dotRegolithPath string) (*FilterCollection, error) {
+func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterCollection, error) {
 	path := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
 	result := &FilterCollection{Filters: []FilterRunner{}}
 	file, err := ioutil.ReadFile(path)
