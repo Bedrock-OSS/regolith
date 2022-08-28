@@ -102,15 +102,15 @@ func (f *RemoteFilter) run(context RunContext) error {
 
 func (f *RemoteFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, err
+		return false, PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
 
 func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create remote filter.")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &RemoteFilter{
 		Filter:     *basicFilter,
