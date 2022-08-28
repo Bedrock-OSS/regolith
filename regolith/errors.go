@@ -114,6 +114,9 @@ const (
 		"Filter name: %s\n" +
 		"Filter version: %s\n"
 
+	// Error used when CreateFilterRunner method of FilterInstaller fails
+	createFilterRunnerError = "Failed to create filter runner.\nFilter: %s"
+
 	// Warning used when Git is not installed
 	gitNotInstalledWarning = "Git is not installed. Git is required to download " +
 		"filters.\n You can download Git from https://git-scm.com/downloads"
