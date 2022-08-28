@@ -3,20 +3,21 @@ package regolith
 // Common errors and warnings used by Regolith
 const (
 	// Error message to display when when expecting an empty or unexisting directory
-	assertEmptyOrNewDirError = "Expected a path to an empty or unexisting directory:\n%s"
+	assertEmptyOrNewDirError = "Expected a path to an empty or unexisting " +
+		"directory.\nPath: %s"
 
 	// Error message for filepath.Abs() function.
-	filepathAbsError = "Failed to get absolute path to:\n%s"
+	filepathAbsError = "Failed to get absolute path.\nBase path: %s"
 
 	// Error message for os.Stat failore
-	osStatErrorAny = "Failed to access file info for path:\n%s"
+	osStatErrorAny = "Failed to access file info.\nPath: %s"
 
 	// Error message for file or directory that doesn't exist
-	osStatErrorIsNotExist = "Following path doesn't exist:\n%s"
+	osStatErrorIsNotExist = "Path doesn't exist.\nPath: %s"
 
 	// Error message for os.Stat when the funciton should fail because it's
 	// expected that the target path doesn't exist
-	osStatExistsError = "Path already exists:\n%s"
+	osStatExistsError = "Path already exists.\nPath: %s"
 
 	// Error message for handling failores of os.Rename
 	osRenameError = "Failed to move file or directory:\nSource: %s\nTarget: %s"
@@ -25,7 +26,7 @@ const (
 	osCopyError = "Failed to copy file or directory:\nSource: %s\nTarget: %s"
 
 	// Error message displayed when mkdir (or similar function) fails
-	osMkdirError = "Failed to create directory:\n%s"
+	osMkdirError = "Failed to create directory.\nPath: %s"
 
 	// Common Error message to be reused on top of IsDirEmpty
 	isDirEmptyError = "Failed to check if path is an empty directory.\nPath: %s"
