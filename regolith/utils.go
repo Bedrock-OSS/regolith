@@ -84,7 +84,7 @@ func FullFilterToNiceFilterName(name string) string {
 		if err != nil {
 			return fmt.Sprintf("the \"%s\" filter", name)
 		}
-		return NiceFilterName(strings.Split(name, ":")[0], i)
+		return NiceSubfilterName(strings.Split(name, ":")[0], i)
 	}
 	return fmt.Sprintf("the \"%s\" filter", name)
 }
@@ -96,7 +96,7 @@ func ShortFilterName(name string) string {
 	return name
 }
 
-func NiceFilterName(name string, i int) string {
+func NiceSubfilterName(name string, i int) string {
 	return fmt.Sprintf("the %s subfilter of \"%s\" filter", nth(i), name)
 }
 
