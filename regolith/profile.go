@@ -195,9 +195,7 @@ func RecycledRunProfile(context RunContext) error {
 		if err := firstErr(err1, err2, err3); err != nil {
 			err1 := ClearCachedStates() // Just to be safe - clear cached states
 			if err1 != nil {
-				err = WrapError(
-					err1, "Failed to clear cached file path states while "+
-						"handling another error.")
+				err = WrapError(err1, clearCachedStatesError)
 			}
 			return PassError(err)
 		}
@@ -216,9 +214,7 @@ start:
 	if err != nil {
 		err1 := ClearCachedStates() // Just to be safe clear cached states
 		if err1 != nil {
-			err = WrapError(
-				err1, "Failed to clear cached file path states whil handling"+
-					" another error.")
+			err = WrapError(err1, clearCachedStatesError)
 		}
 		return WrapError(err, "Unable to setup profile.")
 	}
@@ -247,9 +243,7 @@ start:
 	if err != nil {
 		err1 := ClearCachedStates() // Just to be safe clear cached states
 		if err1 != nil {
-			err = WrapError(
-				err1, "Failed to clear cached file path states while "+
-					"handling another error.")
+			err = WrapError(err1, clearCachedStatesError)
 		}
 		return WrapError(err, "Exporting project failed.")
 	}
@@ -333,9 +327,7 @@ func WatchProfileImpl(context RunContext) (bool, error) {
 		if err != nil {
 			err1 := ClearCachedStates() // Just to be safe clear cached states
 			if err1 != nil {
-				err = WrapError(
-					err1, "Failed to clear cached file path states while "+
-						"handling another error.")
+				err = WrapError(err1, clearCachedStatesError)
 			}
 			return false, WrapError(err, "Failed to run filter.")
 		}

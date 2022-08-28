@@ -136,4 +136,7 @@ const (
 
 	// Error used when certain function is not implemented on this system
 	notImplementedOnThisSystemError = "Not implemented for this system."
+
+	// Error used when recycled copy ClearCachedStates function fails
+	clearCachedStatesError = "Failed to clear cached file path states."
 )

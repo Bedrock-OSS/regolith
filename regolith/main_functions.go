@@ -406,7 +406,7 @@ func clean(cachedStatesOnly bool, dotRegolithPath string) error {
 	if cachedStatesOnly {
 		err := ClearCachedStates()
 		if err != nil {
-			return WrapError(err, "Failed to remove cached path states.")
+			return WrapError(err, clearCachedStatesError)
 		}
 	} else {
 		err := os.RemoveAll(dotRegolithPath)
