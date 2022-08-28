@@ -57,6 +57,12 @@ const (
 	// Error used when os.Create fails
 	osCreateError = "Failed to open for writing.\nPath: %s"
 
+	// Error used when os.Rel fails
+	osRelError = "Failed to get relative path.\nBase: %s\nTarget: %s"
+
+	// Error used when os.Walk fails
+	osWalkError = "Failed to walk directory.\nPath: %s"
+
 	// Error used when program fails to read from opened file
 	fileReadError = "Failed to read from file.\nPath: %s"
 
