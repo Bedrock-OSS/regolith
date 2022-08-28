@@ -63,6 +63,29 @@ const (
 	// Error used when program fails to write to opened file
 	fileWriteError = "Failed to write to file.\nPath: %s"
 
+	// Error used when program fails to parse JSON file
+	jsonUnmarshalError = "Failed to parse JSON.\nPath: %s"
+
+	// Error used when Regolith fails to parse a property os JSON
+	jsonPropertyParseError = "Failed to parse JSON property.\nProperty: %s"
+
+	// Error used when Regolith expects a property but it's missing
+	jsonPropertyMissingError = "Required JSON property is missing.\nProperty: %s"
+
+	// Errror used when JSON property is not an expected type
+	jsonPropertyTypeError = "JSON property has unexpected type." +
+		"\nProperty: %s\nExpected: %s"
+
+	// Error used when Regolith fails to parse a property os JSON
+	jsonPathParseError = "Failed to parse JSON.\nJSON Path: %s"
+
+	// Error used when JSON path is missing
+	jsonPathMissingError = "Required JSON path is missing.\nJSON Path: %s"
+
+	// Error used when JSON path exists but the type is wrong
+	jsonPathTypeError = "Invalid data type.\nJSON Path: %s\n" +
+		"Expected type: %s\n"
+
 	// Warning used when Git is not installed
 	gitNotInstalledWarning = "Git is not installed. Git is required to download " +
 		"filters.\n You can download Git from https://git-scm.com/downloads"
