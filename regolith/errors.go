@@ -125,6 +125,12 @@ const (
 	// Error used when filterFromObject function fails
 	filterFromObjectError = "Failed to parse filter from JSON object."
 
+	// Error used when remote filter fails to download
+	remoteFilterDownloadError = "Failed to download filter.\nFilter: %s"
+
+	// Error used when exec.Command fails.
+	execCommandError = "Failed to execute command.\nCommand: %s"
+
 	// Error used when FilterRunner.Check method fails
 	filterRunnerCheckError = "Filter check failed.\nFilter: %s"
 
