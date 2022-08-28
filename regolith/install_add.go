@@ -27,13 +27,15 @@ func installFilters(
 	filterDefinitions map[string]FilterInstaller, force bool,
 	dataPath, dotRegolithPath string,
 ) error {
-	err := CreateDirectoryIfNotExists(filepath.Join(dotRegolithPath, "cache/filters"), true)
+	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
+	err := CreateDirectoryIfNotExists(joinedPath, true)
 	if err != nil {
-		return PassError(err)
+		return WrapErrorf(err, osMkdirError, "cache/filters")
 	}
-	err = CreateDirectoryIfNotExists(filepath.Join(dotRegolithPath, "cache/venvs"), true)
+	joinedPath = filepath.Join(dotRegolithPath, "cache/venvs")
+	err = CreateDirectoryIfNotExists(joinedPath, true)
 	if err != nil {
-		return PassError(err)
+		return WrapErrorf(err, osMkdirError, "cache/venvs")
 	}
 
 	// Download all of the remote filters
@@ -52,8 +54,7 @@ func installFilters(
 			// Download the remote filter
 			err := remoteFilter.Download(force, dotRegolithPath)
 			if err != nil {
-				return WrapErrorf(
-					err, "Could not download %q!", name)
+				return WrapErrorf(err, remoteFilterDownloadError, name)
 			}
 			// Copy the data of the remote filter to the data path
 			remoteFilter.CopyFilterData(dataPath, dotRegolithPath)
@@ -63,7 +64,9 @@ func installFilters(
 		err = filterDefinition.InstallDependencies(nil, dotRegolithPath)
 		if err != nil {
 			return WrapErrorf(
-				err, "Failed to install dependencies for %q filter.", name)
+				err,
+				"Failed to install dependencies of the filter.\nFilter: %s.",
+				name)
 		}
 	}
 	return nil
@@ -73,13 +76,15 @@ func installFilters(
 func updateFilters(
 	remoteFilterDefinitions map[string]FilterInstaller, dotRegolithPath string,
 ) error {
-	err := CreateDirectoryIfNotExists(filepath.Join(dotRegolithPath, "cache/filters"), true)
+	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
+	err := CreateDirectoryIfNotExists(joinedPath, true)
 	if err != nil {
-		return PassError(err)
+		return WrapErrorf(err, osMkdirError, joinedPath)
 	}
-	err = CreateDirectoryIfNotExists(filepath.Join(dotRegolithPath, "cache/venvs"), true)
+	joinedPath = filepath.Join(dotRegolithPath, "cache/venvs")
+	err = CreateDirectoryIfNotExists(joinedPath, true)
 	if err != nil {
-		return PassError(err)
+		return WrapErrorf(err, osMkdirError, joinedPath)
 	}
 	resolverUpdated := false
 	// Download all of the remote filters
@@ -98,7 +103,7 @@ func updateFilters(
 			err := remoteFilter.Update(dotRegolithPath)
 			if err != nil {
 				return WrapErrorf(
-					err, "Could not update %q!", name)
+					err, "Failed to update filter.\nFilter: %s", name)
 			}
 		}
 	}
@@ -112,7 +117,9 @@ func parseInstallFilterArgs(
 ) ([]*parsedInstallFilterArg, error) {
 	result := []*parsedInstallFilterArg{}
 	if len(filters) == 0 {
-		return nil, WrappedError("No filters specified.")
+		return nil, WrappedError(
+			"No filters specified.\n" +
+				"Please specify at least one filter to install.")
 	}
 
 	// Parse the filter argument
@@ -128,9 +135,10 @@ func parseInstallFilterArgs(
 			splitStr := strings.Split(arg, "==")
 			if len(splitStr) != 2 {
 				return nil, WrappedErrorf(
-					"Unable to parse argument %q as filter data. "+
+					"Unable to parse argument.\n"+
+						"Argument: %s\n"+
 						"The argument should contain an URL and optionally a "+
-						"version number separated by '=='.",
+						"version number separated by \"==\".",
 					arg)
 			}
 			url, version = splitStr[0], splitStr[1]
@@ -153,16 +161,18 @@ func parseInstallFilterArgs(
 				updatedResolver = true
 			}
 			name = url
-			url, err = ResolveUrl(url)
+			url, err = ResolveUrl(name)
 			if err != nil {
 				return nil, WrapErrorf(
-					err, "Unable to resolve URL of %q.", url)
+					err,
+					"Unable to resolve filter name to URL.\n"+
+						"Filter name: %s", name)
 			}
 		}
 		key := [2]string{url, name}
 		if _, ok := parsedArgs[key]; ok {
 			return nil, WrapErrorf(
-				err, "Duplicate filter:\n URL: %s\n name: %s",
+				err, "Duplicate filter:\nURL: %s\nFilter name: %s",
 				url, name)
 		}
 		parsedArgs[key] = struct{}{}
@@ -202,7 +212,9 @@ func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 			return version, nil
 		}
 	}
-	return "", WrappedErrorf("No valid version found for %q filter.", name)
+	return "", WrappedError(
+		"Unable to find version of the filter that satisfies the " +
+			"specified constraints.")
 }
 
 // GetLatestRemoteFilterTag returns the most up-to-date tag of the remote filter
@@ -214,7 +226,8 @@ func GetLatestRemoteFilterTag(url, name string) (string, error) {
 			lastTag := tags[len(tags)-1]
 			return lastTag, nil
 		}
-		return "", WrappedErrorf("No tags found for %q filter.", name)
+		return "", WrappedError(
+			"No version tags found for the filter on its repository.")
 	}
 	return "", err
 }
@@ -222,12 +235,11 @@ func GetLatestRemoteFilterTag(url, name string) (string, error) {
 // ListRemoteFilterTags returns the list tags of the remote filter specified by the
 // filter name and URL.
 func ListRemoteFilterTags(url, name string) ([]string, error) {
-	output, err := exec.Command(
-		"git", "ls-remote", "--tags", "https://"+url,
-	).Output()
+	commandArgs := []string{"ls-remote", "--tags", "https://" + url}
+	output, err := exec.Command("git", commandArgs...).Output()
 	if err != nil {
-		return nil, WrapErrorf(
-			err, "Unable to list tags for %q filter.", name)
+		command := "git " + strings.Join(commandArgs, " ")
+		return nil, WrapErrorf(err, execCommandError, command)
 	}
 	// Go line by line though the output
 	var tags []string
@@ -252,12 +264,11 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 // filter URL. This function does not check whether the filter actually exists
 // in the repository.
 func GetHeadSha(url, name string) (string, error) {
-	output, err := exec.Command(
-		"git", "ls-remote", "--symref", "https://"+url, "HEAD",
-	).Output()
+	commandArgs := []string{
+		"ls-remote", "--symref", "https://" + url, "HEAD"}
+	output, err := exec.Command("git", commandArgs...).Output()
 	if err != nil {
-		return "", WrapErrorf(
-			err, "Unable to get head SHA for %q filter.", name)
+		return "", WrapErrorf(err, execCommandError, name)
 	}
 	// The result is on the second line.
 	lines := strings.Split(string(output), "\n")
