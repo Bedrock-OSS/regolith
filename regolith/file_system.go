@@ -14,6 +14,8 @@ import (
 	"github.com/otiai10/copy"
 )
 
+const copyFileBufferSize = 1_000_000 // 1 MB
+
 // RevertableFsOperations is a struct that performs file system operations,
 // keeps track of them, and can undo them if something goes wrong.
 type RevertableFsOperations struct {

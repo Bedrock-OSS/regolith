@@ -2,8 +2,6 @@ package regolith
 
 // Common errors and warnings used by Regolith
 const (
-	copyFileBufferSize = 1_000_000 // 1 MB
-
 	// Error message to display when when expecting an empty or unexisting directory
 	assertEmptyOrNewDirError = "Expected a path to an empty or unexisting directory:\n%s"
 
