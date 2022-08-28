@@ -21,11 +21,13 @@ func ShellFilterDefinitionFromObject(
 ) (*ShellFilterDefinition, error) {
 	filter := &ShellFilterDefinition{
 		FilterDefinition: *FilterDefinitionFromObject(id)}
-	command, ok := obj["command"].(string)
+	commandObj, ok := obj["command"]
 	if !ok {
-		return nil, WrapErrorf(
-			nil,
-			"Missing \"command\" property in filter definition %q.", filter.Id)
+		return nil, WrapErrorf(nil, jsonPropertyMissingError, "command")
+	}
+	command, ok := commandObj.(string)
+	if !ok {
+		return nil, WrappedErrorf(jsonPropertyTypeError, "command", "string")
 	}
 	filter.Command = command
 	return filter, nil
@@ -91,7 +93,7 @@ func (f *ShellFilter) run(
 			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
 	}
 	if err != nil {
-		return WrapError(err, "Failed to run shell filter.")
+		return WrapError(err, "Failed to run shell command.")
 	}
 	return nil
 }
@@ -107,7 +109,7 @@ func executeCommand(id string,
 	}
 	err = RunSubProcess(shell, []string{arg, joined}, filterDir, workingDir, ShortFilterName(id))
 	if err != nil {
-		return WrapError(err, "Failed to run shell script.")
+		return WrapError(err, runSubProcessError)
 	}
 	return nil
 }
