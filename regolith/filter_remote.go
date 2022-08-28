@@ -107,7 +107,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 		})
 		if err != nil {
 			return WrapErrorf(
-				err, "Failed to run %s.",
+				err, filterRunnerRunError,
 				NiceSubfilterName(f.Id, i))
 		}
 	}
@@ -170,8 +170,8 @@ func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, 
 		filterInstaller, err := FilterInstallerFromObject(
 			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
 		if err != nil {
-			return extraFilterJsonErrorInfo(path, WrapErrorf(
-				err, jsonPathParseError, jsonPath))
+			return extraFilterJsonErrorInfo(
+				path, WrapErrorf(err, jsonPathParseError, jsonPath))
 		}
 		err = filterInstaller.InstallDependencies(f, dotRegolithPath)
 		if err != nil {

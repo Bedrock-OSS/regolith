@@ -91,7 +91,7 @@ const (
 
 	// Error used when JSON path exists but the type is wrong
 	jsonPathTypeError = "Invalid data type.\nJSON Path: %s\n" +
-		"Expected type: %s\n"
+		"Expected type: %s"
 
 	// Error used when RunSubProcess funciton fails
 	runSubProcessError = "Failed to run sub process."
@@ -113,7 +113,7 @@ const (
 	getRemoteFilterDownloadRefError = "Failed to get download link for the filter.\n" +
 		"Filter repository Url: %s\n" +
 		"Filter name: %s\n" +
-		"Filter version: %s\n"
+		"Filter version: %s"
 
 	// Error used when CreateFilterRunner method of FilterInstaller fails
 	createFilterRunnerError = "Failed to create filter runner.\nFilter: %s"
@@ -139,4 +139,16 @@ const (
 
 	// Error used when recycled copy ClearCachedStates function fails
 	clearCachedStatesError = "Failed to clear cached file path states."
+
+	// Error used when SetupTmpFiles function fails
+	setupTmpFilesError = "Failed to setup temporary files.\n" +
+		"Regolith files path: %s" // .regolith
+
+	// Error used when ExportProject function fails
+	exportProjectError = "Failed to export project."
+
+	// Error used when RunContext.GetProfile function fails
+	runContextGetProfileError = "Failed to get profile."
+
+	filterRunnerRunError = "Failed to run filter.\nFilter: %s"
 )
