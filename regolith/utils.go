@@ -220,7 +220,7 @@ func GetDotRegolith(useAppData, silent bool, projectRoot string) (string, error)
 	// App data enabled - use user cache dir
 	userCache, err := os.UserCacheDir()
 	if err != nil {
-		return "", WrappedError("Unable to get user cache dir")
+		return "", WrappedError(osUserCacheDirError)
 	}
 	// Make sure that projectsRoot is an absolute path
 	absoluteProjectRoot, err := filepath.Abs(projectRoot)
