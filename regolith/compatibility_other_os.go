@@ -48,3 +48,8 @@ func FindMojangDir() (string, error) {
 	return "", WrappedErrorf(
 		"Unsupported operating system: '%s'", runtime.GOOS)
 }
+
+func FindPreviewDir() (string, error) {
+	return "", WrappedErrorf(
+		"Unsupported operating system: '%s'", runtime.GOOS)
+}

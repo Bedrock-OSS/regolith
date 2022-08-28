@@ -152,3 +152,18 @@ func FindMojangDir() (string, error) {
 	}
 	return result, nil
 }
+
+func FindPreviewDir() (string, error) {
+	result := filepath.Join(
+		os.Getenv("LOCALAPPDATA"), "Packages",
+		"Microsoft.MinecraftWindowsBeta_8wekyb3d8bbwe", "LocalState", "games",
+		"com.mojang")
+	if _, err := os.Stat(result); err != nil {
+		if os.IsNotExist(err) {
+			return "", WrapErrorf(err, osStatErrorIsNotExist, result)
+		}
+		return "", WrapErrorf(
+			err, osStatErrorAny, result)
+	}
+	return result, nil
+}
