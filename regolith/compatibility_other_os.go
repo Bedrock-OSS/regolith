@@ -14,6 +14,9 @@ const venvScriptsPath = "bin"
 // exeSuffix is a suffix for executable files.
 const exeSuffix = ""
 
+// Error used whe os.UserCacheDir fails
+const osUserCacheDirError = "Failed to get user cache directory."
+
 // copyFileSecurityInfo placeholder for a function which is necessary only
 // on Windows.
 func copyFileSecurityInfo(source string, target string) error {

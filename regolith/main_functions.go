@@ -488,7 +488,7 @@ func CleanUserCache() error {
 	// App data enabled - use user cache dir
 	userCache, err := os.UserCacheDir()
 	if err != nil {
-		return WrappedError("Unable to get user cache dir")
+		return WrappedError(osUserCacheDirError)
 	}
 	regolithCacheFiles := filepath.Join(userCache, appDataCachePath)
 	Logger.Infof("Regolith cache files are located in: %s", regolithCacheFiles)

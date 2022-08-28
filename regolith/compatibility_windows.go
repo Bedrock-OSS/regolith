@@ -17,6 +17,9 @@ const venvScriptsPath = "Scripts"
 // exeSuffix is a suffix for executable files.
 const exeSuffix = ".exe"
 
+// Error used whe os.UserCacheDir fails
+const osUserCacheDirError = "Failed to resolve %LocalAppData% path."
+
 // copyFileSecurityInfo copies the DACL info from source path to DACL of
 // the target path
 func copyFileSecurityInfo(source string, target string) error {

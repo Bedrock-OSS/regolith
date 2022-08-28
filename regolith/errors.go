@@ -151,4 +151,7 @@ const (
 	runContextGetProfileError = "Failed to get profile."
 
 	filterRunnerRunError = "Failed to run filter.\nFilter: %s"
+
+	// Error used when GetRegolithConfigPath fails
+	getRegolithConfigPathError = "Failed to get path to Regolith's app data folder."
 )
