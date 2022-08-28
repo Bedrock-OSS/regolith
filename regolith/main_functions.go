@@ -48,7 +48,8 @@ func Install(filters []string, force, debug bool) error {
 	filterDefinitions, err := filterDefinitionsFromConfigMap(config)
 	if err != nil {
 		return WrapError(
-			err, "Failed to get filter definitions from config file.")
+			err,
+			"Failed to get the list of filter definitions from config file.")
 	}
 	useAppData, err := useAppDataFromConfigMap(config)
 	if err != nil {
@@ -63,9 +64,11 @@ func Install(filters []string, force, debug bool) error {
 			_, ok := filterDefinitions[parsedArg.name]
 			if ok {
 				return WrappedErrorf(
-					"The filter %q is already on the filter definitions list.\n"+
-						"Please remove it first before installing it again or use "+
-						"the --force option.", parsedArg.name)
+					"The filter is already on the filter definitions list.\n"+
+						"Filter: %s\n"+
+						"If you want to force the installation of the filter, "+
+						"please add \"--force\" flag to your "+
+						"\"regolith install\" command", parsedArg.name)
 			}
 		}
 	}
@@ -77,21 +80,17 @@ func Install(filters []string, force, debug bool) error {
 			parsedArg.url, parsedArg.name, parsedArg.version)
 		if err != nil {
 			return WrapErrorf(
-				err, "Unable to get filter definition of %q filter.",
-				parsedArg.name)
+				err,
+				"Unable to download the filter definition from the Internet.\n"+
+					"Filter repository Url: %s\n"+
+					"Filter name: %s\n"+
+					"Filter version: %s\n",
+				parsedArg.url, parsedArg.name, parsedArg.version)
 		}
 		if parsedArg.version == "HEAD" || parsedArg.version == "latest" {
 			// The "HEAD" and "latest" keywords should be the same in the
 			// config file don't lock them to the actual versions
 			remoteFilterDefinition.Version = parsedArg.version
-		}
-		if err != nil {
-			return WrapErrorf(
-				err,
-				"Unable to download filter: \"%s\"\n"+
-					"Some of the files might still be in cache.\n"+
-					"Run \"regolith clean\" to fix invalid cache state.",
-				parsedArg.name)
 		}
 		filterInstallers[parsedArg.name] = remoteFilterDefinition
 	}
