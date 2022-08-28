@@ -33,7 +33,7 @@ func ShellFilterDefinitionFromObject(
 
 func (f *ShellFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(f.Settings, context); err != nil {
-		return false, err
+		return false, PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -41,9 +41,9 @@ func (f *ShellFilter) Run(context RunContext) (bool, error) {
 func (f *ShellFilterDefinition) CreateFilterRunner(
 	runConfiguration map[string]interface{},
 ) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create shell filter.")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &ShellFilter{
 		Filter:     *basicFilter,

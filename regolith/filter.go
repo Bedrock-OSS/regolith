@@ -109,7 +109,7 @@ func FilterDefinitionFromObject(id string) *FilterDefinition {
 	return &FilterDefinition{Id: id}
 }
 
-func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
+func filterFromObject(obj map[string]interface{}) (*Filter, error) {
 	filter := &Filter{}
 	// Name
 	description, _ := obj["description"].(string)

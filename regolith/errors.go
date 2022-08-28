@@ -92,9 +92,15 @@ const (
 	jsonPathTypeError = "Invalid data type.\nJSON Path: %s\n" +
 		"Expected type: %s\n"
 
+	// Error used when RunSubProcess funciton fails
+	runSubProcessError = "Failed to run sub process."
+
 	// Warning used when Git is not installed
 	gitNotInstalledWarning = "Git is not installed. Git is required to download " +
 		"filters.\n You can download Git from https://git-scm.com/downloads"
+
+	// Error used when filterFromObject function fails
+	filterFromObjectError = "Failed to parse filter from JSON object."
 
 	// Error used when certain function is not implemented on this system
 	notImplementedOnThisSystemError = "Not implemented for this system."
