@@ -118,17 +118,6 @@ func NotImplementedError(text string) error {
 	return wrapErrorStackTrace(nil, text)
 }
 
-// VersionMismatchError is used when cached filter version doesn't match the one required by config.
-func VersionMismatchError(id string, requiredVersion string, cachedVersion string) error {
-	text := fmt.Sprintf(
-		"Installation missmatch for '%s' detected.\n"+
-			"Installed version: %s\n"+
-			"Required version: %s\n"+
-			"Update the filter using: 'regolith update %[1]s'",
-		id, cachedVersion, requiredVersion)
-	return wrapErrorStackTrace(nil, text)
-}
-
 // WrappedError creates an error with a stack trace from text.
 func WrappedError(text string) error {
 	return wrapErrorStackTrace(nil, text)
