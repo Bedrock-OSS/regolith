@@ -205,7 +205,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 				"Unable to create Java filter from %q filter definition.", id)
 		}
 		return filter, nil
-	case ".net":
+	case "dotnet":
 		filter, err := DotNetFilterDefinitionFromObject(id, obj)
 		if err != nil {
 			return nil, WrapErrorf(
