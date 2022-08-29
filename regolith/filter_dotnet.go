@@ -20,13 +20,9 @@ func DotNetFilterDefinitionFromObject(id string, obj map[string]interface{}) (*D
 	filter := &DotNetFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	script, ok := obj["path"].(string)
 	if !ok {
-		script, ok = obj["script"].(string)
-		if !ok {
-			return nil, WrappedErrorf(
-				"Missing \"path\" property in %s definition.",
-				FullFilterToNiceFilterName(filter.Id))
-		}
-		Logger.Warnf("\"script\" property in %s definition is deprecated, use \"path\" instead.", FullFilterToNiceFilterName(filter.Id))
+		return nil, WrappedErrorf(
+			"Missing \"path\" property in %s definition.",
+			FullFilterToNiceFilterName(filter.Id))
 	}
 	filter.Script = script
 	return filter, nil
