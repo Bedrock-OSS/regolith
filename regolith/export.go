@@ -215,9 +215,15 @@ func ExportProject(
 	// (due to Windows API limitation).
 	paths, err := os.ReadDir(dataPath)
 	if err != nil {
-		return WrapErrorf(
-			err, "Failed to read the files from the data path %q",
-			dataPath)
+		var err1 error = nil
+		if os.IsNotExist(err) {
+			err1 = os.MkdirAll(dataPath, 0666)
+		}
+		if err1 != nil {
+			return WrapErrorf(
+				err, "Failed to read the files from the data path %q",
+				dataPath)
+		}
 	}
 	revertibleOps, err := NewRevertableFsOperaitons(
 		filepath.Join(dotRegolithPath, ".dataBackup"))
