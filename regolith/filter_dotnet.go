@@ -8,7 +8,7 @@ import (
 
 type DotNetFilterDefinition struct {
 	FilterDefinition
-	Script string `json:"script,omitempty"`
+	Path string `json:"path,omitempty"`
 }
 
 type DotNetFilter struct {
@@ -18,13 +18,13 @@ type DotNetFilter struct {
 
 func DotNetFilterDefinitionFromObject(id string, obj map[string]interface{}) (*DotNetFilterDefinition, error) {
 	filter := &DotNetFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
-	script, ok := obj["path"].(string)
+	path, ok := obj["path"].(string)
 	if !ok {
 		return nil, WrappedErrorf(
 			"Missing \"path\" property in %s definition.",
 			FullFilterToNiceFilterName(filter.Id))
 	}
-	filter.Script = script
+	filter.Path = path
 	return filter, nil
 }
 func (f *DotNetFilter) Run(context RunContext) (bool, error) {
@@ -42,7 +42,7 @@ func (f *DotNetFilter) run(context RunContext) error {
 			append(
 				[]string{
 					context.AbsoluteLocation + string(os.PathSeparator) +
-						f.Definition.Script,
+						f.Definition.Path,
 				},
 				f.Arguments...,
 			),
@@ -60,7 +60,7 @@ func (f *DotNetFilter) run(context RunContext) error {
 			append(
 				[]string{
 					context.AbsoluteLocation + string(os.PathSeparator) +
-						f.Definition.Script, string(jsonSettings)},
+						f.Definition.Path, string(jsonSettings)},
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
@@ -95,8 +95,8 @@ func (f *DotNetFilterDefinition) Check(context RunContext) error {
 	if err != nil {
 		return WrapError(
 			err,
-			"DotNet not found, download and install it"+
-				" from https://dotnet.microsoft.com/")
+			".Net not found, download and install it"+
+				" from https://dotnet.microsoft.com/download")
 	}
 	cmd, err := exec.Command("dotnet", "--version").Output()
 	if err != nil {
