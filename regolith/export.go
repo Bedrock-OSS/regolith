@@ -219,19 +219,33 @@ func ExportProject(
 			err, "Failed to read the files from the data path %q",
 			dataPath)
 	}
-	revertibleOps, err := NewRevertableFsOperaitons(
-		filepath.Join(dotRegolithPath, ".dataBackup"))
+	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
+	revertibleOps, err := NewRevertableFsOperaitons(backupPath)
 	if err != nil {
-		return PassError(err)
+		return WrapErrorf(err, "Failed to prepare backup path for revertable"+
+			" file system operations.\n"+
+			"Path that Regolith tried to use: %s", backupPath)
 	}
 	for _, path := range paths {
 		path := filepath.Join(dataPath, path.Name())
 		err = revertibleOps.DeleteDir(path)
 		if err != nil {
 			revertibleOps.Undo()
-			return WrapErrorf(
-				err, "Failed to clear filter path from data path %q.",
-				path)
+			return WrapError(
+				err, "Failed clear filters data before replacing it with "+
+					"updated version of the files.\n"+
+					"Every time you run Regolith, it creates a copy of the "+
+					"data files so they can be modified by the filters.\n"+
+					"After running the filters, the copy is moved back to "+
+					"the original location.\n"+
+					"Old data files are deleted to free space for the modified "+
+					"copy.\n"+
+					"This time Regolith wasn't able to clear the data "+
+					"directory.\n"+
+					"The most common reason for this problem is that the "+
+					"data path is used by another program (usually terminal).\n"+
+					"Please close your terminal and try again.\n"+
+					"Make sure that you don't open it inside the filters data path.")
 		}
 	}
 

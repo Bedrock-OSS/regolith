@@ -41,8 +41,7 @@ func NewRevertableFsOperaitons(backupPath string) (*RevertableFsOperations, erro
 	// Create empty directory for the backup files in the backup path
 	err = createBackupPath(fullBackupPath)
 	if err != nil {
-		return nil, WrapErrorf(
-			err, "Failed to create backup folder.\n\tPath: %s", fullBackupPath)
+		return nil, PassError(err)
 	}
 
 	return &RevertableFsOperations{
@@ -103,8 +102,10 @@ func (r *RevertableFsOperations) Delete(path string) error {
 	if err != nil {
 		return WrapErrorf(
 			err,
-			"Failed to create backup for file.\nPath: %s",
-			path)
+			"Failed to move the file to the backup location.\n"+
+				"Path: %s\n"+
+				"Backup path: %s",
+			path, tmpPath)
 	}
 	r.undoOperations = append(r.undoOperations, func() error {
 		err := ForceMoveFile(tmpPath, path)
@@ -405,11 +406,10 @@ func createBackupPath(path string) error {
 			return WrapErrorf(err, isDirEmptyError, path)
 		}
 		if !isEmpty {
-			return WrapErrorf(
+			return WrapError(
 				err,
-				"Unable to use path for backups because it's not an empty "+
-					"directory.\nPath: %s",
-				path)
+				"Unable to use path for backups because the directory is"+
+					" not empty.")
 		}
 	}
 	return nil
@@ -591,17 +591,13 @@ func ForceMoveFile(source, target string) error {
 		if err != nil {
 			return WrapErrorf(err, osRemoveError, source)
 		}
-	}
-	if err := CopyFile(source, target); err != nil {
-		return WrapErrorf(err, osCopyError, source, target)
+	} else { // Regular file
+		if err := CopyFile(source, target); err != nil {
+			return WrapErrorf(err, osCopyError, source, target)
+		}
 	}
 	if err := os.RemoveAll(source); err != nil {
-		return WrapErrorf(
-			err,
-			"Failed to remove file copied.\n"+
-				"File to remove: %s\n"+
-				"Copied file: %s",
-			source, target)
+		return WrapErrorf(err, "Failed to remove file copied.")
 	}
 	return nil
 }

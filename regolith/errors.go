@@ -41,7 +41,8 @@ const (
 	copyFileSecurityInfoError = "Failed to copy ACL.\nSource: %s\nTarget: %s"
 
 	// Error used when RevertableFsOperations.Delete fails
-	revertableFsOperationsDeleteError = "Failed to delete file.\nPath: %s"
+	revertableFsOperationsDeleteError = "Failed to perform revertable " +
+		"deletion of the file or directory.\nPath: %s"
 
 	// Error used when filepath.Rel fails
 	filepathRelError = "Failed to get relative path.\nBase: %s\nTarget: %s"
