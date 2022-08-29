@@ -100,7 +100,7 @@ func (f *DotNetFilterDefinition) Check(context RunContext) error {
 		return WrapError(
 			err,
 			"DotNet not found, download and install it"+
-				" from https://adoptopenjdk.net/")
+				" from https://dotnet.microsoft.com/")
 	}
 	cmd, err := exec.Command("dotnet", "--version").Output()
 	if err != nil {
