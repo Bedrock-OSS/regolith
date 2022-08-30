@@ -17,6 +17,9 @@ const venvScriptsPath = "Scripts"
 // exeSuffix is a suffix for executable files.
 const exeSuffix = ".exe"
 
+// Error used whe os.UserCacheDir fails
+const osUserCacheDirError = "Failed to resolve %LocalAppData% path."
+
 // copyFileSecurityInfo copies the DACL info from source path to DACL of
 // the target path
 func copyFileSecurityInfo(source string, target string) error {
@@ -25,13 +28,11 @@ func copyFileSecurityInfo(source string, target string) error {
 		windows.SE_FILE_OBJECT,
 		windows.DACL_SECURITY_INFORMATION)
 	if err != nil {
-		return WrapErrorf(
-			err, "Unable to get security info of %q.", source)
+		return WrapError(err, "Unable to get security info from the source.")
 	}
 	dacl, _, err := securityInfo.DACL()
 	if err != nil {
-		return WrapErrorf(
-			err, "Unable to get DACL of %q.", source)
+		return WrapErrorf(err, "Unable to get DACL of the source.")
 	}
 	err = windows.SetNamedSecurityInfo(
 		target,
@@ -39,8 +40,7 @@ func copyFileSecurityInfo(source string, target string) error {
 		windows.DACL_SECURITY_INFORMATION, nil, nil, dacl, nil,
 	)
 	if err != nil {
-		return WrapErrorf(
-			err, "Unable to set DACL of %q.", target)
+		return WrapErrorf(err, "Unable to set DACL of the target.")
 	}
 	return nil
 }
@@ -146,13 +146,24 @@ func FindMojangDir() (string, error) {
 		"com.mojang")
 	if _, err := os.Stat(result); err != nil {
 		if os.IsNotExist(err) {
-			return "", WrapErrorf(
-				err, "The \"com.mojang\" folder is not at \"%s\".\n"+
-					"Does your system have multiple user accounts?", result)
+			return "", WrapErrorf(err, osStatErrorIsNotExist, result)
+		}
+		return "", WrapErrorf(err, osStatErrorAny, result)
+	}
+	return result, nil
+}
+
+func FindPreviewDir() (string, error) {
+	result := filepath.Join(
+		os.Getenv("LOCALAPPDATA"), "Packages",
+		"Microsoft.MinecraftWindowsBeta_8wekyb3d8bbwe", "LocalState", "games",
+		"com.mojang")
+	if _, err := os.Stat(result); err != nil {
+		if os.IsNotExist(err) {
+			return "", WrapErrorf(err, osStatErrorIsNotExist, result)
 		}
 		return "", WrapErrorf(
-			err, "Unable to access \"%s\".\n"+
-				"Are your user permissions correct?", result)
+			err, osStatErrorAny, result)
 	}
 	return result, nil
 }

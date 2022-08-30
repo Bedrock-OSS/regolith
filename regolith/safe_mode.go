@@ -25,7 +25,8 @@ func IsUnlocked(dotRegolithPath string) bool {
 
 	if !unlocked {
 		Logger.Info(
-			"Safe mode is locked. Unlock it by running \"regolith unlock\".")
+			"Safe mode is locked. Unlock it by running command:\n" +
+				"regolith unlock")
 	}
 
 	return unlocked
