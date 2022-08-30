@@ -18,11 +18,13 @@ type DotNetFilter struct {
 
 func DotNetFilterDefinitionFromObject(id string, obj map[string]interface{}) (*DotNetFilterDefinition, error) {
 	filter := &DotNetFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
-	path, ok := obj["path"].(string)
+	pathObj, ok := obj["path"]
 	if !ok {
-		return nil, WrappedErrorf(
-			"Missing \"path\" property in %s definition.",
-			FullFilterToNiceFilterName(filter.Id))
+		return nil, WrappedErrorf(jsonPropertyMissingError, "path")
+	}
+	path, ok := pathObj.(string)
+	if !ok {
+		return nil, WrappedErrorf(jsonPropertyTypeError, "path", "string")
 	}
 	filter.Path = path
 	return filter, nil
@@ -68,16 +70,16 @@ func (f *DotNetFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return WrapError(err, "Failed to run .Net filter")
+			return PassError(err)
 		}
 	}
 	return nil
 }
 
 func (f *DotNetFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create .Net filter")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &DotNetFilter{
 		Filter:     *basicFilter,
