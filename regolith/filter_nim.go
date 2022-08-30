@@ -22,10 +22,14 @@ func NimFilterDefinitionFromObject(
 	id string, obj map[string]interface{},
 ) (*NimFilterDefinition, error) {
 	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
-	script, ok := obj["script"].(string)
+	scriptObj, ok := obj["script"]
+	if !ok {
+		return nil, WrappedErrorf(jsonPropertyMissingError, "script")
+	}
+	script, ok := scriptObj.(string)
 	if !ok {
 		return nil, WrappedErrorf(
-			"Missing \"script\" property in filter definition %q.", filter.Id)
+			jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
 	return filter, nil
@@ -46,7 +50,7 @@ func (f *NimFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return WrapError(err, "Failed to run Nim script.")
+			return PassError(err)
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -63,7 +67,7 @@ func (f *NimFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return WrapError(err, "Failed to run Nim script.")
+			return PassError(err)
 		}
 	}
 	return nil
@@ -71,15 +75,15 @@ func (f *NimFilter) run(context RunContext) error {
 
 func (f *NimFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, err
+		return false, PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
 
 func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create Nim filter.")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &NimFilter{
 		Filter:     *basicFilter,
@@ -97,9 +101,10 @@ func (f *NimFilterDefinition) InstallDependencies(
 		installLocation = parent.GetDownloadPath(dotRegolithPath)
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
-	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
+	joinedPath := filepath.Join(installLocation, f.Script)
+	scriptPath, err := filepath.Abs(joinedPath)
 	if err != nil {
-		return WrapErrorf(err, "Unable to resolve path of %s script", f.Id)
+		return WrapErrorf(err, filepathAbsError, joinedPath)
 	}
 	filterPath := filepath.Dir(scriptPath)
 	if hasNimble(filterPath) {
@@ -108,7 +113,8 @@ func (f *NimFilterDefinition) InstallDependencies(
 			"nimble", []string{"install"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
-				err, "Failed to run nimble to install dependencies of %s.",
+				err, "Failed to run nimble to install dependencies of a filter."+
+					"Filter name: %s.",
 				f.Id)
 		}
 	}
