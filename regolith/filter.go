@@ -280,7 +280,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 		"Invalid runWith value filter definition.\n"+
 			"Filter: %s\n"+
 			"Value: %s\n"+
-			"Valid values: java, nim, deno, nodejs, python, shell, exe",
+			"Valid values: java, dotnet, nim, deno, nodejs, python, shell, exe",
 		runWith, id)
 }
 
