@@ -5,7 +5,6 @@ package regolith
 
 import (
 	"fmt"
-	"runtime"
 )
 
 // venvScriptsPath is a folder name between "venv" and "python" that leads to
