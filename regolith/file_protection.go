@@ -37,7 +37,7 @@ func LoadEditedFiles(dotRegolithPath string) EditedFiles {
 // Dump dumps EditedFiles to EditedFilesPath in JSON format.
 func (f *EditedFiles) Dump(dotRegolithPath string) error {
 	result, err := json.MarshalIndent(f, "", "\t")
-	if err != nil {
+	if err != nil { // This should never happen.
 		return WrapError(err, "Failed to marshal edited files list JSON.")
 	}
 	// Create parent directory of EditedFilesPath
@@ -45,14 +45,11 @@ func (f *EditedFiles) Dump(dotRegolithPath string) error {
 	parentDir := filepath.Dir(efp)
 	err = os.MkdirAll(parentDir, 0666)
 	if err != nil {
-		return WrapErrorf(
-			err, "Failed to create \"%s\" directory for edited files list.",
-			parentDir)
+		return WrapErrorf(err, osMkdirError, parentDir)
 	}
 	err = os.WriteFile(efp, result, 0666)
 	if err != nil {
-		return WrapErrorf(
-			err, "Failed to save edited files list in \"%s\".", efp)
+		return WrapErrorf(err, fileWriteError, efp)
 	}
 	return nil
 }
@@ -66,10 +63,8 @@ func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
 	}
 	err := checkDeletionSafety(rpPath, files)
 	if err != nil {
-		return WrapErrorf(
-			err,
-			"The resource pack files from \"%s\" has been modified and "+
-				"cannot be deleted.", rpPath)
+		return WrapError(
+			err, "Deletion safety check for resource pack failed.")
 	}
 	files, ok = f.Bp[bpPath]
 	if !ok {
@@ -77,11 +72,8 @@ func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
 	}
 	err = checkDeletionSafety(bpPath, files)
 	if err != nil {
-		return WrapErrorf(
-			err,
-			"The behavior pack files from \"%s\" has been modified and"+
-				" cannot be deleted",
-			bpPath)
+		return WrapError(
+			err, "Deletion safety check for behavior pack failed.")
 	}
 	return nil
 }
@@ -91,13 +83,11 @@ func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
 func (f *EditedFiles) UpdateFromPaths(rpPath string, bpPath string) error {
 	rpFiles, err := listFiles(rpPath)
 	if err != nil {
-		return WrapErrorf(
-			err, "Failed to list resource pack files from \"%s\".", rpPath)
+		return WrapError(err, "Failed to list resource pack files.")
 	}
 	bpFiles, err := listFiles(bpPath)
 	if err != nil {
-		return WrapErrorf(
-			err, "Failed to list behavior pack files from \"%s\".", bpPath)
+		return WrapError(err, "Failed to list behavior pack files.")
 	}
 	f.Rp[rpPath] = rpFiles
 	f.Bp[bpPath] = bpFiles
@@ -122,23 +112,19 @@ func listFiles(path string) ([]string, error) {
 	err := filepath.WalkDir(path,
 		func(s string, d fs.DirEntry, e error) error {
 			if e != nil {
-				return WrapErrorf(e, "Failed to walk directory \"%s\".", path)
+				return PassError(e)
 			}
 			if !d.IsDir() {
 				relpath, err := filepath.Rel(path, s)
 				if err != nil {
-					return WrapErrorf(
-						err,
-						"Failed to get path relative to \"%s\" from \"%s\"",
-						path, s)
+					return WrapErrorf(err, osRelError, path, s)
 				}
 				result = append(result, relpath)
 			}
 			return nil
 		})
 	if err != nil {
-		return make([]string, 0), WrapErrorf(
-			err, "Failed to walk directory \"%s\".", path)
+		return make([]string, 0), WrapErrorf(err, osWalkError, path)
 	}
 	return result, nil
 }
@@ -155,40 +141,35 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 		if os.IsNotExist(err) {
 			return nil // directory doesn't exist there is nothing to check
 		}
-		return WrapErrorf(err, "Unable to access stats of the %q path.", path)
+		return WrapErrorf(err, osStatErrorAny, path)
 	} else if !stats.IsDir() {
-		return WrappedErrorf("The output path %q is not a directory.", path)
+		return WrappedErrorf(isDirNotADirError, path)
 	}
 	err = filepath.WalkDir(path,
 		func(s string, d fs.DirEntry, e error) error {
 			if e != nil {
-				return e
+				return WrapErrorf(e, osWalkError, path)
 			}
 			if d.IsDir() { // Directories aren't checked
 				return nil
 			}
 			relpath, err := filepath.Rel(path, s)
 			if err != nil {
-				return WrapErrorf(
-					err,
-					"Failed to get path relative to \"%s\" from \"%s\"",
-					path, s)
+				return WrapErrorf(err, osRelError, path, s)
 			}
 			s = relpath // remove path from the file path
+			const notRegolithFileError = "File is not on the list of files" +
+				" created by Regolith.\nPath: %s"
 			for {
 				if i >= len(removableFiles) {
-					return WrappedErrorf(
-						"File path %q is not on the list of the files "+
-							"recently modified by Regolith", s)
+					return WrappedErrorf(notRegolithFileError, s)
 				}
 				currPath := removableFiles[i]
 				i++
 				if s == currPath { // found path on the list
 					break
 				} else if s < currPath { // this path won't be on the list
-					return WrappedErrorf(
-						"File path %q is not on the list of the files "+
-							"recently modified by Regolith", s)
+					return WrappedErrorf(notRegolithFileError, s)
 				}
 			}
 			return nil

@@ -46,40 +46,40 @@ func ConfigFromObject(obj map[string]interface{}) (*Config, error) {
 	// Name
 	name, ok := obj["name"].(string)
 	if !ok {
-		return nil, WrappedError("The \"name\" property is missing.")
+		return nil, WrappedErrorf(jsonPathMissingError, "name")
 	}
 	result.Name = name
 	// Author
 	author, ok := obj["author"].(string)
 	if !ok {
-		return nil, WrappedError("The \"author\" is missing.")
+		return nil, WrappedErrorf(jsonPathMissingError, "author")
 	}
 	result.Author = author
 	// Packs
 	if packs, ok := obj["packs"]; ok {
 		packs, ok := packs.(map[string]interface{})
 		if !ok {
-			return nil, WrappedError("The \"packs\" property not a map.")
+			return nil, WrappedErrorf(jsonPathTypeError, "packs", "object")
 		}
 		// Packs can be empty, no need to check for errors
 		result.Packs = PacksFromObject(packs)
 	} else {
-		return nil, WrappedError("The \"packs\" property is missing.")
+		return nil, WrappedErrorf(jsonPathMissingError, "packs")
 	}
 	// Regolith
 	if regolith, ok := obj["regolith"]; ok {
 		regolith, ok := regolith.(map[string]interface{})
 		if !ok {
-			return nil, WrappedError("The \"regolith\" property is not a map.")
+			return nil, WrappedErrorf(
+				jsonPathTypeError, "regolith", "object")
 		}
 		regolithProject, err := RegolithProjectFromObject(regolith)
 		if err != nil {
-			return nil, WrapError(
-				err, "Could not parse \"regolith\" property.")
+			return nil, WrapErrorf(err, jsonPropertyParseError, "regolith")
 		}
 		result.RegolithProject = regolithProject
 	} else {
-		return nil, WrappedError("Missing \"regolith\" property.")
+		return nil, WrappedErrorf(jsonPropertyMissingError, "regolith")
 	}
 	return result, nil
 }
@@ -107,11 +107,12 @@ func RegolithProjectFromObject(
 	}
 	// DataPath
 	if _, ok := obj["dataPath"]; !ok {
-		return result, WrappedError("The \"dataPath\" property is missing.")
+		return result, WrappedErrorf(jsonPropertyMissingError, "dataPath")
 	}
 	dataPath, ok := obj["dataPath"].(string)
 	if !ok {
-		return result, WrappedErrorf("The \"dataPath\" is not a string")
+		return result, WrappedErrorf(
+			jsonPropertyTypeError, "dataPath", "string")
 	}
 	result.DataPath = dataPath
 	// Filter definitions
@@ -121,13 +122,14 @@ func RegolithProjectFromObject(
 			filterDefinitionMap, ok := filterDefinition.(map[string]interface{})
 			if !ok {
 				return result, WrappedErrorf(
-					"The filter definition %q not a map.", filterDefinitionName)
+					jsonPropertyTypeError, "filterDefinitions",
+					"object")
 			}
 			filterInstaller, err := FilterInstallerFromObject(
 				filterDefinitionName, filterDefinitionMap)
 			if err != nil {
-				return result, WrapError(
-					err, "Could not parse the filter definition.")
+				return result, WrapErrorf(
+					err, jsonPropertyParseError, "filterDefinitions")
 			}
 			result.FilterDefinitions[filterDefinitionName] = filterInstaller
 		}
@@ -135,19 +137,20 @@ func RegolithProjectFromObject(
 	// Profiles
 	profiles, ok := obj["profiles"].(map[string]interface{})
 	if !ok {
-		return result, WrappedError("Missing \"profiles\" property.")
+		return result, WrappedErrorf(jsonPropertyMissingError, "profiles")
 	}
 	for profileName, profile := range profiles {
 		profileMap, ok := profile.(map[string]interface{})
 		if !ok {
 			return result, WrappedErrorf(
-				"Profile %q is not a map.", profileName)
+				jsonPropertyTypeError,
+				"profiles->"+profileName, "object")
 		}
 		profileValue, err := ProfileFromObject(
 			profileMap, result.FilterDefinitions)
 		if err != nil {
 			return result, WrapErrorf(
-				err, "Could not parse %q profile.", profileName)
+				err, jsonPropertyParseError, "profiles->"+profileName)
 		}
 		result.Profiles[profileName] = profileValue
 	}
@@ -156,8 +159,8 @@ func RegolithProjectFromObject(
 	if _, ok := obj["useAppData"]; ok {
 		useAppData, ok = obj["useAppData"].(bool)
 		if !ok {
-			return result, WrappedError(
-				"The \"useAppData\" property is not a boolean.")
+			return result, WrappedErrorf(
+				jsonPropertyTypeError, "useAppData", "boolean")
 		}
 	}
 	result.UseAppData = useAppData
@@ -167,28 +170,31 @@ func RegolithProjectFromObject(
 // ExportTargetFromObject creates a "ExportTarget" object from
 // map[string]interface{}
 func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
-	// TODO - implement in a proper way
 	result := ExportTarget{}
 	// Target
-	target, ok := obj["target"].(string)
+	targetObj, ok := obj["target"]
 	if !ok {
-		return result, WrappedError(
-			"The\"target\" property in \"config.json\" is missing.")
+		return result, WrappedErrorf(jsonPropertyMissingError, "target")
+	}
+	target, ok := targetObj.(string)
+	if !ok {
+		return result, WrappedErrorf(
+			jsonPropertyTypeError, "target", "string")
 	}
 	result.Target = target
-	// RpPath
+	// RpPath - can be empty
 	rpPath, _ := obj["rpPath"].(string)
 	result.RpPath = rpPath
-	// BpPath
+	// BpPath - can be empty
 	bpPath, _ := obj["bpPath"].(string)
 	result.BpPath = bpPath
-	// WorldName
+	// WorldName - can be empty
 	worldName, _ := obj["worldName"].(string)
 	result.WorldName = worldName
-	// WorldPath
+	// WorldPath - can be empty
 	worldPath, _ := obj["worldPath"].(string)
 	result.WorldPath = worldPath
-	// ReadOnly
+	// ReadOnly - can be empty
 	readOnly, _ := obj["readOnly"].(bool)
 	result.ReadOnly = readOnly
 	return result, nil
