@@ -52,6 +52,8 @@ sidebar:
     children:
       - title: "Java Filters"
         url: /docs/java-filters
+      - title: ".NET Filters"
+        url: /docs/dotnet-filters
       - title: "Nim Filters"
         url: /docs/nim-filters
       - title: "Python Filters"
