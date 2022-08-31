@@ -3,10 +3,6 @@
 
 package regolith
 
-import (
-	"fmt"
-)
-
 // venvScriptsPath is a folder name between "venv" and "python" that leads to
 // the python executable.
 const venvScriptsPath = "bin"
