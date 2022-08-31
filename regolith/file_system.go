@@ -14,70 +14,7 @@ import (
 	"github.com/otiai10/copy"
 )
 
-const (
-	copyFileBufferSize = 1_000_000 // 1 MB
-
-	// Error message to display when when expecting an empty or unexisting directory
-	assertEmptyOrNewDirError = "Expected a path to an empty or unexisting directory:\n%s"
-
-	// Error message for filepath.Abs() function.
-	filepathAbsError = "Failed to get absolute path to:\n%s"
-
-	// Error message for os.Stat failore
-	osStatErrorAny = "Failed to access file info for path:\n%s"
-
-	// Error message for file or directory that doesn't exist
-	osStatErrorIsNotExist = "Following path doesn't exist:\n%s"
-
-	// Error message for os.Stat when the funciton should fail because it's
-	// expected that the target path doesn't exist
-	osStatExistsError = "Path already exists:\n%s"
-
-	// Error message for handling failores of os.Rename
-	osRenameError = "Failed to move file or directory:\nSource: %s\nTarget: %s"
-
-	// Error message for handling failores of os.Copy
-	osCopyError = "Failed to copy file or directory:\nSource: %s\nTarget: %s"
-
-	// Error message displayed when mkdir (or similar function) fails
-	osMkdirError = "Failed to create directory:\n%s"
-
-	// Common Error message to be reused on top of IsDirEmpty
-	isDirEmptyError = "Failed to check if path is an empty directory.\nPath: %s"
-
-	// Error used when an empty directory is expected but it's not
-	isDirEmptyNotEmptyError = "Path is an empty directory.\nPath: %s"
-
-	// Error used when copyFileSecurityInfo fails
-	copyFileSecurityInfoError = "Failed to copy ACL.\nSource: %s\nTarget: %s"
-
-	// Error used when RevertableFsOperations.Delete fails
-	revertableFsOperationsDeleteError = "Failed to delete file.\nPath: %s"
-
-	// Error used when filepath.Rel fails
-	filepathRelError = "Failed to get relative path.\nBase: %s\nTarget: %s"
-
-	// Error used when os.Remove (or similar function) fails
-	osRemoveError = "Failed to delete file or directory.\nPath: %s"
-
-	// Error used when MoveOrCopy function fails
-	moveOrCopyError = "Failed to move or copy file or directory.\nSource: %s\nTarget: %s"
-
-	// Error used when expecting a directory but it's not
-	isDirNotADirError = "Path is not a directory.\nPath: %s"
-
-	// Error used when os.Open fails
-	osOpenError = "Failed to open.\nPath: %s"
-
-	// Error used when os.Create fails
-	osCreateError = "Failed to open for writing.\nPath: %s"
-
-	// Error used when program fails to read from opened file
-	fileReadError = "Failed to read from file.\nPath: %s"
-
-	// Error used when program fails to write to opened file
-	fileWriteError = "Failed to write to file.\nPath: %s"
-)
+const copyFileBufferSize = 1_000_000 // 1 MB
 
 // RevertableFsOperations is a struct that performs file system operations,
 // keeps track of them, and can undo them if something goes wrong.
@@ -104,8 +41,7 @@ func NewRevertableFsOperaitons(backupPath string) (*RevertableFsOperations, erro
 	// Create empty directory for the backup files in the backup path
 	err = createBackupPath(fullBackupPath)
 	if err != nil {
-		return nil, WrapErrorf(
-			err, "Failed to create backup folder.\n\tPath: %s", fullBackupPath)
+		return nil, PassError(err)
 	}
 
 	return &RevertableFsOperations{
@@ -166,8 +102,10 @@ func (r *RevertableFsOperations) Delete(path string) error {
 	if err != nil {
 		return WrapErrorf(
 			err,
-			"Failed to create backup for file.\nPath: %s",
-			path)
+			"Failed to move the file to the backup location.\n"+
+				"Path: %s\n"+
+				"Backup path: %s",
+			path, tmpPath)
 	}
 	r.undoOperations = append(r.undoOperations, func() error {
 		err := ForceMoveFile(tmpPath, path)
@@ -468,11 +406,10 @@ func createBackupPath(path string) error {
 			return WrapErrorf(err, isDirEmptyError, path)
 		}
 		if !isEmpty {
-			return WrapErrorf(
+			return WrapError(
 				err,
-				"Unable to use path for backups because it's not an empty "+
-					"directory.\nPath: %s",
-				path)
+				"Unable to use path for backups because the directory is"+
+					" not empty.")
 		}
 	}
 	return nil
@@ -654,17 +591,13 @@ func ForceMoveFile(source, target string) error {
 		if err != nil {
 			return WrapErrorf(err, osRemoveError, source)
 		}
-	}
-	if err := CopyFile(source, target); err != nil {
-		return WrapErrorf(err, osCopyError, source, target)
+	} else { // Regular file
+		if err := CopyFile(source, target); err != nil {
+			return WrapErrorf(err, osCopyError, source, target)
+		}
 	}
 	if err := os.RemoveAll(source); err != nil {
-		return WrapErrorf(
-			err,
-			"Failed to remove file copied.\n"+
-				"File to remove: %s\n"+
-				"Copied file: %s",
-			source, target)
+		return WrapErrorf(err, "Failed to remove file copied.")
 	}
 	return nil
 }

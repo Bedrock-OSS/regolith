@@ -20,12 +20,16 @@ func ExeFilterDefinitionFromObject(
 ) (*ExeFilterDefinition, error) {
 	filter := &ExeFilterDefinition{
 		FilterDefinition: *FilterDefinitionFromObject(id)}
-	exe, ok := obj["exe"].(string)
+	exeObj, ok := obj["exe"]
 	if !ok {
-		return nil, WrapErrorf(
-			nil,
-			"Missing \"exe\" property in filter definition %q.", filter.Id)
+		return nil, WrappedErrorf(jsonPropertyMissingError, "exe")
 	}
+	exe, ok := exeObj.(string)
+	if !ok {
+		return nil, WrappedErrorf(
+			jsonPropertyTypeError, "exe", "string")
+	}
+
 	filter.Exe = exe
 	return filter, nil
 }
@@ -40,9 +44,9 @@ func (f *ExeFilter) Run(context RunContext) (bool, error) {
 func (f *ExeFilterDefinition) CreateFilterRunner(
 	runConfiguration map[string]interface{},
 ) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create exe filter.")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &ExeFilter{
 		Filter:     *basicFilter,
@@ -84,7 +88,8 @@ func (f *ExeFilter) run(
 				context.DotRegolithPath))
 	}
 	if err != nil {
-		return WrapError(err, "Failed to run shell filter.")
+		return WrapErrorf(
+			err, "Failed to run exe file.\nPath: %s", f.Definition.Exe)
 	}
 	return nil
 }
@@ -96,7 +101,7 @@ func executeExeFile(id string,
 	Logger.Debugf("Running exe file %s:", exe)
 	err := RunSubProcess(exe, args, filterDir, workingDir, id)
 	if err != nil {
-		return WrapError(err, "Failed to run exe file.")
+		return WrapErrorf(err, runSubProcessError)
 	}
 	return nil
 }

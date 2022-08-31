@@ -22,11 +22,13 @@ type PythonFilter struct {
 
 func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*PythonFilterDefinition, error) {
 	filter := &PythonFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
-	script, ok := obj["script"].(string)
+	scripObj, ok := obj["script"]
 	if !ok {
-		return nil, WrapErrorf(
-			nil, "Missing \"script\" property in filter definition %q.",
-			filter.Id)
+		return nil, WrappedErrorf(jsonPropertyMissingError, "script")
+	}
+	script, ok := scripObj.(string)
+	if !ok {
+		return nil, WrappedErrorf(jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
@@ -71,15 +73,15 @@ func (f *PythonFilter) run(context RunContext) error {
 
 func (f *PythonFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, err
+		return false, PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
 
 func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create Python filter.")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &PythonFilter{
 		Filter:     *basicFilter,
@@ -97,9 +99,10 @@ func (f *PythonFilterDefinition) InstallDependencies(
 		installLocation = parent.GetDownloadPath(dotRegolithPath)
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
-	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
+	joinedPath := filepath.Join(installLocation, f.Script)
+	scriptPath, err := filepath.Abs(joinedPath)
 	if err != nil {
-		return WrapErrorf(err, "Unable to resolve path of %s script.", f.Id)
+		return WrapErrorf(err, filepathAbsError, joinedPath)
 	}
 
 	// Install the filter dependencies
@@ -136,7 +139,7 @@ func (f *PythonFilterDefinition) InstallDependencies(
 			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
-				err, "couldn't run pip to install dependencies of %s",
+				err, "Couldn't run Pip to install dependencies of %s",
 				f.Id,
 			)
 		}
