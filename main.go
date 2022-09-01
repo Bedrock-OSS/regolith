@@ -6,7 +6,7 @@ import (
 
 	"github.com/fatih/color"
 
-	"bedrock-oss.github.com/regolith/regolith"
+	"github.com/Bedrock-OSS/regolith/regolith"
 	"github.com/urfave/cli/v2"
 )
 
