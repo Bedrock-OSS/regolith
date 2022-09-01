@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"bedrock-oss.github.com/regolith/regolith"
+	"github.com/Bedrock-OSS/regolith/regolith"
 	"github.com/otiai10/copy"
 )
 
