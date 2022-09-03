@@ -67,7 +67,7 @@ func testSwitchingExportTargets(t *testing.T, recycled bool) {
 }
 
 func TestSwitchingExportTargets(t *testing.T) {
-	testMoveFilesAcl(t, false)
+	testSwitchingExportTargets(t, false)
 }
 
 func TestSwitchingExportTargetsRecycled(t *testing.T) {
