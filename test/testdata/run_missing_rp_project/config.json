@@ -1,4 +1,5 @@
 {
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.json",
 	"name": "filter_tester example",
 	"author": "Bedrock-OSS",
 	"packs": {

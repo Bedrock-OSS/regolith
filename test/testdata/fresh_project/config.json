@@ -1,21 +1,22 @@
 {
-  "name": "Project name",
-  "author": "Your name",
-  "packs": {
-    "behaviorPack": "./packs/BP",
-    "resourcePack": "./packs/RP"
-  },
-  "regolith": {
-    "profiles": {
-      "default": {
-        "filters": [],
-        "export": {
-          "target": "development",
-          "readOnly": false
-        }
-      }
-    },
-    "filterDefinitions": {},
-    "dataPath": "./packs/data"
-  }
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.json",
+	"author": "Your name",
+	"name": "Project name",
+	"packs": {
+		"behaviorPack": "./packs/BP",
+		"resourcePack": "./packs/RP"
+	},
+	"regolith": {
+		"dataPath": "./packs/data",
+		"filterDefinitions": {},
+		"profiles": {
+			"default": {
+				"export": {
+					"readOnly": false,
+					"target": "development"
+				},
+				"filters": []
+			}
+		}
+	}
 }

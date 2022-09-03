@@ -1,29 +1,30 @@
 {
-  "name": "regolith_test_project",
-  "author": "Bedrock-OSS",
-  "packs": {
-    "behaviorPack": "./packs/BP",
-    "resourcePack": "./packs/RP"
-  },
-  "regolith": {
-    "dataPath": "./packs/data",
-    "profiles": {
-      "exact_export_A": {
-        "filters": [],
-        "export": {
-          "target": "exact",
-          "rpPath": "../target-a/RP",
-          "bpPath": "../target-a/BP"
-        }
-      },
-      "exact_export_B": {
-        "filters": [],
-        "export": {
-          "target": "exact",
-          "rpPath": "../target-b/RP",
-          "bpPath": "../target-b/BP"
-        }
-      }
-    }
-  }
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.json",
+	"name": "regolith_test_project",
+	"author": "Bedrock-OSS",
+	"packs": {
+		"behaviorPack": "./packs/BP",
+		"resourcePack": "./packs/RP"
+	},
+	"regolith": {
+		"dataPath": "./packs/data",
+		"profiles": {
+			"exact_export_A": {
+				"filters": [],
+				"export": {
+					"target": "exact",
+					"rpPath": "../target-a/RP",
+					"bpPath": "../target-a/BP"
+				}
+			},
+			"exact_export_B": {
+				"filters": [],
+				"export": {
+					"target": "exact",
+					"rpPath": "../target-b/RP",
+					"bpPath": "../target-b/BP"
+				}
+			}
+		}
+	}
 }
