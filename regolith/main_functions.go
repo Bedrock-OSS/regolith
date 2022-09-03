@@ -15,7 +15,7 @@ import (
 // <filter-url>==<filter-version> or <filter-url>.
 // "filter-url" is the URL of the filter to install.
 // "filter-version" is the version of the filter. It can be semver, git commit
-//  hash, "HEAD", or "latest". "HEAD" means that the filter will be
+// hash, "HEAD", or "latest". "HEAD" means that the filter will be
 // updated to lastest SHA commit and "latest" updates the filter to the latest
 // version tag. If "filter-version" is not specified, the filter will be
 // installed with the latest version or HEAD if there is no valid version tags.
@@ -112,7 +112,7 @@ func Install(filters []string, force, debug bool) error {
 	}
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
-	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
+	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
 	if err != nil {
 		return WrapErrorf(
 			err,
@@ -350,7 +350,7 @@ func Init(debug bool) error {
 				"directory.\n\"regolith init\" can be used only in empty "+
 				"directories.", wd)
 	}
-	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
+	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0644)
 	// Create new default configuration
 	jsonData := Config{
 		Name:   "Project name",
@@ -376,7 +376,7 @@ func Init(debug bool) error {
 		},
 	}
 	jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
-	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
+	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
 	if err != nil {
 		return WrapErrorf(err, "Failed to write data to %q", ConfigFilePath)
 	}
@@ -388,7 +388,7 @@ func Init(debug bool) error {
 		filepath.Join(".regolith", "cache/venvs"),
 	}
 	for _, folder := range ConfigurationFolders {
-		err = os.MkdirAll(folder, 0666)
+		err = os.MkdirAll(folder, 0755)
 		if err != nil {
 			Logger.Error("Could not create folder: %s", folder, err)
 		}
@@ -413,12 +413,6 @@ func clean(cachedStatesOnly bool, dotRegolithPath string) error {
 		if err != nil {
 			return WrapErrorf(err, "failed to remove %q folder", dotRegolithPath)
 		}
-		// if leaveEmptyPath {
-		// 	err = os.MkdirAll(dotRegolithPath, 0666)
-		// 	if err != nil {
-		// 		return WrapErrorf(err, "failed to recreate %q folder", dotRegolithPath)
-		// 	}
-		// }
 	}
 
 	return nil
@@ -496,7 +490,7 @@ func CleanUserCache() error {
 	if err != nil {
 		return WrapErrorf(err, "failed to remove %q folder", regolithCacheFiles)
 	}
-	os.MkdirAll(regolithCacheFiles, 0666)
+	os.MkdirAll(regolithCacheFiles, 0755)
 	Logger.Infof("All regolith files cached in user app data cleaned.")
 	return nil
 }
@@ -568,7 +562,7 @@ func Unlock(debug bool) error {
 				"If you want to make a new one. Please remove the file manually.\n"+
 				"The lock file is located at:\n%s", lockfilePath)
 	}
-	err = ioutil.WriteFile(lockfilePath, []byte(id), 0666)
+	err = ioutil.WriteFile(lockfilePath, []byte(id), 0644)
 	if err != nil {
 		return WrapError(err, "Failed to write lock file.")
 	}
