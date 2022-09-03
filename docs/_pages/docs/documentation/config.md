@@ -58,7 +58,14 @@ Example config, with many options explained:
           },
           {
             // A second filter, which will run after 'name_ninja'
-            "filter": "bump_manifest"
+            "filter": "bump_manifest",
+
+            // Arguments list is a list of arguments to pass to the command that runs the filter (optional).
+            // If filter uses both settings and arguments, the settings json is passed as the first argument.
+            "arguments": ["-regolith"],
+            
+            // "disabled" is a bolean that determines whether or not to run this filter (optional).
+            "disabled": true
           }
         ],
 
