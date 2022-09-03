@@ -143,7 +143,7 @@ func WrapErrorf(err error, text string, args ...interface{}) error {
 
 func CreateDirectoryIfNotExists(directory string, mustSucceed bool) error {
 	if _, err := os.Stat(directory); os.IsNotExist(err) {
-		err = os.MkdirAll(directory, 0666)
+		err = os.MkdirAll(directory, 0755)
 		if err != nil {
 			if mustSucceed {
 				// Error outside of this function should tell about the path
