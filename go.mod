@@ -1,4 +1,4 @@
-module bedrock-oss.github.com/regolith
+module github.com/Bedrock-OSS/regolith
 
 go 1.18
 
