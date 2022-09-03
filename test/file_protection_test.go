@@ -33,7 +33,7 @@ func testSwitchingExportTargets(t *testing.T, recycled bool) {
 	defer os.RemoveAll(tmpDir)
 	defer os.Chdir(wd)
 	workingDir := filepath.Join(tmpDir, "working-dir")
-	os.Mkdir(workingDir, 0666)
+	os.Mkdir(workingDir, 0755)
 	// Copy the test project to the working directory
 	err = copy.Copy(
 		multitargetProjectPath,
@@ -97,7 +97,7 @@ func testTriggerFileProtection(t *testing.T, recycled bool) {
 	defer os.RemoveAll(tmpDir)
 	defer os.Chdir(wd)
 	workingDir := filepath.Join(tmpDir, "working-dir")
-	os.Mkdir(workingDir, 0666)
+	os.Mkdir(workingDir, 0755)
 	// Copy the test project to the working directory
 	err = copy.Copy(
 		multitargetProjectPath,

@@ -47,7 +47,7 @@ func (f *EditedFiles) Dump(dotRegolithPath string) error {
 	if err != nil {
 		return WrapErrorf(err, osMkdirError, parentDir)
 	}
-	err = os.WriteFile(efp, result, 0666)
+	err = os.WriteFile(efp, result, 0644)
 	if err != nil {
 		return WrapErrorf(err, fileWriteError, efp)
 	}

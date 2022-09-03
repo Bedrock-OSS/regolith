@@ -388,7 +388,7 @@ func (i *RemoteFilterDefinition) SaveVerssionInfo(version, dotRegolithPath strin
 	filterJsonMap["version"] = version
 	filterJson, _ := json.MarshalIndent(filterJsonMap, "", "\t") // no error
 	filterJsonPath := path.Join(i.GetDownloadPath(dotRegolithPath), "filter.json")
-	err = os.WriteFile(filterJsonPath, filterJson, 0666)
+	err = os.WriteFile(filterJsonPath, filterJson, 0644)
 	if err != nil {
 		return WrapErrorf(
 			err, "Unable to write \"filter.json\" for %q filter.", i.Id)

@@ -112,7 +112,7 @@ func Install(filters []string, force, debug bool) error {
 	}
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
-	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
+	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
 	if err != nil {
 		return WrapErrorf(
 			err,
@@ -350,7 +350,7 @@ func Init(debug bool) error {
 				"directory.\n\"regolith init\" can be used only in empty "+
 				"directories.", wd)
 	}
-	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0666)
+	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0644)
 	// Create new default configuration
 	jsonData := Config{
 		Name:   "Project name",
@@ -376,7 +376,7 @@ func Init(debug bool) error {
 		},
 	}
 	jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
-	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0666)
+	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
 	if err != nil {
 		return WrapErrorf(err, "Failed to write data to %q", ConfigFilePath)
 	}
@@ -413,12 +413,6 @@ func clean(cachedStatesOnly bool, dotRegolithPath string) error {
 		if err != nil {
 			return WrapErrorf(err, "failed to remove %q folder", dotRegolithPath)
 		}
-		// if leaveEmptyPath {
-		// 	err = os.MkdirAll(dotRegolithPath, 0666)
-		// 	if err != nil {
-		// 		return WrapErrorf(err, "failed to recreate %q folder", dotRegolithPath)
-		// 	}
-		// }
 	}
 
 	return nil
@@ -568,7 +562,7 @@ func Unlock(debug bool) error {
 				"If you want to make a new one. Please remove the file manually.\n"+
 				"The lock file is located at:\n%s", lockfilePath)
 	}
-	err = ioutil.WriteFile(lockfilePath, []byte(id), 0666)
+	err = ioutil.WriteFile(lockfilePath, []byte(id), 0644)
 	if err != nil {
 		return WrapError(err, "Failed to write lock file.")
 	}
