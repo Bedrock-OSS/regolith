@@ -15,9 +15,7 @@ import (
 // <filter-url>==<filter-version> or <filter-url>.
 // "filter-url" is the URL of the filter to install.
 // "filter-version" is the version of the filter. It can be semver, git commit
-//
-//	hash, "HEAD", or "latest". "HEAD" means that the filter will be
-//
+// hash, "HEAD", or "latest". "HEAD" means that the filter will be
 // updated to lastest SHA commit and "latest" updates the filter to the latest
 // version tag. If "filter-version" is not specified, the filter will be
 // installed with the latest version or HEAD if there is no valid version tags.
