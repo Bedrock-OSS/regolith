@@ -217,7 +217,7 @@ func ExportProject(
 	if err != nil {
 		var err1 error = nil
 		if os.IsNotExist(err) {
-			err1 = os.MkdirAll(dataPath, 0666)
+			err1 = os.MkdirAll(dataPath, 0755)
 		}
 		if err1 != nil {
 			return WrapErrorf(

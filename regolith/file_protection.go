@@ -43,7 +43,7 @@ func (f *EditedFiles) Dump(dotRegolithPath string) error {
 	// Create parent directory of EditedFilesPath
 	efp := filepath.Join(dotRegolithPath, EditedFilesPath)
 	parentDir := filepath.Dir(efp)
-	err = os.MkdirAll(parentDir, 0666)
+	err = os.MkdirAll(parentDir, 0755)
 	if err != nil {
 		return WrapErrorf(err, osMkdirError, parentDir)
 	}

@@ -242,7 +242,7 @@ func (f *RemoteFilterDefinition) CopyFilterData(dataPath string, dotRegolithPath
 				"filter.", f.Id, localDataPath)
 	} else if _, err := os.Stat(remoteDataPath); err == nil {
 		// Ensure folder exists
-		err = os.MkdirAll(localDataPath, 0666)
+		err = os.MkdirAll(localDataPath, 0755)
 		if err != nil {
 			Logger.Error("Could not create filter data folder.", err)
 		}
