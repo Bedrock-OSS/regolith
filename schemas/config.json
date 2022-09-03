@@ -75,6 +75,10 @@
 								"description": "The list of the filters used by the profile and their settigns.",
 								"items": {
 									"properties": {
+										"disabled": {
+											"type": "boolean",
+											"description": "Whether the filter is disabled. The disabled filters are not applied, it's the same as if the filter was not specified in the profile."
+										},
 										"filter": {
 											"type": "string",
 											"description": "The name of the filter that matches one of the filter names from filterDefinitions."
