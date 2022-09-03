@@ -166,9 +166,10 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 				}
 				currPath := removableFiles[i]
 				i++
-				if s == currPath { // found path on the list
+				cmpVal := compareFilePaths(s, currPath)
+				if cmpVal == 0 { // found path on the list
 					break
-				} else if s < currPath { // this path won't be on the list
+				} else if cmpVal < 0 { // this path won't be on the list
 					return WrappedErrorf(notRegolithFileError, s)
 				}
 			}
