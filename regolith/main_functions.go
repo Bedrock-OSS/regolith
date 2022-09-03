@@ -15,7 +15,9 @@ import (
 // <filter-url>==<filter-version> or <filter-url>.
 // "filter-url" is the URL of the filter to install.
 // "filter-version" is the version of the filter. It can be semver, git commit
-//  hash, "HEAD", or "latest". "HEAD" means that the filter will be
+//
+//	hash, "HEAD", or "latest". "HEAD" means that the filter will be
+//
 // updated to lastest SHA commit and "latest" updates the filter to the latest
 // version tag. If "filter-version" is not specified, the filter will be
 // installed with the latest version or HEAD if there is no valid version tags.
@@ -388,7 +390,7 @@ func Init(debug bool) error {
 		filepath.Join(".regolith", "cache/venvs"),
 	}
 	for _, folder := range ConfigurationFolders {
-		err = os.MkdirAll(folder, 0666)
+		err = os.MkdirAll(folder, 0755)
 		if err != nil {
 			Logger.Error("Could not create folder: %s", folder, err)
 		}
@@ -496,7 +498,7 @@ func CleanUserCache() error {
 	if err != nil {
 		return WrapErrorf(err, "failed to remove %q folder", regolithCacheFiles)
 	}
-	os.MkdirAll(regolithCacheFiles, 0666)
+	os.MkdirAll(regolithCacheFiles, 0755)
 	Logger.Infof("All regolith files cached in user app data cleaned.")
 	return nil
 }

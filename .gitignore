@@ -1,5 +1,6 @@
 /dist/
 /vendor/
+/bin/
 *.exe
 local
 docs/scraper/__pycache__/
