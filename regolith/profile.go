@@ -17,7 +17,7 @@ import (
 func RecycledSetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error {
 	start := time.Now()
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
-	err := os.MkdirAll(tmpPath, 0666)
+	err := os.MkdirAll(tmpPath, 0755)
 	if err != nil {
 		return WrapErrorf(err, osMkdirError, tmpPath)
 	}
@@ -84,7 +84,7 @@ func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error
 		return WrapErrorf(err, osRemoveError, tmpPath)
 	}
 
-	err = os.MkdirAll(tmpPath, 0666)
+	err = os.MkdirAll(tmpPath, 0755)
 	if err != nil {
 		return WrapErrorf(err, osMkdirError, tmpPath)
 	}
@@ -103,7 +103,7 @@ func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error
 				if os.IsNotExist(err) {
 					Logger.Warnf(
 						"%s %q does not exist", descriptiveName, path)
-					err = os.MkdirAll(p, 0666)
+					err = os.MkdirAll(p, 0755)
 					if err != nil {
 						return WrapErrorf(err, osMkdirError, p)
 					}
@@ -120,7 +120,7 @@ func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error
 				return WrappedErrorf(isDirNotADirError, path)
 			}
 		} else {
-			err = os.MkdirAll(p, 0666)
+			err = os.MkdirAll(p, 0755)
 			if err != nil {
 				return WrapErrorf(err, osMkdirError, p)
 			}
