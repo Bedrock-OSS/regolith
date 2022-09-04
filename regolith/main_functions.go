@@ -111,7 +111,7 @@ func Install(filters []string, force, debug bool) error {
 		filterDefinitions[name] = downloadedFilter
 	}
 	// Save the config file
-	jsonBytes, _ := json.MarshalIndent(config, "", "  ")
+	jsonBytes, _ := json.MarshalIndent(config, "", "\t")
 	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
 	if err != nil {
 		return WrapErrorf(
@@ -375,7 +375,13 @@ func Init(debug bool) error {
 			},
 		},
 	}
-	jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
+	jsonBytes, _ := json.MarshalIndent(jsonData, "", "")
+	// Add the schema property, this is a little hacky
+	rawJsonData := make(map[string]interface{}, 0)
+	json.Unmarshal(jsonBytes, &rawJsonData)
+	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.json"
+	jsonBytes, _ = json.MarshalIndent(rawJsonData, "", "\t")
+
 	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
 	if err != nil {
 		return WrapErrorf(err, "Failed to write data to %q", ConfigFilePath)
