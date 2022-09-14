@@ -81,8 +81,6 @@ if (!$result) {
         # Download installer
         Invoke-WebRequest -Uri $asset -OutFile "./install.msi"
         # Run installer
-        Start-Process -FilePath "./install.msi"
-        # Exit with success immediately in case the script needs an update as well
-        exit 0
+        Start-Process -FilePath "./install.msi" -ArgumentList "/quiet" -Wait
     }
 }
