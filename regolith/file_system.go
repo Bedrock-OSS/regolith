@@ -708,15 +708,12 @@ func move(source, destination string) error {
 							"while moving files from directory.\b"+
 							"\tSource: %s\n"+
 							"\tTarget: %s\n\n"+
-
 							"\tRecovery failed while moving file.\n"+
 							"\tSource: %s\n"+
 							"\tTarget: %s\n"+
 							"\tError: %s\n\n"+
-
 							"\tThis is a critical error that leaves your "+
 							"files in unorganized manner.\n\n"+
-
 							"\tYou can try to recover the files manually "+
 							"from:\n"+
 							"\tPath: %s\n",
@@ -748,7 +745,7 @@ func MoveOrCopy(
 		Logger.Warnf(
 			"Failed to move files.\n\tSource: %s\n\tTarget: %s\n"+
 				"This error is not critical. Trying to copy files instead...",
-			source, destination)
+			filepath.Clean(source), filepath.Clean(destination))
 		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
 		err := copy.Copy(source, destination, copyOptions)
 		if err != nil {
