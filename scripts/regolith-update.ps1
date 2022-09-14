@@ -82,5 +82,7 @@ if (!$result) {
         Invoke-WebRequest -Uri $asset -OutFile "./install.msi"
         # Run installer
         Start-Process -FilePath "./install.msi" -ArgumentList "/quiet" -Wait
+        # Remove installer
+        Remove-Item "./install.msi"
     }
 }
