@@ -123,7 +123,7 @@ func RecycledExportProject(
 	if err != nil {
 		return WrapError(err, "Failed to export behavior pack.")
 	}
-	Logger.Infof("Exporting project to \"%s\".", rpPath)
+	Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
 	err = FullRecycledMoveOrCopy(
 		filepath.Join(dotRegolithPath, "tmp/RP"), rpPath,
 		RecycledMoveOrCopySettings{
@@ -260,7 +260,7 @@ func ExportProject(
 	if err != nil {
 		return WrapError(err, "Failed to export behavior pack.")
 	}
-	Logger.Infof("Exporting project to \"%s\".", rpPath)
+	Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
 	err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
 	if err != nil {
 		return WrapError(err, "Failed to export resource pack.")
