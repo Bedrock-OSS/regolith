@@ -8,9 +8,21 @@ env:
 builds:
   - id: binary
     goos:
-      - windows
       - darwin
       - linux
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - 386
+    goarm:
+      - 6
+      - 7
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.buildSource=binaryRelease
+  - id: win_binary
+    goos:
+      - windows
     goarch:
       - amd64
       - arm
@@ -47,12 +59,23 @@ archives:
     replacements:
       darwin: Darwin
       linux: Linux
-      windows: Windows
       386: x86
       amd64: x86_64
     format_overrides:
       - goos: windows
         format: zip
+  - builds:
+      - win_binary
+    id: win_binary
+    format: zip
+    replacements:
+      windows: Windows
+      386: x86
+      amd64: x86_64
+    files:
+        - src: scripts/regolith-update.ps1
+          dst: ./
+          strip_parent: true
 
 checksum:
   name_template: "checksums.txt"
