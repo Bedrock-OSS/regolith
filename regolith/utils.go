@@ -21,6 +21,8 @@ import (
 // app data
 const appDataCachePath = "regolith/project-cache"
 
+var Debug = false
+
 func StringArrayContains(arr []string, str string) bool {
 	for _, a := range arr {
 		if a == str {
@@ -171,12 +173,7 @@ func CreateEnvironmentVariables(filterDir string) ([]string, error) {
 	if err != nil {
 		return nil, WrapErrorf(err, osGetwdError)
 	}
-	// TODO - doesn't os.GetWd() already return an absolute path?
-	projectDir, err = filepath.Abs(projectDir)
-	if err != nil {
-		return nil, WrapErrorf(err, filepathAbsError, projectDir)
-	}
-	return append(os.Environ(), "FILTER_DIR="+filterDir, "ROOT_DIR="+projectDir), nil
+	return append(os.Environ(), fmt.Sprintf("FILTER_DIR=%s", filterDir), fmt.Sprintf("ROOT_DIR=%s", projectDir), fmt.Sprintf("DEBUG=%t", Debug)), nil
 }
 
 // RunSubProcess runs a sub-process with specified arguments and working
