@@ -192,7 +192,7 @@ func needsVenv(filterPath string) bool {
 
 func findPython() (string, error) {
 	var err error
-	for _, c := range []string{"python", "python3"} {
+	for _, c := range []string{"python3", "python"} {
 		_, err = exec.LookPath(c)
 		if err == nil {
 			return c, nil
