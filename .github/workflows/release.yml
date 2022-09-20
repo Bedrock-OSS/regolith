@@ -42,3 +42,19 @@ jobs:
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v2
+        with:
+          repository: 'Bedrock-OSS/regolith-action'
+          token: ${{ secrets.GH_PAT }}
+          path: './action'
+      - name: Update GitHub Action
+        working-directory: './action'
+        run: |
+          echo -n "${{github.ref_name}}" > version
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add ./version
+          git commit -m "Regolith v${{github.ref_name}}"
+          git tag "v${{github.ref_name}}"
+          git push origin main
+          git push --tags
