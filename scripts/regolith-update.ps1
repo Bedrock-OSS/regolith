@@ -79,10 +79,11 @@ if (!$result) {
         # Add progress activity with nice name
         Write-Progress -Activity "Downloading Installer"
         # Download installer
-        Invoke-WebRequest -Uri $asset -OutFile "./install.msi"
+        $TempFile = New-TemporaryFile | Rename-Item -NewName { $_ -replace 'tmp$', 'msi' } -PassThru
+        Invoke-WebRequest -Uri $asset -OutFile $TempFile
         # Run installer
-        Start-Process -FilePath "./install.msi" -ArgumentList "/quiet" -Wait
+        Start-Process -FilePath $TempFile -Wait
         # Remove installer
-        Remove-Item "./install.msi"
+        Remove-Item $TempFile
     }
 }
