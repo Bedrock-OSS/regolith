@@ -89,7 +89,11 @@ func (f *RemoteFilter) run(context RunContext) error {
 	}
 	for i, filter := range filterCollection.Filters {
 		// Disabled filters are skipped
-		if filter.IsDisabled() {
+		disabled, err := filter.IsDisabled()
+		if err != nil {
+			return WrapErrorf(err, "Failed to check if filter is disabled")
+		}
+		if disabled {
 			Logger.Infof(
 				"The %s subfilter of \"%s\" filter is disabled, skipping.",
 				nth(i), f.Id)
@@ -98,7 +102,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 		// Overwrite the venvSlot with the parent value
 		// TODO - remote filters can contain multiple filters, the interruption
 		// chceck should be performed after every subfilter
-		_, err := filter.Run(RunContext{
+		_, err = filter.Run(RunContext{
 			Config:           context.Config,
 			AbsoluteLocation: absolutePath,
 			Profile:          context.Profile,

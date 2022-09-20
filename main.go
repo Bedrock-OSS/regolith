@@ -21,6 +21,7 @@ func main() {
 	status := make(chan regolith.UpdateStatus)
 	go regolith.CheckUpdate(version, status)
 	regolith.CustomHelp()
+	regolith.Version = version
 	err := (&cli.App{
 		Name:                 "Regolith",
 		Usage:                "A bedrock addon compiler pipeline",
