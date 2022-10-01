@@ -20,6 +20,8 @@ If you have have achieved the feat of having one executable for all platforms (o
 }
 ```
 
+**note: this behavior is currently experimental, and subject to change.**
+
 Alternatively, if you need to specify the executable based on platform, platform specific executables are supported:
 
 ```json
