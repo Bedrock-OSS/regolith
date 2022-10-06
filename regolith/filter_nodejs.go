@@ -21,10 +21,14 @@ type NodeJSFilter struct {
 
 func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*NodeJSFilterDefinition, error) {
 	filter := &NodeJSFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
-	script, ok := obj["script"].(string)
+	scriptObj, ok := obj["script"]
+	if !ok {
+		return nil, WrappedErrorf(jsonPropertyMissingError, "script")
+	}
+	script, ok := scriptObj.(string)
 	if !ok {
 		return nil, WrappedErrorf(
-			"Missing \"script\" property in filter definition %q.", filter.Id)
+			jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
 	return filter, nil
@@ -41,11 +45,11 @@ func (f *NodeJSFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return WrapError(err, "failed to run NodeJS script")
+			return PassError(err)
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -56,11 +60,11 @@ func (f *NodeJSFilter) run(context RunContext) error {
 					f.Definition.Script,
 				string(jsonSettings)}, f.Arguments...),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return WrapError(err, "failed to run NodeJS script")
+			return PassError(err)
 		}
 	}
 	return nil
@@ -68,15 +72,15 @@ func (f *NodeJSFilter) run(context RunContext) error {
 
 func (f *NodeJSFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, err
+		return false, PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
 
 func (f *NodeJSFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "failed to create NodeJS filter")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &NodeJSFilter{
 		Filter:     *basicFilter,
@@ -85,16 +89,17 @@ func (f *NodeJSFilterDefinition) CreateFilterRunner(runConfiguration map[string]
 	return filter, nil
 }
 
-func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
+func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition, dotRegolithPath string) error {
 	installLocation := ""
 	// Install dependencies
 	if parent != nil {
-		installLocation = parent.GetDownloadPath()
+		installLocation = parent.GetDownloadPath(dotRegolithPath)
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
-	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
+	joinedPath := filepath.Join(installLocation, f.Script)
+	scriptPath, err := filepath.Abs(joinedPath)
 	if err != nil {
-		return WrapErrorf(err, "unable to resolve path of %s script", f.Id)
+		return WrapErrorf(err, filepathAbsError, joinedPath)
 	}
 
 	filterPath := filepath.Dir(scriptPath)
@@ -103,7 +108,8 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
-				err, "failed to run npm and install dependencies of %s", f.Id)
+				err, "Failed to run npm and install dependencies."+
+					"\nFilter name: %s", f.Id)
 		}
 	}
 	Logger.Infof("Dependencies for %s installed successfully", f.Id)
@@ -119,7 +125,7 @@ func (f *NodeJSFilterDefinition) Check(context RunContext) error {
 	}
 	cmd, err := exec.Command("node", "--version").Output()
 	if err != nil {
-		return WrapError(err, "failed to check NodeJS version")
+		return WrapError(err, "Failed to check NodeJS version")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
 	Logger.Debugf("Found NodeJS version %s", a)

@@ -1,74 +1,75 @@
 {
-  "name": "nested_filter_test_project",
-  "author": "Bedrock-OSS",
-  "packs": {
-    "behaviorPack": "./packs/BP",
-    "resourcePack": "./packs/RP"
-  },
-  "regolith": {
-    "profiles": {
-      "dev": {
-        "filters": [
-          {
-            "filter": "test_exe_filter"
-          }
-        ],
-        "export": {
-          "target": "local",
-          "readOnly": false
-        }
-      },
-      "correct_nested_profile": {
-        "filters": [
-          {
-            "profile": "dev"
-          }
-        ],
-        "export": {
-          "target": "local",
-          "readOnly": false
-        }
-      },
-      "invalid_circular_profile_1": {
-        "filters": [
-          {
-            "profile": "invalid_circular_profile_2"
-          }
-        ],
-        "export": {
-          "target": "local",
-          "readOnly": false
-        }
-      },
-      "invalid_circular_profile_2": {
-        "filters": [
-          {
-            "profile": "invalid_circular_profile_3"
-          }
-        ],
-        "export": {
-          "target": "local",
-          "readOnly": false
-        }
-      },
-      "invalid_circular_profile_3": {
-        "filters": [
-          {
-            "profile": "invalid_circular_profile_1"
-          }
-        ],
-        "export": {
-          "target": "local",
-          "readOnly": false
-        }
-      }
-    },
-    "filterDefinitions": {
-      "test_exe_filter": {
-        "runWith": "exe",
-        "exe": "./executables/test_exe_filter"
-      } 
-    },
-    "dataPath": "./packs/data"
-  }
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.json",
+	"name": "nested_filter_test_project",
+	"author": "Bedrock-OSS",
+	"packs": {
+		"behaviorPack": "./packs/BP",
+		"resourcePack": "./packs/RP"
+	},
+	"regolith": {
+		"profiles": {
+			"dev": {
+				"filters": [
+					{
+						"filter": "test_exe_filter"
+					}
+				],
+				"export": {
+					"target": "local",
+					"readOnly": false
+				}
+			},
+			"correct_nested_profile": {
+				"filters": [
+					{
+						"profile": "dev"
+					}
+				],
+				"export": {
+					"target": "local",
+					"readOnly": false
+				}
+			},
+			"invalid_circular_profile_1": {
+				"filters": [
+					{
+						"profile": "invalid_circular_profile_2"
+					}
+				],
+				"export": {
+					"target": "local",
+					"readOnly": false
+				}
+			},
+			"invalid_circular_profile_2": {
+				"filters": [
+					{
+						"profile": "invalid_circular_profile_3"
+					}
+				],
+				"export": {
+					"target": "local",
+					"readOnly": false
+				}
+			},
+			"invalid_circular_profile_3": {
+				"filters": [
+					{
+						"profile": "invalid_circular_profile_1"
+					}
+				],
+				"export": {
+					"target": "local",
+					"readOnly": false
+				}
+			}
+		},
+		"filterDefinitions": {
+			"test_exe_filter": {
+				"runWith": "exe",
+				"exe": "./executables/test_exe_filter"
+			}
+		},
+		"dataPath": "./packs/data"
+	}
 }

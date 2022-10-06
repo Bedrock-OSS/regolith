@@ -6,7 +6,7 @@ import (
 
 	"github.com/fatih/color"
 
-	"bedrock-oss.github.com/regolith/regolith"
+	"github.com/Bedrock-OSS/regolith/regolith"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,7 +21,6 @@ func main() {
 	status := make(chan regolith.UpdateStatus)
 	go regolith.CheckUpdate(version, status)
 	regolith.CustomHelp()
-	var debug bool
 	err := (&cli.App{
 		Name:                 "Regolith",
 		Usage:                "A bedrock addon compiler pipeline",
@@ -39,7 +38,7 @@ func main() {
 				Name:        "debug",
 				Aliases:     []string{"d"},
 				Usage:       "Enables debugging.",
-				Destination: &debug,
+				Destination: &regolith.Debug,
 			},
 		},
 		Commands: []*cli.Command{
@@ -53,7 +52,7 @@ func main() {
 					if len(args) != 0 {
 						profile = args[0]
 					}
-					return regolith.Run(profile, recycled, debug)
+					return regolith.Run(profile, recycled, regolith.Debug)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -73,7 +72,7 @@ func main() {
 					if len(args) != 0 {
 						profile = args[0]
 					}
-					return regolith.Watch(profile, recycled, debug)
+					return regolith.Watch(profile, recycled, regolith.Debug)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -89,7 +88,7 @@ func main() {
 				names of the filters must be already present in the
 				filtersDefinitions list in the config.json file.`,
 				Action: func(c *cli.Context) error {
-					return regolith.Update(c.Args().Slice(), debug)
+					return regolith.Update(c.Args().Slice(), regolith.Debug)
 				},
 			},
 			{
@@ -97,7 +96,7 @@ func main() {
 				Usage: `It updates all of the filters listed in the
 				filtersDefinitions which aren't version locked.`,
 				Action: func(c *cli.Context) error {
-					return regolith.UpdateAll(debug)
+					return regolith.UpdateAll(regolith.Debug)
 				},
 			},
 			{
@@ -105,7 +104,7 @@ func main() {
 				Usage: `Installs all of the filters from filtersDefintions of config.json file and their dependencies.`,
 				Action: func(c *cli.Context) error {
 					force := c.Bool("force")
-					return regolith.InstallAll(force, debug)
+					return regolith.InstallAll(force, regolith.Debug)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -128,7 +127,7 @@ func main() {
 							break
 						}
 					}
-					return regolith.Install(filters, force, debug)
+					return regolith.Install(filters, force, regolith.Debug)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
@@ -142,23 +141,33 @@ func main() {
 				Name:  "init",
 				Usage: "Initialize a Regolith project in the current directory.",
 				Action: func(c *cli.Context) error {
-					return regolith.Init(debug)
+					return regolith.Init(regolith.Debug)
 				},
 			},
 			{
 				Name:  "clean",
-				Usage: "Cleans cache from the .regolith folder.",
+				Usage: "Cleans Regolith cache.",
 				Action: func(c *cli.Context) error {
 					clearPathStates := c.Bool("path-states")
-					return regolith.Clean(debug, clearPathStates)
+					userCache := c.Bool("user-cache")
+					return regolith.Clean(regolith.Debug, userCache, clearPathStates)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "path-states",
 						Aliases: []string{"p"},
 						Usage: "Deletes file used for caching contents of " +
-							"paths used by Regolith (useful when Regolith " +
-							"doesn't export files propertly).",
+							"paths used by Regolith. This is useful when you " +
+							"work in --recycled mode and Regolith doesn't " +
+							"export files propertly).",
+					},
+					&cli.BoolFlag{
+						Name:    "user-cache",
+						Aliases: []string{},
+						Usage: "Clears data of the projects cached in the " +
+							"user app data folder. This is useful to clean " +
+							"up leftover files from old projects that use " +
+							"the \"useAppData\" option.",
 					},
 				},
 			},
@@ -166,7 +175,7 @@ func main() {
 				Name:  "unlock",
 				Usage: "Unlocks Regolith, to enable use of Remote and Local filters.",
 				Action: func(c *cli.Context) error {
-					return regolith.Unlock(debug)
+					return regolith.Unlock(regolith.Debug)
 				},
 			},
 		},

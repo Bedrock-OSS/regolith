@@ -36,7 +36,10 @@ Example config, with many options explained:
 
   // These fields are for Regolith specifically
   "regolith": {
-
+    // "useAppData" determines whether or not to use the app data folder, regolith should save its cache
+    // in user app data folder (true) or in the project folder in ".regolith" (false). This setting is
+    // optional and defaults to false. 
+    "useAppData": false,
     // Profiles are a list of filters and export information, which can be run with 'regolith run <profile>'
     "profiles": {
       // 'default' is the default profile. You can add more.
@@ -51,10 +54,18 @@ Example config, with many options explained:
             // Settings object, which configure how name_ninja will run (optional)
             "settings": {
               "language": "en_GB.lang"
+            }
           },
           {
             // A second filter, which will run after 'name_ninja'
-            "filter": "bump_manifest"
+            "filter": "bump_manifest",
+
+            // Arguments list is a list of arguments to pass to the command that runs the filter (optional).
+            // If filter uses both settings and arguments, the settings json is passed as the first argument.
+            "arguments": ["-regolith"],
+            
+            // "disabled" is a bolean that determines whether or not to run this filter (optional).
+            "disabled": true
           }
         ],
 

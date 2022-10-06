@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 jobs:
   goreleaser:
     runs-on: windows-latest
@@ -16,11 +19,22 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Set up Go
+
+      - name: Setup go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Cache Wix Toolset
+        id: cache-wix
+        uses: actions/cache@v3
+        with:
+          path: C:/wix
+          key: wix
+
       - name: Set up Wix Toolset
+        if: steps.cache-wix.outputs.cache-hit != 'true'
         run: |
           mkdir -p C:/wix
           curl -o "C:/wix/wix311-binaries.zip" -OL https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip
@@ -29,15 +43,33 @@ jobs:
           go install github.com/stirante/go-msi@latest
           mkdir ./go-msi-tmp
         shell: bash
+
       - name: Sync vendor directory
         run: |
           go mod vendor
         shell: bash
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3
         with:
           distribution: goreleaser
           version: latest
           args: release --rm-dist
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v2
+        with:
+          repository: 'Bedrock-OSS/regolith-action'
+          token: ${{ secrets.GH_PAT }}
+          path: './action'
+
+      - name: Update GitHub Action
+        working-directory: './action'
+        run: |
+          echo -n "${{github.ref_name}}" > version
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add ./version
+          git commit -m "Regolith v${{github.ref_name}}"
+          git tag "${{github.ref_name}}"
+          git push origin main
+          git push --tags

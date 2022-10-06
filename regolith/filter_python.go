@@ -22,11 +22,13 @@ type PythonFilter struct {
 
 func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*PythonFilterDefinition, error) {
 	filter := &PythonFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
-	script, ok := obj["script"].(string)
+	scripObj, ok := obj["script"]
 	if !ok {
-		return nil, WrapErrorf(
-			nil, "Missing \"script\" property in filter definition %q.",
-			filter.Id)
+		return nil, WrappedErrorf(jsonPropertyMissingError, "script")
+	}
+	script, ok := scripObj.(string)
+	if !ok {
+		return nil, WrappedErrorf(jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
@@ -41,7 +43,7 @@ func (f *PythonFilter) run(context RunContext) error {
 	}
 	scriptPath := filepath.Join(context.AbsoluteLocation, f.Definition.Script)
 	if needsVenv(filepath.Dir(scriptPath)) {
-		venvPath, err := f.Definition.resolveVenvPath()
+		venvPath, err := f.Definition.resolveVenvPath(context.DotRegolithPath)
 		if err != nil {
 			return WrapError(err, "Failed to resolve venv path.")
 		}
@@ -60,7 +62,9 @@ func (f *PythonFilter) run(context RunContext) error {
 		)
 	}
 	err = RunSubProcess(
-		pythonCommand, args, context.AbsoluteLocation, GetAbsoluteWorkingDirectory(), ShortFilterName(f.Id))
+		pythonCommand, args, context.AbsoluteLocation,
+		GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+		ShortFilterName(f.Id))
 	if err != nil {
 		return WrapError(err, "Failed to run Python script.")
 	}
@@ -69,15 +73,15 @@ func (f *PythonFilter) run(context RunContext) error {
 
 func (f *PythonFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, err
+		return false, PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
 
 func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create Python filter.")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &PythonFilter{
 		Filter:     *basicFilter,
@@ -86,22 +90,25 @@ func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]
 	return filter, nil
 }
 
-func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition) error {
+func (f *PythonFilterDefinition) InstallDependencies(
+	parent *RemoteFilterDefinition, dotRegolithPath string,
+) error {
 	installLocation := ""
 	// Install dependencies
 	if parent != nil {
-		installLocation = parent.GetDownloadPath()
+		installLocation = parent.GetDownloadPath(dotRegolithPath)
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
-	scriptPath, err := filepath.Abs(filepath.Join(installLocation, f.Script))
+	joinedPath := filepath.Join(installLocation, f.Script)
+	scriptPath, err := filepath.Abs(joinedPath)
 	if err != nil {
-		return WrapErrorf(err, "Unable to resolve path of %s script.", f.Id)
+		return WrapErrorf(err, filepathAbsError, joinedPath)
 	}
 
 	// Install the filter dependencies
 	filterPath := filepath.Dir(scriptPath)
 	if needsVenv(filterPath) {
-		venvPath, err := f.resolveVenvPath()
+		venvPath, err := f.resolveVenvPath(dotRegolithPath)
 		if err != nil {
 			return WrapError(err, "Failed to resolve venv path.")
 		}
@@ -132,7 +139,7 @@ func (f *PythonFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
-				err, "couldn't run pip to install dependencies of %s",
+				err, "Couldn't run Pip to install dependencies of %s",
 				f.Id,
 			)
 		}
@@ -165,9 +172,9 @@ func (f *PythonFilter) CopyArguments(parent *RemoteFilter) {
 	f.Definition.VenvSlot = parent.Definition.VenvSlot
 }
 
-func (f *PythonFilterDefinition) resolveVenvPath() (string, error) {
+func (f *PythonFilterDefinition) resolveVenvPath(dotRegolithPath string) (string, error) {
 	resolvedPath, err := filepath.Abs(
-		filepath.Join(".regolith/cache/venvs", strconv.Itoa(f.VenvSlot)))
+		filepath.Join(filepath.Join(dotRegolithPath, "cache/venvs"), strconv.Itoa(f.VenvSlot)))
 	if err != nil {
 		return "", WrapErrorf(
 			err, "Unable to create venv for VenvSlot %v.", f.VenvSlot)
@@ -185,7 +192,7 @@ func needsVenv(filterPath string) bool {
 
 func findPython() (string, error) {
 	var err error
-	for _, c := range []string{"python", "python3"} {
+	for _, c := range []string{"python3", "python"} {
 		_, err = exec.LookPath(c)
 		if err == nil {
 			return c, nil

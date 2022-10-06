@@ -15,7 +15,6 @@ import (
 )
 
 const defaultHashPairsPath = ".regolith/cache/dir_hash_pairs.json"
-const copyFileBufferSize = 1_000_000 // 1 MB
 
 // PathHashPair is a single entry in the list that represents the state of the
 // file path. It contains the path and the hash of the file/directory.
@@ -456,8 +455,6 @@ func DeepCopyAndGetState(
 	return state, nil
 }
 
-// PRIVATE FUNCTIONS
-
 // shallowMoveOrCopy takes source and target paths as arguments and tries to
 // move or copy the file from source to target. It returns true if the file was
 // moved and false if it was copied.
@@ -500,7 +497,7 @@ func shallowMoveOrCopy(source, target string, canMove bool) (bool, error) {
 		}
 	}
 	// Move failed or not allowed, copy the file
-	err = copyFile(source, target)
+	err = CopyFile(source, target)
 	if err != nil {
 		return false, WrapErrorf(
 			err, "Failed to copy \"%s\" to \"%s\".", source, target)
@@ -671,48 +668,6 @@ func isRelative(path, dir string) (bool, error) {
 	return strings.HasPrefix(path, dir), nil
 }
 
-// copyFile copies a file from source to target. If it's necessary it creates
-// the target directory.
-func copyFile(source, target string) error {
-	// Make parent directory of target
-	err := os.MkdirAll(filepath.Dir(target), 0755)
-	if err != nil {
-		return WrapErrorf(
-			err, "Failed to create \"%s\".", target)
-	}
-	buf := make([]byte, copyFileBufferSize)
-	// Open source for reading
-	sourceF, err := os.Open(source)
-	if err != nil {
-		return WrapErrorf(
-			err, "Failed to open \"%s\" for reading.", source)
-	}
-	defer sourceF.Close()
-	// Open target for writing
-	targetF, err := os.Create(target)
-	if err != nil {
-		return WrapErrorf(
-			err, "Failed to open \"%s\" for writing.", target)
-	}
-	defer targetF.Close()
-	// Copy the file
-	for {
-		n, err := sourceF.Read(buf)
-		if err != nil && err != io.EOF {
-			return WrapErrorf(err, "Failed to read from \"%s\".", source)
-		}
-		if n == 0 {
-			break
-		}
-
-		if _, err := targetF.Write(buf[:n]); err != nil {
-			return WrapErrorf(err, "Failed to write to \"%s\".", target)
-		}
-	}
-	targetF.Sync()
-	return nil
-}
-
 // patHashPairSliceToState converts a slice of PathHashPairs to a list.List.
 func patHashPairSliceToState(s []PathHashPair) *list.List {
 	l := list.New()
@@ -751,7 +706,7 @@ func removeEmptyDirectoryChain(root string, path string) error {
 		if isRel, err := isRelative(path, root); err != nil {
 			return WrapErrorf(err, "Failed to check if \"%s\" is relative to \"%s\".", path, root)
 		} else if isRel && path != root {
-			if isEmpty, err := isDirEmpty(path); err != nil {
+			if isEmpty, err := IsDirEmpty(path); err != nil {
 				return WrapErrorf(err, "Failed to check if \"%s\" is empty.", path)
 			} else if isEmpty {
 				os.Remove(path)

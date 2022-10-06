@@ -4,6 +4,9 @@
 package regolith
 
 import (
+	"os"
+	"path/filepath"
+
 	"golang.org/x/sys/windows"
 )
 
@@ -14,6 +17,9 @@ const venvScriptsPath = "Scripts"
 // exeSuffix is a suffix for executable files.
 const exeSuffix = ".exe"
 
+// Error used whe os.UserCacheDir fails
+const osUserCacheDirError = "Failed to resolve %LocalAppData% path."
+
 // copyFileSecurityInfo copies the DACL info from source path to DACL of
 // the target path
 func copyFileSecurityInfo(source string, target string) error {
@@ -22,13 +28,11 @@ func copyFileSecurityInfo(source string, target string) error {
 		windows.SE_FILE_OBJECT,
 		windows.DACL_SECURITY_INFORMATION)
 	if err != nil {
-		return WrapErrorf(
-			err, "Unable to get security info of %q.", source)
+		return WrapError(err, "Unable to get security info from the source.")
 	}
 	dacl, _, err := securityInfo.DACL()
 	if err != nil {
-		return WrapErrorf(
-			err, "Unable to get DACL of %q.", source)
+		return WrapErrorf(err, "Unable to get DACL of the source.")
 	}
 	err = windows.SetNamedSecurityInfo(
 		target,
@@ -36,8 +40,7 @@ func copyFileSecurityInfo(source string, target string) error {
 		windows.DACL_SECURITY_INFORMATION, nil, nil, dacl, nil,
 	)
 	if err != nil {
-		return WrapErrorf(
-			err, "Unable to set DACL of %q.", target)
+		return WrapErrorf(err, "Unable to set DACL of the target.")
 	}
 	return nil
 }
@@ -133,4 +136,34 @@ func (d *DirWatcher) WaitForChangeGroup(
 // Close closes DirWatcher handle.
 func (d *DirWatcher) Close() error {
 	return windows.CloseHandle(d.handle)
+}
+
+// FindMojangDir returns path to the com.mojang folder.
+func FindMojangDir() (string, error) {
+	result := filepath.Join(
+		os.Getenv("LOCALAPPDATA"), "Packages",
+		"Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games",
+		"com.mojang")
+	if _, err := os.Stat(result); err != nil {
+		if os.IsNotExist(err) {
+			return "", WrapErrorf(err, osStatErrorIsNotExist, result)
+		}
+		return "", WrapErrorf(err, osStatErrorAny, result)
+	}
+	return result, nil
+}
+
+func FindPreviewDir() (string, error) {
+	result := filepath.Join(
+		os.Getenv("LOCALAPPDATA"), "Packages",
+		"Microsoft.MinecraftWindowsBeta_8wekyb3d8bbwe", "LocalState", "games",
+		"com.mojang")
+	if _, err := os.Stat(result); err != nil {
+		if os.IsNotExist(err) {
+			return "", WrapErrorf(err, osStatErrorIsNotExist, result)
+		}
+		return "", WrapErrorf(
+			err, osStatErrorAny, result)
+	}
+	return result, nil
 }

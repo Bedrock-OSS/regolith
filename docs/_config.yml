@@ -21,6 +21,10 @@ description: >- # this means to ignore newlines until "baseurl:"
 github_username: Bedrock-OSS
 minimal_mistakes_skin: "regolith" # "default", "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum" "sunrise"
 search: true
+lunr:
+  search_within_pages: true
+
+
 url: "https://bedrock-oss.github.io"
 baseurl: "/regolith"
 repository: "bedrock-oss/regolith"

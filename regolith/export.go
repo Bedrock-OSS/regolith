@@ -1,7 +1,6 @@
 package regolith
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -85,7 +84,9 @@ func GetExportPaths(
 // into the project's export target. The paths are generated with
 // GetExportPaths. The function uses cached data about the state of the project
 // files to reduce the number of file system operations.
-func RecycledExportProject(profile Profile, name string, dataPath string) error {
+func RecycledExportProject(
+	profile Profile, name, dataPath, dotRegolithPath string,
+) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
 	if err != nil {
@@ -94,7 +95,7 @@ func RecycledExportProject(profile Profile, name string, dataPath string) error 
 	}
 
 	// Loading edited_files.json or creating empty object
-	editedFiles := LoadEditedFiles()
+	editedFiles := LoadEditedFiles(dotRegolithPath)
 	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
 	if err != nil {
 		return WrapErrorf(
@@ -109,9 +110,8 @@ func RecycledExportProject(profile Profile, name string, dataPath string) error 
 	}
 
 	Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-	// err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
 	err = FullRecycledMoveOrCopy(
-		".regolith/tmp/BP", bpPath,
+		filepath.Join(dotRegolithPath, "tmp/BP"), bpPath,
 		RecycledMoveOrCopySettings{
 			canMove:                 true,
 			saveSourceHashes:        true,
@@ -123,10 +123,9 @@ func RecycledExportProject(profile Profile, name string, dataPath string) error 
 	if err != nil {
 		return WrapError(err, "Failed to export behavior pack.")
 	}
-	Logger.Infof("Exporting project to \"%s\".", rpPath)
-	// err = MoveOrCopy(".regolith/tmp/RP", rpPath, exportTarget.ReadOnly, true)
+	Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
 	err = FullRecycledMoveOrCopy(
-		".regolith/tmp/RP", rpPath,
+		filepath.Join(dotRegolithPath, "tmp/RP"), rpPath,
 		RecycledMoveOrCopySettings{
 			canMove:                 true,
 			saveSourceHashes:        true,
@@ -138,9 +137,8 @@ func RecycledExportProject(profile Profile, name string, dataPath string) error 
 	if err != nil {
 		return WrapError(err, "Failed to export resource pack.")
 	}
-	// err = MoveOrCopy(".regolith/tmp/data", dataPath, false, false)
 	err = FullRecycledMoveOrCopy(
-		".regolith/tmp/data", dataPath,
+		filepath.Join(dotRegolithPath, "tmp/data"), dataPath,
 		RecycledMoveOrCopySettings{
 			canMove:                 true,
 			saveSourceHashes:        true,
@@ -162,7 +160,7 @@ func RecycledExportProject(profile Profile, name string, dataPath string) error 
 			err,
 			"Failed to create a list of files edited by this 'regolith run'")
 	}
-	err = editedFiles.Dump()
+	err = editedFiles.Dump(dotRegolithPath)
 	if err != nil {
 		return WrapError(
 			err, "Failed to update the list of the files edited by Regolith."+
@@ -173,7 +171,9 @@ func RecycledExportProject(profile Profile, name string, dataPath string) error 
 
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export target. The paths are generated with GetExportPaths.
-func ExportProject(profile Profile, name string, dataPath string) error {
+func ExportProject(
+	profile Profile, name, dataPath, dotRegolithPath string,
+) error {
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
 	if err != nil {
@@ -182,7 +182,7 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	}
 
 	// Loading edited_files.json or creating empty object
-	editedFiles := LoadEditedFiles()
+	editedFiles := LoadEditedFiles(dotRegolithPath)
 	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
 	if err != nil {
 		return WrapErrorf(
@@ -213,34 +213,62 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 	// The root of the data path cannot be deleted because the
 	// "regolith watch" function would stop watching the file changes
 	// (due to Windows API limitation).
-	files, err := ioutil.ReadDir(dataPath)
+	paths, err := os.ReadDir(dataPath)
 	if err != nil {
-		return WrapErrorf(
-			err, "Failed to read the files from the data path %q",
-			dataPath)
-	}
-	for _, file := range files {
-		filePath := filepath.Join(dataPath, file.Name())
-		err = os.RemoveAll(filePath)
-		if err != nil {
+		var err1 error = nil
+		if os.IsNotExist(err) {
+			err1 = os.MkdirAll(dataPath, 0755)
+		}
+		if err1 != nil {
 			return WrapErrorf(
-				err, "Failed to clear filter path from data path %q.",
-				filePath)
+				err, "Failed to read the files from the data path %q",
+				dataPath)
+		}
+	}
+	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
+	revertibleOps, err := NewRevertableFsOperaitons(backupPath)
+	if err != nil {
+		return WrapErrorf(err, "Failed to prepare backup path for revertable"+
+			" file system operations.\n"+
+			"Path that Regolith tried to use: %s", backupPath)
+	}
+	for _, path := range paths {
+		path := filepath.Join(dataPath, path.Name())
+		err = revertibleOps.DeleteDir(path)
+		if err != nil {
+			revertibleOps.Undo()
+			return WrapError(
+				err, "Failed clear filters data before replacing it with "+
+					"updated version of the files.\n"+
+					"Every time you run Regolith, it creates a copy of the "+
+					"data files so they can be modified by the filters.\n"+
+					"After running the filters, the copy is moved back to "+
+					"the original location.\n"+
+					"Old data files are deleted to free space for the modified "+
+					"copy.\n"+
+					"This time Regolith wasn't able to clear the data "+
+					"directory.\n"+
+					"The most common reason for this problem is that the "+
+					"data path is used by another program (usually terminal).\n"+
+					"Please close your terminal and try again.\n"+
+					"Make sure that you don't open it inside the filters data path.")
 		}
 	}
 
 	Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-	err = MoveOrCopy(".regolith/tmp/BP", bpPath, exportTarget.ReadOnly, true)
+	err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
 	if err != nil {
 		return WrapError(err, "Failed to export behavior pack.")
 	}
-	Logger.Infof("Exporting project to \"%s\".", rpPath)
-	err = MoveOrCopy(".regolith/tmp/RP", rpPath, exportTarget.ReadOnly, true)
+	Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
+	err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
 	if err != nil {
 		return WrapError(err, "Failed to export resource pack.")
 	}
-	err = MoveOrCopy(".regolith/tmp/data", dataPath, false, false)
+	err = revertibleOps.MoveoOrCopyDir(
+		filepath.Join(dotRegolithPath, "tmp/data"), dataPath)
 	if err != nil {
+		revertibleOps.Undo()
 		return WrapError(
 			err, "Failed to move the filter data back to the project's "+
 				"data folder.")
@@ -253,11 +281,14 @@ func ExportProject(profile Profile, name string, dataPath string) error {
 			err,
 			"Failed to create a list of files edited by this 'regolith run'")
 	}
-	err = editedFiles.Dump()
+	err = editedFiles.Dump(dotRegolithPath)
 	if err != nil {
 		return WrapError(
 			err, "Failed to update the list of the files edited by Regolith."+
 				"This may cause the next run to fail.")
+	}
+	if err := revertibleOps.Close(); err != nil {
+		return PassError(err)
 	}
 	return nil
 }

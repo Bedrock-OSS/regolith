@@ -2,10 +2,11 @@ package regolith
 
 import (
 	"bufio"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,14 +15,13 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/otiai10/copy"
 )
 
-// Common warnings
-const (
-	gitNotInstalled = "Git is not installed. Git is required to download " +
-		"filters.\n You can download Git from https://git-scm.com/downloads"
-)
+// appDataCachePath is a path to the cache directory relative to the user's
+// app data
+const appDataCachePath = "regolith/project-cache"
+
+var Debug = false
 
 func StringArrayContains(arr []string, str string) bool {
 	for _, a := range arr {
@@ -86,7 +86,7 @@ func FullFilterToNiceFilterName(name string) string {
 		if err != nil {
 			return fmt.Sprintf("the \"%s\" filter", name)
 		}
-		return NiceFilterName(strings.Split(name, ":")[0], i)
+		return NiceSubfilterName(strings.Split(name, ":")[0], i)
 	}
 	return fmt.Sprintf("the \"%s\" filter", name)
 }
@@ -98,7 +98,7 @@ func ShortFilterName(name string) string {
 	return name
 }
 
-func NiceFilterName(name string, i int) string {
+func NiceSubfilterName(name string, i int) string {
 	return fmt.Sprintf("the %s subfilter of \"%s\" filter", nth(i), name)
 }
 
@@ -117,17 +117,6 @@ func PassError(err error) error {
 // NotImplementedError is used by default functions, that need implementation.
 func NotImplementedError(text string) error {
 	text = fmt.Sprintf("Function not implemented: %s", text)
-	return wrapErrorStackTrace(nil, text)
-}
-
-// VersionMismatchError is used when cached filter version doesn't match the one required by config.
-func VersionMismatchError(id string, requiredVersion string, cachedVersion string) error {
-	text := fmt.Sprintf(
-		"Installation missmatch for '%s' detected.\n"+
-			"Installed version: %s\n"+
-			"Required version: %s\n"+
-			"Update the filter using: 'regolith update %[1]s'",
-		id, cachedVersion, requiredVersion)
 	return wrapErrorStackTrace(nil, text)
 }
 
@@ -156,11 +145,11 @@ func WrapErrorf(err error, text string, args ...interface{}) error {
 
 func CreateDirectoryIfNotExists(directory string, mustSucceed bool) error {
 	if _, err := os.Stat(directory); os.IsNotExist(err) {
-		err = os.MkdirAll(directory, 0666)
+		err = os.MkdirAll(directory, 0755)
 		if err != nil {
 			if mustSucceed {
-				return WrapErrorf(
-					err, "Failed to create directory %s.", directory)
+				// Error outside of this function should tell about the path
+				return PassError(err)
 			} else {
 				Logger.Warnf(
 					"Failed to create directory %s: %s.", directory,
@@ -172,9 +161,9 @@ func CreateDirectoryIfNotExists(directory string, mustSucceed bool) error {
 	return nil
 }
 
-// GetAbsoluteWorkingDirectory returns an absolute path to .regolith/tmp
-func GetAbsoluteWorkingDirectory() string {
-	absoluteWorkingDir, _ := filepath.Abs(".regolith/tmp")
+// GetAbsoluteWorkingDirectory returns an absolute path to [dotRegolithPath]/tmp
+func GetAbsoluteWorkingDirectory(dotRegolithPath string) string {
+	absoluteWorkingDir, _ := filepath.Abs(filepath.Join(dotRegolithPath, "tmp"))
 	return absoluteWorkingDir
 }
 
@@ -182,13 +171,9 @@ func GetAbsoluteWorkingDirectory() string {
 func CreateEnvironmentVariables(filterDir string) ([]string, error) {
 	projectDir, err := os.Getwd()
 	if err != nil {
-		return nil, WrapErrorf(err, "Failed to get current working directory.")
+		return nil, WrapErrorf(err, osGetwdError)
 	}
-	projectDir, err = filepath.Abs(projectDir)
-	if err != nil {
-		return nil, WrapErrorf(err, "Failed to get absolute path to current working directory.")
-	}
-	return append(os.Environ(), "FILTER_DIR="+filterDir, "ROOT_DIR="+projectDir), nil
+	return append(os.Environ(), fmt.Sprintf("FILTER_DIR=%s", filterDir), fmt.Sprintf("ROOT_DIR=%s", projectDir), fmt.Sprintf("DEBUG=%t", Debug)), nil
 }
 
 // RunSubProcess runs a sub-process with specified arguments and working
@@ -203,7 +188,9 @@ func RunSubProcess(command string, args []string, filterDir string, workingDir s
 	go LogStd(err, Logger.Errorf, outputLabel)
 	env, err1 := CreateEnvironmentVariables(filterDir)
 	if err1 != nil {
-		return WrapErrorf(err1, "Failed to create environment variables.")
+		return WrapErrorf(
+			err1,
+			"Failed to create FILTER_DIR and ROOT_DIR environment variables.")
 	}
 	cmd.Env = env
 
@@ -217,83 +204,41 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 	}
 }
 
-// isDirEmpty checks whether the path points at empty directory. If the path
-// is not a directory or info about the path can't be obtaioned for some reason
-// it returns false. If the path is a directory and it is empty, it returns
-// true.
-func isDirEmpty(path string) (bool, error) {
-	if stat, err := os.Stat(path); os.IsNotExist(err) {
-		return false, WrappedErrorf("Path %q does not exist.", path)
-	} else if !stat.IsDir() {
-		return false, WrappedErrorf("Path %q is not a directory.", path)
+// GetDotRegolith returns the path to the directory where Regolith stores
+// its cached data (like filters, Python venvs, etc.). If useAppData is set to
+// false it returns relative director: ".regolith" otherwise it returns path
+// inside the AppData directory. Based on the hash value of the
+// project's root directory. If the path isn't .regolith it also logs a message
+// which tells where the data is stored unless the silent flag is set to true.
+// The projectRoot path can be relative or absolute and is resolved to an
+// absolute path.
+func GetDotRegolith(useAppData, silent bool, projectRoot string) (string, error) {
+	// App data diabled - use .regolith
+	if !useAppData {
+		return ".regolith", nil
 	}
-	f, err := os.Open(path)
+	// App data enabled - use user cache dir
+	userCache, err := os.UserCacheDir()
 	if err != nil {
-		return false, WrapErrorf(err, "Failed to open %q.", path)
+		return "", WrappedError(osUserCacheDirError)
 	}
-	defer f.Close()
-	_, err = f.Readdirnames(1)
-	if err == io.EOF {
-		return true, nil
-	} else if err != nil {
-		return false, PassError(err)
+	// Make sure that projectsRoot is an absolute path
+	absoluteProjectRoot, err := filepath.Abs(projectRoot)
+	if err != nil {
+		return "", WrapErrorf(err, filepathAbsError, projectRoot)
 	}
-	// err is nil -> not empty
-	return false, nil
-}
-
-// MoveOrCopy tries to move the the source to destination first and in case
-// of failore it copies the files instead.
-func MoveOrCopy(
-	source string, destination string, makeReadOnly bool, copyParentAcl bool,
-) error {
-	if err := os.Rename(source, destination); err != nil {
+	// Get the md5 of the project path
+	hash := md5.New()
+	hash.Write([]byte(absoluteProjectRoot))
+	hashInBytes := hash.Sum(nil)
+	projectPathHash := hex.EncodeToString(hashInBytes)
+	// %userprofile%/AppData/Local/regolith/<md5 of project path>
+	dotRegolithPath := filepath.Join(
+		userCache, appDataCachePath, projectPathHash)
+	if !silent {
 		Logger.Infof(
-			"Couldn't move files to \"%s\".\n"+
-				"    Trying to copy files instead...",
-			destination)
-		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
-		err := copy.Copy(source, destination, copyOptions)
-		if err != nil {
-			return WrapErrorf(
-				err, "Couldn't copy data files to \"%s\", aborting.",
-				destination)
-		}
-	} else if copyParentAcl { // No errors with moving files but needs ACL copy
-		parent := filepath.Dir(destination)
-		if _, err := os.Stat(parent); os.IsNotExist(err) {
-			return WrapError(
-				err,
-				"Couldn't copy ACLs - parent directory (used as a source of "+
-					"ACL data) doesn't exist.")
-		}
-		err = copyFileSecurityInfo(parent, destination)
-		if err != nil {
-			return WrapErrorf(
-				err,
-				"Counldn't copy ACLs to the target file \"%s\".",
-				destination,
-			)
-		}
+			"Regolith project cache is in:\n\t%s",
+			dotRegolithPath)
 	}
-	// Make files read only if this option is selected
-	if makeReadOnly {
-		err := filepath.WalkDir(destination,
-			func(s string, d fs.DirEntry, e error) error {
-				if e != nil {
-					return WrapErrorf(
-						e, "Failed to walk directory \"%s\".", destination)
-				}
-				if !d.IsDir() {
-					os.Chmod(s, 0444)
-				}
-				return nil
-			})
-		if err != nil {
-			Logger.Warnf(
-				"Unable to change file permissions of \"%s\" into read-only",
-				destination)
-		}
-	}
-	return nil
+	return dotRegolithPath, nil
 }

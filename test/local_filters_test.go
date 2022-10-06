@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"bedrock-oss.github.com/regolith/regolith"
+	"github.com/Bedrock-OSS/regolith/regolith"
 	"github.com/otiai10/copy"
 )
 
@@ -70,7 +70,7 @@ func testRegolithRunMissingRp(t *testing.T, recycled bool) {
 	// Before deleting "workingDir" the test must stop using it
 	defer os.RemoveAll(tmpDir)
 	defer os.Chdir(wd)
-	os.Mkdir(tmpDir, 0666)
+	os.Mkdir(tmpDir, 0755)
 	// Copy the test project to the working directory
 	err = copy.Copy(
 		runMissingRpProjectPath,
