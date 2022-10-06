@@ -3,11 +3,15 @@ package regolith
 import (
 	"encoding/json"
 	"path/filepath"
+	"runtime"
 )
 
 type ExeFilterDefinition struct {
 	FilterDefinition
-	Exe string `json:"exe,omitempty"`
+	Exe      string `json:"exe,omitempty"`
+	ExeWin   string `json:"exeWindows,omitempty"`
+	ExeLinux string `json:"exeLinux,omitempty"`
+	ExeMac   string `json:"exeMac,omitempty"`
 }
 
 type ExeFilter struct {
@@ -20,18 +24,46 @@ func ExeFilterDefinitionFromObject(
 ) (*ExeFilterDefinition, error) {
 	filter := &ExeFilterDefinition{
 		FilterDefinition: *FilterDefinitionFromObject(id)}
-	exe, ok := obj["exe"].(string)
+	exeObj, ok := obj["exe"]
 	if !ok {
-		return nil, WrapErrorf(
-			nil,
-			"Missing \"exe\" property in filter definition %q.", filter.Id)
+		return nil, WrappedErrorf(jsonPropertyMissingError, "exe")
 	}
+	exe, ok := exeObj.(string)
+	if !ok {
+		return nil, WrappedErrorf(
+			jsonPropertyTypeError, "exe", "string")
+	}
+
 	filter.Exe = exe
+	if exeObj, ok = obj["exeWindows"]; ok {
+		if exe, ok = exeObj.(string); ok {
+			filter.ExeWin = exe
+		} else {
+			return nil, WrappedErrorf(
+				jsonPropertyTypeError, "exeWindows", "string")
+		}
+	}
+	if exeObj, ok = obj["exeLinux"]; ok {
+		if exe, ok = exeObj.(string); ok {
+			filter.ExeLinux = exe
+		} else {
+			return nil, WrappedErrorf(
+				jsonPropertyTypeError, "exeLinux", "string")
+		}
+	}
+	if exeObj, ok = obj["exeMac"]; ok {
+		if exe, ok = exeObj.(string); ok {
+			filter.ExeMac = exe
+		} else {
+			return nil, WrappedErrorf(
+				jsonPropertyTypeError, "exeMac", "string")
+		}
+	}
 	return filter, nil
 }
 
 func (f *ExeFilter) Run(context RunContext) (bool, error) {
-	if err := f.run(f.Settings, context.AbsoluteLocation); err != nil {
+	if err := f.run(f.Settings, context); err != nil {
 		return false, PassError(err)
 	}
 	return context.IsInterrupted(), nil
@@ -40,9 +72,9 @@ func (f *ExeFilter) Run(context RunContext) (bool, error) {
 func (f *ExeFilterDefinition) CreateFilterRunner(
 	runConfiguration map[string]interface{},
 ) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create exe filter.")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &ExeFilter{
 		Filter:     *basicFilter,
@@ -52,7 +84,7 @@ func (f *ExeFilterDefinition) CreateFilterRunner(
 }
 
 func (f *ExeFilterDefinition) InstallDependencies(
-	parent *RemoteFilterDefinition,
+	*RemoteFilterDefinition, string,
 ) error {
 	return nil
 }
@@ -67,23 +99,35 @@ func (f *ExeFilter) Check(context RunContext) error {
 
 func (f *ExeFilter) run(
 	settings map[string]interface{},
-	absoluteLocation string,
+	context RunContext,
 ) error {
 	var err error = nil
+	exe := f.Definition.Exe
+	if runtime.GOOS == "windows" && f.Definition.ExeWin != "" {
+		exe = f.Definition.ExeWin
+	}
+	if runtime.GOOS == "linux" && f.Definition.ExeLinux != "" {
+		exe = f.Definition.ExeLinux
+	}
+	if runtime.GOOS == "darwin" && f.Definition.ExeMac != "" {
+		exe = f.Definition.ExeMac
+	}
 	if len(settings) == 0 {
 		err = executeExeFile(f.Id,
-			f.Definition.Exe,
-			f.Arguments, absoluteLocation,
-			GetAbsoluteWorkingDirectory())
+			exe,
+			f.Arguments, context.AbsoluteLocation,
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
 		err = executeExeFile(f.Id,
-			f.Definition.Exe,
+			exe,
 			append([]string{string(jsonSettings)}, f.Arguments...),
-			absoluteLocation, GetAbsoluteWorkingDirectory())
+			context.AbsoluteLocation, GetAbsoluteWorkingDirectory(
+				context.DotRegolithPath))
 	}
 	if err != nil {
-		return WrapError(err, "Failed to run shell filter.")
+		return WrapErrorf(
+			err, "Failed to run exe file.\nPath: %s", exe)
 	}
 	return nil
 }
@@ -95,7 +139,7 @@ func executeExeFile(id string,
 	Logger.Debugf("Running exe file %s:", exe)
 	err := RunSubProcess(exe, args, filterDir, workingDir, id)
 	if err != nil {
-		return WrapError(err, "Failed to run exe file.")
+		return WrapErrorf(err, runSubProcessError)
 	}
 	return nil
 }

@@ -19,10 +19,14 @@ type DenoFilter struct {
 
 func DenoFilterDefinitionFromObject(id string, obj map[string]interface{}) (*DenoFilterDefinition, error) {
 	filter := &DenoFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
-	script, ok := obj["script"].(string)
+	scriptObj, ok := obj["script"]
+	if !ok {
+		return nil, WrappedErrorf(jsonPropertyMissingError, "script")
+	}
+	script, ok := scriptObj.(string)
 	if !ok {
 		return nil, WrappedErrorf(
-			"Missing \"script\" property in filter definition %q.", filter.Id)
+			jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
 	return filter, nil
@@ -40,11 +44,11 @@ func (f *DenoFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return WrapError(err, "failed to run Deno script")
+			return WrapError(err, runSubProcessError)
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -56,11 +60,11 @@ func (f *DenoFilter) run(context RunContext) error {
 					f.Definition.Script,
 				string(jsonSettings)}, f.Arguments...),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return WrapError(err, "failed to run Deno script")
+			return WrapError(err, runSubProcessError)
 		}
 	}
 	return nil
@@ -68,15 +72,15 @@ func (f *DenoFilter) run(context RunContext) error {
 
 func (f *DenoFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, err
+		return false, PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
 
 func (f *DenoFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "failed to create Deno filter")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &DenoFilter{
 		Filter:     *basicFilter,
@@ -94,7 +98,7 @@ func (f *DenoFilterDefinition) Check(context RunContext) error {
 	}
 	cmd, err := exec.Command("deno", "--version").Output()
 	if err != nil {
-		return WrapError(err, "failed to check Deno version")
+		return WrapError(err, "Failed to check Deno version")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
 	Logger.Debugf("Found Deno version %s", a)
@@ -102,7 +106,7 @@ func (f *DenoFilterDefinition) Check(context RunContext) error {
 }
 
 func (f *DenoFilterDefinition) InstallDependencies(
-	parent *RemoteFilterDefinition,
+	parent *RemoteFilterDefinition, dotRegolithPath string,
 ) error {
 	return nil
 }

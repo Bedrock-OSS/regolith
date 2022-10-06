@@ -19,17 +19,26 @@ type JavaFilter struct {
 
 func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*JavaFilterDefinition, error) {
 	filter := &JavaFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
-	script, ok := obj["path"].(string)
+	var path string
+	pathObj, ok := obj["path"]
 	if !ok {
-		script, ok = obj["script"].(string)
+		scriptObj, ok := obj["script"]
 		if !ok {
-			return nil, WrappedErrorf(
-				"Missing \"path\" property in %s definition.",
-				FullFilterToNiceFilterName(filter.Id))
+			return nil, WrappedErrorf(jsonPropertyMissingError, "path")
 		}
 		Logger.Warnf("\"script\" property in %s definition is deprecated, use \"path\" instead.", FullFilterToNiceFilterName(filter.Id))
+		path, ok = scriptObj.(string)
+		if !ok {
+			return nil, WrappedErrorf(jsonPropertyTypeError, "script", "string")
+		}
+
+	} else {
+		path, ok = pathObj.(string)
+		if !ok {
+			return nil, WrappedErrorf(jsonPropertyTypeError, "path", "string")
+		}
 	}
-	filter.Script = script
+	filter.Script = path
 	return filter, nil
 }
 func (f *JavaFilter) Run(context RunContext) (bool, error) {
@@ -52,7 +61,7 @@ func (f *JavaFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -69,20 +78,20 @@ func (f *JavaFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(),
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return WrapError(err, "Failed to run Java filter")
+			return PassError(err)
 		}
 	}
 	return nil
 }
 
 func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create Java filter")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &JavaFilter{
 		Filter:     *basicFilter,
@@ -91,7 +100,7 @@ func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]in
 	return filter, nil
 }
 
-func (f *JavaFilterDefinition) InstallDependencies(*RemoteFilterDefinition) error {
+func (f *JavaFilterDefinition) InstallDependencies(*RemoteFilterDefinition, string) error {
 	return nil
 }
 
@@ -111,7 +120,7 @@ func (f *JavaFilterDefinition) Check(context RunContext) error {
 	if len(a) > 1 {
 		Logger.Debugf("Found Java %s version %s", a[0], a[1])
 	} else {
-		Logger.Debugf("Failed to parse Java version")
+		Logger.Debugf("Failed to parse Java version.\nVersion string: %s", a)
 	}
 	return nil
 }

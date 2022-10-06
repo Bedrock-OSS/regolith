@@ -2,10 +2,7 @@ package regolith
 
 import (
 	"io/ioutil"
-	"os"
 	"path"
-	"path/filepath"
-	"runtime"
 )
 
 type World struct {
@@ -22,7 +19,8 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 	worldsPath := path.Join(mojangDir, "minecraftWorlds")
 	files, err := ioutil.ReadDir(worldsPath)
 	if err != nil {
-		return nil, WrapError(err, "Failed to list files inside worlds dir.")
+		return nil, WrapErrorf(
+			err, "Failed to list files in the directory.\nPath: %s", worldsPath)
 	}
 	for _, f := range files {
 		if f.IsDir() {
@@ -52,50 +50,6 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 	var result []*World
 	for _, val := range worlds {
 		result = append(result, &val)
-	}
-	return result, nil
-}
-
-func FindMojangDir() (string, error) {
-	if runtime.GOOS != "windows" {
-		return "", WrappedErrorf(
-			"Unsupported operating system: '%s'", runtime.GOOS)
-	}
-	result := filepath.Join(
-		os.Getenv("LOCALAPPDATA"), "Packages",
-		"Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games",
-		"com.mojang")
-	if _, err := os.Stat(result); err != nil {
-		if os.IsNotExist(err) {
-			return "", WrapErrorf(
-				err, "The \"com.mojang\" folder is not at \"%s\".\n"+
-					"Does your system have multiple user accounts?", result)
-		}
-		return "", WrapErrorf(
-			err, "Unable to access \"%s\".\n"+
-				"Are your user permissions correct?", result)
-	}
-	return result, nil
-}
-
-func FindPreviewDir() (string, error) {
-	if runtime.GOOS != "windows" {
-		return "", WrappedErrorf(
-			"Unsupported operating system: '%s'", runtime.GOOS)
-	}
-	result := filepath.Join(
-		os.Getenv("LOCALAPPDATA"), "Packages",
-		"Microsoft.MinecraftWindowsBeta_8wekyb3d8bbwe", "LocalState", "games",
-		"com.mojang")
-	if _, err := os.Stat(result); err != nil {
-		if os.IsNotExist(err) {
-			return "", WrapErrorf(
-				err, "The minecraft preview's \"com.mojang\" folder is not at \"%s\".\n"+
-					"Does your system have multiple user accounts?", result)
-		}
-		return "", WrapErrorf(
-			err, "Unable to access \"%s\".\n"+
-				"Are your user permissions correct?", result)
 	}
 	return result, nil
 }

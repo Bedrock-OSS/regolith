@@ -8,6 +8,9 @@
   "files": [
     {
       "path": "dist/msi_windows_amd64_v1/regolith.exe"
+    },
+    {
+      "path": "scripts/regolith-update.ps1"
     }
   ],
   "environments": [

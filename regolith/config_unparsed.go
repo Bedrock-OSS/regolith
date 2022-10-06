@@ -15,16 +15,15 @@ import (
 func LoadConfigAsMap() (map[string]interface{}, error) {
 	file, err := ioutil.ReadFile(ConfigFilePath)
 	if err != nil {
-		return nil, WrapErrorf(
-			err,
-			"%q not found (use \"regolith init\" to initialize the project).",
-			ConfigFilePath)
+		return nil, WrappedError( // We don't need to pass OS error. It's confusing.
+			"Failed to open \"config.json\". This directory is not a Regolith project.\n" +
+				"Please make sure to run this command in a Regolith project directory.\n" +
+				"If you want to create new Regolith project here, use \"regolith init\".")
 	}
 	var configJson map[string]interface{}
 	err = jsonc.Unmarshal(file, &configJson)
 	if err != nil {
-		return nil, WrapErrorf(
-			err, "Could not load %q as a JSON file.", ConfigFilePath)
+		return nil, WrapErrorf(err, jsonUnmarshalError, ConfigFilePath)
 	}
 	return configJson, nil
 }
@@ -34,11 +33,11 @@ func LoadConfigAsMap() (map[string]interface{}, error) {
 func dataPathFromConfigMap(config map[string]interface{}) (string, error) {
 	regolith, ok := config["regolith"].(map[string]interface{})
 	if !ok {
-		return "", WrappedError("Missing \"regolith\" property.")
+		return "", WrappedErrorf(jsonPathMissingError, "regolith")
 	}
 	dataPath, ok := regolith["dataPath"].(string)
 	if !ok {
-		return "", WrappedError("Missing \"regolith\"->\"dataPath\" property.")
+		return "", WrappedErrorf(jsonPathMissingError, "regolith->dataPath")
 	}
 	return dataPath, nil
 }
@@ -50,11 +49,31 @@ func filterDefinitionsFromConfigMap(
 ) (map[string]interface{}, error) {
 	regolith, ok := config["regolith"].(map[string]interface{})
 	if !ok {
-		return nil, WrappedError("Missing \"regolith\" property.")
+		return nil, WrappedErrorf(jsonPathMissingError, "regolith")
 	}
 	filterDefinitions, ok := regolith["filterDefinitions"].(map[string]interface{})
 	if !ok {
-		return nil, WrappedError("Missing \"regolith\"->\"filterDefinitions\" property.")
+		return nil, WrappedErrorf(
+			jsonPathMissingError, "regolith->filterDefinitions")
+	}
+	return filterDefinitions, nil
+}
+
+// useAppDataFromConfigMap returns the useAppData value from the config file
+// map, without parsing it to a Config object.
+func useAppDataFromConfigMap(config map[string]interface{}) (bool, error) {
+	regolith, ok := config["regolith"].(map[string]interface{})
+	if !ok {
+		return false, WrappedErrorf(jsonPathMissingError, "regolith")
+	}
+	filterDefinitionsInterface, ok := regolith["useAppData"]
+	if !ok { // false by default
+		return false, nil
+	}
+	filterDefinitions, ok := filterDefinitionsInterface.(bool)
+	if !ok {
+		return false, WrappedErrorf(
+			jsonPathTypeError, "regolith->useAppData", "bool")
 	}
 	return filterDefinitions, nil
 }

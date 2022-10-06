@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"bedrock-oss.github.com/regolith/regolith"
+	"github.com/Bedrock-OSS/regolith/regolith"
 	"github.com/otiai10/copy"
 )
 
@@ -33,7 +33,7 @@ func testSwitchingExportTargets(t *testing.T, recycled bool) {
 	defer os.RemoveAll(tmpDir)
 	defer os.Chdir(wd)
 	workingDir := filepath.Join(tmpDir, "working-dir")
-	os.Mkdir(workingDir, 0666)
+	os.Mkdir(workingDir, 0755)
 	// Copy the test project to the working directory
 	err = copy.Copy(
 		multitargetProjectPath,
@@ -67,7 +67,7 @@ func testSwitchingExportTargets(t *testing.T, recycled bool) {
 }
 
 func TestSwitchingExportTargets(t *testing.T) {
-	testMoveFilesAcl(t, false)
+	testSwitchingExportTargets(t, false)
 }
 
 func TestSwitchingExportTargetsRecycled(t *testing.T) {
@@ -97,7 +97,7 @@ func testTriggerFileProtection(t *testing.T, recycled bool) {
 	defer os.RemoveAll(tmpDir)
 	defer os.Chdir(wd)
 	workingDir := filepath.Join(tmpDir, "working-dir")
-	os.Mkdir(workingDir, 0666)
+	os.Mkdir(workingDir, 0755)
 	// Copy the test project to the working directory
 	err = copy.Copy(
 		multitargetProjectPath,

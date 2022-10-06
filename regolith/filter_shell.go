@@ -21,19 +21,21 @@ func ShellFilterDefinitionFromObject(
 ) (*ShellFilterDefinition, error) {
 	filter := &ShellFilterDefinition{
 		FilterDefinition: *FilterDefinitionFromObject(id)}
-	command, ok := obj["command"].(string)
+	commandObj, ok := obj["command"]
 	if !ok {
-		return nil, WrapErrorf(
-			nil,
-			"Missing \"command\" property in filter definition %q.", filter.Id)
+		return nil, WrapErrorf(nil, jsonPropertyMissingError, "command")
+	}
+	command, ok := commandObj.(string)
+	if !ok {
+		return nil, WrappedErrorf(jsonPropertyTypeError, "command", "string")
 	}
 	filter.Command = command
 	return filter, nil
 }
 
 func (f *ShellFilter) Run(context RunContext) (bool, error) {
-	if err := f.run(f.Settings, context.AbsoluteLocation); err != nil {
-		return false, err
+	if err := f.run(f.Settings, context); err != nil {
+		return false, PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -41,9 +43,9 @@ func (f *ShellFilter) Run(context RunContext) (bool, error) {
 func (f *ShellFilterDefinition) CreateFilterRunner(
 	runConfiguration map[string]interface{},
 ) (FilterRunner, error) {
-	basicFilter, err := FilterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, "Failed to create shell filter.")
+		return nil, WrapError(err, filterFromObjectError)
 	}
 	filter := &ShellFilter{
 		Filter:     *basicFilter,
@@ -52,9 +54,7 @@ func (f *ShellFilterDefinition) CreateFilterRunner(
 	return filter, nil
 }
 
-func (f *ShellFilterDefinition) InstallDependencies(
-	parent *RemoteFilterDefinition,
-) error {
+func (f *ShellFilterDefinition) InstallDependencies(*RemoteFilterDefinition, string) error {
 	return nil
 }
 
@@ -76,23 +76,24 @@ var shells = [][]string{
 
 func (f *ShellFilter) run(
 	settings map[string]interface{},
-	absoluteLocation string,
+	context RunContext,
 ) error {
 	var err error = nil
 	if len(settings) == 0 {
 		err = executeCommand(f.Id,
 			f.Definition.Command,
-			f.Arguments, absoluteLocation,
-			GetAbsoluteWorkingDirectory())
+			f.Arguments, context.AbsoluteLocation,
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
 		err = executeCommand(f.Id,
 			f.Definition.Command,
 			append([]string{string(jsonSettings)}, f.Arguments...),
-			absoluteLocation, GetAbsoluteWorkingDirectory())
+			context.AbsoluteLocation,
+			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
 	}
 	if err != nil {
-		return WrapError(err, "Failed to run shell filter.")
+		return WrapError(err, "Failed to run shell command.")
 	}
 	return nil
 }
@@ -108,7 +109,7 @@ func executeCommand(id string,
 	}
 	err = RunSubProcess(shell, []string{arg, joined}, filterDir, workingDir, ShortFilterName(id))
 	if err != nil {
-		return WrapError(err, "Failed to run shell script.")
+		return WrapError(err, runSubProcessError)
 	}
 	return nil
 }

@@ -17,6 +17,7 @@ type RunContext struct {
 	Config           *Config
 	Profile          string
 	Parent           *RunContext
+	DotRegolithPath  string
 
 	// interruptionChannel is a channel that is used to notify about changes
 	// in the sourec files, in order to trigger a restart of the program in
@@ -27,9 +28,13 @@ type RunContext struct {
 }
 
 // GetProfile returns the Profile structure from the context.
-func (c *RunContext) GetProfile() (Profile, bool) {
+func (c *RunContext) GetProfile() (Profile, error) {
 	profile, ok := c.Config.Profiles[c.Profile]
-	return profile, ok
+	if !ok {
+		return Profile{}, WrappedErrorf("Profile with specified name doesn't exist.\n"+
+			"Profile name: %s", c.Profile)
+	}
+	return profile, nil
 }
 
 // IsWatchMode returns a value that shows whether the context is in the
@@ -46,7 +51,7 @@ func (c *RunContext) StartWatchingSrouceFiles() error {
 	// their messages until the end of the program. Sending to a closed channel
 	// would cause panic.
 	if c.interruptionChannel != nil {
-		return WrappedError("The Config is already watching source files.")
+		return WrappedError("Files are already being watched.")
 	}
 	rpWatcher, err := NewDirWatcher(c.Config.ResourceFolder)
 	if err != nil {
@@ -108,7 +113,7 @@ func FilterDefinitionFromObject(id string) *FilterDefinition {
 	return &FilterDefinition{Id: id}
 }
 
-func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
+func filterFromObject(obj map[string]interface{}) (*Filter, error) {
 	filter := &Filter{}
 	// Name
 	description, _ := obj["description"].(string)
@@ -131,21 +136,20 @@ func FilterFromObject(obj map[string]interface{}) (*Filter, error) {
 	filter.Settings = settings
 
 	// Id
-	// TODO - this property is redundant. You can find it in Filter and
-	// FilterDefinition. This could cause hard to find bugs. There should
-	// be a mechanism that ensures that the two are consistent. The filters
-	// defined in "filter.json" don't have an id but its required by the
-	// other filters.
-	id, ok := obj["filter"].(string)
+	idObj, ok := obj["filter"]
 	if !ok {
-		return nil, WrappedError("Missing \"filter\" property in filter.")
+		return nil, WrappedErrorf(jsonPropertyMissingError, "filter")
+	}
+	id, ok := idObj.(string)
+	if !ok {
+		return nil, WrappedErrorf(jsonPropertyTypeError, "filter", "string")
 	}
 	filter.Id = id
 	return filter, nil
 }
 
 type FilterInstaller interface {
-	InstallDependencies(parent *RemoteFilterDefinition) error
+	InstallDependencies(parent *RemoteFilterDefinition, dotRegolithPath string) error
 	Check(context RunContext) error
 	CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error)
 }
@@ -202,6 +206,14 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 			return nil, WrapErrorf(
 				err,
 				"Unable to create Java filter from %q filter definition.", id)
+		}
+		return filter, nil
+	case "dotnet":
+		filter, err := DotNetFilterDefinitionFromObject(id, obj)
+		if err != nil {
+			return nil, WrapErrorf(
+				err,
+				"Unable to create .Net filter from %q filter definition.", id)
 		}
 		return filter, nil
 	case "nim":
@@ -265,7 +277,11 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 		return filter, nil
 	}
 	return nil, WrappedErrorf(
-		"Unknown runWith %q in filter definition %q", runWith, id)
+		"Invalid runWith value filter definition.\n"+
+			"Filter: %s\n"+
+			"Value: %s\n"+
+			"Valid values: java, dotnet, nim, deno, nodejs, python, shell, exe",
+		runWith, id)
 }
 
 func FilterRunnerFromObjectAndDefinitions(
@@ -275,21 +291,22 @@ func FilterRunnerFromObjectAndDefinitions(
 	if ok {
 		return &ProfileFilter{Profile: profile}, nil
 	}
-	filter, ok := obj["filter"].(string)
+	filterObj, ok := obj["filter"]
 	if !ok {
-		return nil, WrappedError(
-			"Missing \"filter\" property in filter runner.")
+		return nil, WrappedErrorf(jsonPropertyMissingError, "filter")
+	}
+	filter, ok := filterObj.(string)
+	if !ok {
+		return nil, WrappedErrorf(jsonPropertyTypeError, "filter", "string")
 	}
 	if filterDefinition, ok := filterDefinitions[filter]; ok {
 		filterRunner, err := filterDefinition.CreateFilterRunner(obj)
 		if err != nil {
-			return nil, WrapErrorf(
-				err,
-				"Unable to create filter runner from %q filter definition.",
-				filter)
+			return nil, WrapErrorf(err, createFilterRunnerError, filter)
 		}
 		return filterRunner, nil
 	}
 	return nil, WrappedErrorf(
-		"Unable to find %q filter in filter definitions.", filter)
+		"Unable to find filter in filter definitions.\nFilter name: %s",
+		filter)
 }
