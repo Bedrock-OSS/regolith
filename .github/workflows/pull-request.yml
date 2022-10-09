@@ -5,7 +5,7 @@ name: Pull Request Check
 
 on:
   pull_request:
-    branches: [wiki]
+    branches: [main]
   workflow_dispatch:
 
 env:
