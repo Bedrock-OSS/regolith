@@ -53,12 +53,14 @@ For example `github.com/SirLich/echo-npc-regolith/echo`.
 | [minimize](https://github.com/cda94581/regolith-filters/tree/main/minimize) | cda94581 | nodejs | Minimize all file JSONs. Can save a tiny bit of space. Also kinda pointless but whatever. |
 | [namespace](https://github.com/cda94581/regolith-filters/tree/main/namespace) | cda94581 | nodejs | Automatically apply and replace namespaces to each block, item, entity, recipe, attachable, particle, and fog. Useful for temporary namespaces before deployment. |
 | [classes](https://github.com/evilguy50/my-regolith-filters/tree/main/classes) | evilguy50 | nim | filter for adding OOP class like structure to functions. |
+| [dash](https://github.com/evilguy50/my-regolith-filters/tree/main/dash) | evilguy50 | nim | filter for installing / running the bridge dash compiler. |
 | [ds_store](https://github.com/evilguy50/my-regolith-filters/tree/main/ds_store) | evilguy50 | nim | filter for removing .DS_Store files. |
 | [new_exec](https://github.com/evilguy50/my-regolith-filters/tree/main/new_exec) | evilguy50 | nodejs |  |
 | [shorthand](https://github.com/evilguy50/my-regolith-filters/tree/main/shorthand) | evilguy50 | python | filter for having shorthand syntax inside of functions. |
 | [strip](https://github.com/evilguy50/my-regolith-filters/tree/main/strip) | evilguy50 | nim | filter for striping comments from json, mcfunction, and lang files. |
 | [style_lint](https://github.com/evilguy50/my-regolith-filters/tree/main/style_lint) | evilguy50 | python | filter for automatic project styling. |
 | [title_ui](https://github.com/evilguy50/my-regolith-filters/tree/main/title_ui) | evilguy50 | nim | filter for generating title ui bindings. |
+| [item_scale](https://github.com/MedicalJewel105/regolilters/tree/main/item_scale) | MedicalJewel105 | python | This filter generates render_offsets for 1.16.100+ items. |
 | [module_importer](https://github.com/ShiCheng-Lu/Regolith-Filters/tree/main/module_importer) | ShiCheng-Lu | nodejs | A regolith filter for import |
 | [command_lang](https://github.com/MCDevKit/regolith-library/tree/main/command_lang) | MCDevKit | shell |  |
 | [jsonte](https://github.com/MCDevKit/regolith-library/tree/main/jsonte) | MCDevKit | exe |  |
