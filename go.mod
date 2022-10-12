@@ -7,6 +7,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/google/go-github/v39 v39.2.0
 	github.com/hashicorp/go-getter v1.5.11
+	github.com/nightlyone/lockfile v1.0.0
 	github.com/otiai10/copy v1.7.0
 	github.com/urfave/cli/v2 v2.4.0
 	go.uber.org/zap v1.21.0

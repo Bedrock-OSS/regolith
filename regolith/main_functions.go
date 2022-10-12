@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"encoding/json"
+	"github.com/nightlyone/lockfile"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -276,6 +277,18 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 		return WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
+	join, err := filepath.Abs(filepath.Join(dotRegolithPath, "lockfile"))
+	if err != nil {
+		return WrapError(err, "Could not get the absolute path to the lockfile.")
+	}
+	l, err := lockfile.New(join)
+	if err != nil {
+		return WrapError(err, "Could not create lockfile.")
+	}
+	err = l.TryLock()
+	if err != nil {
+		return WrapError(err, "Could not lock the lockfile. Is another instance of regolith running?")
+	}
 	// Check the filters of the profile
 	err = CheckProfileImpl(profile, profileName, *config, nil, dotRegolithPath)
 	if err != nil {
@@ -311,6 +324,10 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 		return WrapErrorf(err, "Failed to run profile %q", profileName)
 	}
 	Logger.Infof("Successfully ran the %q profile.", profileName)
+	err = l.Unlock()
+	if err != nil {
+		return WrapError(err, "Could not unlock the lockfile.")
+	}
 	return nil
 }
 
