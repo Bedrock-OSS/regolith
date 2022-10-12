@@ -17,6 +17,8 @@ Please ensure that you add python to your path:
 
 ![](/regolith/assets/images/installing/python.png)
 
+We recommend that you download more or less recent versions of Python.
+
 **Warning:** It's generally not acceptable to install python via the Microsoft Store. Python installed from here is not available on the path. If you have trouble running Python filters with Regolith, please reinstall using the link above.
 {: .notice--warning}
 
