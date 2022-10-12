@@ -90,14 +90,14 @@ func (r *RevertableFsOperations) Undo() error {
 
 // Delete removes a file or directory.
 // For deleting entire directories, check out the DeleteDir.
-func (r *RevertableFsOperations) Delete(path string) error {
+func (r *RevertableFsOperations) Delete(path, dataDir string) error {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return WrapErrorf(err, osStatErrorAny, path)
 	}
-	tmpPath := r.getTempFilePath(path)
+	tmpPath := r.getTempFilePath(path, dataDir)
 	err := ForceMoveFile(path, tmpPath)
 	if err != nil {
 		return WrapErrorf(
@@ -123,18 +123,18 @@ func (r *RevertableFsOperations) Delete(path string) error {
 // it moves the files of the directory one by one to the backup directory,
 // and it's able to undo the operation even if an error occures in the middle
 // of its execution.
-func (r *RevertableFsOperations) DeleteDir(path string) error {
+func (r *RevertableFsOperations) DeleteDir(path, dataDir string) error {
 	// TODO - maybe Delete should be able to delete both directories and files and DeleteDir should be private
 	stat, err := os.Stat(path)
 	if err == nil && !stat.IsDir() {
-		err = r.Delete(path)
+		err = r.Delete(path, dataDir)
 		if err != nil {
 			return WrapErrorf(err, revertableFsOperationsDeleteError, path)
 		}
 		return nil
 	}
 	deleteFunc := func(currPath string, info fs.FileInfo, err error) error {
-		err = r.Delete(currPath)
+		err = r.Delete(currPath, dataDir)
 		if err != nil {
 			return WrapErrorf(err, revertableFsOperationsDeleteError, currPath)
 		}
@@ -372,13 +372,17 @@ func (r *RevertableFsOperations) copy(source, target string) error {
 	return nil
 }
 
-// getTempFilePath returns a temporary path in the bacup directory to store
+// getTempFilePath returns a temporary path in the backup directory to store
 // files deleted by the FsOperationBatch before the operations are fully
 // applied (before calling Close()).
-func (r *RevertableFsOperations) getTempFilePath(base string) string {
-	_, file := filepath.Split(base)
+func (r *RevertableFsOperations) getTempFilePath(base, dataDir string) string {
+	base, err := filepath.Rel(dataDir, base)
+	if err != nil {
+		Logger.Warnf("Failed to get relative path of %s: %s", base, err)
+	}
+	base, file := filepath.Split(base)
 	return filepath.Join(
-		r.backupPath, strconv.Itoa(r.backupFileCounter)+"_"+file)
+		r.backupPath, base, strconv.Itoa(r.backupFileCounter)+"_"+file)
 }
 
 // createBackupPath creates an empty directory at the given path or returns an

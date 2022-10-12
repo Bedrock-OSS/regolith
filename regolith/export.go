@@ -234,7 +234,7 @@ func ExportProject(
 	}
 	for _, path := range paths {
 		path := filepath.Join(dataPath, path.Name())
-		err = revertibleOps.DeleteDir(path)
+		err = revertibleOps.DeleteDir(path, filepath.Clean(dataPath))
 		if err != nil {
 			revertibleOps.Undo()
 			return WrapError(
