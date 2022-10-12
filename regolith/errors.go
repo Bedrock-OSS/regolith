@@ -2,6 +2,8 @@ package regolith
 
 // Common errors and warnings used by Regolith
 const (
+	errorConnector = "** Another error occured while handling the previous error **"
+
 	// Error message to display when when expecting an empty or unexisting directory
 	assertEmptyOrNewDirError = "Expected a path to an empty or unexisting " +
 		"directory.\nPath: %s"
@@ -158,4 +160,7 @@ const (
 
 	// Error used when GetRegolithConfigPath fails
 	getRegolithConfigPathError = "Failed to get path to Regolith's app data folder."
+
+	// Error used whe Regolith fails to undo failed file system operation.
+	fsUndoError = "Filed to undo file system operation."
 )

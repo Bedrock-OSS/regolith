@@ -236,8 +236,8 @@ func ExportProject(
 		path := filepath.Join(dataPath, path.Name())
 		err = revertibleOps.DeleteDir(path)
 		if err != nil {
-			revertibleOps.Undo()
-			return WrapError(
+			handlerError := revertibleOps.Undo()
+			mainError := WrapError(
 				err, "Failed clear filters data before replacing it with "+
 					"updated version of the files.\n"+
 					"Every time you run Regolith, it creates a copy of the "+
@@ -252,6 +252,15 @@ func ExportProject(
 					"data path is used by another program (usually terminal).\n"+
 					"Please close your terminal and try again.\n"+
 					"Make sure that you don't open it inside the filters data path.")
+			if handlerError != nil {
+				return WrapErrorHandlerError(
+					mainError, handlerError, errorConnector, fsUndoError)
+			}
+			if handlerError := revertibleOps.Close(); handlerError != nil {
+				return PassErrorHandlerError(
+					mainError, handlerError, errorConnector)
+			}
+			return mainError
 		}
 	}
 
@@ -268,10 +277,19 @@ func ExportProject(
 	err = revertibleOps.MoveoOrCopyDir(
 		filepath.Join(dotRegolithPath, "tmp/data"), dataPath)
 	if err != nil {
-		revertibleOps.Undo()
-		return WrapError(
+		handlerError := revertibleOps.Undo()
+		mainError := WrapError(
 			err, "Failed to move the filter data back to the project's "+
 				"data folder.")
+		if handlerError != nil {
+			return WrapErrorHandlerError(
+				mainError, handlerError, errorConnector, fsUndoError)
+		}
+		if handlerError := revertibleOps.Close(); handlerError != nil {
+			return PassErrorHandlerError(
+				mainError, handlerError, errorConnector)
+		}
+		return mainError
 	}
 
 	// Update or create edited_files.json

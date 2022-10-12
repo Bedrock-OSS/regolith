@@ -82,7 +82,7 @@ func (r *RevertableFsOperations) Undo() error {
 		undo, r.undoOperations = r.undoOperations[i], r.undoOperations[:i]
 		err := undo()
 		if err != nil {
-			return WrapError(err, "Failed to undo operation.")
+			return PassError(err)
 		}
 	}
 	return nil
