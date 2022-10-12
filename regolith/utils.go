@@ -80,6 +80,64 @@ func wrapErrorStackTrace(err error, text string) error {
 	return errors.New(text)
 }
 
+// wrapErrorHandlerErrorStackTrace is a helper function for wrapping errors
+// that occured during error handling.
+//
+// - mainErr - the error that is being handled. The message of this error
+//   should be properly formatted and have the stack trace if debug mode is
+//   enabled.
+// - handlerErr - the error that occured during handling. This value can be
+//   nil. In this case only the errorHandlerText is used for printing the
+//   part of the message related to the error handler.
+// - connectorText - text used to connect both errors. For example:
+//   "Another error occured while handling the previous error:". This text can
+//   be empty. In this case the errors are separated by two new lines.
+// - errorHandlerText - additional text to be added to the error message. This
+//   text can be empty. IN this case only the handlerErr is used for printing
+//   the part of the message related to the error handler.
+func wrapErrorHandlerErrorStackTrace(
+	mainErr, handlerErr error, connectorText, errorHandlerText string,
+) error {
+	// Add header (the main message)
+	text := mainErr.Error() + "\n\n"
+	// Add connector text (optional)
+	if connectorText != "" {
+		text = text + connectorText + "\n\n"
+	}
+	// Format and add the error handler error
+	errorHandlerText = strings.Replace(
+		errorHandlerText, "\n", color.YellowString("\n   >> "), -1)
+	redPlus := color.RedString("+")
+	if handlerErr == nil {
+		if errorHandlerText != "" {
+			errorHandlerText = fmt.Sprintf(
+				"[%s]: %s", redPlus, errorHandlerText)
+		}
+		// else: no error, but this function shouldn't be used like this
+		// no extra text. But it's possible that it will leave connector text
+		// at the end.
+	} else {
+		if errorHandlerText != "" {
+			errorHandlerText = fmt.Sprintf(
+				"[%s]: %s\n[%s]: %s", redPlus, errorHandlerText, redPlus,
+				handlerErr.Error())
+		} else {
+			errorHandlerText = fmt.Sprintf(
+				"[%s]: %s\n[%s]: %s", redPlus, errorHandlerText, redPlus,
+				handlerErr.Error())
+		}
+	}
+	text = text + errorHandlerText
+	// Add stack trace (optional)
+	if printStackTraces {
+		pc, fn, line, _ := runtime.Caller(2)
+		text = fmt.Sprintf(
+			"%s\n   [%s] %s:%d", text, runtime.FuncForPC(pc).Name(),
+			filepath.Base(fn), line)
+	}
+	return errors.New(text)
+}
+
 func FullFilterToNiceFilterName(name string) string {
 	if strings.Contains(name, ":subfilter") {
 		i, err := strconv.Atoi(strings.Split(name, ":subfilter")[1])
@@ -141,6 +199,25 @@ func WrapError(err error, text string) error {
 // text information.
 func WrapErrorf(err error, text string, args ...interface{}) error {
 	return wrapErrorStackTrace(err, fmt.Sprintf(text, args...))
+}
+
+// WrapErrorHandlerError combines two errors into one. The first error is
+// an error that occured during the main operation. The second error is an
+// error that occured during error handling. Errors are combined using
+// connectorText. Additional text can be added to the handler error message
+// using errorHandlerText.
+func WrapErrorHandlerError(
+	mainErr, handlerErr error, connectorText, errorHandlerText string,
+) error {
+	return wrapErrorHandlerErrorStackTrace(
+		mainErr, handlerErr, connectorText, errorHandlerText)
+}
+
+// PassErrorHandlerError combines mainErr and handlerError similar to
+// WrapErrorHandlerError, but it doesn't provide any additional text
+// (analogous to PassError).
+func PassErrorHandlerError(mainErr, handlerErr error, connectorText string) error {
+	return wrapErrorHandlerErrorStackTrace(mainErr, handlerErr, connectorText, "")
 }
 
 func CreateDirectoryIfNotExists(directory string, mustSucceed bool) error {
