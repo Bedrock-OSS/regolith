@@ -30,8 +30,8 @@ type RevertableFsOperations struct {
 	backupFileCounter int
 }
 
-// NewRevertableFsOperaitons creates a new FsOperationBatch struct.
-func NewRevertableFsOperaitons(backupPath string) (*RevertableFsOperations, error) {
+// NewRevertableFsOperations creates a new FsOperationBatch struct.
+func NewRevertableFsOperations(backupPath string) (*RevertableFsOperations, error) {
 	// Resolve the path to backups in case of changing the working directory
 	// during runtime
 	fullBackupPath, err := filepath.Abs(backupPath)
@@ -377,8 +377,10 @@ func (r *RevertableFsOperations) copy(source, target string) error {
 // applied (before calling Close()).
 func (r *RevertableFsOperations) getTempFilePath(base string) string {
 	_, file := filepath.Split(base)
-	return filepath.Join(
+	result := filepath.Join(
 		r.backupPath, strconv.Itoa(r.backupFileCounter)+"_"+file)
+	r.backupFileCounter++
+	return result
 }
 
 // createBackupPath creates an empty directory at the given path or returns an

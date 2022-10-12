@@ -226,7 +226,7 @@ func ExportProject(
 		}
 	}
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
-	revertibleOps, err := NewRevertableFsOperaitons(backupPath)
+	revertibleOps, err := NewRevertableFsOperations(backupPath)
 	if err != nil {
 		return WrapErrorf(err, "Failed to prepare backup path for revertable"+
 			" file system operations.\n"+
