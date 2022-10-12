@@ -303,7 +303,7 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 		DotRegolithPath:  dotRegolithPath,
 	}
 	if watch { // Loop until program termination (CTRL+C)
-		context.StartWatchingSrouceFiles()
+		context.StartWatchingSourceFiles()
 		for {
 			err = rp(context)
 			if err != nil {

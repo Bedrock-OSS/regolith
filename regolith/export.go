@@ -265,7 +265,7 @@ func ExportProject(
 	if err != nil {
 		return WrapError(err, "Failed to export resource pack.")
 	}
-	err = revertibleOps.MoveoOrCopyDir(
+	err = revertibleOps.MoveOrCopyDir(
 		filepath.Join(dotRegolithPath, "tmp/data"), dataPath)
 	if err != nil {
 		revertibleOps.Undo()
