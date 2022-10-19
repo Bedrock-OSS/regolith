@@ -220,19 +220,14 @@ func PassErrorHandlerError(mainErr, handlerErr error, connectorText string) erro
 	return wrapErrorHandlerErrorStackTrace(mainErr, handlerErr, connectorText, "")
 }
 
-func CreateDirectoryIfNotExists(directory string, mustSucceed bool) error {
+// CreateDirectoryIfNotExists creates a directory if it doesn't exist. If
+// the directory already exists, it does nothing and returns nil.
+func CreateDirectoryIfNotExists(directory string) error {
 	if _, err := os.Stat(directory); os.IsNotExist(err) {
 		err = os.MkdirAll(directory, 0755)
 		if err != nil {
-			if mustSucceed {
-				// Error outside of this function should tell about the path
-				return PassError(err)
-			} else {
-				Logger.Warnf(
-					"Failed to create directory %s: %s.", directory,
-					err.Error())
-				return nil
-			}
+			// Error outside of this function should tell about the path
+			return PassError(err)
 		}
 	}
 	return nil

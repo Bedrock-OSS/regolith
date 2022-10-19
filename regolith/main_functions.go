@@ -2,10 +2,11 @@ package regolith
 
 import (
 	"encoding/json"
-	"github.com/nightlyone/lockfile"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/nightlyone/lockfile"
 )
 
 // Install handles the "regolith install" command. It installs specific filters
@@ -568,7 +569,7 @@ func Unlock(debug bool) error {
 	}
 	// Create parent of the lockfile.txt path if it doesn't exist
 	err = CreateDirectoryIfNotExists(
-		filepath.Join(dotRegolithPath, "cache"), true)
+		filepath.Join(dotRegolithPath, "cache"))
 	if err != nil {
 		return PassError(err)
 	}
