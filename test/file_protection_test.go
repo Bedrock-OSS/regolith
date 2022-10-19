@@ -16,7 +16,7 @@ import (
 // 1. Runs Regolith with target A
 // 2. Runs Regolith with target B
 // 3. Runs Regolith with target A again
-func testSwitchingExportTargets(t *testing.T, recycled bool) {
+func TestSwitchingExportTargets(t *testing.T) {
 	// Switching working directories in this test, make sure to go back
 	wd, err := os.Getwd()
 	if err != nil {
@@ -50,28 +50,20 @@ func testSwitchingExportTargets(t *testing.T, recycled bool) {
 	os.Chdir(workingDir)
 	// THE TEST
 	// Run Regolith with targets: A, B, A
-	err = regolith.Run("exact_export_A", recycled, true)
+	err = regolith.Run("exact_export_A", false, true)
 	if err != nil {
 		t.Fatal(
 			"Unable RunProfile failed on first attempt to export to A:", err)
 	}
-	err = regolith.Run("exact_export_B", recycled, true)
+	err = regolith.Run("exact_export_B", false, true)
 	if err != nil {
 		t.Fatal("Unable RunProfile failed on attempt to export to B:", err)
 	}
-	err = regolith.Run("exact_export_A", recycled, true)
+	err = regolith.Run("exact_export_A", false, true)
 	if err != nil {
 		t.Fatal(
 			"Unable RunProfile failed on second attempt to export to A:", err)
 	}
-}
-
-func TestSwitchingExportTargets(t *testing.T) {
-	testSwitchingExportTargets(t, false)
-}
-
-func TestSwitchingExportTargetsRecycled(t *testing.T) {
-	testSwitchingExportTargets(t, true)
 }
 
 // TestTriggerFileProtection tests if the file protection system will get
@@ -80,7 +72,7 @@ func TestSwitchingExportTargetsRecycled(t *testing.T) {
 // 1. Runs Regolith to export something to a target directory.
 // 2. Creates a file in the target directory.
 // 3. Runs Regolith to export again to the same target directory.
-func testTriggerFileProtection(t *testing.T, recycled bool) {
+func TestTriggerFileProtection(t *testing.T) {
 	// Switching working directories in this test, make sure to go back
 	wd, err := os.Getwd()
 	if err != nil {
@@ -114,7 +106,7 @@ func testTriggerFileProtection(t *testing.T, recycled bool) {
 	os.Chdir(workingDir)
 	// THE TEST
 	// Run Regolith (export to A)
-	err = regolith.Run("exact_export_A", recycled, true)
+	err = regolith.Run("exact_export_A", false, true)
 	if err != nil {
 		t.Fatal(
 			"Unable RunProfile failed on first attempt to export to A:", err)
@@ -126,16 +118,8 @@ func testTriggerFileProtection(t *testing.T, recycled bool) {
 	}
 	file.Close()
 	// 3. Run Regolith (export to A)
-	err = regolith.Run("exact_export_A", recycled, true)
+	err = regolith.Run("exact_export_A", false, true)
 	if err == nil {
 		t.Fatal("Expected RunProfile to fail on second attempt to export to A")
 	}
-}
-
-func TestTriggerFileProtection(t *testing.T) {
-	testTriggerFileProtection(t, false)
-}
-
-func TestTriggerFileProtectionRecycled(t *testing.T) {
-	testTriggerFileProtection(t, true)
 }
