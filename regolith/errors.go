@@ -163,4 +163,7 @@ const (
 
 	// Error used whe Regolith fails to undo failed file system operation.
 	fsUndoError = "Filed to undo file system operation."
+
+	// Error used when aquireSessionLock function fails
+	aquireSessionLockError = "Failed to aquire session lock."
 )

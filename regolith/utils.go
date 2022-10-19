@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/nightlyone/lockfile"
 )
 
 // appDataCachePath is a path to the cache directory relative to the user's
@@ -313,4 +314,33 @@ func GetDotRegolith(useAppData, silent bool, projectRoot string) (string, error)
 			dotRegolithPath)
 	}
 	return dotRegolithPath, nil
+}
+
+// AquireSessionLock creates a lock file in specified directory and
+// returns a function that releases the lock.
+// The path should point to the .regolith directory.
+func aquireSessionLock(dotRegolithPath string) (func() error, error) {
+	// Create dotRegolithPath if it doesn't exist
+	err := CreateDirectoryIfNotExists(dotRegolithPath)
+	if err != nil {
+		return nil, WrapErrorf(err, osMkdirError, dotRegolithPath)
+	}
+	// Get the session lock
+	sessionLockPath, err := filepath.Abs(filepath.Join(dotRegolithPath, "session_lock"))
+	if err != nil {
+		return nil, WrapError(err, "Could not get the absolute path to the session_lock file.")
+	}
+	sessionLock, err := lockfile.New(sessionLockPath)
+	if err != nil {
+		return nil, WrapError(err, "Could not create session_lock file.")
+	}
+	err = sessionLock.TryLock()
+	if err != nil {
+		return nil, WrapError(
+			err, "Could not lock the session_lock file. Is another instance of regolith running?")
+	}
+	unlockFunc := func() error {
+		return sessionLock.Unlock()
+	}
+	return unlockFunc, nil
 }
