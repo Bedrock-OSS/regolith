@@ -11,68 +11,6 @@ import (
 	"github.com/otiai10/copy"
 )
 
-// RecycledSetupTmpFiles set up the workspace for the filters. The function
-// uses cached data about the state of the project files to reduce the number
-// of file system operations.
-func RecycledSetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error {
-	start := time.Now()
-	tmpPath := filepath.Join(dotRegolithPath, "tmp")
-	err := os.MkdirAll(tmpPath, 0755)
-	if err != nil {
-		return WrapErrorf(err, osMkdirError, tmpPath)
-	}
-	// Copy the contents of the 'regolith' folder to '[dotRegolith]/tmp'
-	if config.ResourceFolder != "" {
-		Logger.Debugf("Copying project files to \"%s\"", tmpPath)
-		err = FullRecycledMoveOrCopy(
-			config.ResourceFolder, filepath.Join(tmpPath, "RP"),
-			RecycledMoveOrCopySettings{
-				canMove:                 false,
-				saveSourceHashes:        false,
-				saveTargetHashes:        false,
-				copyTargetAclFromParent: false,
-				reloadSourceHashes:      true,
-			})
-		if err != nil {
-			return WrapErrorf(
-				err, "Failed to setup RP folder in the temporary directory.")
-		}
-	}
-	if config.BehaviorFolder != "" {
-		err = FullRecycledMoveOrCopy(
-			config.BehaviorFolder, filepath.Join(tmpPath, "BP"),
-			RecycledMoveOrCopySettings{
-				canMove:                 false,
-				saveSourceHashes:        false,
-				saveTargetHashes:        false,
-				copyTargetAclFromParent: false,
-				reloadSourceHashes:      true,
-			})
-		if err != nil {
-			return WrapErrorf(
-				err, "Failed to setup BP folder in the temporary directory.")
-		}
-	}
-	if config.DataPath != "" {
-		err = FullRecycledMoveOrCopy(
-			config.DataPath, filepath.Join(tmpPath, "data"),
-			RecycledMoveOrCopySettings{
-				canMove:                 false,
-				saveSourceHashes:        false,
-				saveTargetHashes:        false,
-				copyTargetAclFromParent: false,
-				reloadSourceHashes:      true,
-			})
-		if err != nil {
-			return WrapErrorf(
-				err, "Failed to setup data folder in the temporary directory.")
-		}
-	}
-
-	Logger.Debug("Setup done in ", time.Since(start))
-	return nil
-}
-
 // SetupTmpFiles set up the workspace for the filters.
 func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error {
 	start := time.Now()
@@ -167,90 +105,10 @@ func CheckProfileImpl(
 	return nil
 }
 
-// RecycledRunProfile loads the profile from config.json and runs it based on the
-// context. If context is in the watch mode, it can repeat the process multiple
-// times in case of interruptions (changes in the source files).
-func RecycledRunProfile(context RunContext) error {
-	// profileName string, profile *Profile, config *Config
-
-	// saveTmp saves the state of the tmp files. This is useful only if runnig
-	// in the watch mode.
-	saveTmp := func() error {
-		err1 := SaveStateInDefaultCache(filepath.Join(context.DotRegolithPath, "tmp/RP"))
-		err2 := SaveStateInDefaultCache(filepath.Join(context.DotRegolithPath, "tmp/BP"))
-		err3 := SaveStateInDefaultCache(filepath.Join(context.DotRegolithPath, "tmp/data"))
-		if err := firstErr(err1, err2, err3); err != nil {
-			err1 := ClearCachedStates() // Just to be safe - clear cached states
-			if err1 != nil {
-				err = WrapError(err1, clearCachedStatesError)
-			}
-			return WrapError(err, "Failed to save file path states in cache.")
-		}
-		return nil
-	}
-	// The label and goto can be easily changed to a loop with continue and
-	// break but I find this more readable. If you want to change it, because
-	// you believe goto is forbidden, dark art then feel free to do so.
-start:
-	// Prepare tmp files
-	profile, err := context.GetProfile()
-	if err != nil {
-		return WrapErrorf(err, runContextGetProfileError)
-	}
-	err = RecycledSetupTmpFiles(*context.Config, profile, context.DotRegolithPath)
-	if err != nil {
-		err1 := ClearCachedStates() // Just to be safe clear cached states
-		if err1 != nil {
-			err = WrapError(err1, clearCachedStatesError)
-		}
-		return WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
-	}
-	if context.IsInterrupted() {
-		if err := saveTmp(); err != nil {
-			return PassError(err)
-		}
-		goto start
-	}
-	// Run the profile
-	interrupted, err := WatchProfileImpl(context)
-	if err != nil {
-		return PassError(err)
-	}
-	if interrupted { // Save the current target state before rerun
-		if err := saveTmp(); err != nil {
-			return PassError(err)
-		}
-		goto start
-	}
-	// Export files
-	Logger.Info("Moving files to target directory.")
-	start := time.Now()
-	err = RecycledExportProject(
-		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath)
-	if err != nil {
-		err1 := ClearCachedStates() // Just to be safe clear cached states
-		if err1 != nil {
-			err = WrapError(err1, clearCachedStatesError)
-		}
-		return WrapError(err, exportProjectError)
-	}
-	if context.IsInterrupted("data") { // Ignore the interruptions from the data path
-		if err := saveTmp(); err != nil {
-			return PassError(err)
-		}
-		goto start
-	}
-	Logger.Debug("Done in ", time.Since(start))
-	return nil
-}
-
 // RunProfile loads the profile from config.json and runs it based on the
 // context. If context is in the watch mode, it can repeat the process multiple
 // times in case of interruptions (changes in the source files).
 func RunProfile(context RunContext) error {
-	// Clear states to not conflict with recycled mode, error handling not
-	// important
-	ClearCachedStates()
 start:
 	// Prepare tmp files
 	profile, err := context.GetProfile()
@@ -311,12 +169,7 @@ func WatchProfileImpl(context RunContext) (bool, error) {
 		interrupted, err := filter.Run(context)
 		Logger.Debugf("Executed in %s", time.Since(start))
 		if err != nil {
-			err1 := ClearCachedStates() // Just to be safe clear cached states
-			if err1 != nil {
-				err = WrapError(err1, clearCachedStatesError)
-			}
-			return false, WrapErrorf(
-				err, filterRunnerRunError, filter.GetId())
+			return false, WrapErrorf(err, filterRunnerRunError, filter.GetId())
 		}
 		if interrupted {
 			return true, nil
