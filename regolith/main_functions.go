@@ -568,17 +568,17 @@ func Unlock(debug bool) error {
 			err, "Unable to get the path to regolith cache folder.")
 	}
 	// Create parent of the lockfile.txt path if it doesn't exist
-	err = CreateDirectoryIfNotExists(
-		filepath.Join(dotRegolithPath, "cache"))
+	cachePath := filepath.Join(dotRegolithPath, "cache")
+	err = CreateDirectoryIfNotExists(cachePath)
 	if err != nil {
-		return PassError(err)
+		return WrapErrorf(err, osMkdirError, cachePath)
 	}
 	id, err := GetMachineId()
 	if err != nil {
 		return WrappedError("Failed to get machine ID for the lock file.")
 	}
 
-	lockfilePath := filepath.Join(dotRegolithPath, "cache/lockfile.txt")
+	lockfilePath := filepath.Join(cachePath, "lockfile.txt")
 	Logger.Infof("Creating the lock file in %s...", lockfilePath)
 	if _, err := os.Stat(lockfilePath); err == nil {
 		return WrappedErrorf(
