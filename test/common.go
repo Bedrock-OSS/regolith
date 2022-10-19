@@ -38,10 +38,6 @@ const (
 	// which with missing "packs/RP". The profile doesn't have any filters.
 	runMissingRpProjectPath = "testdata/run_missing_rp_project"
 
-	// recycledCopyData is a directory with data used for testing functions
-	// recycled_copy.go file
-	recycledCopyData = "testdata/recycled_copy_data"
-
 	localRequirementsPath                = "testdata/local_requirements"
 	versionedRemoteFilterProject         = "testdata/versioned_remote_filter_project"
 	versionedRemoteFilterProjectAfterRun = "testdata/versioned_remote_filter_project_after_run"
