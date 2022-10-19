@@ -278,17 +278,22 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 		return WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
-	join, err := filepath.Abs(filepath.Join(dotRegolithPath, "lockfile"))
+	err = CreateDirectoryIfNotExists(dotRegolithPath)
 	if err != nil {
-		return WrapError(err, "Could not get the absolute path to the lockfile.")
+		return WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
-	l, err := lockfile.New(join)
+	sessionLockPath, err := filepath.Abs(filepath.Join(dotRegolithPath, "session_lock"))
 	if err != nil {
-		return WrapError(err, "Could not create lockfile.")
+		return WrapError(err, "Could not get the absolute path to the session_lock file.")
+	}
+	l, err := lockfile.New(sessionLockPath)
+	if err != nil {
+		return WrapError(err, "Could not create session_lock file.")
 	}
 	err = l.TryLock()
 	if err != nil {
-		return WrapError(err, "Could not lock the lockfile. Is another instance of regolith running?")
+		return WrapError(
+			err, "Could not lock the session_lock file. Is another instance of regolith running?")
 	}
 	// Check the filters of the profile
 	err = CheckProfileImpl(profile, profileName, *config, nil, dotRegolithPath)
