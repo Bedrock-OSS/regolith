@@ -79,7 +79,7 @@ func TestMoveFilesAcl(t *testing.T) {
 	// THE TEST
 	err = regolith.Run("dev", false, true)
 	if err != nil {
-		t.Fatal("'regolith init' failed:", err)
+		t.Fatal("'regolith run' failed:", err)
 	}
 	// Test if the RP and BP were created in the right paths
 	assertDirExists := func(dir string) {
