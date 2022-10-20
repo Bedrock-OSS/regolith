@@ -129,9 +129,6 @@ func TestLocalRequirementsInstallAndRun(t *testing.T) {
 	if err != nil {
 		t.Fatal("'regolith install-all' failed", err.Error())
 	}
-	if err := regolith.Unlock(true); err != nil {
-		t.Fatal("'regolith unlock' failed:", err.Error())
-	}
 	if err := regolith.Run("dev", true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
@@ -178,9 +175,6 @@ func TestExeFilterRun(t *testing.T) {
 	}
 	// THE TEST
 	os.Chdir(tmpDir)
-	if err := regolith.Unlock(true); err != nil {
-		t.Fatal("'regolith unlock' failed:", err.Error())
-	}
 	if err := regolith.Run("dev", true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
@@ -242,9 +236,6 @@ func TestProfileFilterRun(t *testing.T) {
 	}
 	// THE TEST
 	os.Chdir(tmpDir)
-	if err := regolith.Unlock(true); err != nil {
-		t.Fatal("'regolith unlock' failed:", err.Error())
-	}
 	t.Log("Running invalid profile filter with circular " +
 		"dependencies (this should fail)")
 	if err := regolith.Run(
