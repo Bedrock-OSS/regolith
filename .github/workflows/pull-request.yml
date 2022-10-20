@@ -5,7 +5,7 @@ name: Pull Request Check
 
 on:
   pull_request:
-    branches: [wiki]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -42,5 +42,5 @@ jobs:
       - name: Build Check
         run: go build ./...
 
-      - name: Build Check
-        run: go test ./...
+      - name: Run Tests
+        run: sudo go test ./...
