@@ -56,7 +56,7 @@ of useful test commands:
 - `go test ./test` - runs all of the tests from the test folder (we keep all of the test there)
 - `go test ./test -v -run "TestRecycledCopy"` - run only the "TestRecycledCopy"
   with verbose output.
-- `dlv test ./test -- "-test.run" TestInstallAllUnlockAndRun` - debug the "TestInstallAllUnlockAndRun"
+- `dlv test ./test -- "-test.run" TestInstallAllAndRun` - debug the "TestInstallAllAndRun"
   test using [delve](https://github.com/go-delve/delve)
 
 ## 🏗 Building as a `.exe`:
