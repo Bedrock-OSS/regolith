@@ -58,6 +58,18 @@ func Install(filters []string, force, debug bool) error {
 				"config file.",
 		)
 	}
+	// Get dotRegolithPath
+	dotRegolithPath, err := GetDotRegolith(useAppData, false, ".")
+	if err != nil {
+		return WrapError(
+			err, "Unable to get the path to regolith cache folder.")
+	}
+	// Lock the session
+	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	if sessionLockErr != nil {
+		return WrapError(sessionLockErr, aquireSessionLockError)
+	}
+	defer func() { sessionLockErr = unlockSession() }()
 	// Check if the filters are already installed if force mode is disabled
 	if !force {
 		for _, parsedArg := range parsedArgs {
@@ -94,12 +106,6 @@ func Install(filters []string, force, debug bool) error {
 		}
 		filterInstallers[parsedArg.name] = remoteFilterDefinition
 	}
-	// Get the dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(useAppData, false, ".")
-	if err != nil {
-		return WrapError(
-			err, "Unable to get the path to regolith cache folder.")
-	}
 	// Download the filter definitions
 	err = installFilters(filterInstallers, force, dataPath, dotRegolithPath)
 	if err != nil {
@@ -122,7 +128,7 @@ func Install(filters []string, force, debug bool) error {
 			len(parsedArgs))
 	}
 	Logger.Info("Successfully installed the filters.")
-	return nil
+	return sessionLockErr // Return the error from the defer function
 }
 
 // InstallAll handles the "regolith install-all" command. It installs all of
@@ -152,13 +158,20 @@ func InstallAll(force, debug bool) error {
 		return WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
+	// Lock the session
+	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	if sessionLockErr != nil {
+		return WrapError(sessionLockErr, aquireSessionLockError)
+	}
+	defer func() { sessionLockErr = unlockSession() }()
+	// Install the filters
 	err = installFilters(
 		config.FilterDefinitions, force, config.DataPath, dotRegolithPath)
 	if err != nil {
 		return WrapError(err, "Could not install filters.")
 	}
 	Logger.Info("Successfully installed the filters.")
-	return nil
+	return sessionLockErr // Return the error from the defer function
 }
 
 // Update handles the "regolith update" command. It updates filters listed in
@@ -181,6 +194,19 @@ func Update(filters []string, debug bool) error {
 	if err := firstErr(err1, err2); err != nil {
 		return WrapError(err, "Failed to load config.json.")
 	}
+	// Get dotRegolithPath
+	dotRegolithPath, err := GetDotRegolith(
+		config.RegolithProject.UseAppData, false, ".")
+	if err != nil {
+		return WrapError(
+			err, "Unable to get the path to regolith cache folder.")
+	}
+	// Lock the session
+	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	if sessionLockErr != nil {
+		return WrapError(sessionLockErr, aquireSessionLockError)
+	}
+	defer func() { sessionLockErr = unlockSession() }()
 	// Filter out the filters that are not present in the 'filters' list
 	filterInstallers := make(map[string]FilterInstaller, 0)
 	for _, filterName := range filters {
@@ -193,20 +219,13 @@ func Update(filters []string, debug bool) error {
 		}
 		filterInstallers[filterName] = filterInstaller
 	}
-	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(
-		config.RegolithProject.UseAppData, false, ".")
-	if err != nil {
-		return WrapError(
-			err, "Unable to get the path to regolith cache folder.")
-	}
 	// Update the filters from the list
 	err = updateFilters(filterInstallers, dotRegolithPath)
 	if err != nil {
 		return WrapError(err, "Could not update filters.")
 	}
 	Logger.Info("Successfully updated the filters.")
-	return nil
+	return sessionLockErr // Return the error from the defer function
 }
 
 // UpdateAll handles the "regolith update-all" command. It updates all of the
@@ -233,25 +252,27 @@ func UpdateAll(debug bool) error {
 		return WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
+	// Lock the session
+	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	if sessionLockErr != nil {
+		return WrapError(sessionLockErr, aquireSessionLockError)
+	}
+	defer func() { sessionLockErr = unlockSession() }()
+	// Update the filters
 	err = updateFilters(config.FilterDefinitions, dotRegolithPath)
 	if err != nil {
 		return WrapError(err, "Could not install filters.")
 	}
 	Logger.Info("Successfully installed the filters.")
-	return nil
+	return sessionLockErr // Return the error from the defer function
 }
 
 // runOrWatch handles both 'regolith run' and 'regolith watch' commands based
 // on the 'watch' parameter. It runs/watches the profile named after
 // 'profileName' parameter. The 'debug' argument determines if the debug
 // messages should be printed or not.
-func runOrWatch(profileName string, recycled, debug, watch bool) error {
+func runOrWatch(profileName string, debug, watch bool) error {
 	InitLogging(debug)
-	// Select the run profile function based on the recycled flag
-	rp := RunProfile
-	if recycled {
-		rp = RecycledRunProfile
-	}
 	if profileName == "" {
 		profileName = "default"
 	}
@@ -276,6 +297,16 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 		return WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
+	err = CreateDirectoryIfNotExists(dotRegolithPath)
+	if err != nil {
+		return WrapErrorf(err, osMkdirError, dotRegolithPath)
+	}
+	// Lock the session
+	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	if sessionLockErr != nil {
+		return WrapError(sessionLockErr, aquireSessionLockError)
+	}
+	defer func() { sessionLockErr = unlockSession() }()
 	// Check the filters of the profile
 	err = CheckProfileImpl(profile, profileName, *config, nil, dotRegolithPath)
 	if err != nil {
@@ -290,9 +321,9 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 		DotRegolithPath:  dotRegolithPath,
 	}
 	if watch { // Loop until program termination (CTRL+C)
-		context.StartWatchingSrouceFiles()
+		context.StartWatchingSourceFiles()
 		for {
-			err = rp(context)
+			err = RunProfile(context)
 			if err != nil {
 				Logger.Errorf(
 					"Failed to run profile %q: %s",
@@ -306,25 +337,25 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 		}
 		// return nil // Unreachable code
 	}
-	err = rp(context)
+	err = RunProfile(context)
 	if err != nil {
 		return WrapErrorf(err, "Failed to run profile %q", profileName)
 	}
 	Logger.Infof("Successfully ran the %q profile.", profileName)
-	return nil
+	return sessionLockErr // Return the error from the defer function
 }
 
 // Run handles the "regolith run" command. It runs selected profile and exports
 // created resource pack and behvaiour pack to the target destination.
-func Run(profileName string, recycled, debug bool) error {
-	return runOrWatch(profileName, recycled, debug, false)
+func Run(profileName string, debug bool) error {
+	return runOrWatch(profileName, debug, false)
 }
 
 // Watch handles the "regolith watch" command. It watches the project
 // directories and it runs selected profile and exports created resource pack
 // and behvaiour pack to the target destination when the project changes.
-func Watch(profileName string, recycled, debug bool) error {
-	return runOrWatch(profileName, recycled, debug, true)
+func Watch(profileName string, debug bool) error {
+	return runOrWatch(profileName, debug, true)
 }
 
 // Init handles the "regolith init" command. It initializes a new Regolith
@@ -408,23 +439,15 @@ func Init(debug bool) error {
 // AppData). The path to clean is determined by the dotRegolithPath parameter.
 // leaveEmptyPath determines if regolith should leave an empty folder at
 // dotRegolithPath
-func clean(cachedStatesOnly bool, dotRegolithPath string) error {
-	if cachedStatesOnly {
-		err := ClearCachedStates()
-		if err != nil {
-			return WrapError(err, clearCachedStatesError)
-		}
-	} else {
-		err := os.RemoveAll(dotRegolithPath)
-		if err != nil {
-			return WrapErrorf(err, "failed to remove %q folder", dotRegolithPath)
-		}
+func clean(dotRegolithPath string) error {
+	err := os.RemoveAll(dotRegolithPath)
+	if err != nil {
+		return WrapErrorf(err, "failed to remove %q folder", dotRegolithPath)
 	}
-
 	return nil
 }
 
-func CleanCurrentProject(cachedStatesOnly bool) error {
+func CleanCurrentProject() error {
 	Logger.Infof("Cleaning cache...")
 	// Load the useAppData property form config
 	config, err := LoadConfigAsMap()
@@ -449,7 +472,7 @@ func CleanCurrentProject(cachedStatesOnly bool) error {
 	if useAppData {
 		// Can fail
 		Logger.Infof("Trying to clean \".regolith\" if it exists...")
-		clean(cachedStatesOnly, ".regolith")
+		clean(".regolith")
 		// Can't fail
 		Logger.Infof("Cleaning the cache in application data folder...")
 		dotRegolithPath, err := GetDotRegolith(true, true, ".")
@@ -458,7 +481,7 @@ func CleanCurrentProject(cachedStatesOnly bool) error {
 				err, "Unable to get the path to regolith cache folder.")
 		}
 		Logger.Infof("Regolith cache folder is: %s", dotRegolithPath)
-		err = clean(cachedStatesOnly, dotRegolithPath)
+		err = clean(dotRegolithPath)
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to clean the cache from %q.", dotRegolithPath)
@@ -469,11 +492,11 @@ func CleanCurrentProject(cachedStatesOnly bool) error {
 			"Trying to clean the Regolith cache from app data folder if it exists...")
 		dotRegolithPath, err := GetDotRegolith(true, true, ".")
 		if err != nil {
-			clean(cachedStatesOnly, dotRegolithPath)
+			clean(dotRegolithPath)
 		}
 		// Can't fail
 		Logger.Infof("Cleaning \".regolith\"...")
-		clean(cachedStatesOnly, ".regolith")
+		err = clean(".regolith")
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to clean the cache from \".regolith\".")
@@ -506,16 +529,12 @@ func CleanUserCache() error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Clean(debug, userCache, cachedStatesOnly bool) error {
+func Clean(debug, userCache bool) error {
 	InitLogging(debug)
 	if userCache {
-		if cachedStatesOnly {
-			return WrappedError(
-				"Cannot mix --user-cache and --cached-states-only flags.")
-		}
 		return CleanUserCache()
 	} else {
-		return CleanCurrentProject(cachedStatesOnly)
+		return CleanCurrentProject()
 	}
 }
 
@@ -549,18 +568,24 @@ func Unlock(debug bool) error {
 		return WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
+	// Lock the session
+	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	if sessionLockErr != nil {
+		return WrapError(sessionLockErr, aquireSessionLockError)
+	}
+	defer func() { sessionLockErr = unlockSession() }()
 	// Create parent of the lockfile.txt path if it doesn't exist
-	err = CreateDirectoryIfNotExists(
-		filepath.Join(dotRegolithPath, "cache"), true)
+	cachePath := filepath.Join(dotRegolithPath, "cache")
+	err = CreateDirectoryIfNotExists(cachePath)
 	if err != nil {
-		return PassError(err)
+		return WrapErrorf(err, osMkdirError, cachePath)
 	}
 	id, err := GetMachineId()
 	if err != nil {
 		return WrappedError("Failed to get machine ID for the lock file.")
 	}
 
-	lockfilePath := filepath.Join(dotRegolithPath, "cache/lockfile.txt")
+	lockfilePath := filepath.Join(cachePath, "lockfile.txt")
 	Logger.Infof("Creating the lock file in %s...", lockfilePath)
 	if _, err := os.Stat(lockfilePath); err == nil {
 		return WrappedErrorf(
@@ -573,5 +598,5 @@ func Unlock(debug bool) error {
 		return WrapError(err, "Failed to write lock file.")
 	}
 	Logger.Infof("Safe mode disabled.")
-	return nil
+	return sessionLockErr // Return the error from the defer function
 }

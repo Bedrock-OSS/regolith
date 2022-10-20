@@ -63,7 +63,7 @@ func TestInstallAllUnlockAndRun(t *testing.T) {
 	if err != nil {
 		t.Fatal("'regolith unlock' failed:", err)
 	}
-	err = regolith.Run("dev", false, true)
+	err = regolith.Run("dev", true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}

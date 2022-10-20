@@ -47,19 +47,11 @@ func main() {
 				Usage: "Runs Regolith, and generates compiled RP and BP, which will be exported to the destination specified in the config.",
 				Action: func(c *cli.Context) error {
 					args := c.Args().Slice()
-					recycled := c.Bool("recycled")
 					var profile string
 					if len(args) != 0 {
 						profile = args[0]
 					}
-					return regolith.Run(profile, recycled, regolith.Debug)
-				},
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "recycled",
-						Aliases: []string{"r"},
-						Usage:   "Uses different \"recycled\" function for moving files, might be faster in some cases. Not recommended.",
-					},
+					return regolith.Run(profile, regolith.Debug)
 				},
 			},
 			{
@@ -67,19 +59,11 @@ func main() {
 				Usage: "Watches the project files and runs specified Regolith profile when they change.",
 				Action: func(c *cli.Context) error {
 					args := c.Args().Slice()
-					recycled := c.Bool("recycled")
 					var profile string
 					if len(args) != 0 {
 						profile = args[0]
 					}
-					return regolith.Watch(profile, recycled, regolith.Debug)
-				},
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "recycled",
-						Aliases: []string{"r"},
-						Usage:   "Uses different \"recycled\" function for moving files, might be faster in some cases. Not recommended.",
-					},
+					return regolith.Watch(profile, regolith.Debug)
 				},
 			},
 			{
@@ -148,19 +132,10 @@ func main() {
 				Name:  "clean",
 				Usage: "Cleans Regolith cache.",
 				Action: func(c *cli.Context) error {
-					clearPathStates := c.Bool("path-states")
 					userCache := c.Bool("user-cache")
-					return regolith.Clean(regolith.Debug, userCache, clearPathStates)
+					return regolith.Clean(regolith.Debug, userCache)
 				},
 				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "path-states",
-						Aliases: []string{"p"},
-						Usage: "Deletes file used for caching contents of " +
-							"paths used by Regolith. This is useful when you " +
-							"work in --recycled mode and Regolith doesn't " +
-							"export files propertly).",
-					},
 					&cli.BoolFlag{
 						Name:    "user-cache",
 						Aliases: []string{},

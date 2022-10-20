@@ -14,6 +14,10 @@ type UpdateStatus struct {
 }
 
 func CheckUpdate(version string, status chan UpdateStatus) {
+	if version == "unversioned" {
+		status <- UpdateStatus{false, nil, nil}
+		return
+	}
 	client := github.NewClient(nil)
 	// Ignore the error, since it's not critical to regolith
 	release, _, err := client.Repositories.GetLatestRelease(

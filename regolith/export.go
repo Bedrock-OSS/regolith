@@ -80,95 +80,6 @@ func GetExportPaths(
 	return
 }
 
-// RecycledExportProject copies files from the tmp paths (tmp/BP and tmp/RP)
-// into the project's export target. The paths are generated with
-// GetExportPaths. The function uses cached data about the state of the project
-// files to reduce the number of file system operations.
-func RecycledExportProject(
-	profile Profile, name, dataPath, dotRegolithPath string,
-) error {
-	exportTarget := profile.ExportTarget
-	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
-	if err != nil {
-		return WrapError(
-			err, "Failed to get generate export paths.")
-	}
-
-	// Loading edited_files.json or creating empty object
-	editedFiles := LoadEditedFiles(dotRegolithPath)
-	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
-	if err != nil {
-		return WrapErrorf(
-			err,
-			"Safety mechanism stopped Regolith to protect unexpected files "+
-				"from your export targets.\n"+
-				"Did you edit the exported files manually?\n"+
-				"Please clear your export paths and try again.\n"+
-				"Resource pack export path: %s\n"+
-				"Behavior pack export path: %s",
-			rpPath, bpPath)
-	}
-
-	Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-	err = FullRecycledMoveOrCopy(
-		filepath.Join(dotRegolithPath, "tmp/BP"), bpPath,
-		RecycledMoveOrCopySettings{
-			canMove:                 true,
-			saveSourceHashes:        true,
-			saveTargetHashes:        true,
-			makeTargetReadOnly:      exportTarget.ReadOnly,
-			copyTargetAclFromParent: true,
-			reloadSourceHashes:      true,
-		})
-	if err != nil {
-		return WrapError(err, "Failed to export behavior pack.")
-	}
-	Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
-	err = FullRecycledMoveOrCopy(
-		filepath.Join(dotRegolithPath, "tmp/RP"), rpPath,
-		RecycledMoveOrCopySettings{
-			canMove:                 true,
-			saveSourceHashes:        true,
-			saveTargetHashes:        true,
-			makeTargetReadOnly:      exportTarget.ReadOnly,
-			copyTargetAclFromParent: true,
-			reloadSourceHashes:      true,
-		})
-	if err != nil {
-		return WrapError(err, "Failed to export resource pack.")
-	}
-	err = FullRecycledMoveOrCopy(
-		filepath.Join(dotRegolithPath, "tmp/data"), dataPath,
-		RecycledMoveOrCopySettings{
-			canMove:                 true,
-			saveSourceHashes:        true,
-			saveTargetHashes:        false,
-			makeTargetReadOnly:      false,
-			copyTargetAclFromParent: false,
-			reloadSourceHashes:      true,
-		})
-	if err != nil {
-		return WrapError(
-			err, "Failed to move the filter data back to the project's "+
-				"data folder.")
-	}
-
-	// Update or create edited_files.json
-	err = editedFiles.UpdateFromPaths(rpPath, bpPath)
-	if err != nil {
-		return WrapError(
-			err,
-			"Failed to create a list of files edited by this 'regolith run'")
-	}
-	err = editedFiles.Dump(dotRegolithPath)
-	if err != nil {
-		return WrapError(
-			err, "Failed to update the list of the files edited by Regolith."+
-				"This may cause the next run to fail.")
-	}
-	return nil
-}
-
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export target. The paths are generated with GetExportPaths.
 func ExportProject(
@@ -226,7 +137,7 @@ func ExportProject(
 		}
 	}
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
-	revertibleOps, err := NewRevertableFsOperaitons(backupPath)
+	revertibleOps, err := NewRevertableFsOperations(backupPath)
 	if err != nil {
 		return WrapErrorf(err, "Failed to prepare backup path for revertable"+
 			" file system operations.\n"+
@@ -236,8 +147,8 @@ func ExportProject(
 		path := filepath.Join(dataPath, path.Name())
 		err = revertibleOps.DeleteDir(path)
 		if err != nil {
-			revertibleOps.Undo()
-			return WrapError(
+			handlerError := revertibleOps.Undo()
+			mainError := WrapError(
 				err, "Failed clear filters data before replacing it with "+
 					"updated version of the files.\n"+
 					"Every time you run Regolith, it creates a copy of the "+
@@ -252,6 +163,15 @@ func ExportProject(
 					"data path is used by another program (usually terminal).\n"+
 					"Please close your terminal and try again.\n"+
 					"Make sure that you don't open it inside the filters data path.")
+			if handlerError != nil {
+				return WrapErrorHandlerError(
+					mainError, handlerError, errorConnector, fsUndoError)
+			}
+			if handlerError := revertibleOps.Close(); handlerError != nil {
+				return PassErrorHandlerError(
+					mainError, handlerError, errorConnector)
+			}
+			return mainError
 		}
 	}
 
@@ -265,13 +185,22 @@ func ExportProject(
 	if err != nil {
 		return WrapError(err, "Failed to export resource pack.")
 	}
-	err = revertibleOps.MoveoOrCopyDir(
+	err = revertibleOps.MoveOrCopyDir(
 		filepath.Join(dotRegolithPath, "tmp/data"), dataPath)
 	if err != nil {
-		revertibleOps.Undo()
-		return WrapError(
+		handlerError := revertibleOps.Undo()
+		mainError := WrapError(
 			err, "Failed to move the filter data back to the project's "+
 				"data folder.")
+		if handlerError != nil {
+			return WrapErrorHandlerError(
+				mainError, handlerError, errorConnector, fsUndoError)
+		}
+		if handlerError := revertibleOps.Close(); handlerError != nil {
+			return PassErrorHandlerError(
+				mainError, handlerError, errorConnector)
+		}
+		return mainError
 	}
 
 	// Update or create edited_files.json
