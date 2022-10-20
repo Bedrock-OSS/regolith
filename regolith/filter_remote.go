@@ -50,10 +50,6 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 
 func (f *RemoteFilter) run(context RunContext) error {
 	Logger.Debugf("RunRemoteFilter \"%s\"", f.Definition.Url)
-	// All other filters require safe mode to be turned off
-	if f.Definition.Url != StandardLibraryUrl && !IsUnlocked(context.DotRegolithPath) {
-		return WrappedErrorf(safeModeEnabledError)
-	}
 	if !f.IsCached(context.DotRegolithPath) {
 		return WrappedErrorf(
 			"Filter is not downloaded. "+

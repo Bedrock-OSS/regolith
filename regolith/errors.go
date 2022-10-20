@@ -102,12 +102,6 @@ const (
 	// Error used when RunSubProcess funciton fails
 	runSubProcessError = "Failed to run sub process."
 
-	// Error used when safe mode is when user tries to perform an unsafe
-	// operation with safe mode enabled
-	safeModeEnabledError = "Safe mode is enabled. " +
-		"It's a feature that protects you from running unsafe code.\n" +
-		"You can turn it off using command:\nregolith unlock"
-
 	// Error used when remote filter fails to access its subfilter collection.
 	// The error doesn't print the name of the filter because the
 	// subfilterCollection method is private and it's always a part of some
