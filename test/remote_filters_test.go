@@ -10,12 +10,12 @@ import (
 	"github.com/otiai10/copy"
 )
 
-// TestInstallAllUnlockAndRun runs a project with a modified config.json file.
+// TestInstallAllAndRun runs a project with a modified config.json file.
 // The config file uses a remote filter with a specific version. This test
-// tests 'regolith install-all', 'regolith unlock', and 'regolith run'. The
+// tests 'regolith install-all', and 'regolith run'. The
 // results of running the filter are compared to a project with an expected
 // result.
-func TestInstallAllUnlockAndRun(t *testing.T) {
+func TestInstallAllAndRun(t *testing.T) {
 	// Switching working directories in this test, make sure to go back
 	wd, err := os.Getwd()
 	if err != nil {
@@ -58,10 +58,6 @@ func TestInstallAllUnlockAndRun(t *testing.T) {
 	err = regolith.InstallAll(false, true)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed:", err)
-	}
-	err = regolith.Unlock(true)
-	if err != nil {
-		t.Fatal("'regolith unlock' failed:", err)
 	}
 	err = regolith.Run("dev", true)
 	if err != nil {
