@@ -9,7 +9,7 @@ sidebar:
 
 Nim is a statically typed compiled systems programming language. It combines successful concepts from mature languages like Python, Ada and Modula. 
 
-## How to install Nim
+## Installing Nim
 
 
   1. Download the newest version of [choosenim.](https://nim-lang.org/install_windows.html)

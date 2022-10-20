@@ -30,8 +30,8 @@ type RevertableFsOperations struct {
 	backupFileCounter int
 }
 
-// NewRevertableFsOperaitons creates a new FsOperationBatch struct.
-func NewRevertableFsOperaitons(backupPath string) (*RevertableFsOperations, error) {
+// NewRevertableFsOperations creates a new FsOperationBatch struct.
+func NewRevertableFsOperations(backupPath string) (*RevertableFsOperations, error) {
 	// Resolve the path to backups in case of changing the working directory
 	// during runtime
 	fullBackupPath, err := filepath.Abs(backupPath)
@@ -82,7 +82,7 @@ func (r *RevertableFsOperations) Undo() error {
 		undo, r.undoOperations = r.undoOperations[i], r.undoOperations[:i]
 		err := undo()
 		if err != nil {
-			return WrapError(err, "Failed to undo operation.")
+			return PassError(err)
 		}
 	}
 	return nil
@@ -157,7 +157,7 @@ func (r *RevertableFsOperations) DeleteDir(path string) error {
 }
 
 // Move moves a file or a directory from source to target.
-// For moving or copying entire directories, check out the MoveoOrCopyDir.
+// For moving or copying entire directories, check out the MoveOrCopyDir.
 func (r *RevertableFsOperations) Move(source, target string) error {
 	err := moveOrCopyAssertions(source, target)
 	if err != nil {
@@ -171,7 +171,7 @@ func (r *RevertableFsOperations) Move(source, target string) error {
 }
 
 // Copies a file from source to target.
-// For moving or copying entire directories, check out the MoveoOrCopyDir.
+// For moving or copying entire directories, check out the MoveOrCopyDir.
 func (r *RevertableFsOperations) Copy(source, target string) error {
 	err := moveOrCopyAssertions(source, target)
 	if err != nil {
@@ -189,7 +189,7 @@ func (r *RevertableFsOperations) Copy(source, target string) error {
 // MoveOrCopy tries to move source file to the target, if it fails, it copies
 // it. If the copy function is performed, the source file remains in its
 // original location.
-// For moving or copying entire directories, check out the MoveoOrCopyDir.
+// For moving or copying entire directories, check out the MoveOrCopyDir.
 func (r *RevertableFsOperations) MoveOrCopy(source, target string) error {
 	err := moveOrCopyAssertions(source, target)
 	if err != nil {
@@ -256,7 +256,7 @@ func (r *RevertableFsOperations) MkdirAll(path string) error {
 // Move, Copy or MoveOrCopy functions because it moves the files of the
 // directory one by one and it's able to undo its actions even if an error
 // occures in the middle of moving.
-func (r *RevertableFsOperations) MoveoOrCopyDir(source, target string) error {
+func (r *RevertableFsOperations) MoveOrCopyDir(source, target string) error {
 	// Check if target is empty or doesn't exist
 	fullTargetPath, err := filepath.Abs(target)
 	if err != nil {
@@ -372,13 +372,15 @@ func (r *RevertableFsOperations) copy(source, target string) error {
 	return nil
 }
 
-// getTempFilePath returns a temporary path in the bacup directory to store
+// getTempFilePath returns a temporary path in the backup directory to store
 // files deleted by the FsOperationBatch before the operations are fully
 // applied (before calling Close()).
 func (r *RevertableFsOperations) getTempFilePath(base string) string {
 	_, file := filepath.Split(base)
-	return filepath.Join(
+	result := filepath.Join(
 		r.backupPath, strconv.Itoa(r.backupFileCounter)+"_"+file)
+	r.backupFileCounter++
+	return result
 }
 
 // createBackupPath creates an empty directory at the given path or returns an

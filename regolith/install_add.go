@@ -28,12 +28,12 @@ func installFilters(
 	dataPath, dotRegolithPath string,
 ) error {
 	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
-	err := CreateDirectoryIfNotExists(joinedPath, true)
+	err := CreateDirectoryIfNotExists(joinedPath)
 	if err != nil {
 		return WrapErrorf(err, osMkdirError, "cache/filters")
 	}
 	joinedPath = filepath.Join(dotRegolithPath, "cache/venvs")
-	err = CreateDirectoryIfNotExists(joinedPath, true)
+	err = CreateDirectoryIfNotExists(joinedPath)
 	if err != nil {
 		return WrapErrorf(err, osMkdirError, "cache/venvs")
 	}
@@ -77,12 +77,12 @@ func updateFilters(
 	remoteFilterDefinitions map[string]FilterInstaller, dotRegolithPath string,
 ) error {
 	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
-	err := CreateDirectoryIfNotExists(joinedPath, true)
+	err := CreateDirectoryIfNotExists(joinedPath)
 	if err != nil {
 		return WrapErrorf(err, osMkdirError, joinedPath)
 	}
 	joinedPath = filepath.Join(dotRegolithPath, "cache/venvs")
-	err = CreateDirectoryIfNotExists(joinedPath, true)
+	err = CreateDirectoryIfNotExists(joinedPath)
 	if err != nil {
 		return WrapErrorf(err, osMkdirError, joinedPath)
 	}
