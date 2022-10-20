@@ -77,7 +77,7 @@ func TestMoveFilesAcl(t *testing.T) {
 		mojangDir, "development_resource_packs", config.Name+"_rp")
 	os.Chdir(workingDir)
 	// THE TEST
-	err = regolith.Run("dev", false, true)
+	err = regolith.Run("dev", true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
