@@ -271,13 +271,8 @@ func UpdateAll(debug bool) error {
 // on the 'watch' parameter. It runs/watches the profile named after
 // 'profileName' parameter. The 'debug' argument determines if the debug
 // messages should be printed or not.
-func runOrWatch(profileName string, recycled, debug, watch bool) error {
+func runOrWatch(profileName string, debug, watch bool) error {
 	InitLogging(debug)
-	// Select the run profile function based on the recycled flag
-	rp := RunProfile
-	if recycled {
-		rp = RecycledRunProfile
-	}
 	if profileName == "" {
 		profileName = "default"
 	}
@@ -328,7 +323,7 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 	if watch { // Loop until program termination (CTRL+C)
 		context.StartWatchingSourceFiles()
 		for {
-			err = rp(context)
+			err = RunProfile(context)
 			if err != nil {
 				Logger.Errorf(
 					"Failed to run profile %q: %s",
@@ -342,7 +337,7 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 		}
 		// return nil // Unreachable code
 	}
-	err = rp(context)
+	err = RunProfile(context)
 	if err != nil {
 		return WrapErrorf(err, "Failed to run profile %q", profileName)
 	}
@@ -352,15 +347,15 @@ func runOrWatch(profileName string, recycled, debug, watch bool) error {
 
 // Run handles the "regolith run" command. It runs selected profile and exports
 // created resource pack and behvaiour pack to the target destination.
-func Run(profileName string, recycled, debug bool) error {
-	return runOrWatch(profileName, recycled, debug, false)
+func Run(profileName string, debug bool) error {
+	return runOrWatch(profileName, debug, false)
 }
 
 // Watch handles the "regolith watch" command. It watches the project
 // directories and it runs selected profile and exports created resource pack
 // and behvaiour pack to the target destination when the project changes.
-func Watch(profileName string, recycled, debug bool) error {
-	return runOrWatch(profileName, recycled, debug, true)
+func Watch(profileName string, debug bool) error {
+	return runOrWatch(profileName, debug, true)
 }
 
 // Init handles the "regolith init" command. It initializes a new Regolith
@@ -444,23 +439,15 @@ func Init(debug bool) error {
 // AppData). The path to clean is determined by the dotRegolithPath parameter.
 // leaveEmptyPath determines if regolith should leave an empty folder at
 // dotRegolithPath
-func clean(cachedStatesOnly bool, dotRegolithPath string) error {
-	if cachedStatesOnly {
-		err := ClearCachedStates()
-		if err != nil {
-			return WrapError(err, clearCachedStatesError)
-		}
-	} else {
-		err := os.RemoveAll(dotRegolithPath)
-		if err != nil {
-			return WrapErrorf(err, "failed to remove %q folder", dotRegolithPath)
-		}
+func clean(dotRegolithPath string) error {
+	err := os.RemoveAll(dotRegolithPath)
+	if err != nil {
+		return WrapErrorf(err, "failed to remove %q folder", dotRegolithPath)
 	}
-
 	return nil
 }
 
-func CleanCurrentProject(cachedStatesOnly bool) error {
+func CleanCurrentProject() error {
 	Logger.Infof("Cleaning cache...")
 	// Load the useAppData property form config
 	config, err := LoadConfigAsMap()
@@ -485,7 +472,7 @@ func CleanCurrentProject(cachedStatesOnly bool) error {
 	if useAppData {
 		// Can fail
 		Logger.Infof("Trying to clean \".regolith\" if it exists...")
-		clean(cachedStatesOnly, ".regolith")
+		clean(".regolith")
 		// Can't fail
 		Logger.Infof("Cleaning the cache in application data folder...")
 		dotRegolithPath, err := GetDotRegolith(true, true, ".")
@@ -494,7 +481,7 @@ func CleanCurrentProject(cachedStatesOnly bool) error {
 				err, "Unable to get the path to regolith cache folder.")
 		}
 		Logger.Infof("Regolith cache folder is: %s", dotRegolithPath)
-		err = clean(cachedStatesOnly, dotRegolithPath)
+		err = clean(dotRegolithPath)
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to clean the cache from %q.", dotRegolithPath)
@@ -505,11 +492,11 @@ func CleanCurrentProject(cachedStatesOnly bool) error {
 			"Trying to clean the Regolith cache from app data folder if it exists...")
 		dotRegolithPath, err := GetDotRegolith(true, true, ".")
 		if err != nil {
-			clean(cachedStatesOnly, dotRegolithPath)
+			clean(dotRegolithPath)
 		}
 		// Can't fail
 		Logger.Infof("Cleaning \".regolith\"...")
-		clean(cachedStatesOnly, ".regolith")
+		err = clean(".regolith")
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to clean the cache from \".regolith\".")
@@ -542,16 +529,12 @@ func CleanUserCache() error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Clean(debug, userCache, cachedStatesOnly bool) error {
+func Clean(debug, userCache bool) error {
 	InitLogging(debug)
 	if userCache {
-		if cachedStatesOnly {
-			return WrappedError(
-				"Cannot mix --user-cache and --cached-states-only flags.")
-		}
 		return CleanUserCache()
 	} else {
-		return CleanCurrentProject(cachedStatesOnly)
+		return CleanCurrentProject()
 	}
 }
 

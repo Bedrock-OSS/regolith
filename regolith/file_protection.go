@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const EditedFilesPath = "cache/edited_files.json"
@@ -179,4 +180,34 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 		return PassError(err)
 	}
 	return nil
+}
+
+// compareFilePaths compares two filepaths to oder them lexicographically.
+// This is not the same as comparing the file paths as strings because
+// "." < "/" and "." < "\\" but the "text.txt" should be greater than
+//  "text/text.txt" ("text.txt" > "text/text.txt"). This is the same order
+// that you would get when you use filepath.Walk.
+// The function returns -1 when "a" < "b", 0 when "a" == "b" and 1 when
+// "a" > "b".
+func compareFilePaths(a, b string) int {
+	a = strings.Replace(a, "\\", "/", -1)
+	b = strings.Replace(b, "\\", "/", -1)
+	aSlice := strings.Split(a, string("/"))
+	bSlice := strings.Split(b, string("/"))
+	for i := 0; i < len(aSlice) && i < len(bSlice); i++ {
+		if cmp := strings.Compare(aSlice[i], bSlice[i]); cmp != 0 {
+			return cmp
+		} // else - they're the same
+	}
+	if len(aSlice) < len(bSlice) {
+		// This shouldn't really happen because you can't use exactly the same
+		// name for file and directory.
+		return -1
+	}
+	if len(aSlice) > len(bSlice) {
+		// This shouldn't really happen because you can't use exactly the same
+		// name for file and directory.
+		return 1
+	}
+	return 0
 }
