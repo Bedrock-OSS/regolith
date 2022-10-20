@@ -42,5 +42,5 @@ jobs:
       - name: Build Check
         run: go build ./...
 
-      - name: Build Check
+      - name: Run Tests
         run: go test ./...
