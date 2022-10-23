@@ -161,6 +161,54 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
+				Name:        "init",
+				Usage:       "Initializes a Regolith project in current directory",
+				Description: regolithInitDesc,
+				Action: func(c *cli.Context) error {
+					return regolith.Init(regolith.Debug)
+				},
+			},
+			{
+				Name:        "install",
+				Usage:       "Downloads and installs filters from the Internet and adds them to the filterDefinitions list",
+				Description: regolithInstallDesc,
+				Action: func(c *cli.Context) error {
+					force := c.Bool("force")
+					filters := c.Args().Slice()
+					// Filter out the --force flag
+					for i, f := range filters {
+						if f == "--force" {
+							filters = append(filters[:i], filters[i+1:]...)
+							break
+						}
+					}
+					return regolith.Install(filters, force, regolith.Debug)
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "force",
+						Aliases: []string{"f"},
+						Usage:   "Force the operation, overriding potential safeguards.",
+					},
+				},
+			},
+			{
+				Name:        "install-all",
+				Usage:       "Installs all of the new filters defined in filterDefintions list",
+				Description: regolithInstallAllDesc,
+				Action: func(c *cli.Context) error {
+					force := c.Bool("force")
+					return regolith.InstallAll(force, regolith.Debug)
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "force",
+						Aliases: []string{"f"},
+						Usage:   "Force the operation, overriding potential safeguards.",
+					},
+				},
+			},
+			{
 				Name:        "run",
 				Usage:       "Runs Regolith using specified profile",
 				Description: regolithRunDesc,
@@ -200,54 +248,6 @@ func main() {
 				Description: regolithUpdateAllDesc,
 				Action: func(c *cli.Context) error {
 					return regolith.UpdateAll(regolith.Debug)
-				},
-			},
-			{
-				Name:        "install-all",
-				Usage:       "Installs all of the new filters defined in filterDefintions list",
-				Description: regolithInstallAllDesc,
-				Action: func(c *cli.Context) error {
-					force := c.Bool("force")
-					return regolith.InstallAll(force, regolith.Debug)
-				},
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "force",
-						Aliases: []string{"f"},
-						Usage:   "Force the operation, overriding potential safeguards.",
-					},
-				},
-			},
-			{
-				Name:        "install",
-				Usage:       "Downloads and installs filters from the Internet and adds them to the filterDefinitions list",
-				Description: regolithInstallDesc,
-				Action: func(c *cli.Context) error {
-					force := c.Bool("force")
-					filters := c.Args().Slice()
-					// Filter out the --force flag
-					for i, f := range filters {
-						if f == "--force" {
-							filters = append(filters[:i], filters[i+1:]...)
-							break
-						}
-					}
-					return regolith.Install(filters, force, regolith.Debug)
-				},
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "force",
-						Aliases: []string{"f"},
-						Usage:   "Force the operation, overriding potential safeguards.",
-					},
-				},
-			},
-			{
-				Name:        "init",
-				Usage:       "Initializes a Regolith project in current directory",
-				Description: regolithInitDesc,
-				Action: func(c *cli.Context) error {
-					return regolith.Init(regolith.Debug)
 				},
 			},
 			{
