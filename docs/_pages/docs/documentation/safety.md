@@ -7,29 +7,7 @@ sidebar:
   nav: "sidebar"
 ---
 
-Please be aware that Regolith is only intended to be used by competent users. Due to the extreme power and flexibility that Regolith offers, there is an increased chance of harm to your system, if used improperly.
-
-Please use caution when using Regolith. If you are not a developer, we highly recommend that you leave your Regolith installation in "Safe Mode".
-{: .notice--warning}
-
-## What is Safe Mode?
-
-By default, Regolith will begin in safe mode: We encourage you to keep it this way!
-
-In Safe Mode, Regolith will only run standard filters. These filters are written by the maintainers of Regolith, and we consider them extremely safe. 
-
-Please be aware however that we cannot accept any liability. Even when running in Safe Mode, you are fully responsible for the safety of your system.
-
-## What is Unsafe mode?
-
-Unsafe Mode unlocks the true potential of Regolith by enabling custom filters. These filters can be written locally, and stored in your project file, or pulled down from the internet by URL, paired with the `regolith install` command.
-
-
-## How do I turn off Safe Mode?
-
-Safe Mode can be disabled by running `regolith unlock`. You will be required to accept a short liability notice before continuing.
-
-This action will create a certificate file in your regolith folder, which is signed to your machine. It is impossible to commit this file into version control: Every system must individually accept the terms.
+Please be aware that Regolith is only intended to be used by users experienced with working inside command prompt. Due to the extreme power and flexibility that Regolith offers, there is an increased chance of harm to your system, if used improperly. We cannot accept any liability. You are fully responsible for the safety of your system.
 
 ## Why is Regolith Unsafe?
 

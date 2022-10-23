@@ -146,13 +146,6 @@ func main() {
 					},
 				},
 			},
-			{
-				Name:  "unlock",
-				Usage: "Unlocks Regolith, to enable use of Remote and Local filters.",
-				Action: func(c *cli.Context) error {
-					return regolith.Unlock(regolith.Debug)
-				},
-			},
 		},
 	}).Run(os.Args)
 	if err != nil {
