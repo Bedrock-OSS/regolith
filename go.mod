@@ -3,7 +3,6 @@ module github.com/Bedrock-OSS/regolith
 go 1.18
 
 require (
-	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/fatih/color v1.13.0
 	github.com/google/go-github/v39 v39.2.0
 	github.com/hashicorp/go-getter v1.5.11
