@@ -8,7 +8,7 @@ import (
 )
 
 // Install handles the "regolith install" command. It installs specific filters
-// from the Internet and adds them to the filtersDefinitions list in the
+// from the internet and adds them to the filtersDefinitions list in the
 // config.json file.
 //
 // The "filters" parameter is a list of filters to install in the format
@@ -93,7 +93,7 @@ func Install(filters []string, force, debug bool) error {
 		if err != nil {
 			return WrapErrorf(
 				err,
-				"Unable to download the filter definition from the Internet.\n"+
+				"Unable to download the filter definition from the internet.\n"+
 					"Filter repository Url: %s\n"+
 					"Filter name: %s\n"+
 					"Filter version: %s\n",
