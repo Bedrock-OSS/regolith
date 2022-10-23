@@ -188,9 +188,11 @@ func (r *RevertableFsOperations) Copy(source, target string) error {
 
 // MoveOrCopy tries to move source file to the target, if it fails, it copies
 // it. If the copy function is performed, the source file remains in its
-// original location.
+// original location unless the clearTargetOnMoveFail flag is set to true.
 // For moving or copying entire directories, check out the MoveOrCopyDir.
-func (r *RevertableFsOperations) MoveOrCopy(source, target string) error {
+func (r *RevertableFsOperations) MoveOrCopy(
+	source, target string, clearTargetOnMoveFail bool,
+) error {
 	err := moveOrCopyAssertions(source, target)
 	if err != nil {
 		return PassError(err)
@@ -206,7 +208,15 @@ func (r *RevertableFsOperations) MoveOrCopy(source, target string) error {
 			// error messages like that are handled outside of the function
 			return PassError(err)
 		}
-		return nil
+		if clearTargetOnMoveFail {
+			err = r.Delete(source)
+			if err != nil {
+				return WrapError(
+					err,
+					"Failed to delete the file after copying it to "+
+						"the target location.")
+			}
+		}
 	}
 	return nil
 }
@@ -303,7 +313,11 @@ func (r *RevertableFsOperations) MoveOrCopyDir(source, target string) error {
 				}
 				return nil
 			}
-			err = r.MoveOrCopy(currSourcePath, currTargetPath)
+			// We use clearTargetOnFail flag here because we rely on the file
+			// in the target location being removed. If it's not removed, the
+			// function will fail trying to delete the parent directory of that
+			// file later in the loop.
+			err = r.MoveOrCopy(currSourcePath, currTargetPath, true)
 			if err != nil {
 				return WrapErrorf(
 					err, moveOrCopyError, currSourcePath, currTargetPath)
