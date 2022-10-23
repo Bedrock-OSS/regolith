@@ -140,7 +140,7 @@ func main() {
 	regolith.CustomHelp()
 	err := (&cli.App{
 		Name:                 "regolith",
-		Usage:                "a Bedrock Addon compiler pipeline",
+		Usage:                "Addon Compiler for the Bedrock Edition of Minecraft",
 		Description:          regolithDesc,
 		EnableBashCompletion: true,
 		Version:              version,
@@ -187,7 +187,7 @@ func main() {
 			},
 			{
 				Name:        "install-all",
-				Usage:       "Installs all of the new filters defined in filterDefintions list",
+				Usage:       "Installs all undownloaded filters defined in filterDefintions list",
 				Description: regolithInstallAllDesc,
 				Action: func(c *cli.Context) error {
 					force := c.Bool("force")
