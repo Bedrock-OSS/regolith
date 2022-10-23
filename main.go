@@ -175,13 +175,6 @@ func main() {
 				Action: func(c *cli.Context) error {
 					force := c.Bool("force")
 					filters := c.Args().Slice()
-					// Filter out the --force flag
-					for i, f := range filters {
-						if f == "--force" {
-							filters = append(filters[:i], filters[i+1:]...)
-							break
-						}
-					}
 					return regolith.Install(filters, force, regolith.Debug)
 				},
 				Flags: []cli.Flag{
