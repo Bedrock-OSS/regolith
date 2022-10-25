@@ -47,6 +47,13 @@ const (
 	// ProfileFilter. It contains a project and an expected result. The
 	// projects has both valid and invalid profiles.
 	profileFilterPath = "testdata/profile_filter"
+
+	// conditionalFilterPath contains two subdirectories 'project' and
+	// 'expected_build_result'. The project is a Regolith project with a simple
+	// Python filter and with configuration that runs it based on a 'when'
+	// condition. The 'expected_build_result' contains the expected result of
+	// the execution.
+	conditionalFilterPath = "testdata/conditional_filter"
 )
 
 // firstErr returns the first error in a list of errors. If the list is empty
