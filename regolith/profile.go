@@ -156,7 +156,11 @@ func WatchProfileImpl(context RunContext) (bool, error) {
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
 		// Disabled filters are skipped
-		if filter.IsDisabled() {
+		disabled, err := filter.IsDisabled()
+		if err != nil {
+			return false, WrapErrorf(err, "Failed to check if filter is disabled")
+		}
+		if disabled {
 			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
 			continue
 		}
