@@ -139,30 +139,14 @@ func ExportProject(
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
 	revertibleOps, err := NewRevertableFsOperations(backupPath)
 	if err != nil {
-		return WrapErrorf(err, "Failed to prepare backup path for revertable"+
-			" file system operations.\n"+
-			"Path that Regolith tried to use: %s", backupPath)
+		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
 	for _, path := range paths {
 		path := filepath.Join(dataPath, path.Name())
 		err = revertibleOps.DeleteDir(path)
 		if err != nil {
 			handlerError := revertibleOps.Undo()
-			mainError := WrapError(
-				err, "Failed clear filters data before replacing it with "+
-					"updated version of the files.\n"+
-					"Every time you run Regolith, it creates a copy of the "+
-					"data files so they can be modified by the filters.\n"+
-					"After running the filters, the copy is moved back to "+
-					"the original location.\n"+
-					"Old data files are deleted to free space for the modified "+
-					"copy.\n"+
-					"This time Regolith wasn't able to clear the data "+
-					"directory.\n"+
-					"The most common reason for this problem is that the "+
-					"data path is used by another program (usually terminal).\n"+
-					"Please close your terminal and try again.\n"+
-					"Make sure that you don't open it inside the filters data path.")
+			mainError := WrapErrorf(err, updateSourceFilesError, path)
 			if handlerError != nil {
 				return WrapErrorHandlerError(
 					mainError, handlerError, errorConnector, fsUndoError)

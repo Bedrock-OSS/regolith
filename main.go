@@ -76,6 +76,24 @@ func main() {
 				},
 			},
 			{
+				Name:  "tool",
+				Usage: "TODO - update the usage and description.",
+				Action: func(c *cli.Context) error {
+					args := c.Args().Slice()
+					var filter string
+					if len(args) > 0 {
+						filter = args[0]
+					} else {
+						return regolith.WrappedError(
+							"You must specify a filter name when running " +
+								"the \"regolith tool\" command.\n" +
+								"Use \"regolith help tool\" to learn more details.")
+					}
+					filterArgs := args[1:] // First arg is the filter name
+					return regolith.Tool(filter, filterArgs, regolith.Debug)
+				},
+			},
+			{
 				Name: "update-all",
 				Usage: `It updates all of the filters listed in the
 				filtersDefinitions which aren't version locked.`,
