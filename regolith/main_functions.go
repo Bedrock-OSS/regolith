@@ -437,7 +437,7 @@ func Tool(filterName string, filterArgs []string, debug bool) error {
 	}
 	// Create revertible ops object
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
-	revertibleOps, err := NewRevertableFsOperations(backupPath)
+	revertibleOps, err := NewrevertibleFsOperations(backupPath)
 	if err != nil {
 		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
