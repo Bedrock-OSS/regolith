@@ -358,6 +358,146 @@ func Watch(profileName string, debug bool) error {
 	return runOrWatch(profileName, debug, true)
 }
 
+// Tool handles the "regolith tool" command. It runs a filter in a "tool mode".
+// Tool mode modifies RP and BP file in place (using source). The config and
+// properties of the tool filter are passed via commandline.
+func Tool(filterName string, filterArgs []string, debug bool) error {
+	InitLogging(debug)
+	// Load the Config and the profile
+	configJson, err := LoadConfigAsMap()
+	if err != nil {
+		return WrapError(err, "Could not load \"config.json\".")
+	}
+	config, err := ConfigFromObject(configJson)
+	if err != nil {
+		return WrapError(err, "Could not load \"config.json\".")
+	}
+	filterDefinition, ok := config.FilterDefinitions[filterName]
+	if !ok {
+		return WrappedErrorf(
+			"Unable to find the filter on the \"filterDefinitions\" list "+
+				"of the \"config.json\" file.\n"+
+				"Filter name: %s", filterName)
+	}
+	// Get dotRegolithPath
+	dotRegolithPath, err := GetDotRegolith(
+		config.RegolithProject.UseAppData, false, ".")
+	if err != nil {
+		return WrapError(
+			err, "Unable to get the path to regolith cache folder.")
+	}
+	err = CreateDirectoryIfNotExists(dotRegolithPath)
+	if err != nil {
+		return WrapErrorf(err, osMkdirError, dotRegolithPath)
+	}
+	// Lock the session
+	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	if sessionLockErr != nil {
+		return WrapError(sessionLockErr, aquireSessionLockError)
+	}
+	defer func() {
+		// WARNING: sessionLockError is not reported in case of different errors.
+		// This error is minor and other errors are way more important.
+		sessionLockErr = unlockSession()
+	}()
+
+	// Create the filter
+	runConfiguration := map[string]interface{}{
+		"filter":    filterName,
+		"arguments": filterArgs,
+	}
+	filterRunner, err := filterDefinition.CreateFilterRunner(runConfiguration)
+	if err != nil {
+		return WrapErrorf(err, createFilterRunnerError, filterName)
+	}
+	// Create run context
+	path, _ := filepath.Abs(".")
+	runContext := RunContext{
+		Config:              config,
+		Parent:              nil,
+		Profile:             "[dynamic profile]",
+		DotRegolithPath:     dotRegolithPath,
+		interruptionChannel: nil,
+		AbsoluteLocation:    path,
+	}
+	// Check the filter
+	err = filterRunner.Check(runContext)
+	if err != nil {
+		return WrapErrorf(err, filterRunnerCheckError, filterName)
+	}
+	// Setup tmp directory
+	err = SetupTmpFiles(*config, dotRegolithPath)
+	if err != nil {
+		return WrapErrorf(err, setupTmpFilesError, dotRegolithPath)
+	}
+	// Run the filter
+	_, err = filterRunner.Run(runContext)
+	if err != nil {
+		return WrapErrorf(err, filterRunnerRunError, filterName)
+	}
+	// Create revertible ops object
+	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
+	revertibleOps, err := NewRevertableFsOperations(backupPath)
+	if err != nil {
+		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
+	}
+	// Schedule Undo in case of an revertible ops error
+	var revertErr error = nil
+	defer func() {
+		if revertErr != nil {
+			Logger.Warnf("Reverting changes...")
+			handlerError := revertibleOps.Undo()
+			if handlerError != nil {
+				revertErr = WrapErrorHandlerError(
+					revertErr, handlerError, errorConnector,
+					fsUndoError)
+				return
+			}
+			handlerError = revertibleOps.Close()
+			if handlerError != nil {
+				revertErr = PassErrorHandlerError(
+					revertErr, handlerError, errorConnector)
+				return
+			}
+		}
+	}()
+	// Delete RP, BP and data before replacing them with files from tmp
+	deleteDirs := []string{
+		config.ResourceFolder, config.BehaviorFolder, config.DataPath}
+	for _, deleteDir := range deleteDirs {
+		if deleteDir != "" {
+			revertErr = revertibleOps.DeleteDir(deleteDir)
+			if revertErr != nil {
+				revertErr = WrapErrorf(
+					err, updateSourceFilesError, deleteDir)
+				return revertErr // Overwritten by defer
+			}
+		}
+	}
+	// Move files from tmp to RP, BP and data
+	moveFiles := [][2]string{
+		{filepath.Join(dotRegolithPath, "tmp/RP"), config.ResourceFolder},
+		{filepath.Join(dotRegolithPath, "tmp/BP"), config.BehaviorFolder},
+		{filepath.Join(dotRegolithPath, "tmp/data"), config.DataPath},
+	}
+	for _, moveFile := range moveFiles {
+		source, target := moveFile[0], moveFile[1]
+		if source != "" {
+			revertErr = revertibleOps.MoveOrCopy(source, target, true)
+			if revertErr != nil {
+				revertErr = WrapErrorf(
+					revertErr, moveOrCopyError, source, target)
+				return revertErr // Overwritten by defer
+			}
+		}
+	}
+	// Close the revertible ops
+	if err := revertibleOps.Close(); err != nil {
+		return PassError(err)
+	}
+	return sessionLockErr
+}
+
 // Init handles the "regolith init" command. It initializes a new Regolith
 // project in the current directory.
 //
