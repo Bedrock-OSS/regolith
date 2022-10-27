@@ -47,6 +47,13 @@ const (
 	// ProfileFilter. It contains a project and an expected result. The
 	// projects has both valid and invalid profiles.
 	profileFilterPath = "testdata/profile_filter"
+
+	// toolFilterPath is a directory that contains the files for testing
+	// 'regolith tool' command. It contains two projects, one before running
+	// 'regolith tool' command and one after. The command should run the
+	// 'test_filter' with 'Regolith' argument. The filter adds a single file
+	// with 'Hello Regolith!' greeting.
+	toolFilterPath = "testdata/tool_filter"
 )
 
 // firstErr returns the first error in a list of errors. If the list is empty
