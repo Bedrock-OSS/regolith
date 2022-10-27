@@ -205,3 +205,71 @@ func ExportProject(
 	}
 	return nil
 }
+
+// InplaceExportProject copies the files from the tmp paths (tmp/BP, tmp/RP and
+// tmp/data) into the project's source files. It's used by the "regolith tool"
+// command. This operation is destructive and cannot be undone.
+func InplaceExportProject(
+	config *Config, dotRegolithPath string,
+) error {
+	// Create revertible ops object
+	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
+	revertibleOps, err := NewrevertibleFsOperations(backupPath)
+	if err != nil {
+		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
+	}
+	// Schedule Undo in case of an revertible ops error and schedule Close()
+	defer func() {
+		if err != nil { // Handle previous error
+			Logger.Warnf("Reverting changes...")
+			handlerError := revertibleOps.Undo()
+			if handlerError != nil {
+				err = WrapErrorHandlerError(
+					err, handlerError, errorConnector,
+					fsUndoError)
+				return
+			}
+			handlerError = revertibleOps.Close()
+			if handlerError != nil {
+				err = PassErrorHandlerError(
+					err, handlerError, errorConnector)
+			}
+		} else { // No previous error but Close() must be called
+			err = revertibleOps.Close()
+			if err != nil {
+				err = PassError(err)
+			}
+		}
+	}()
+	// Delete RP, BP and data before replacing them with files from tmp
+	deleteDirs := []string{
+		config.ResourceFolder, config.BehaviorFolder, config.DataPath}
+	for _, deleteDir := range deleteDirs {
+		if deleteDir != "" {
+			err = revertibleOps.DeleteDir(deleteDir)
+			if err != nil {
+				err = WrapErrorf(
+					err, updateSourceFilesError, deleteDir)
+				return err // Overwritten by defer
+			}
+		}
+	}
+	// Move files from tmp to RP, BP and data
+	moveFiles := [][2]string{
+		{filepath.Join(dotRegolithPath, "tmp/RP"), config.ResourceFolder},
+		{filepath.Join(dotRegolithPath, "tmp/BP"), config.BehaviorFolder},
+		{filepath.Join(dotRegolithPath, "tmp/data"), config.DataPath},
+	}
+	for _, moveFile := range moveFiles {
+		source, target := moveFile[0], moveFile[1]
+		if source != "" {
+			err = revertibleOps.MoveOrCopy(source, target, true)
+			if err != nil {
+				err = WrapErrorf(
+					err, moveOrCopyError, source, target)
+				return err // Overwritten by defer
+			}
+		}
+	}
+	return err // Can be altered by defer
+}

@@ -435,65 +435,11 @@ func Tool(filterName string, filterArgs []string, debug bool) error {
 	if err != nil {
 		return WrapErrorf(err, filterRunnerRunError, filterName)
 	}
-	// Create revertible ops object
-	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
-	revertibleOps, err := NewrevertibleFsOperations(backupPath)
+	// Export files to the source files
+	err = InplaceExportProject(config, dotRegolithPath)
 	if err != nil {
-		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
-	}
-	// Schedule Undo in case of an revertible ops error
-	var revertErr error = nil
-	defer func() {
-		if revertErr != nil {
-			Logger.Warnf("Reverting changes...")
-			handlerError := revertibleOps.Undo()
-			if handlerError != nil {
-				revertErr = WrapErrorHandlerError(
-					revertErr, handlerError, errorConnector,
-					fsUndoError)
-				return
-			}
-			handlerError = revertibleOps.Close()
-			if handlerError != nil {
-				revertErr = PassErrorHandlerError(
-					revertErr, handlerError, errorConnector)
-				return
-			}
-		}
-	}()
-	// Delete RP, BP and data before replacing them with files from tmp
-	deleteDirs := []string{
-		config.ResourceFolder, config.BehaviorFolder, config.DataPath}
-	for _, deleteDir := range deleteDirs {
-		if deleteDir != "" {
-			revertErr = revertibleOps.DeleteDir(deleteDir)
-			if revertErr != nil {
-				revertErr = WrapErrorf(
-					err, updateSourceFilesError, deleteDir)
-				return revertErr // Overwritten by defer
-			}
-		}
-	}
-	// Move files from tmp to RP, BP and data
-	moveFiles := [][2]string{
-		{filepath.Join(dotRegolithPath, "tmp/RP"), config.ResourceFolder},
-		{filepath.Join(dotRegolithPath, "tmp/BP"), config.BehaviorFolder},
-		{filepath.Join(dotRegolithPath, "tmp/data"), config.DataPath},
-	}
-	for _, moveFile := range moveFiles {
-		source, target := moveFile[0], moveFile[1]
-		if source != "" {
-			revertErr = revertibleOps.MoveOrCopy(source, target, true)
-			if revertErr != nil {
-				revertErr = WrapErrorf(
-					revertErr, moveOrCopyError, source, target)
-				return revertErr // Overwritten by defer
-			}
-		}
-	}
-	// Close the revertible ops
-	if err := revertibleOps.Close(); err != nil {
-		return PassError(err)
+		return WrapError(
+			err, "Failed to overwrite the source files with generated files.")
 	}
 	return sessionLockErr
 }
