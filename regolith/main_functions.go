@@ -431,16 +431,19 @@ func Tool(filterName string, filterArgs []string, debug bool) error {
 		return WrapErrorf(err, setupTmpFilesError, dotRegolithPath)
 	}
 	// Run the filter
+	Logger.Infof("Running the \"%s\" filter.", filterName)
 	_, err = filterRunner.Run(runContext)
 	if err != nil {
 		return WrapErrorf(err, filterRunnerRunError, filterName)
 	}
 	// Export files to the source files
+	Logger.Info("Overwriting the source files.")
 	err = InplaceExportProject(config, dotRegolithPath)
 	if err != nil {
 		return WrapError(
 			err, "Failed to overwrite the source files with generated files.")
 	}
+	Logger.Infof("Successfully ran the \"%s\" filter.", filterName)
 	return sessionLockErr
 }
 
