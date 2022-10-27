@@ -79,7 +79,7 @@ If you don't have an addon prepared, you may also create a fresh one directly in
 
 ## Running Regolith
 
-There are two ways of running Regolith `regolith run` and `regolith watch`.
+There are two ways of running Regolith profiles `regolith run` and `regolith watch`.
 They both run a profile defined in `config.json` file.
 
 The `regolith run [profile-name]` command runs provided profile once. If you don't
@@ -89,12 +89,18 @@ The `regolith watch [profile-name]` command works the same as `regolith run`, bu
 it will watch your source files and rerun the profile when they change. If you're
 using `regolith run` you have to do it manually every time.
 
-A single run copies your source files into a temporary folder, runs all of the
-filters of the profile and moves the files to target location defined in the
-"export" property of the profile. By default the export is set to "development",
-which means that the files will be copied to the `development` pack folders of
-`com.mojang`. The names of folders created in this export mode are based on
-the name of the project like `project_name_bp` and `project_name_rp`.
+A single run copies your source files into a temporary folder, then runs all
+of the filters of the profile and moves the files to the target location
+defined in the "export" property of the profile. Filters work on the copies of
+RP, BP, and data. Thanks to the use of copies, RP and BP cannot be modified by
+the filters. The data folder can be modified because after successful run
+Regolith moves the files of the copy to the original data folder (this is
+useful for the filters to store some data between runs).
+
+By default the export is set to "development", which means that the files will
+be copied to the `development` pack folders of `com.mojang`. The names of
+folders created in this export mode are based on the name of the project like
+`project_name_bp` and `project_name_rp`.
 
 ## Adding your first Filter
 
@@ -138,6 +144,22 @@ Check `com.mojang`, and open the new `texture_list.json` file in `RP/textures/te
 
 {: .notice--warning}
 `Warning:` If your project doesn't have any textures, than `texture_list.json` will simply create a blank file `[]`. Consider adding some textures to see the filter at work!
+
+## Running Regolith Destructively
+
+Running Regolith with `regolith run` or `regolith watch` is a safe operation because the filters can
+only modify the data folder but not RP and BP. Sometimes you want to modify the RP and BP directly
+in a destructive way. This is where the tool-filters come in handy. You can use any filter as a tool
+by running the `regolith tool` command. Unlike the `regolith run` command, the `regolith tool`
+command runs only one filter instead of running entire profile.
+
+The command is used like this:
+```
+regolith tool <filter-name> [args...]
+```
+
+The `filter-name` is the name of one of the filters installed in your project. The `args` is a list of arguments passed to the filter.
+
 
 ## Whats Next
 
