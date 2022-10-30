@@ -18,15 +18,25 @@ To start using a filter, you need to do four things:
 
 Filters are written in [programming languages](https://www.wikiwand.com/en/Programming_language). These languages may not be installed on your computer by default. Before installing a filter, you should ensure you have the proper programming language installed. The "Filter Types" documentation has detailed installation instructions for every regolith-supported language!
 
-For example if the filter relies on python, you can find installation instructions [here](/regolith/docs/python-filters).
+For example, if the filter relies on Python, you can find installation instructions [here](/regolith/docs/python-filters).
 
 ### Installing a Filter
 
-Regolith contains a powerful installation command, which will download a filter from github, and install any required libraries for you. In general, the format is like this:
+Regolith contains a powerful installation command, which will download a filter from GitHub, and install any required libraries for you. In general, the format is like this: `regolith install <filter_identifier>`
 
-`regolith install <filter_identifier>`
+The value of `filter_identifier` will depend on where the filter is hosted. Filters listed on the [Bedrock-OSS/regolith-filter-resolver](https://github.com/Bedrock-OSS/regolith-filter-resolver/blob/main/resolver.json) repository can be installed by their name. For example, to install the `name_ninja` filter, you would run the:
+```
+regolith install name_ninja
+```
+If the filter is not listed on the resolver repository, you will need to use the following format:
+`github.com/<user>/<repository>/<folder>`.
 
-The value of `filter_identifier` will depend on where the filter is hosted, but in general the format is: `github.com/<user>/<repository>/<folder>`
+For example, to install `name_ninja` using the full format, you would run:
+```
+regolith install github.com/Bedrock-OSS/regolith-filters/name_ninja
+```
+The longer form can be used to install filters from private repositories.
+
 
 {: .notice--warning}
 The `install` command relies on `git`. You may download git [here](https://git-scm.com/download/win).
@@ -49,27 +59,6 @@ After installing, the filter will appear inside of `filter_definitions` of `conf
 }
 ```
 
-## Filter Types
-
-Regolith comes with a rich ecosystem of existing filters, which broadly fits into two categories:
-
-### Standard Library
-
-The standard library is a special [github repository](https://github.com/Bedrock-OSS/regolith-filters) hosted in the Bedrock OSS organization. This repository is special, since filters here can be accessed by name, instead of by URL. This makes the standard library very easy to use for beginners!
-
-The full list of available standard-library filters can be found [here](/regolith/docs/standard-library).
-
-To install, you may use the name directly: e.g., `regolith install json_cleaner`
-
-{: .notice--warning}
-This  is equivalent to `regolith install github.com/Bedrock-OSS/regolith-filters/json_cleaner`, but since it's hosted in our repository, you can just use `json_cleaner`!
-
-### Community Filters
-
-Community filters use the same format as standard filters, except instead of being hosted in our library repository, they can be contained in any github repository. To install a community filter, you will need to use the full identifier:
-
-Example: `regolith install github.com/Bedrock-OSS/regolith-filters/json_cleaner`
-
 ## Install All
 
 Regolith is intended to be used with git version control, and by default the `.regolith` folder is ignored. That means that when you collaborate on a project, or simply re-clone your existing projects, you will need an easy way to download all the filters again!
@@ -88,7 +77,7 @@ If you don't specify a version, the `install` command will pick a sensible defau
 
 ### Installing a Specific Version
 
-When installing, you can optionally include a version key after two `==`:
+When installing, you can optionally include a version key after two  equals signs (`==`):
 
  - ⭐ Version: `regolith install name_ninja==1.2.8`
  - Unpinned Head: `regolith install name_ninja==HEAD`
@@ -105,9 +94,10 @@ Optionally, you may mark filters as `unpinned`, which signifies that your projec
 
 ### Updating your Filters
 
-Generally speaking, updating your filters only makes sense when you're working with unpinned versions. Pinned filters will always report themselves as up to date, unless you explicitly ask for a new version.
+If you want to update the version of the filter used in your project, you can use the `regolith install` command again. By default, the `install` command is not allowed to update existing filters, but you can use the `--force` flag to change this behavior. The flag must be used directly after the `install` command.
 
-Commands:
- - `regolith update <filter_name>`
- - `regolith update-all`
+```
+regolith install --force name_ninja
+```
 
+Alternatively, you can modify the `version` field in `config.json` and run `regolith install-all`. Regolith install-all is useful for working in a team, when other team members may have to update or add filters to the project.
