@@ -33,21 +33,6 @@ every time a change in files of the project's RP, BP, or data folders is detecte
 uses the same syntax as "regolith run". You can use "regolith help run" to learn more about the
 command.
 `
-const regolithUpdateDesc = `
-This command updates the Regolith filters specified in the arguments. The filters must be defined in
-the "config.json" file of the project in the "filterDefinitions" section. Regolith updates the
-filters to the version specified in the "config.json" file. This version does not necessarily have
-to be the latest existing version of the filter.
-
-If you want to update to the latest version of the filter, use the "regolith install" command with
-the "--force" flag. You can use "regolith help install" to learn more about the "install" command.
-`
-const regolithUpdateAllDesc = `
-Runs "regolith update" for all of the filters defined in the "filterDefinitions" list of the
-"config.json" file. This command is equivalent to running the "regolith update" command with all of
-the filters passed as arguments. You can learn more about the "regolith update" command by using
-"regolith help update".
-`
 const regolithInstallDesc = `
 Downloads and installs Regolith filters from the Internet, and adds them to the "filterDefinitions"
 list of the project's "config.json" file. This command accepts multiple arguments, each of which
@@ -225,22 +210,6 @@ func main() {
 						profile = args[0]
 					}
 					return regolith.Watch(profile, regolith.Debug)
-				},
-			},
-			{
-				Name:        "update",
-				Usage:       "Updates specified filters to versions defined in filterDefinitions list",
-				Description: regolithUpdateDesc,
-				Action: func(c *cli.Context) error {
-					return regolith.Update(c.Args().Slice(), regolith.Debug)
-				},
-			},
-			{
-				Name:        "update-all",
-				Usage:       "Updates all filters to versions defined in filterDefinitions list",
-				Description: regolithUpdateAllDesc,
-				Action: func(c *cli.Context) error {
-					return regolith.UpdateAll(regolith.Debug)
 				},
 			},
 			{
