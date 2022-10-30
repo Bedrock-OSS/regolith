@@ -34,7 +34,7 @@ uses the same syntax as "regolith run". You can use "regolith help run" to learn
 command.
 `
 const regolithInstallDesc = `
-Downloads and installs Regolith filters from the Internet, and adds them to the "filterDefinitions"
+Downloads and installs Regolith filters from the internet, and adds them to the "filterDefinitions"
 list of the project's "config.json" file. This command accepts multiple arguments, each of which
 specifies what filter to install and what version to install. The syntax of the argument can have
 the following forms:
@@ -76,18 +76,20 @@ Where:
   the repository), it tries to download using "HEAD".
 
 The "regolith install" combined with the "--force" flag can be used to change/update filters saved
-in the "config.json". Unlike "regolith update" which updates to the version specified in the config
-file, "regolith install --force" can modify the content of the "config.json".
+in the "config.json".
 `
 const regolithInstallAllDesc = `
-This command installs all of the filters that aren't installed already from the "filterDefinitions"
-list in the "config.json"  file. It is useful when you're starting to work on a project which
-already has a "config.json" file with a bunch of filters defined in it.
+This commands installs or updates all of the filters specified in the "filterDefinitions" list of
+the "config.json" file. It makes sure that the versions of the filters defined in the
+"filterDefinitions" list in sync with the actual versions of the installed filters.
 
-"regolith install-all --force" can be used to forcefully reinstall every filter on the project to
-match the version from the "config.json" file. It is similar to "regolith update-all" except, the
-update-all command doesn't reinstall the filters that are installed already, with the version that
-matches the definition from the "config.json" file.
+It is useful when you're starting to work on a project which already has a "config.json" file with
+a bunch of filters defined in it or when the config file was modified by someone else and you want
+to make sure that your local copies of the filters is up to date.
+
+By default, the filters that are already installed with a correct version are ignored. You can
+change that by using the "--force" flag. "regolith install-all --force" forcefully reinstalls every
+filter on the project.
 `
 const regolithInitDesc = `
 Initializes a new Regolith project in the current directory. The folder used for a new project must
@@ -155,7 +157,7 @@ func main() {
 			},
 			{
 				Name:        "install",
-				Usage:       "Downloads and installs filters from the Internet and adds them to the filterDefinitions list",
+				Usage:       "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
 				Description: regolithInstallDesc,
 				Action: func(c *cli.Context) error {
 					force := c.Bool("force")
@@ -172,7 +174,7 @@ func main() {
 			},
 			{
 				Name:        "install-all",
-				Usage:       "Installs all undownloaded filters defined in filterDefintions list",
+				Usage:       "Installs all undownloaded or outdated filters defined in filterDefintions list",
 				Description: regolithInstallAllDesc,
 				Action: func(c *cli.Context) error {
 					force := c.Bool("force")
