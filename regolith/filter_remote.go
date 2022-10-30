@@ -422,7 +422,7 @@ func (f *RemoteFilterDefinition) InstalledVersion(dotRegolithPath string) (strin
 	return versionStr, nil
 }
 
-func (f *RemoteFilterDefinition) Update(dotRegolithPath string) error {
+func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string) error {
 	installedVersion, err := f.InstalledVersion(dotRegolithPath)
 	installedVersion = trimFilterPrefix(installedVersion, f.Id)
 	if err != nil {
@@ -434,7 +434,7 @@ func (f *RemoteFilterDefinition) Update(dotRegolithPath string) error {
 			err, getRemoteFilterDownloadRefError, f.Url, f.Id, f.Version)
 	}
 	version = trimFilterPrefix(version, f.Id)
-	if installedVersion != version {
+	if installedVersion != version || force {
 		Logger.Infof(
 			"Updating filter %q to new version: %q->%q.",
 			f.Id, installedVersion, version)
