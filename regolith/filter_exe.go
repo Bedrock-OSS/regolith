@@ -3,15 +3,11 @@ package regolith
 import (
 	"encoding/json"
 	"path/filepath"
-	"runtime"
 )
 
 type ExeFilterDefinition struct {
 	FilterDefinition
-	Exe      string `json:"exe,omitempty"`
-	ExeWin   string `json:"exeWindows,omitempty"`
-	ExeLinux string `json:"exeLinux,omitempty"`
-	ExeMac   string `json:"exeMac,omitempty"`
+	Exe string `json:"exe,omitempty"`
 }
 
 type ExeFilter struct {
@@ -35,30 +31,6 @@ func ExeFilterDefinitionFromObject(
 	}
 
 	filter.Exe = exe
-	if exeObj, ok = obj["exeWindows"]; ok {
-		if exe, ok = exeObj.(string); ok {
-			filter.ExeWin = exe
-		} else {
-			return nil, WrappedErrorf(
-				jsonPropertyTypeError, "exeWindows", "string")
-		}
-	}
-	if exeObj, ok = obj["exeLinux"]; ok {
-		if exe, ok = exeObj.(string); ok {
-			filter.ExeLinux = exe
-		} else {
-			return nil, WrappedErrorf(
-				jsonPropertyTypeError, "exeLinux", "string")
-		}
-	}
-	if exeObj, ok = obj["exeMac"]; ok {
-		if exe, ok = exeObj.(string); ok {
-			filter.ExeMac = exe
-		} else {
-			return nil, WrappedErrorf(
-				jsonPropertyTypeError, "exeMac", "string")
-		}
-	}
 	return filter, nil
 }
 
@@ -102,32 +74,22 @@ func (f *ExeFilter) run(
 	context RunContext,
 ) error {
 	var err error = nil
-	exe := f.Definition.Exe
-	if runtime.GOOS == "windows" && f.Definition.ExeWin != "" {
-		exe = f.Definition.ExeWin
-	}
-	if runtime.GOOS == "linux" && f.Definition.ExeLinux != "" {
-		exe = f.Definition.ExeLinux
-	}
-	if runtime.GOOS == "darwin" && f.Definition.ExeMac != "" {
-		exe = f.Definition.ExeMac
-	}
 	if len(settings) == 0 {
 		err = executeExeFile(f.Id,
-			exe,
+			f.Definition.Exe,
 			f.Arguments, context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
 		err = executeExeFile(f.Id,
-			exe,
+			f.Definition.Exe,
 			append([]string{string(jsonSettings)}, f.Arguments...),
 			context.AbsoluteLocation, GetAbsoluteWorkingDirectory(
 				context.DotRegolithPath))
 	}
 	if err != nil {
 		return WrapErrorf(
-			err, "Failed to run exe file.\nPath: %s", exe)
+			err, "Failed to run exe file.\nPath: %s", f.Definition.Exe)
 	}
 	return nil
 }

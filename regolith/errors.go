@@ -42,8 +42,8 @@ const (
 	// Error used when copyFileSecurityInfo fails
 	copyFileSecurityInfoError = "Failed to copy ACL.\nSource: %s\nTarget: %s"
 
-	// Error used when RevertableFsOperations.Delete fails
-	revertableFsOperationsDeleteError = "Failed to perform revertable " +
+	// Error used when revertibleFsOperations.Delete fails
+	revertibleFsOperationsDeleteError = "Failed to perform revertible " +
 		"deletion of the file or directory.\nPath: %s"
 
 	// Error used when filepath.Rel fails
@@ -157,4 +157,19 @@ const (
 
 	// Error used when aquireSessionLock function fails
 	aquireSessionLockError = "Failed to aquire session lock."
+
+	// Error used when creation of the RevertibleFsOperations object fails
+	newRevertibleFsOperationsError = "Failed to prepare backup path for revertible" +
+		" file system operations.\n" +
+		"Path that Regolith tried to use: %s"
+
+	// Error used when source files (RP, BP or data) before updating them fails.
+	// This should trigger an Undo() operation from the RevertibleFsOperations
+	// object.
+	updateSourceFilesError = "Failed to clear source files while updating them with a new version.\n" +
+		"Path: %s\n" +
+		"The most common reason for this problem is that the data path is used by another " +
+		"program (usually terminal).\n" +
+		"Please close your terminal and try again.\n" +
+		"Make sure that you open it directly inside the root of the Regolith project."
 )

@@ -9,7 +9,7 @@ main:
     url: "https://github.com/Bedrock-OSS/regolith"
   
 sidebar:
-  - title: Getting Started
+  - title: Basics
     children:
       - title: "Introduction"
         url: /docs/introduction
@@ -17,16 +17,11 @@ sidebar:
         url: /docs/installing
       - title: "Getting Started"
         url: /docs/getting-started
+      - title: "Safety"
+        url: /docs/safety
       - title: "Troubleshooting"
         url: /docs/troubleshooting
-
-  - title: Installing Filters
-    children:
-      - title: "Installing Filters"
-        url: /docs/installing-filters
-      - title: "Community Filters"
-        url: /docs/community-filters
-  - title: Documentation
+  - title: Project Configuration
     children:
       - title: "Configuration File"
         url: /docs/configuration
@@ -36,8 +31,18 @@ sidebar:
         url: /docs/export-targets
       - title: "Profiles"
         url: /docs/profiles
-      - title: "Safety"
-        url: /docs/safety
+  - title: Working with filters
+    children:
+      - title: "Installing and Updating Filters"
+        url: /docs/installing-filters
+      - title: "Filter run modes"
+        url: /docs/filter-run-modes
+  - title: Finding filters
+    children:
+      - title: "Standard Library"
+        url: /docs/standard-library
+      - title: "Community Filters"
+        url: /docs/community-filters
   - title: Creating Filters
     children:
       - title: "Filters"
@@ -50,6 +55,8 @@ sidebar:
         url: /docs/creating-a-filter
   - title: Filter Types
     children:
+      - title: "Executable Filters"
+        url: /docs/exe-filters
       - title: "Java Filters"
         url: /docs/java-filters
       - title: ".NET Filters"

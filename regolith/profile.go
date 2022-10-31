@@ -12,7 +12,7 @@ import (
 )
 
 // SetupTmpFiles set up the workspace for the filters.
-func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error {
+func SetupTmpFiles(config Config, dotRegolithPath string) error {
 	start := time.Now()
 	// Setup Directories
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
@@ -115,7 +115,7 @@ start:
 	if err != nil {
 		return WrapErrorf(err, runContextGetProfileError)
 	}
-	err = SetupTmpFiles(*context.Config, profile, context.DotRegolithPath)
+	err = SetupTmpFiles(*context.Config, context.DotRegolithPath)
 	if err != nil {
 		return WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
 	}
@@ -156,7 +156,11 @@ func WatchProfileImpl(context RunContext) (bool, error) {
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
 		// Disabled filters are skipped
-		if filter.IsDisabled() {
+		disabled, err := filter.IsDisabled()
+		if err != nil {
+			return false, WrapErrorf(err, "Failed to check if filter is disabled")
+		}
+		if disabled {
 			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
 			continue
 		}

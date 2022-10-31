@@ -2,7 +2,7 @@
 permalink: /docs/installing-filters
 layout: single
 classes: wide
-title: Installing Filters
+title: Installing and Updating Filters
 sidebar:
   nav: "sidebar"
 ---
