@@ -33,6 +33,18 @@ every time a change in files of the project's RP, BP, or data folders is detecte
 uses the same syntax as "regolith run". You can use "regolith help run" to learn more about the
 command.
 `
+const regolithToolDesc = `
+This command runs single selected filter as a tool for modifying project source files. Running this
+is a destructive operation that modifies RP, BP and data folders, so it is recommended to be cautious
+when using this command and to have a way to revert the changes (e.g. using Git).
+
+Every filter can be used as a tool as long as it's defined in the "config.json" file in the
+"filterDefinitions" section.
+
+The "regolith tool" command runs on a copy of the project's files and copies them back to the
+project only if the filter was successful. This means that if the filter fails, the project's files
+will not be modified.
+`
 const regolithInstallDesc = `
 Downloads and installs Regolith filters from the internet, and adds them to the "filterDefinitions"
 list of the project's "config.json" file. This command accepts multiple arguments, each of which
@@ -216,8 +228,9 @@ func main() {
 				},
 			},
 			{
-				Name:  "tool",
-				Usage: "Runs selected filter to destructively modify the project files.",
+				Name:        "tool",
+				Usage:       "Runs selected filter to destructively modify the project files.",
+				Description: regolithToolDesc,
 				Action: func(c *cli.Context) error {
 					args := c.Args().Slice()
 					var filter string
