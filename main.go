@@ -77,7 +77,7 @@ func main() {
 			},
 			{
 				Name:  "tool",
-				Usage: "TODO - update the usage and description.",
+				Usage: "Runs selected filter to destructively modify the project files.",
 				Action: func(c *cli.Context) error {
 					args := c.Args().Slice()
 					var filter string
