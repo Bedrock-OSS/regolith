@@ -12,7 +12,7 @@ import (
 )
 
 // SetupTmpFiles set up the workspace for the filters.
-func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error {
+func SetupTmpFiles(config Config, dotRegolithPath string) error {
 	start := time.Now()
 	// Setup Directories
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
@@ -115,7 +115,7 @@ start:
 	if err != nil {
 		return WrapErrorf(err, runContextGetProfileError)
 	}
-	err = SetupTmpFiles(*context.Config, profile, context.DotRegolithPath)
+	err = SetupTmpFiles(*context.Config, context.DotRegolithPath)
 	if err != nil {
 		return WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
 	}

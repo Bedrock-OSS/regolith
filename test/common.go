@@ -48,6 +48,14 @@ const (
 	// projects has both valid and invalid profiles.
 	profileFilterPath = "testdata/profile_filter"
 
+
+	// toolFilterPath is a directory that contains the files for testing
+	// 'regolith tool' command. It contains two projects, one before running
+	// 'regolith tool' command and one after. The command should run the
+	// 'test_filter' with 'Regolith' argument. The filter adds a single file
+	// with 'Hello Regolith!' greeting.
+	toolFilterPath = "testdata/tool_filter"
+
 	// conditionalFilterPath contains two subdirectories 'project' and
 	// 'expected_build_result'. The project is a Regolith project with a simple
 	// Python filter and with configuration that runs it based on a 'when'

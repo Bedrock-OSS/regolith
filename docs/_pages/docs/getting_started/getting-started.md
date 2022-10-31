@@ -79,7 +79,7 @@ If you don't have an addon prepared, you may also create a fresh one directly in
 
 ## Running Regolith
 
-There are two ways of running Regolith `regolith run` and `regolith watch`.
+There are two ways of running Regolith profiles `regolith run` and `regolith watch`.
 They both run a profile defined in `config.json` file.
 
 The `regolith run [profile-name]` command runs provided profile once. If you don't
@@ -89,12 +89,10 @@ The `regolith watch [profile-name]` command works the same as `regolith run`, bu
 it will watch your source files and rerun the profile when they change. If you're
 using `regolith run` you have to do it manually every time.
 
-A single run copies your source files into a temporary folder, runs all of the
-filters of the profile and moves the files to target location defined in the
-"export" property of the profile. By default the export is set to "development",
-which means that the files will be copied to the `development` pack folders of
-`com.mojang`. The names of folders created in this export mode are based on
-the name of the project like `project_name_bp` and `project_name_rp`.
+By default the export is set to "development", which means that the files will
+be copied to the `development_behavior_packs` and `development_resource_packs`
+folders of `com.mojang`. The names of folders created in this export mode are
+based on the name of the project like `project_name_bp` and `project_name_rp`.
 
 ## Adding your first Filter
 
@@ -143,4 +141,6 @@ Check `com.mojang`, and open the new `texture_list.json` file in `RP/textures/te
 
 Now that you've created your first Regolith project, and installed your first filters, you are well on your way to being a Regolith expert! You should check out the [standard library](/regolith/docs/standard-library), to see if additional filters might be useful for you.
 
-Otherwise, you can learn about writing [custom filters](/regolith/docs/custom-filters).
+Otherwise, you can learn about writing [custom filters](/regolith/docs/custom-filters) or
+dive deeper into Regolith commands by reading about [Filter Run Modes](/regolith/docs/filter-run-modes)
+and [Installing and Updating Filters](/regolith/docs/installing-filters).
