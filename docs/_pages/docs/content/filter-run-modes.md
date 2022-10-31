@@ -15,8 +15,8 @@ There are 3 ways of running Regolith:
 ## Run and Watch Commands
 
 Regolith `run` and `watch` are very similar to each other. They run a profile. The difference is
-that the `watch` command will watch for changes in the RP, BP and data folders and rerun the
-profile when they change. The `run` command will run the profile only once.
+that the `watch` command will watch for changes in the RP, BP and [data](/regolith/docs/data-folder) folders
+and rerun the profile when they change. The `run` command will run the profile only once.
 
 The syntax for run and watch command is:
 ```
@@ -26,7 +26,7 @@ regolith run [profile-name]
 regolith watch [profile-name]
 ```
 Where `[profile-name]` is the name of the profile defined your "config.json" file you want to run.
-The `[profile-name]` is optional. If you don't specify it, the "default" profile will be run.
+The `[profile-name]` is optional. If you don't specify it, the `"default"` profile will be run.
 
 A single run performs the following steps:
 1. Copy your source files into a temporary folder.
