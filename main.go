@@ -167,6 +167,10 @@ func main() {
 				Action: func(c *cli.Context) error {
 					return regolith.Init(regolith.Debug)
 				},
+
+				// This is a hac to hide the arguments in the help message (this
+				// command doesn't have any)
+				ArgsUsage: " ",
 			},
 			{
 				Name:        "install",
@@ -184,6 +188,7 @@ func main() {
 						Usage:   "Force the operation, overriding potential safeguards.",
 					},
 				},
+				ArgsUsage: "[filter_names...]",
 			},
 			{
 				Name:        "install-all",
@@ -200,6 +205,7 @@ func main() {
 						Usage:   "Force the operation, overriding potential safeguards.",
 					},
 				},
+				ArgsUsage: " ", // Arguments are not used by this command
 			},
 			{
 				Name:        "run",
@@ -213,6 +219,7 @@ func main() {
 					}
 					return regolith.Run(profile, regolith.Debug)
 				},
+				ArgsUsage: "[profile_name]",
 			},
 			{
 				Name:        "watch",
@@ -226,6 +233,7 @@ func main() {
 					}
 					return regolith.Watch(profile, regolith.Debug)
 				},
+				ArgsUsage: "[profile_name]",
 			},
 			{
 				Name:        "tool",
@@ -245,6 +253,7 @@ func main() {
 					filterArgs := args[1:] // First arg is the filter name
 					return regolith.Tool(filter, filterArgs, regolith.Debug)
 				},
+				ArgsUsage: "<filter_name> [filter_args...]",
 			},
 			{
 				Name:        "clean",
@@ -262,6 +271,7 @@ func main() {
 							"the current project",
 					},
 				},
+				ArgsUsage: " ", // Arguments are not used by this command
 			},
 		},
 	}).Run(os.Args)
