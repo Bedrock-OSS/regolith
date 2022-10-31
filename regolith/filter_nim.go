@@ -41,7 +41,7 @@ func (f *NimFilter) run(context RunContext) error {
 		err := RunSubProcess(
 			"nim",
 			append([]string{
-				"-r", "c", "--hints:off", "--warnings:off",
+				"-r", "c", "--hints:off", "--warnings:off", "--mm:orc",
 				context.AbsoluteLocation + string(os.PathSeparator) + f.Definition.Script},
 				f.Arguments...,
 			),
@@ -57,7 +57,7 @@ func (f *NimFilter) run(context RunContext) error {
 		err := RunSubProcess(
 			"nim",
 			append([]string{
-				"-r", "c", "--hints:off", "--warnings:off",
+				"-r", "c", "--hints:off", "--warnings:off", "--mm:orc",
 				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
 				string(jsonSettings)},
@@ -110,7 +110,7 @@ func (f *NimFilterDefinition) InstallDependencies(
 	if hasNimble(filterPath) {
 		Logger.Info("Installing nim dependencies...")
 		err := RunSubProcess(
-			"nimble", []string{"install"}, filterPath, filterPath, ShortFilterName(f.Id))
+			"nimble", []string{"install --deps-only -y"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to run nimble to install dependencies of a filter."+

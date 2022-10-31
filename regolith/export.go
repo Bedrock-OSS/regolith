@@ -137,32 +137,16 @@ func ExportProject(
 		}
 	}
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
-	revertibleOps, err := NewRevertableFsOperations(backupPath)
+	revertibleOps, err := NewrevertibleFsOperations(backupPath)
 	if err != nil {
-		return WrapErrorf(err, "Failed to prepare backup path for revertable"+
-			" file system operations.\n"+
-			"Path that Regolith tried to use: %s", backupPath)
+		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
 	for _, path := range paths {
 		path := filepath.Join(dataPath, path.Name())
 		err = revertibleOps.DeleteDir(path)
 		if err != nil {
 			handlerError := revertibleOps.Undo()
-			mainError := WrapError(
-				err, "Failed clear filters data before replacing it with "+
-					"updated version of the files.\n"+
-					"Every time you run Regolith, it creates a copy of the "+
-					"data files so they can be modified by the filters.\n"+
-					"After running the filters, the copy is moved back to "+
-					"the original location.\n"+
-					"Old data files are deleted to free space for the modified "+
-					"copy.\n"+
-					"This time Regolith wasn't able to clear the data "+
-					"directory.\n"+
-					"The most common reason for this problem is that the "+
-					"data path is used by another program (usually terminal).\n"+
-					"Please close your terminal and try again.\n"+
-					"Make sure that you don't open it inside the filters data path.")
+			mainError := WrapErrorf(err, updateSourceFilesError, path)
 			if handlerError != nil {
 				return WrapErrorHandlerError(
 					mainError, handlerError, errorConnector, fsUndoError)
@@ -220,4 +204,72 @@ func ExportProject(
 		return PassError(err)
 	}
 	return nil
+}
+
+// InplaceExportProject copies the files from the tmp paths (tmp/BP, tmp/RP and
+// tmp/data) into the project's source files. It's used by the "regolith tool"
+// command. This operation is destructive and cannot be undone.
+func InplaceExportProject(
+	config *Config, dotRegolithPath string,
+) error {
+	// Create revertible ops object
+	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
+	revertibleOps, err := NewrevertibleFsOperations(backupPath)
+	if err != nil {
+		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
+	}
+	// Schedule Undo in case of an revertible ops error and schedule Close()
+	defer func() {
+		if err != nil { // Handle previous error
+			Logger.Warnf("Reverting changes...")
+			handlerError := revertibleOps.Undo()
+			if handlerError != nil {
+				err = WrapErrorHandlerError(
+					err, handlerError, errorConnector,
+					fsUndoError)
+				return
+			}
+			handlerError = revertibleOps.Close()
+			if handlerError != nil {
+				err = PassErrorHandlerError(
+					err, handlerError, errorConnector)
+			}
+		} else { // No previous error but Close() must be called
+			err = revertibleOps.Close()
+			if err != nil {
+				err = PassError(err)
+			}
+		}
+	}()
+	// Delete RP, BP and data before replacing them with files from tmp
+	deleteDirs := []string{
+		config.ResourceFolder, config.BehaviorFolder, config.DataPath}
+	for _, deleteDir := range deleteDirs {
+		if deleteDir != "" {
+			err = revertibleOps.DeleteDir(deleteDir)
+			if err != nil {
+				err = WrapErrorf(
+					err, updateSourceFilesError, deleteDir)
+				return err // Overwritten by defer
+			}
+		}
+	}
+	// Move files from tmp to RP, BP and data
+	moveFiles := [][2]string{
+		{filepath.Join(dotRegolithPath, "tmp/RP"), config.ResourceFolder},
+		{filepath.Join(dotRegolithPath, "tmp/BP"), config.BehaviorFolder},
+		{filepath.Join(dotRegolithPath, "tmp/data"), config.DataPath},
+	}
+	for _, moveFile := range moveFiles {
+		source, target := moveFile[0], moveFile[1]
+		if source != "" {
+			err = revertibleOps.MoveOrCopy(source, target, true)
+			if err != nil {
+				err = WrapErrorf(
+					err, moveOrCopyError, source, target)
+				return err // Overwritten by defer
+			}
+		}
+	}
+	return err // Can be altered by defer
 }

@@ -265,6 +265,95 @@ func Watch(profileName string, debug bool) error {
 	return runOrWatch(profileName, debug, true)
 }
 
+// Tool handles the "regolith tool" command. It runs a filter in a "tool mode".
+// Tool mode modifies RP and BP file in place (using source). The config and
+// properties of the tool filter are passed via commandline.
+func Tool(filterName string, filterArgs []string, debug bool) error {
+	InitLogging(debug)
+	// Load the Config and the profile
+	configJson, err := LoadConfigAsMap()
+	if err != nil {
+		return WrapError(err, "Could not load \"config.json\".")
+	}
+	config, err := ConfigFromObject(configJson)
+	if err != nil {
+		return WrapError(err, "Could not load \"config.json\".")
+	}
+	filterDefinition, ok := config.FilterDefinitions[filterName]
+	if !ok {
+		return WrappedErrorf(
+			"Unable to find the filter on the \"filterDefinitions\" list "+
+				"of the \"config.json\" file.\n"+
+				"Filter name: %s", filterName)
+	}
+	// Get dotRegolithPath
+	dotRegolithPath, err := GetDotRegolith(
+		config.RegolithProject.UseAppData, false, ".")
+	if err != nil {
+		return WrapError(
+			err, "Unable to get the path to regolith cache folder.")
+	}
+	err = CreateDirectoryIfNotExists(dotRegolithPath)
+	if err != nil {
+		return WrapErrorf(err, osMkdirError, dotRegolithPath)
+	}
+	// Lock the session
+	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	if sessionLockErr != nil {
+		return WrapError(sessionLockErr, aquireSessionLockError)
+	}
+	defer func() {
+		// WARNING: sessionLockError is not reported in case of different errors.
+		// This error is minor and other errors are way more important.
+		sessionLockErr = unlockSession()
+	}()
+
+	// Create the filter
+	runConfiguration := map[string]interface{}{
+		"filter":    filterName,
+		"arguments": filterArgs,
+	}
+	filterRunner, err := filterDefinition.CreateFilterRunner(runConfiguration)
+	if err != nil {
+		return WrapErrorf(err, createFilterRunnerError, filterName)
+	}
+	// Create run context
+	path, _ := filepath.Abs(".")
+	runContext := RunContext{
+		Config:              config,
+		Parent:              nil,
+		Profile:             "[dynamic profile]",
+		DotRegolithPath:     dotRegolithPath,
+		interruptionChannel: nil,
+		AbsoluteLocation:    path,
+	}
+	// Check the filter
+	err = filterRunner.Check(runContext)
+	if err != nil {
+		return WrapErrorf(err, filterRunnerCheckError, filterName)
+	}
+	// Setup tmp directory
+	err = SetupTmpFiles(*config, dotRegolithPath)
+	if err != nil {
+		return WrapErrorf(err, setupTmpFilesError, dotRegolithPath)
+	}
+	// Run the filter
+	Logger.Infof("Running the \"%s\" filter.", filterName)
+	_, err = filterRunner.Run(runContext)
+	if err != nil {
+		return WrapErrorf(err, filterRunnerRunError, filterName)
+	}
+	// Export files to the source files
+	Logger.Info("Overwriting the source files.")
+	err = InplaceExportProject(config, dotRegolithPath)
+	if err != nil {
+		return WrapError(
+			err, "Failed to overwrite the source files with generated files.")
+	}
+	Logger.Infof("Successfully ran the \"%s\" filter.", filterName)
+	return sessionLockErr
+}
+
 // Init handles the "regolith init" command. It initializes a new Regolith
 // project in the current directory.
 //

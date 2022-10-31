@@ -169,6 +169,9 @@ func (f *PythonFilter) Check(context RunContext) error {
 func (f *PythonFilter) CopyArguments(parent *RemoteFilter) {
 	f.Arguments = append(f.Arguments, parent.Arguments...)
 	f.Settings = parent.Settings
+	if f.When == "" {
+		f.When = parent.When
+	}
 	f.Definition.VenvSlot = parent.Definition.VenvSlot
 }
 

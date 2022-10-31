@@ -125,6 +125,7 @@ func main() {
 	status := make(chan regolith.UpdateStatus)
 	go regolith.CheckUpdate(version, status)
 	regolith.CustomHelp()
+	regolith.Version = version
 	err := (&cli.App{
 		Name:                 "regolith",
 		Usage:                "Addon Compiler for the Bedrock Edition of Minecraft",
@@ -212,6 +213,24 @@ func main() {
 						profile = args[0]
 					}
 					return regolith.Watch(profile, regolith.Debug)
+				},
+			},
+			{
+				Name:  "tool",
+				Usage: "Runs selected filter to destructively modify the project files.",
+				Action: func(c *cli.Context) error {
+					args := c.Args().Slice()
+					var filter string
+					if len(args) > 0 {
+						filter = args[0]
+					} else {
+						return regolith.WrappedError(
+							"You must specify a filter name when running " +
+								"the \"regolith tool\" command.\n" +
+								"Use \"regolith help tool\" to learn more details.")
+					}
+					filterArgs := args[1:] // First arg is the filter name
+					return regolith.Tool(filter, filterArgs, regolith.Debug)
 				},
 			},
 			{
