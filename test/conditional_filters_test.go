@@ -52,10 +52,7 @@ func TestConditionalFilter(t *testing.T) {
 	}
 	// THE TEST
 	os.Chdir(tmpDir)
-	if err := regolith.Unlock(true); err != nil {
-		t.Fatal("'regolith unlock' failed:", err.Error())
-	}
-	if err := regolith.Run("default", false, true); err != nil {
+	if err := regolith.Run("default", true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 	// Load expected result
