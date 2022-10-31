@@ -23,6 +23,7 @@ import (
 const appDataCachePath = "regolith/project-cache"
 
 var Debug = false
+var Version = "unversioned"
 
 func StringArrayContains(arr []string, str string) bool {
 	for _, a := range arr {

@@ -10,6 +10,7 @@ type Filter struct {
 	Disabled    bool                   `json:"disabled,omitempty"`
 	Arguments   []string               `json:"arguments,omitempty"`
 	Settings    map[string]interface{} `json:"settings,omitempty"`
+	When        string                 `json:"when,omitempty"`
 }
 
 type RunContext struct {
@@ -145,6 +146,17 @@ func filterFromObject(obj map[string]interface{}) (*Filter, error) {
 	// Settings
 	settings, _ := obj["settings"].(map[string]interface{})
 	filter.Settings = settings
+	// When
+	when, ok := obj["when"]
+	if !ok {
+		when = ""
+	} else {
+		when, ok = when.(string)
+		if !ok {
+			when = ""
+		}
+	}
+	filter.When = when.(string)
 
 	// Id
 	idObj, ok := obj["filter"]
@@ -177,7 +189,7 @@ type FilterRunner interface {
 	Run(context RunContext) (bool, error)
 
 	// IsDisabled returns whether the filter is disabled.
-	IsDisabled() bool
+	IsDisabled() (bool, error)
 
 	// GetId returns the id of the filter.
 	GetId() string
@@ -190,6 +202,9 @@ type FilterRunner interface {
 func (f *Filter) CopyArguments(parent *RemoteFilter) {
 	f.Arguments = append(f.Arguments, parent.Arguments...)
 	f.Settings = parent.Settings
+	if f.When == "" {
+		f.When = parent.When
+	}
 }
 
 func (f *Filter) Check() error {
@@ -204,8 +219,18 @@ func (f *Filter) GetId() string {
 	return f.Id
 }
 
-func (f *Filter) IsDisabled() bool {
-	return f.Disabled
+func (f *Filter) IsDisabled() (bool, error) {
+	if f.Disabled {
+		return true, nil
+	}
+	if f.When != "" {
+		condition, err := EvalCondition(f.When)
+		if err != nil {
+			return false, WrapError(err, "Could not evaluate condition.")
+		}
+		return !condition, nil
+	}
+	return false, nil
 }
 
 func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterInstaller, error) {

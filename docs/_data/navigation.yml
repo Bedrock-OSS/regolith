@@ -55,6 +55,8 @@ sidebar:
         url: /docs/creating-a-filter
   - title: Filter Types
     children:
+      - title: "Executable Filters"
+        url: /docs/exe-filters
       - title: "Java Filters"
         url: /docs/java-filters
       - title: ".NET Filters"
