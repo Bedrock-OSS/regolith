@@ -123,15 +123,26 @@ func filterFromObject(obj map[string]interface{}) (*Filter, error) {
 	disabled, _ := obj["disabled"].(bool)
 	filter.Disabled = disabled
 	// Arguments
-	arguments, ok := obj["arguments"].([]interface{})
-	if !ok {
-		arguments = nil
+	arguments, ok := obj["arguments"]
+	if ok {
+		// Try to parse arguments as []interface{} and as []string
+		// one format is used when parsed from JSON, and the other format is
+		// used by the Tool() function.
+		switch arguments := arguments.(type) {
+		case []interface{}:
+			s := make([]string, len(arguments))
+			for i, v := range arguments {
+				s[i] = v.(string)
+			}
+			filter.Arguments = s
+		case []string:
+			filter.Arguments = arguments
+		default:
+			filter.Arguments = []string{}
+		}
+	} else {
+		filter.Arguments = []string{}
 	}
-	s := make([]string, len(arguments))
-	for i, v := range arguments {
-		s[i] = v.(string)
-	}
-	filter.Arguments = s
 	// Settings
 	settings, _ := obj["settings"].(map[string]interface{})
 	filter.Settings = settings
