@@ -94,10 +94,10 @@ Optionally, you may mark filters as `unpinned`, which signifies that your projec
 
 ### Updating your Filters
 
-If you want to update the version of the filter used in your project, you can use the `regolith install` command again. By default, the `install` command is not allowed to update existing filters, but you can use the `--force` flag to change this behavior. The flag must be used directly after the `install` command.
+If you want to update the version of the filter used in your project, you can use the `regolith install` command again. By default, the `install` command is not allowed to update existing filters, but you can use the `--force` flag to change this behavior. The flag must be used after the `install` arguments.
 
 ```
-regolith install --force name_ninja
+regolith install name_ninja --force
 ```
 
 Alternatively, you can modify the `version` field in `config.json` and run `regolith install-all`. Regolith install-all is useful for working in a team, when other team members may have to update or add filters to the project.
