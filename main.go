@@ -7,7 +7,7 @@ import (
 	"github.com/fatih/color"
 
 	"github.com/Bedrock-OSS/regolith/regolith"
-	"github.com/urfave/cli/v2"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -134,160 +134,147 @@ You can clear caches of all projects stored in user data by using the "--user-ca
 `
 
 func main() {
+	// Schedule error handling
+	var err error
+	defer func() {
+		if regolith.Logger == nil { // Logger is nil when the command is 'help' or 'completion'
+			return
+		}
+		if err != nil {
+			regolith.Logger.Error(err)
+			os.Exit(1)
+		} else {
+			regolith.Logger.Info(color.GreenString("Finished"))
+		}
+	}()
+	// Schedule update status check
 	status := make(chan regolith.UpdateStatus)
 	go regolith.CheckUpdate(version, status)
-	regolith.CustomHelp()
-	regolith.Version = version
-	err := (&cli.App{
-		Name:                 "regolith",
-		Usage:                "Addon Compiler for the Bedrock Edition of Minecraft",
-		Description:          regolithDesc,
-		EnableBashCompletion: true,
-		Version:              version,
-		Metadata: map[string]interface{}{
-			"Commit":      commit,
-			"Date":        date,
-			"BuildSource": buildSource,
-		},
-		Writer:    color.Output,
-		ErrWriter: color.Error,
-		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:        "debug",
-				Aliases:     []string{"d"},
-				Usage:       "Enables debugging.",
-				Destination: &regolith.Debug,
-			},
-		},
-		Commands: []*cli.Command{
-			{
-				Name:        "init",
-				Usage:       "Initializes a Regolith project in current directory",
-				Description: regolithInitDesc,
-				Action: func(c *cli.Context) error {
-					return regolith.Init(regolith.Debug)
-				},
+	defer func() {
+		if regolith.Logger == nil { // Logger is nil when the command is 'help' or 'completion'
+			return
+		}
+		updateStatus := <-status
+		if updateStatus.Err != nil {
+			regolith.Logger.Warn("Update check failed")
+			regolith.Logger.Debug(*updateStatus.Err)
+		} else if updateStatus.ShouldUpdate {
+			_, _ = fmt.Fprintln(color.Output, color.GreenString("New version available!"))
+			_, _ = fmt.Fprintln(color.Output, color.GreenString(*updateStatus.Url))
+		}
+	}()
 
-				// This is a hac to hide the arguments in the help message (this
-				// command doesn't have any)
-				ArgsUsage: " ",
-			},
-			{
-				Name:        "install",
-				Usage:       "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
-				Description: regolithInstallDesc,
-				Action: func(c *cli.Context) error {
-					force := c.Bool("force")
-					filters := c.Args().Slice()
-					return regolith.Install(filters, force, regolith.Debug)
-				},
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "force",
-						Aliases: []string{"f"},
-						Usage:   "Force the operation, overriding potential safeguards.",
-					},
-				},
-				ArgsUsage: "[filter_names...]",
-			},
-			{
-				Name:        "install-all",
-				Usage:       "Installs all undownloaded or outdated filters defined in filterDefintions list",
-				Description: regolithInstallAllDesc,
-				Action: func(c *cli.Context) error {
-					force := c.Bool("force")
-					return regolith.InstallAll(force, regolith.Debug)
-				},
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "force",
-						Aliases: []string{"f"},
-						Usage:   "Force the operation, overriding potential safeguards.",
-					},
-				},
-				ArgsUsage: " ", // Arguments are not used by this command
-			},
-			{
-				Name:        "run",
-				Usage:       "Runs Regolith using specified profile",
-				Description: regolithRunDesc,
-				Action: func(c *cli.Context) error {
-					args := c.Args().Slice()
-					var profile string
-					if len(args) != 0 {
-						profile = args[0]
-					}
-					return regolith.Run(profile, regolith.Debug)
-				},
-				ArgsUsage: "[profile_name]",
-			},
-			{
-				Name:        "watch",
-				Usage:       "Watches project files and automatically runs Regolith when they change",
-				Description: regolithWatchDesc,
-				Action: func(c *cli.Context) error {
-					args := c.Args().Slice()
-					var profile string
-					if len(args) != 0 {
-						profile = args[0]
-					}
-					return regolith.Watch(profile, regolith.Debug)
-				},
-				ArgsUsage: "[profile_name]",
-			},
-			{
-				Name:        "tool",
-				Usage:       "Runs selected filter to destructively modify the project files.",
-				Description: regolithToolDesc,
-				Action: func(c *cli.Context) error {
-					args := c.Args().Slice()
-					var filter string
-					if len(args) > 0 {
-						filter = args[0]
-					} else {
-						return regolith.WrappedError(
-							"You must specify a filter name when running " +
-								"the \"regolith tool\" command.\n" +
-								"Use \"regolith help tool\" to learn more details.")
-					}
-					filterArgs := args[1:] // First arg is the filter name
-					return regolith.Tool(filter, filterArgs, regolith.Debug)
-				},
-				ArgsUsage: "<filter_name> [filter_args...]",
-			},
-			{
-				Name:        "clean",
-				Usage:       "Cleans Regolith cache",
-				Description: regolithCleanDesc,
-				Action: func(c *cli.Context) error {
-					userCache := c.Bool("user-cache")
-					return regolith.Clean(regolith.Debug, userCache)
-				},
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "user-cache",
-						Aliases: []string{},
-						Usage: "Clears all caches stored in user data, instead of the cache of " +
-							"the current project",
-					},
-				},
-				ArgsUsage: " ", // Arguments are not used by this command
-			},
+	// Root command
+	var rootCmd = &cobra.Command{
+		Use:     "regolith",
+		Short:   "Addon Compiler for the Bedrock Edition of Minecraft",
+		Long:    regolithDesc,
+		Version: version,
+	}
+	subcomands := make([]*cobra.Command, 0)
+
+	// regolith init
+	cmdInit := &cobra.Command{
+		Use:   "init",
+		Short: "Initializes a Regolith project in current directory",
+		Long:  regolithInitDesc,
+		Run: func(cmd *cobra.Command, _ []string) {
+			err = regolith.Init(regolith.Debug)
 		},
-	}).Run(os.Args)
-	if err != nil {
-		regolith.Logger.Error(err)
-		os.Exit(1)
-	} else {
-		regolith.InitLogging(false)
-		regolith.Logger.Info(color.GreenString("Finished"))
 	}
-	result := <-status
-	if result.Err != nil {
-		regolith.Logger.Warn("Update check failed")
-		regolith.Logger.Debug(*result.Err)
-	} else if result.ShouldUpdate {
-		_, _ = fmt.Fprintln(color.Output, color.GreenString("New version available!"))
-		_, _ = fmt.Fprintln(color.Output, color.GreenString(*result.Url))
+	subcomands = append(subcomands, cmdInit)
+	// regolith install
+	var force bool
+	cmdInstall := &cobra.Command{
+		Use:   "install [filters...]",
+		Short: "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
+		Long:  regolithInitDesc,
+		Run: func(cmd *cobra.Command, filters []string) {
+			err = regolith.Install(filters, force, regolith.Debug)
+		},
 	}
+	cmdInstall.Flags().BoolVarP(
+		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+	subcomands = append(subcomands, cmdInstall)
+	// regolith install-all
+	cmdInstallAll := &cobra.Command{
+		Use:   "install-all",
+		Short: "Installs all undownloaded or outdated filters defined in filterDefintions list",
+		Long:  regolithInstallAllDesc,
+		Run: func(cmd *cobra.Command, _ []string) {
+			err = regolith.InstallAll(force, regolith.Debug)
+		},
+	}
+	cmdInstallAll.Flags().BoolVarP(
+		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+	subcomands = append(subcomands, cmdInstallAll)
+	// regolith run
+	cmdRun := &cobra.Command{
+		Use:   "run [profile_name]",
+		Short: "Runs Regolith using specified profile",
+		Long:  regolithRunDesc,
+		Run: func(cmd *cobra.Command, args []string) {
+			var profile string
+			if len(args) != 0 {
+				profile = args[0]
+			}
+			err = regolith.Run(profile, regolith.Debug)
+		},
+	}
+	subcomands = append(subcomands, cmdRun)
+	// regolith watch
+	cmdWatch := &cobra.Command{
+		Use:   "watch [profile_name]",
+		Short: "Watches project files and automatically runs Regolith when they change",
+		Long:  regolithWatchDesc,
+		Run: func(cmd *cobra.Command, args []string) {
+			var profile string
+			if len(args) != 0 {
+				profile = args[0]
+			}
+			err = regolith.Watch(profile, regolith.Debug)
+		},
+	}
+	subcomands = append(subcomands, cmdWatch)
+	// regolith tool
+	cmdTool := &cobra.Command{
+		Use:   "tool <filter_name> [filter_args...]",
+		Short: "Runs selected filter to destructively modify the project files",
+		Long:  regolithToolDesc,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) == 0 {
+				err = regolith.WrappedError(
+					"You must specify a filter name when running " +
+						"the \"regolith tool\" command.\n" +
+						"Use \"regolith help tool\" to learn more details.")
+				return
+			}
+			filter := args[0]
+			filterArgs := args[1:] // First arg is the filter name
+			err = regolith.Tool(filter, filterArgs, regolith.Debug)
+		},
+	}
+	subcomands = append(subcomands, cmdTool)
+	// regolith clean
+	var userCache bool
+	cmdClean := &cobra.Command{
+		Use:   "clean",
+		Short: "Cleans Regolith cache",
+		Long:  regolithCleanDesc,
+		Run: func(cmd *cobra.Command, _ []string) {
+			err = regolith.Clean(regolith.Debug, userCache)
+		},
+	}
+	cmdClean.Flags().BoolVarP(
+		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
+			"the current project")
+	subcomands = append(subcomands, cmdClean)
+	// add --debug flag to every command
+	for _, cmd := range subcomands {
+		cmd.Flags().BoolVarP(&regolith.Debug, "debug", "d", false, "Enables debugging")
+	}
+	// Build and run CLI
+	rootCmd.AddCommand(subcomands...)
+	rootCmd.Execute()
+
 }
