@@ -79,6 +79,9 @@ const (
 	// Error used when program fails to parse JSON file
 	jsonUnmarshalError = "Failed to parse JSON.\nPath: %s"
 
+	// Error used when program fails to parse TOML file
+	tomlUnmarshalError = "Failed to parse TOML.\nPath: %s"
+
 	// Error used when Regolith fails to parse a property os JSON
 	jsonPropertyParseError = "Failed to parse JSON property.\nProperty: %s"
 

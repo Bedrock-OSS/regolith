@@ -13,7 +13,7 @@ const (
 	// regolithConfigPath is a path to the regolith config relative to
 	// UserCacheDir()
 	regolithConfigPath = "regolith"
-	// resolverUrl is an URL to the resolver.json file
+	// resolverUrl is  the default URL to the resolver.json file
 	resolverUrl = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-filter-resolver/main/resolver.json"
 )
 
@@ -46,7 +46,7 @@ func DownloadResolverMap() error {
 	// overwritting the old file is possible only if download is successful
 	tmpPath := filepath.Join(path, ".resolver-tmp.json")
 	targetPath := filepath.Join(path, "resolver.json")
-	err = getter.GetFile(tmpPath, resolverUrl)
+	err = getter.GetFile(tmpPath, getUserConfig().Resolvers[0])
 	if err != nil {
 		os.Remove(tmpPath) // I don't think errors matter here
 		return WrapErrorf(
@@ -54,7 +54,7 @@ func DownloadResolverMap() error {
 			"Unable to download filter resolver map file."+
 				"Download URL: %s"+
 				"Download path (for saving file): %s",
-			resolverUrl, tmpPath)
+			getUserConfig().Resolvers[0], tmpPath)
 	}
 	os.Remove(targetPath)
 	err = os.Rename(tmpPath, targetPath)
@@ -158,7 +158,7 @@ func ResolveUrl(shortName string) (string, error) {
 				"resolver.\n"+
 				"Filter name: %s\n"+
 				"Resolver URL: %s",
-			shortName, resolverUrl)
+			shortName, getUserConfig().Resolvers[0])
 	}
 	return filterMap.Url, nil
 }
