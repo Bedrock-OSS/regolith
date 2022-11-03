@@ -69,12 +69,13 @@ func (f *RemoteFilter) run(context RunContext) error {
 		return WrappedErrorf(
 			"Filter version saved in cache doesn't match the version declared"+
 				" in the config file.\n"+
+				"Filter: %s\n"+
 				"Installed version: %s\n"+
 				"Required version: %s\n"+
-				"You can update the filter using command:\n"+
-				"regolith update %s",
-			// cached, required, id
-			*version, f.Definition.Version, f.Id)
+				"You udpate all of the filters by running:\n"+
+				"regolith install-all",
+			// id, cached, required
+			f.Id, *version, f.Definition.Version)
 	}
 
 	path := f.GetDownloadPath(context.DotRegolithPath)
@@ -426,7 +427,7 @@ func (f *RemoteFilterDefinition) InstalledVersion(dotRegolithPath string) (strin
 	return versionStr, nil
 }
 
-func (f *RemoteFilterDefinition) Update(dotRegolithPath string) error {
+func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string) error {
 	installedVersion, err := f.InstalledVersion(dotRegolithPath)
 	installedVersion = trimFilterPrefix(installedVersion, f.Id)
 	if err != nil {
@@ -438,7 +439,7 @@ func (f *RemoteFilterDefinition) Update(dotRegolithPath string) error {
 			err, getRemoteFilterDownloadRefError, f.Url, f.Id, f.Version)
 	}
 	version = trimFilterPrefix(version, f.Id)
-	if installedVersion != version {
+	if installedVersion != version || force {
 		Logger.Infof(
 			"Updating filter %q to new version: %q->%q.",
 			f.Id, installedVersion, version)

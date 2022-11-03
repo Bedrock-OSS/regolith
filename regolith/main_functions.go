@@ -8,7 +8,7 @@ import (
 )
 
 // Install handles the "regolith install" command. It installs specific filters
-// from the Internet and adds them to the filtersDefinitions list in the
+// from the internet and adds them to the filtersDefinitions list in the
 // config.json file.
 //
 // The "filters" parameter is a list of filters to install in the format
@@ -93,7 +93,7 @@ func Install(filters []string, force, debug bool) error {
 		if err != nil {
 			return WrapErrorf(
 				err,
-				"Unable to download the filter definition from the Internet.\n"+
+				"Unable to download the filter definition from the internet.\n"+
 					"Filter repository Url: %s\n"+
 					"Filter name: %s\n"+
 					"Filter version: %s\n",
@@ -167,99 +167,6 @@ func InstallAll(force, debug bool) error {
 	// Install the filters
 	err = installFilters(
 		config.FilterDefinitions, force, config.DataPath, dotRegolithPath)
-	if err != nil {
-		return WrapError(err, "Could not install filters.")
-	}
-	Logger.Info("Successfully installed the filters.")
-	return sessionLockErr // Return the error from the defer function
-}
-
-// Update handles the "regolith update" command. It updates filters listed in
-// "filters" parameter. The names of the filters must be already present in the
-// filtersDefinitions list in the config.json file.
-//
-// The "debug" parameter is a boolean that determines if the debug messages
-// should be printed.
-func Update(filters []string, debug bool) error {
-	InitLogging(debug)
-	Logger.Info("Updating filters...")
-	if !hasGit() {
-		Logger.Warn(gitNotInstalledWarning)
-	}
-	if len(filters) == 0 {
-		return WrappedError("No filters specified.")
-	}
-	configMap, err1 := LoadConfigAsMap()
-	config, err2 := ConfigFromObject(configMap)
-	if err := firstErr(err1, err2); err != nil {
-		return WrapError(err, "Failed to load config.json.")
-	}
-	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(
-		config.RegolithProject.UseAppData, false, ".")
-	if err != nil {
-		return WrapError(
-			err, "Unable to get the path to regolith cache folder.")
-	}
-	// Lock the session
-	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
-	if sessionLockErr != nil {
-		return WrapError(sessionLockErr, aquireSessionLockError)
-	}
-	defer func() { sessionLockErr = unlockSession() }()
-	// Filter out the filters that are not present in the 'filters' list
-	filterInstallers := make(map[string]FilterInstaller, 0)
-	for _, filterName := range filters {
-		filterInstaller, ok := config.FilterDefinitions[filterName]
-		if !ok {
-			Logger.Warnf(
-				"Filter %q is not installed and therefore cannot be updated.",
-				filterName)
-			continue
-		}
-		filterInstallers[filterName] = filterInstaller
-	}
-	// Update the filters from the list
-	err = updateFilters(filterInstallers, dotRegolithPath)
-	if err != nil {
-		return WrapError(err, "Could not update filters.")
-	}
-	Logger.Info("Successfully updated the filters.")
-	return sessionLockErr // Return the error from the defer function
-}
-
-// UpdateAll handles the "regolith update-all" command. It updates all of the
-// filters from the filtersDefinitions list in the config.json file which
-// aren't version locked.
-//
-// The "debug" parameter is a boolean that determines if the debug messages
-// should be printed.
-func UpdateAll(debug bool) error {
-	InitLogging(debug)
-	Logger.Info("Updating filters...")
-	if !hasGit() {
-		Logger.Warn(gitNotInstalledWarning)
-	}
-	configMap, err1 := LoadConfigAsMap()
-	config, err2 := ConfigFromObject(configMap)
-	if err := firstErr(err1, err2); err != nil {
-		return WrapError(err, "Failed to load config.json.")
-	}
-	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(
-		config.RegolithProject.UseAppData, false, ".")
-	if err != nil {
-		return WrapError(
-			err, "Unable to get the path to regolith cache folder.")
-	}
-	// Lock the session
-	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
-	if sessionLockErr != nil {
-		return WrapError(sessionLockErr, aquireSessionLockError)
-	}
-	defer func() { sessionLockErr = unlockSession() }()
-	// Update the filters
-	err = updateFilters(config.FilterDefinitions, dotRegolithPath)
 	if err != nil {
 		return WrapError(err, "Could not install filters.")
 	}
