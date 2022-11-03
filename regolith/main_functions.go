@@ -2,9 +2,11 @@ package regolith
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 // Install handles the "regolith install" command. It installs specific filters
@@ -466,7 +468,7 @@ func Init(debug bool) error {
 	}
 	jsonData := Config{
 		Name:   "Project name",
-		Author: userConfig.Username,
+		Author: *userConfig.Username,
 		Packs: Packs{
 			BehaviorFolder: "./packs/BP",
 			ResourceFolder: "./packs/RP",
@@ -585,4 +587,164 @@ func Clean(debug, userCache bool) error {
 	} else {
 		return CleanCurrentProject()
 	}
+}
+
+// UserConfigPrint prints the user configuration to the console.
+// The "debug" parameter is a boolean that determines if the debug messages
+// should be printed.
+// - The "global" parameter is a boolean that determines that the global user
+//   configuration should be printed (can't be mixed with the "local" parameter).
+// - The "local" parameter is a boolean that determines that the local user
+//   configuration should be printed (can't be mixed with the "global" parameter).
+// - The "key" parameter is a string that determines that only the value of the
+//   specified key should be printed.
+func UserConfigPrint(debug, global, local bool, key string) error {
+	InitLogging(debug)
+	if global && local {
+		return WrappedError("Cannot use both --global and --local flags.")
+	}
+	var err error // prevent shadowing
+	configPath := ""
+	userConfig := NewUserConfig()
+	if global {
+		configPath, err = getGlobalUserConfigPath()
+		if err != nil {
+			return WrapError(err, getGlobalUserConfigPathError)
+		}
+		fmt.Printf("\nGLOBAL USER CONFIGURATION: %s\n", configPath)
+		userConfig.fillWithFileData(configPath)
+	} else if local { // local (regardless of the value of the "local" flag)
+		configPath = localUserConfigPath
+		// Make sure that it's a regolith project
+		config, err := LoadConfigAsMap()
+		if err != nil {
+			return WrappedError("Failed to load \"config.json\" file.\n" +
+				" Are you in a regolith project?")
+		}
+		_, err = ConfigFromObject(config)
+		if err != nil {
+			return WrapError(err, "Failed to load \"config.json\" file.\n"+
+				" Are you in a regolith project?")
+		}
+		fmt.Printf("\nLOCAL USER CONFIGURATION: %s\n", configPath)
+		userConfig.fillWithFileData(configPath)
+	} else {
+		userConfig, err = getUserConfig() // Combined config
+		if err != nil {
+			return WrapError(err, getUserConfigError)
+		}
+		fmt.Println("\nCOMBINED USER CONFIGURATION (GLOBAL + LOCAL + DEFAULT):")
+	}
+	if key == "" {
+		fmt.Println(userConfig)
+	} else {
+		result, err := userConfig.stringPropertyValue(key)
+		if err != nil {
+			return WrapErrorf(err, invalidUserConfigPropertyError, key)
+		}
+		fmt.Println(result)
+	}
+	return nil
+}
+
+// UserConfigEdit modifies the user configuration in a specified way.
+// The "debug" parameter is a boolean that determines if the debug messages
+// should be printed.
+// - The "global" parameter is a boolean that determines that the global user
+//   configuration should be edited (can't be mixed with the "local" parameter).
+// - The "local" par\ameter is a boolean that determines that the local user
+//   configuration should be edited (can't be mixed with the "global" parameter).
+// - The "key" parameter is a name of the property that should be edited.
+// - The "value" parameter is a string representation of a value that should be
+//   set for the specified property.
+// - The "delete" parameter is a boolean that determines that the specified key
+//   should be deleted.
+// - The "index" parameter is an integer with the index of the value that should
+//   be edited (only for arrays)
+// The default behavior for the arrays, without the flags is to append the value.
+// If the "global" and "local" flags are not specified, the local configuration
+// is edited.
+func UserConfigEdit(debug, global, local, delete bool, index int, key, value string) error {
+	InitLogging(debug)
+	if global && local {
+		return WrappedError("Cannot use both --global and --local flags.")
+	}
+	var err error // prevent shadowing
+	configPath := ""
+	if global {
+		configPath, err = getGlobalUserConfigPath()
+		if err != nil {
+			return WrapError(err, getGlobalUserConfigPathError)
+		}
+	} else { // local (regardless of the value of the "local" flag)
+		configPath = localUserConfigPath
+		// Make sure that it's a regolith project
+		config, err := LoadConfigAsMap()
+		if err != nil {
+			return WrappedError("Failed to load \"config.json\" file.\n" +
+				" Are you in a regolith project?")
+		}
+		_, err = ConfigFromObject(config)
+		if err != nil {
+			return WrapError(err, "Failed to load \"config.json\" file.\n"+
+				" Are you in a regolith project?")
+		}
+	}
+	Logger.Infof("Editing user configuration.\n\tPath: %s", configPath)
+	userConfig := NewUserConfig()
+	userConfig.fillWithFileData(configPath)
+	switch key {
+	case "use_project_app_data_storage":
+		if index != -1 {
+			return WrappedError("Cannot use --index with non-array property.")
+		}
+		if delete {
+			userConfig.UseProjectAppDataStorage = nil
+			break
+		}
+		boolValue, err := strconv.ParseBool(value)
+		if err != nil {
+			return WrapErrorf(err, "Invalid value for boolean property.\n"+
+				"\tValue: %s", value)
+		}
+		userConfig.UseProjectAppDataStorage = &boolValue
+	case "username":
+		if index != -1 {
+			return WrappedError("Cannot use --index with non-array property.")
+		}
+		if delete {
+			userConfig.Username = nil
+			break
+		}
+		userConfig.Username = &value
+	case "resolvers":
+		if delete {
+			if index == -1 {
+				userConfig.Resolvers = nil
+			} else {
+				if len(userConfig.Resolvers) <= index {
+					return WrappedError("Index out of range.")
+				}
+				userConfig.Resolvers = append(
+					userConfig.Resolvers[:index],
+					userConfig.Resolvers[index+1:]...)
+			}
+			break
+		}
+		if index == -1 {
+			userConfig.Resolvers = append(userConfig.Resolvers, value)
+		} else {
+			if len(userConfig.Resolvers) <= index {
+				return WrappedError("Index out of range.")
+			}
+			userConfig.Resolvers[index] = value
+		}
+	default:
+		return WrappedErrorf(invalidUserConfigPropertyError, key)
+	}
+	err = userConfig.dump(configPath)
+	if err != nil {
+		return WrapErrorf(err, userConfigDumpError, configPath)
+	}
+	return nil
 }
