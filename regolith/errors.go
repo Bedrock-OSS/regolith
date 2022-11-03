@@ -79,9 +79,6 @@ const (
 	// Error used when program fails to parse JSON file
 	jsonUnmarshalError = "Failed to parse JSON.\nPath: %s"
 
-	// Error used when program fails to parse TOML file
-	tomlUnmarshalError = "Failed to parse TOML.\nPath: %s"
-
 	// Error used when Regolith fails to parse a property os JSON
 	jsonPropertyParseError = "Failed to parse JSON property.\nProperty: %s"
 
@@ -154,6 +151,9 @@ const (
 
 	// Error used when GetRegolithConfigPath fails
 	getRegolithConfigPathError = "Failed to get path to Regolith's app data folder."
+
+	// Error used when GetUserConfig function fails
+	getUserConfigError = "Failed to get user configuration."
 
 	// Error used whe Regolith fails to undo failed file system operation.
 	fsUndoError = "Filed to undo file system operation."
