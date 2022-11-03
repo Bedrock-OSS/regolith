@@ -9,9 +9,7 @@ sidebar:
 
 <!-- This page is auto-generated. To edit it, you'll need to change the filter_fetch.py -->
 
-The Standard Library is a special set of filters, approved or written by the Regolith maintainers. Standard Filters offers the safest, easiest, and best support. 
-
-Please be aware that when running in safe mode, standard filters are the only filters allowed.
+The Standard Library is a special set of filters, written by the Regolith maintainers. Standard Filters offers the safest, easiest, and best support. 
 
 ## Standard Filters
 
@@ -27,7 +25,7 @@ Please be aware that when running in safe mode, standard filters are the only fi
 | [texture_convert](https://github.com/Bedrock-OSS/regolith-filters/tree/master/texture_convert) | Converts popular image editor file formats, such as .psd to .png. |
 | [texture_list](https://github.com/Bedrock-OSS/regolith-filters/tree/master/texture_list) | Automatically creates the `texture_list.json` file, based on the images you've added into your resource pack. |
 
-The full, up to date list of filters can be found on our github. We are looking into maintaining a list here, but for now please visit our github. 
+The full, up to date list of filters can be found on our github. We are looking into maintaining a list here, but for now please visit our GitHub. 
 
 ## Using a Standard Filter
 
