@@ -460,9 +460,13 @@ func Init(debug bool) error {
 	}
 	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0644)
 	// Create new default configuration
+	userConfig, err := getUserConfig()
+	if err != nil {
+		return WrapError(err, getUserConfigError)
+	}
 	jsonData := Config{
 		Name:   "Project name",
-		Author: getUserConfig().User.Name,
+		Author: userConfig.Username,
 		Packs: Packs{
 			BehaviorFolder: "./packs/BP",
 			ResourceFolder: "./packs/RP",

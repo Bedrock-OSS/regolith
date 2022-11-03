@@ -46,7 +46,11 @@ func DownloadResolverMap() error {
 	// overwritting the old file is possible only if download is successful
 	tmpPath := filepath.Join(path, ".resolver-tmp.json")
 	targetPath := filepath.Join(path, "resolver.json")
-	err = getter.GetFile(tmpPath, getUserConfig().Resolvers[0])
+	userConfig, err := getUserConfig()
+	if err != nil {
+		return WrapError(err, getUserConfigError)
+	}
+	err = getter.GetFile(tmpPath, userConfig.Resolvers[0])
 	if err != nil {
 		os.Remove(tmpPath) // I don't think errors matter here
 		return WrapErrorf(
@@ -54,7 +58,7 @@ func DownloadResolverMap() error {
 			"Unable to download filter resolver map file."+
 				"Download URL: %s"+
 				"Download path (for saving file): %s",
-			getUserConfig().Resolvers[0], tmpPath)
+			userConfig.Resolvers[0], tmpPath)
 	}
 	os.Remove(targetPath)
 	err = os.Rename(tmpPath, targetPath)
@@ -152,13 +156,17 @@ func ResolveUrl(shortName string) (string, error) {
 		return "", WrapError(err, resolverLoadErrror)
 	}
 	filterMap, ok := resolver.Filters[shortName]
+	userConfig, err := getUserConfig()
+	if err != nil {
+		return "", WrapError(err, getUserConfigError)
+	}
 	if !ok {
 		return "", WrappedErrorf(
 			"The filter doesn't have known mapping to URL in the URL "+
 				"resolver.\n"+
 				"Filter name: %s\n"+
 				"Resolver URL: %s",
-			shortName, getUserConfig().Resolvers[0])
+			shortName, userConfig.Resolvers[0])
 	}
 	return filterMap.Url, nil
 }

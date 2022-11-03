@@ -1,72 +1,76 @@
-// Functions related to config.toml
+// Functions related to user_config.json
 package regolith
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"github.com/BurntSushi/toml"
 )
 
 type UserConfig struct {
-	Project struct {
-		AppDataStorage bool `toml:"app_data_storage"`
-	} `toml:"project"`
-	User struct {
-		Name string `toml:"name"`
-	} `toml:"user"`
-	Resolvers []string `toml:"resolvers"`
+	ProjectAppDataStorage bool     `json:"project_app_data_storage"`
+	Username              string   `json:"username"`
+	Resolvers             []string `json:"resolvers"`
 }
 
 func (u *UserConfig) fillDefaults() {
 	u.Resolvers = append(u.Resolvers, resolverUrl)
-	if u.User.Name == "" {
-		u.User.Name = "Your name"
+	if u.Username == "" {
+		u.Username = "Your name"
 	}
 }
 
 var userConfig *UserConfig
 
-func getAppDataConfigTomlPath() (string, error) {
+func getAppDataConfigJsonPath() (string, error) {
 	// App data enabled - use user cache dir
 	userCache, err := os.UserCacheDir()
 	if err != nil {
 		return "", WrappedError(osUserCacheDirError)
 	}
-	return filepath.Join(userCache, "regolith", "config.toml"), nil
+	return filepath.Join(userCache, "regolith", "user_config.json"), nil
 }
 
-// readUserConfig reads the config from .regolith/config.toml and from the
-// user app data directory. It returns the merged config and an error if any.
-// The result is guaranteed to be a valid config even if there was an error.
-func readUserConfig() (*UserConfig, error) {
+// readCombinedUserConfig reads the config from .regolith/user_config.json and
+// from the user app data directory. It returns the merged config or an error.
+func readCombinedUserConfig() (*UserConfig, error) {
 	// Get the paths to localConfigPath and appDataConfig
-	globalConfigPath, err := getAppDataConfigTomlPath()
 	result := &UserConfig{}
 	defer result.fillDefaults()
-	if err != nil {
-		return result, WrapError(err, "Failed to get global config.toml path")
+	readConfigToResult := func(path string) error {
+		if _, err := os.Stat(path); err == nil {
+			file, err := ioutil.ReadFile(path)
+			if err == nil {
+				return WrapErrorf(err, fileReadError, path)
+			}
+			if err = json.Unmarshal(file, result); err != nil {
+				return WrapErrorf(err, jsonUnmarshalError, path)
+			}
+		} else if !os.IsNotExist(err) {
+			return WrapErrorf(err, osStatErrorAny, path)
+		}
+		return nil
 	}
-	localConfigPath, err := filepath.Abs(".regolith/config.toml")
+
+	globalConfigPath, err := getAppDataConfigJsonPath()
 	if err != nil {
-		return result, WrapErrorf(err, filepathAbsError, ".regolith/config.toml")
+		return nil, WrapError(err, "Failed to get global user_config.json path")
+	}
+	localConfigPath, err := filepath.Abs(".regolith/user_config.json")
+	if err != nil {
+		return nil, WrapErrorf(err, filepathAbsError, ".regolith/user_config.json")
 	}
 	// Load the config files
 	// First load the global config
-	if _, err := os.Stat(globalConfigPath); err == nil {
-		if _, err := toml.DecodeFile(globalConfigPath, result); err != nil {
-			return result, WrapErrorf(err, tomlUnmarshalError, globalConfigPath)
-		}
-	} else if !os.IsNotExist(err) {
-		return result, WrapErrorf(err, osStatErrorAny, globalConfigPath)
+	err = readConfigToResult(globalConfigPath)
+	if err != nil {
+		return nil, WrapError(err, "Failed to read global user_config.json")
 	}
 	// Overwrite with the local config
-	if _, err := os.Stat(localConfigPath); err == nil {
-		if _, err := toml.DecodeFile(localConfigPath, result); err != nil {
-			return result, WrapErrorf(err, tomlUnmarshalError, localConfigPath)
-		}
-	} else if !os.IsNotExist(err) {
-		return result, WrapErrorf(err, osStatErrorAny, localConfigPath)
+	err = readConfigToResult(localConfigPath)
+	if err != nil {
+		return nil, WrapError(err, "Failed to read local user_config.json")
 	}
 	return result, nil
 }
@@ -74,13 +78,13 @@ func readUserConfig() (*UserConfig, error) {
 // getUserConfig lazily loads the user config to the global userConfig variable
 // and returns it. The pointer returned from this function is guaranteed to be
 // non-nil.
-func getUserConfig() *UserConfig {
+func getUserConfig() (*UserConfig, error) {
 	if userConfig == nil {
-		readUserConfig, err := readUserConfig()
+		readUserConfig, err := readCombinedUserConfig()
 		if err != nil {
-			Logger.Warn(WrapError(err, "Failed to read user config").Error())
+			return nil, PassError(err)
 		}
 		userConfig = readUserConfig
 	}
-	return userConfig
+	return userConfig, nil
 }
