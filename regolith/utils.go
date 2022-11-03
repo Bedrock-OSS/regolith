@@ -321,7 +321,7 @@ func GetDotRegolith(silent bool, projectRoot string) (string, error) {
 	if err != nil {
 		return "", WrapError(err, getUserConfigError)
 	}
-	if !userConfig.ProjectAppDataStorage {
+	if !*userConfig.UseProjectAppDataStorage {
 		return ".regolith", nil
 	}
 	return getAppDataDotRegolith(silent, projectRoot)

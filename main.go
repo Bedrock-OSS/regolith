@@ -165,6 +165,97 @@ func main() {
 					},
 				},
 			},
+			{
+				Name:  "config",
+				Usage: "Access to the user configuration.",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "edit",
+						Usage: "Edits a value in the user configuration.",
+						Action: func(c *cli.Context) error {
+							regolith.InitLogging(regolith.Debug)
+							global := c.Bool("global")
+							local := c.Bool("local")
+							delete := c.Bool("delete")
+							index := c.Int("index")
+							args := c.Args().Slice()
+							var key, value string
+							if delete {
+								if len(args) != 1 {
+									return regolith.WrappedError(
+										"When using the --delete flag, you must specify only the key" +
+											" to delete.")
+								}
+								key = args[0]
+								value = ""
+							} else {
+								if len(args) != 2 {
+									return regolith.WrappedError(
+										"When not using the --delete flag, you must specify the key" +
+											" and the value to set.")
+								}
+								key = args[0]
+								value = args[1]
+							}
+							return regolith.UserConfigEdit(
+								regolith.Debug, global, local, delete, index, key, value)
+						},
+						Flags: []cli.Flag{
+							&cli.BoolFlag{
+								Name:    "global",
+								Aliases: []string{"g"},
+								Usage:   "Sets the value in the global configuration file.",
+							},
+							&cli.BoolFlag{
+								Name:    "local",
+								Aliases: []string{"l"},
+								Usage:   "Sets the value in the local configuration file.",
+							},
+							&cli.BoolFlag{
+								Name:    "delete",
+								Aliases: []string{"d"},
+								Usage:   "The property will be deleted from the config file.",
+							},
+							&cli.IntFlag{
+								Name:    "index",
+								Aliases: []string{"i"},
+								Usage:   "The index of the array property on which to act.",
+								Value:   -1,
+							},
+						},
+					},
+					{
+						Name:  "print",
+						Usage: "Prints a value from the user configuration or entire configuration.",
+						Action: func(c *cli.Context) error {
+							global := c.Bool("global")
+							local := c.Bool("local")
+							args := c.Args().Slice()
+							if len(args) == 1 {
+								return regolith.UserConfigPrint(regolith.Debug, global, local, args[0])
+							} else if len(args) == 0 {
+								return regolith.UserConfigPrint(regolith.Debug, global, local, "")
+							} else {
+								return regolith.WrappedError(
+									"You must specify either a key or nothing when running " +
+										"the \"regolith config get\" command.\n")
+							}
+						},
+						Flags: []cli.Flag{
+							&cli.BoolFlag{
+								Name:    "global",
+								Aliases: []string{"g"},
+								Usage:   "Sets the value in the global configuration file.",
+							},
+							&cli.BoolFlag{
+								Name:    "local",
+								Aliases: []string{"l"},
+								Usage:   "Sets the value in the local configuration file.",
+							},
+						},
+					},
+				},
+			},
 		},
 	}).Run(os.Args)
 	if err != nil {
