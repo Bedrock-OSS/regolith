@@ -51,59 +51,24 @@ func installFilters(
 				}
 				resolverUpdated = true
 			}
-			// Download the remote filter
-			err := remoteFilter.Download(force, dotRegolithPath)
+			// Download the remote filter, and its dependencies
+			err := remoteFilter.Update(force, dotRegolithPath)
 			if err != nil {
 				return WrapErrorf(err, remoteFilterDownloadError, name)
 			}
 			// Copy the data of the remote filter to the data path
 			remoteFilter.CopyFilterData(dataPath, dotRegolithPath)
-		}
-		// Install the dependencies of the filter
-		Logger.Infof("Installing %q filter dependencies...", name)
-		err = filterDefinition.InstallDependencies(nil, dotRegolithPath)
-		if err != nil {
-			return WrapErrorf(
-				err,
-				"Failed to install dependencies of the filter.\nFilter: %s.",
-				name)
-		}
-	}
-	return nil
-}
-
-// updateFilters updates the filters from the list.
-func updateFilters(
-	remoteFilterDefinitions map[string]FilterInstaller, dotRegolithPath string,
-) error {
-	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
-	err := CreateDirectoryIfNotExists(joinedPath)
-	if err != nil {
-		return WrapErrorf(err, osMkdirError, joinedPath)
-	}
-	joinedPath = filepath.Join(dotRegolithPath, "cache/venvs")
-	err = CreateDirectoryIfNotExists(joinedPath)
-	if err != nil {
-		return WrapErrorf(err, osMkdirError, joinedPath)
-	}
-	resolverUpdated := false
-	// Download all of the remote filters
-	for name, filterDefinition := range remoteFilterDefinitions {
-		Logger.Infof("Updating %q filter...", name)
-		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
-			// Download resolver once if remote filter is found
-			if !resolverUpdated {
-				err = DownloadResolverMap()
-				if err != nil {
-					Logger.Warn("Failed to download resolver map.")
-				}
-				resolverUpdated = true
-			}
-			// Update the filter
-			err := remoteFilter.Update(dotRegolithPath)
+		} else {
+			// Non-remote filters must always update their dependencies.
+			// TODO - add option to track if the filter already installed
+			// its dependencies.
+			Logger.Infof("Installing %q filter dependencies...", name)
+			err = filterDefinition.InstallDependencies(nil, dotRegolithPath)
 			if err != nil {
 				return WrapErrorf(
-					err, "Failed to update filter.\nFilter: %s", name)
+					err,
+					"Failed to install dependencies of the filter.\nFilter: %s.",
+					name)
 			}
 		}
 	}
