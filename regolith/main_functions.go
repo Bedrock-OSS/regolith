@@ -499,22 +499,9 @@ func Clean(debug, userCache bool) error {
 	}
 }
 
-const (
-	printModeGlobal = iota
-	printModeLocal
-	printModeCombined
-)
-
-// UserConfigPrint prints the user configuration to the console.
-// The "debug" parameter is a boolean that determines if the debug messages
-// should be printed.
-// - The "global" parameter is a boolean that determines that the global user
-//   configuration should be printed (can't be mixed with the "local" parameter).
-// - The "local" parameter is a boolean that determines that the local user
-//   configuration should be printed (can't be mixed with the "global" parameter).
-// - The "key" parameter is a string that determines that only the value of the
-//   specified key should be printed.
-func UserConfigPrint(debug bool, global, local bool, key string) error {
+// manageUserConfigPrint is a helper function for ManageConfig used to print
+// the specified value from the user configuration.
+func manageUserConfigPrint(debug bool, global, local bool, key string) error {
 	var err error // prevent shadowing
 	configPath := ""
 	userConfig := NewUserConfig()
@@ -556,7 +543,9 @@ func UserConfigPrint(debug bool, global, local bool, key string) error {
 	return nil
 }
 
-func UserConfigPrintAll(debug, global, local bool) error {
+// manageUserConfigPrintAll is a helper function for ManageConfig used to print
+// whole user configuration.
+func manageUserConfigPrintAll(debug, global, local bool) error {
 	var err error // prevent shadowing
 	configPath := ""
 	userConfig := NewUserConfig()
@@ -594,24 +583,9 @@ func UserConfigPrintAll(debug, global, local bool) error {
 	return nil
 }
 
-// UserConfigEdit modifies the user configuration in a specified way.
-// The "debug" parameter is a boolean that determines if the debug messages
-// should be printed.
-// - The "global" parameter is a boolean that determines that the global user
-//   configuration should be edited (can't be mixed with the "local" parameter).
-// - The "local" par\ameter is a boolean that determines that the local user
-//   configuration should be edited (can't be mixed with the "global" parameter).
-// - The "key" parameter is a name of the property that should be edited.
-// - The "value" parameter is a string representation of a value that should be
-//   set for the specified property.
-// - The "delete" parameter is a boolean that determines that the specified key
-//   should be deleted.
-// - The "index" parameter is an integer with the index of the value that should
-//   be edited (only for arrays)
-// The default behavior for the arrays, without the flags is to append the value.
-// If the "global" and "local" flags are not specified, the local configuration
-// is edited.
-func UserConfigEdit(debug, global bool, index int, key, value string) error {
+// manageUserConfigEdit is a helper function for ManageConfig used to edit
+// the specified value from the user configuration.
+func manageUserConfigEdit(debug, global bool, index int, key, value string) error {
 	var err error // prevent shadowing
 	configPath := ""
 	if global {
@@ -671,7 +645,9 @@ func UserConfigEdit(debug, global bool, index int, key, value string) error {
 	return nil
 }
 
-func UserConfigDelete(debug, global bool, index int, key string) error {
+// manageUserConfigDelete is a helper function for ManageConfig used to delete
+// the specified value from the user configuration.
+func manageUserConfigDelete(debug, global bool, index int, key string) error {
 	var err error // prevent shadowing
 	configPath := ""
 	if global {
@@ -728,6 +704,18 @@ func UserConfigDelete(debug, global bool, index int, key string) error {
 	return nil
 }
 
+// ManageConfig handles the "regolith config" command. It can modify or
+// print the user configuration
+// - debug - print debug messages
+// - global - modify global configuration
+// - local - modify local configuration
+// - delete - delete the specified value
+// - append - append a value to a array property of the configuration. Applies
+//   only to the array properties
+// - index - the index of the value to modify. Applies only to the array
+//   properties
+// - args - the arguments of the command, the length of the list must be 0, 1
+//   or 2. The lenght determines the action of the command.
 func ManageConfig(debug, global, local, delete, append bool, index int, args []string) error {
 	InitLogging(debug)
 	// Check flag combinations that are always invalid
@@ -753,7 +741,7 @@ func ManageConfig(debug, global, local, delete, append bool, index int, args []s
 			return WrappedError("Cannot use --append without a key.")
 		}
 		// Print all
-		return UserConfigPrintAll(debug, global, local)
+		return manageUserConfigPrintAll(debug, global, local)
 	} else if len(args) == 1 {
 		// 1 ARGUMENT - Print specific or delete
 
@@ -764,12 +752,12 @@ func ManageConfig(debug, global, local, delete, append bool, index int, args []s
 
 		// Delete or print
 		if delete {
-			return UserConfigDelete(debug, global, index, args[0])
+			return manageUserConfigDelete(debug, global, index, args[0])
 		} else {
 			if index != -1 {
 				return WrappedError("The --index flag is not allowed for printing.")
 			}
-			return UserConfigPrint(debug, global, local, args[0])
+			return manageUserConfigPrint(debug, global, local, args[0])
 		}
 	} else if len(args) == 2 {
 		// 2 ARGUMENTS - Set or append
@@ -780,7 +768,7 @@ func ManageConfig(debug, global, local, delete, append bool, index int, args []s
 		}
 
 		// Set or append
-		return UserConfigEdit(debug, global, index, args[0], args[1])
+		return manageUserConfigEdit(debug, global, index, args[0], args[1])
 	} else {
 		return WrappedError("Too many arguments.")
 	}
