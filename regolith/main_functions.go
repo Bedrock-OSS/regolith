@@ -499,6 +499,12 @@ func Clean(debug, userCache bool) error {
 	}
 }
 
+const (
+	printModeGlobal = iota
+	printModeLocal
+	printModeCombined
+)
+
 // UserConfigPrint prints the user configuration to the console.
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
@@ -508,11 +514,49 @@ func Clean(debug, userCache bool) error {
 //   configuration should be printed (can't be mixed with the "global" parameter).
 // - The "key" parameter is a string that determines that only the value of the
 //   specified key should be printed.
-func UserConfigPrint(debug, global, local bool, key string) error {
-	InitLogging(debug)
-	if global && local {
-		return WrappedError("Cannot use both --global and --local flags.")
+func UserConfigPrint(debug bool, global, local bool, key string) error {
+	var err error // prevent shadowing
+	configPath := ""
+	userConfig := NewUserConfig()
+	if global {
+		configPath, err = getGlobalUserConfigPath()
+		if err != nil {
+			return WrapError(err, getGlobalUserConfigPathError)
+		}
+		fmt.Printf("\nGLOBAL USER CONFIGURATION: %s\n", configPath)
+		userConfig.fillWithFileData(configPath)
+	} else if local { // local (regardless of the value of the "local" flag)
+		configPath = localUserConfigPath
+		// Make sure that it's a regolith project
+		config, err := LoadConfigAsMap()
+		if err != nil {
+			return WrappedError("Failed to load \"config.json\" file.\n" +
+				" Are you in a regolith project?")
+		}
+		_, err = ConfigFromObject(config)
+		if err != nil {
+			return WrapError(err, "Failed to load \"config.json\" file.\n"+
+				" Are you in a regolith project?")
+		}
+		fmt.Printf("\nLOCAL USER CONFIGURATION: %s\n", configPath)
+		userConfig.fillWithFileData(configPath)
+	} else { // Combined (not global and not local)
+		userConfig, err = getUserConfig() // Combined config
+		if err != nil {
+			return WrapError(err, getUserConfigError)
+		}
+		fmt.Println("\nCOMBINED USER CONFIGURATION (GLOBAL + LOCAL + DEFAULT):")
 	}
+	result, err := userConfig.stringPropertyValue(key)
+	if err != nil {
+		return WrapErrorf(err, invalidUserConfigPropertyError, key)
+	}
+	result = "\t" + strings.Replace(result, "\n", "\n\t", -1) // Indent
+	fmt.Println(result)
+	return nil
+}
+
+func UserConfigPrintAll(debug, global, local bool) error {
 	var err error // prevent shadowing
 	configPath := ""
 	userConfig := NewUserConfig()
@@ -545,17 +589,8 @@ func UserConfigPrint(debug, global, local bool, key string) error {
 		}
 		fmt.Println("\nCOMBINED USER CONFIGURATION (GLOBAL + LOCAL + DEFAULT):")
 	}
-	if key == "" {
-		fmt.Println( // Print with additional indentation
-			"\t" + strings.Replace(userConfig.String(), "\n", "\n\t", -1))
-	} else {
-		result, err := userConfig.stringPropertyValue(key)
-		if err != nil {
-			return WrapErrorf(err, invalidUserConfigPropertyError, key)
-		}
-		result = "\t" + strings.Replace(result, "\n", "\n\t", -1) // Indent
-		fmt.Println(result)
-	}
+	fmt.Println( // Print with additional indentation
+		"\t" + strings.Replace(userConfig.String(), "\n", "\n\t", -1))
 	return nil
 }
 
@@ -576,11 +611,7 @@ func UserConfigPrint(debug, global, local bool, key string) error {
 // The default behavior for the arrays, without the flags is to append the value.
 // If the "global" and "local" flags are not specified, the local configuration
 // is edited.
-func UserConfigEdit(debug, global, local, delete bool, index int, key, value string) error {
-	InitLogging(debug)
-	if global && local {
-		return WrappedError("Cannot use both --global and --local flags.")
-	}
+func UserConfigEdit(debug, global bool, index int, key, value string) error {
 	var err error // prevent shadowing
 	configPath := ""
 	if global {
@@ -610,10 +641,6 @@ func UserConfigEdit(debug, global, local, delete bool, index int, key, value str
 		if index != -1 {
 			return WrappedError("Cannot use --index with non-array property.")
 		}
-		if delete {
-			userConfig.UseProjectAppDataStorage = nil
-			break
-		}
 		boolValue, err := strconv.ParseBool(value)
 		if err != nil {
 			return WrapErrorf(err, "Invalid value for boolean property.\n"+
@@ -624,25 +651,8 @@ func UserConfigEdit(debug, global, local, delete bool, index int, key, value str
 		if index != -1 {
 			return WrappedError("Cannot use --index with non-array property.")
 		}
-		if delete {
-			userConfig.Username = nil
-			break
-		}
 		userConfig.Username = &value
 	case "resolvers":
-		if delete {
-			if index == -1 {
-				userConfig.Resolvers = nil
-			} else {
-				if len(userConfig.Resolvers) <= index {
-					return WrappedError("Index out of range.")
-				}
-				userConfig.Resolvers = append(
-					userConfig.Resolvers[:index],
-					userConfig.Resolvers[index+1:]...)
-			}
-			break
-		}
 		if index == -1 {
 			userConfig.Resolvers = append(userConfig.Resolvers, value)
 		} else {
@@ -659,4 +669,119 @@ func UserConfigEdit(debug, global, local, delete bool, index int, key, value str
 		return WrapErrorf(err, userConfigDumpError, configPath)
 	}
 	return nil
+}
+
+func UserConfigDelete(debug, global bool, index int, key string) error {
+	var err error // prevent shadowing
+	configPath := ""
+	if global {
+		configPath, err = getGlobalUserConfigPath()
+		if err != nil {
+			return WrapError(err, getGlobalUserConfigPathError)
+		}
+	} else { // local (regardless of the value of the "local" flag)
+		configPath = localUserConfigPath
+		// Make sure that it's a regolith project
+		config, err := LoadConfigAsMap()
+		if err != nil {
+			return WrappedError("Failed to load \"config.json\" file.\n" +
+				" Are you in a regolith project?")
+		}
+		_, err = ConfigFromObject(config)
+		if err != nil {
+			return WrapError(err, "Failed to load \"config.json\" file.\n"+
+				" Are you in a regolith project?")
+		}
+	}
+	Logger.Infof("Editing user configuration.\n\tPath: %s", configPath)
+	userConfig := NewUserConfig()
+	userConfig.fillWithFileData(configPath)
+	switch key {
+	case "use_project_app_data_storage":
+		if index != -1 {
+			return WrappedError("Cannot use --index with non-array property.")
+		}
+		userConfig.UseProjectAppDataStorage = nil
+	case "username":
+		if index != -1 {
+			return WrappedError("Cannot use --index with non-array property.")
+		}
+		userConfig.Username = nil
+	case "resolvers":
+		if index == -1 {
+			userConfig.Resolvers = nil
+		} else {
+			if len(userConfig.Resolvers) <= index {
+				return WrappedError("Index out of range.")
+			}
+			userConfig.Resolvers = append(
+				userConfig.Resolvers[:index],
+				userConfig.Resolvers[index+1:]...)
+		}
+	default:
+		return WrappedErrorf(invalidUserConfigPropertyError, key)
+	}
+	err = userConfig.dump(configPath)
+	if err != nil {
+		return WrapErrorf(err, userConfigDumpError, configPath)
+	}
+	return nil
+}
+
+func ManageConfig(debug, global, local, delete, append bool, index int, args []string) error {
+	InitLogging(debug)
+	// Check flag combinations that are always invalid
+	if global && local {
+		return WrappedError("Cannot use both --global and --local flags.")
+	}
+	if delete && append {
+		return WrappedError("Cannot use both --delete and --append flags.")
+	}
+
+	// Based on number of arguments, determine what to do
+	if len(args) == 0 {
+		// 0 ARGUMENTS - Print all
+
+		// Check illegal flags
+		if index != -1 {
+			return WrappedError("Cannot use --index without a key.")
+		}
+		if delete {
+			return WrappedError("Cannot use --delete without a key.")
+		}
+		if append {
+			return WrappedError("Cannot use --append without a key.")
+		}
+		// Print all
+		return UserConfigPrintAll(debug, global, local)
+	} else if len(args) == 1 {
+		// 1 ARGUMENT - Print specific or delete
+
+		// Check illegal flags
+		if append {
+			return WrappedError("Cannot use --append flag without a value.")
+		}
+
+		// Delete or print
+		if delete {
+			return UserConfigDelete(debug, global, index, args[0])
+		} else {
+			if index != -1 {
+				return WrappedError("The --index flag is not allowed for printing.")
+			}
+			return UserConfigPrint(debug, global, local, args[0])
+		}
+	} else if len(args) == 2 {
+		// 2 ARGUMENTS - Set or append
+
+		// Check illegal flags
+		if delete {
+			return WrappedError("When using --delete, only one argument is allowed.")
+		}
+
+		// Set or append
+		return UserConfigEdit(debug, global, index, args[0], args[1])
+	} else {
+		return WrappedError("Too many arguments.")
+	}
 }
