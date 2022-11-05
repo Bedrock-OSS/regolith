@@ -159,12 +159,13 @@ func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 	// changing the function signature. In order to pass it in the 'vg' list.
 	type vg []func(string, string) (string, error)
 	var versionGetters vg
+	getHeadSha := func(url, _ string) (string, error) { return GetHeadSha(url) }
 	if version == "" {
-		versionGetters = vg{GetLatestRemoteFilterTag, GetHeadSha}
+		versionGetters = vg{GetLatestRemoteFilterTag, getHeadSha}
 	} else if version == "latest" {
 		versionGetters = vg{GetLatestRemoteFilterTag}
 	} else if version == "HEAD" {
-		versionGetters = vg{GetHeadSha}
+		versionGetters = vg{getHeadSha}
 	} else {
 		if semver.IsValid("v" + version) {
 			version = name + "-" + version
@@ -228,12 +229,13 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 // GetHeadSha returns the SHA of the HEAD of the repository specified by the
 // filter URL. This function does not check whether the filter actually exists
 // in the repository.
-func GetHeadSha(url, name string) (string, error) {
+func GetHeadSha(url string) (string, error) {
 	commandArgs := []string{
 		"ls-remote", "--symref", "https://" + url, "HEAD"}
 	output, err := exec.Command("git", commandArgs...).Output()
 	if err != nil {
-		return "", WrapErrorf(err, execCommandError, name)
+		commandText := "git " + strings.Join(commandArgs, " ")
+		return "", WrapErrorf(err, execCommandError, commandText)
 	}
 	// The result is on the second line.
 	lines := strings.Split(string(output), "\n")

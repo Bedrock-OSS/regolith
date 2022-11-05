@@ -1,9 +1,11 @@
 package regolith
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/go-getter"
 	"muzzammil.xyz/jsonc"
@@ -14,7 +16,7 @@ const (
 	// UserCacheDir()
 	regolithConfigPath = "regolith"
 	// resolverUrl is  the default URL to the resolver.json file
-	resolverUrl = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-filter-resolver/main/resolver.json"
+	resolverUrl = "github.com/Bedrock-OSS/regolith-filter-resolver/resolver.json"
 )
 
 type ResolverMap struct {
@@ -35,6 +37,27 @@ func GetRegolithConfigPath() (string, error) {
 	return filepath.Join(path, regolithConfigPath), nil
 }
 
+// resolveResolverUrl resolves the resolver URL from the short name to a full
+// URL that can be used by go-getter
+func resolveResolverUrl(url string) (string, error) {
+	urlParts := strings.Split(url, "/")
+	if len(urlParts) < 4 {
+		return "", WrappedErrorf(
+			"Incorrect URL format.\n" +
+				"Expected format:" +
+				"github.com/<user-name>/<repo-name>/<path-to-the-resolver-file>")
+	}
+	repoUrl := strings.Join(urlParts[0:3], "/")
+	path := strings.Join(urlParts[3:], "/")
+	sha, err := GetHeadSha(repoUrl)
+	if err != nil {
+		return "", WrapError(
+			err,
+			"Failed to get the HEAD of the repository with the resolver.json file")
+	}
+	return fmt.Sprintf("https:/%s//%s?ref=%s", repoUrl, path, sha), nil
+}
+
 // DownloadResolverMap downloads the resolver.json file
 func DownloadResolverMap() error {
 	Logger.Info("Downloading resolver.json")
@@ -50,7 +73,13 @@ func DownloadResolverMap() error {
 	if err != nil {
 		return WrapError(err, getUserConfigError)
 	}
-	err = getter.GetFile(tmpPath, userConfig.Resolvers[0])
+	url, err := resolveResolverUrl(userConfig.Resolvers[0])
+	if err != nil {
+		return WrapError(err,
+			"Failed to resolve the URL of the resolver.json file into a full"+
+				" URL to download the file")
+	}
+	err = getter.GetFile(tmpPath, url)
 	if err != nil {
 		os.Remove(tmpPath) // I don't think errors matter here
 		return WrapErrorf(
