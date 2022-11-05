@@ -133,6 +133,16 @@ the Regolith data folder to remove the cache files of the projects that you don'
 You can clear caches of all projects stored in user data by using the "--user-cache" flag.
 `
 
+const regolithConfigDesc = `
+TODO - add description
+`
+const regolithConfigEditDesc = `
+TODO - add description
+`
+const regolithConfigPrintDesc = `
+TODO - add description
+`
+
 func main() {
 	// Schedule error handling
 	var err error
@@ -265,97 +275,79 @@ func main() {
 			err = regolith.Clean(regolith.Debug, userCache)
 		},
 	}
-	// {
-	// 	Name:  "config",
-	// 	Usage: "Access to the user configuration.",
-	// 	Subcommands: []*cli.Command{
-	// 		{
-	// 			Name:  "edit",
-	// 			Usage: "Edits a value in the user configuration.",
-	// 			Action: func(c *cli.Context) error {
-	// 				regolith.InitLogging(regolith.Debug)
-	// 				global := c.Bool("global")
-	// 				local := c.Bool("local")
-	// 				delete := c.Bool("delete")
-	// 				index := c.Int("index")
-	// 				args := c.Args().Slice()
-	// 				var key, value string
-	// 				if delete {
-	// 					if len(args) != 1 {
-	// 						return regolith.WrappedError(
-	// 							"When using the --delete flag, you must specify only the key" +
-	// 								" to delete.")
-	// 					}
-	// 					key = args[0]
-	// 					value = ""
-	// 				} else {
-	// 					if len(args) != 2 {
-	// 						return regolith.WrappedError(
-	// 							"When not using the --delete flag, you must specify the key" +
-	// 								" and the value to set.")
-	// 					}
-	// 					key = args[0]
-	// 					value = args[1]
-	// 				}
-	// 				return regolith.UserConfigEdit(
-	// 					regolith.Debug, global, local, delete, index, key, value)
-	// 			},
-	// 			Flags: []cli.Flag{
-	// 				&cli.BoolFlag{
-	// 					Name:    "global",
-	// 					Aliases: []string{"g"},
-	// 					Usage:   "Sets the value in the global configuration file.",
-	// 				},
-	// 				&cli.BoolFlag{
-	// 					Name:    "local",
-	// 					Aliases: []string{"l"},
-	// 					Usage:   "Sets the value in the local configuration file.",
-	// 				},
-	// 				&cli.BoolFlag{
-	// 					Name:    "delete",
-	// 					Aliases: []string{"d"},
-	// 					Usage:   "The property will be deleted from the config file.",
-	// 				},
-	// 				&cli.IntFlag{
-	// 					Name:    "index",
-	// 					Aliases: []string{"i"},
-	// 					Usage:   "The index of the array property on which to act.",
-	// 					Value:   -1,
-	// 				},
-	// 			},
-	// 		},
-	// 		{
-	// 			Name:  "print",
-	// 			Usage: "Prints a value from the user configuration or entire configuration.",
-	// 			Action: func(c *cli.Context) error {
-	// 				global := c.Bool("global")
-	// 				local := c.Bool("local")
-	// 				args := c.Args().Slice()
-	// 				if len(args) == 1 {
-	// 					return regolith.UserConfigPrint(regolith.Debug, global, local, args[0])
-	// 				} else if len(args) == 0 {
-	// 					return regolith.UserConfigPrint(regolith.Debug, global, local, "")
-	// 				} else {
-	// 					return regolith.WrappedError(
-	// 						"You must specify either a key or nothing when running " +
-	// 							"the \"regolith config get\" command.\n")
-	// 				}
-	// 			},
-	// 			Flags: []cli.Flag{
-	// 				&cli.BoolFlag{
-	// 					Name:    "global",
-	// 					Aliases: []string{"g"},
-	// 					Usage:   "Sets the value in the global configuration file.",
-	// 				},
-	// 				&cli.BoolFlag{
-	// 					Name:    "local",
-	// 					Aliases: []string{"l"},
-	// 					Usage:   "Sets the value in the local configuration file.",
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// },
+	// regolith config
+	cmdConfig := &cobra.Command{
+		Use:   "config",
+		Short: " Access to the user configuration.",
+		Long:  regolithConfigDesc,
+	}
+	subcomands = append(subcomands, cmdConfig)
+	// regolith config edit
+	cmdConfigEdit := &cobra.Command{
+		Use:   "edit",
+		Short: "Edits a value in the user configuration.",
+		Long:  regolithConfigEditDesc,
+		Run: func(cmd *cobra.Command, args []string) {
+			regolith.InitLogging(regolith.Debug)
+			global, _ := cmd.Flags().GetBool("global")
+			local, _ := cmd.Flags().GetBool("local")
+			delete, _ := cmd.Flags().GetBool("delete")
+			index, _ := cmd.Flags().GetInt("index")
+			var key, value string
+			if delete {
+				if len(args) != 1 {
+					err = regolith.WrappedError(
+						"When using the --delete flag, you must specify only the key" +
+							" to delete.")
+					return
+				}
+				key = args[0]
+				value = ""
+			} else {
+				if len(args) != 2 {
+					err = regolith.WrappedError(
+						"When you must specify the key and the value to set.")
+					return
+				}
+				key = args[0]
+				value = args[1]
+			}
+			err = regolith.UserConfigEdit(regolith.Debug, global, local, delete, index, key, value)
+		},
+	}
+	cmdConfigEdit.Flags().BoolP("global", "g", false, "Sets the value in the global configuration file.")
+	cmdConfigEdit.Flags().BoolP("local", "l", false, "Sets the value in the local configuration file.")
+	cmdConfigEdit.Flags().BoolP("delete", "d", false, "The property will be deleted from the config file.")
+	cmdConfigEdit.Flags().IntP("index", "i", -1, "The index of the array property on which to act.")
+	cmdConfig.AddCommand(cmdConfigEdit)
+
+	// regolith config print
+	cmdConfigPrint := &cobra.Command{
+		Use:   "print",
+		Short: "Prints a value from the user configuration or entire configuration.",
+		Long:  regolithConfigPrintDesc,
+		Run: func(cmd *cobra.Command, args []string) {
+			regolith.InitLogging(regolith.Debug)
+			global, _ := cmd.Flags().GetBool("global")
+			local, _ := cmd.Flags().GetBool("local")
+			var key string
+			if len(args) == 1 {
+				key = args[0]
+			} else if len(args) == 0 {
+				key = ""
+			} else {
+				err = regolith.WrappedError(
+					"You must specify either a key or nothing when running " +
+						"the \"regolith config get\" command.\n")
+				return
+			}
+			err = regolith.UserConfigPrint(regolith.Debug, global, local, key)
+		},
+	}
+	cmdConfigPrint.Flags().BoolP("global", "g", false, "Sets the value in the global configuration file.")
+	cmdConfigPrint.Flags().BoolP("local", "l", false, "Sets the value in the local configuration file.")
+	cmdConfig.AddCommand(cmdConfigPrint)
+
 	cmdClean.Flags().BoolVarP(
 		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
 			"the current project")

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 // Install handles the "regolith install" command. It installs specific filters
@@ -545,12 +546,14 @@ func UserConfigPrint(debug, global, local bool, key string) error {
 		fmt.Println("\nCOMBINED USER CONFIGURATION (GLOBAL + LOCAL + DEFAULT):")
 	}
 	if key == "" {
-		fmt.Println(userConfig)
+		fmt.Println( // Print with additional indentation
+			"\t" + strings.Replace(userConfig.String(), "\n", "\n\t", -1))
 	} else {
 		result, err := userConfig.stringPropertyValue(key)
 		if err != nil {
 			return WrapErrorf(err, invalidUserConfigPropertyError, key)
 		}
+		result = "\t" + strings.Replace(result, "\n", "\n\t", -1) // Indent
 		fmt.Println(result)
 	}
 	return nil
