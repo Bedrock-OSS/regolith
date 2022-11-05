@@ -48,6 +48,11 @@ const (
 	// projects has both valid and invalid profiles.
 	profileFilterPath = "testdata/profile_filter"
 
+	// regolithUpdatePath is a directory that contains files for testing
+	// "regolith install-all" command. It has multiple projects, each with
+	// different config.json for installing different versions of the same
+	// filter.
+	regolithUpdatePath = "testdata/regolith_update"
 
 	// toolFilterPath is a directory that contains the files for testing
 	// 'regolith tool' command. It contains two projects, one before running
