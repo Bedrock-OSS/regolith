@@ -134,13 +134,34 @@ You can clear caches of all projects stored in user data by using the "--user-ca
 `
 
 const regolithConfigDesc = `
-TODO - add description
-`
-const regolithConfigEditDesc = `
-TODO - add description
-`
-const regolithConfigPrintDesc = `
-TODO - add description
+The config command is used to manage the user configuration of Regolith. It can access and modify
+global and project-specific configuration files. The global configuration file is stored in the
+application data folder in the "user_config.json" file. The project-specific configuration file is
+stored in the ".regolith/user_config.json". The project specific configuration file is used when
+the local doesn't have specific properties defined. If the global configuration doesn't define them
+either, the default values are used.
+
+The behavior of the command changes based on the used flags and the number of provided arguments.
+The cheetsheet below shows the possible combinations of flags and arguments and what they do:
+
+Printing all properties:                        regolith config
+Printing specified property:                    regolith config <key>
+Setting property value:                         regolith config <key> <value>
+Deleting a property:                            regolith config <key> --delete
+Appending to a list proeprty:                   regolith config <key> <value> --append
+Replacing item in a list property:              regolith config <key> <value> --index <index>
+Deleting item in a list property:               regolith config <key> --index <index> --delete
+
+You can use the "--global" or "--local" flags for all of the above combinations. To change whether
+the command uses the global or local (project-specific) configuration file.
+
+If you skip the "--global" or "--local" flag:
+-  The commands that edit the config file use the local config file by default.
+-  The commands that print the config file will print a combined view of the local and global
+   configuration. This view defines, what Regolith will actually use when running the project.
+
+You can use "regolith config" command to see the full configuration to learn what properties are
+available.
 `
 
 func main() {
@@ -200,6 +221,10 @@ func main() {
 		Short: "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
 		Long:  regolithInitDesc,
 		Run: func(cmd *cobra.Command, filters []string) {
+			if len(filters) == 0 {
+				cmd.Help()
+				return
+			}
 			err = regolith.Install(filters, force, regolith.Debug)
 		},
 	}
@@ -253,10 +278,7 @@ func main() {
 		Long:  regolithToolDesc,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
-				err = regolith.WrappedError(
-					"You must specify a filter name when running " +
-						"the \"regolith tool\" command.\n" +
-						"Use \"regolith help tool\" to learn more details.")
+				cmd.Help()
 				return
 			}
 			filter := args[0]
@@ -277,76 +299,25 @@ func main() {
 	}
 	// regolith config
 	cmdConfig := &cobra.Command{
-		Use:   "config",
-		Short: " Access to the user configuration.",
+		Use:   "config [key] [value]",
+		Short: " Print or modify the user configuration.",
 		Long:  regolithConfigDesc,
-	}
-	subcomands = append(subcomands, cmdConfig)
-	// regolith config edit
-	cmdConfigEdit := &cobra.Command{
-		Use:   "edit",
-		Short: "Edits a value in the user configuration.",
-		Long:  regolithConfigEditDesc,
 		Run: func(cmd *cobra.Command, args []string) {
 			regolith.InitLogging(regolith.Debug)
 			global, _ := cmd.Flags().GetBool("global")
 			local, _ := cmd.Flags().GetBool("local")
 			delete, _ := cmd.Flags().GetBool("delete")
+			append, _ := cmd.Flags().GetBool("append")
 			index, _ := cmd.Flags().GetInt("index")
-			var key, value string
-			if delete {
-				if len(args) != 1 {
-					err = regolith.WrappedError(
-						"When using the --delete flag, you must specify only the key" +
-							" to delete.")
-					return
-				}
-				key = args[0]
-				value = ""
-			} else {
-				if len(args) != 2 {
-					err = regolith.WrappedError(
-						"When you must specify the key and the value to set.")
-					return
-				}
-				key = args[0]
-				value = args[1]
-			}
-			err = regolith.UserConfigEdit(regolith.Debug, global, local, delete, index, key, value)
+			err = regolith.ManageConfig(regolith.Debug, global, local, delete, append, index, args)
 		},
 	}
-	cmdConfigEdit.Flags().BoolP("global", "g", false, "Sets the value in the global configuration file.")
-	cmdConfigEdit.Flags().BoolP("local", "l", false, "Sets the value in the local configuration file.")
-	cmdConfigEdit.Flags().BoolP("delete", "d", false, "The property will be deleted from the config file.")
-	cmdConfigEdit.Flags().IntP("index", "i", -1, "The index of the array property on which to act.")
-	cmdConfig.AddCommand(cmdConfigEdit)
-
-	// regolith config print
-	cmdConfigPrint := &cobra.Command{
-		Use:   "print",
-		Short: "Prints a value from the user configuration or entire configuration.",
-		Long:  regolithConfigPrintDesc,
-		Run: func(cmd *cobra.Command, args []string) {
-			regolith.InitLogging(regolith.Debug)
-			global, _ := cmd.Flags().GetBool("global")
-			local, _ := cmd.Flags().GetBool("local")
-			var key string
-			if len(args) == 1 {
-				key = args[0]
-			} else if len(args) == 0 {
-				key = ""
-			} else {
-				err = regolith.WrappedError(
-					"You must specify either a key or nothing when running " +
-						"the \"regolith config get\" command.\n")
-				return
-			}
-			err = regolith.UserConfigPrint(regolith.Debug, global, local, key)
-		},
-	}
-	cmdConfigPrint.Flags().BoolP("global", "g", false, "Sets the value in the global configuration file.")
-	cmdConfigPrint.Flags().BoolP("local", "l", false, "Sets the value in the local configuration file.")
-	cmdConfig.AddCommand(cmdConfigPrint)
+	cmdConfig.Flags().BoolP("global", "g", false, "Use global configuration file")
+	cmdConfig.Flags().BoolP("local", "l", false, "Use local (project) configuration file")
+	cmdConfig.Flags().BoolP("delete", "d", false, "Delete property")
+	cmdConfig.Flags().BoolP("append", "a", false, "Append value to array property")
+	cmdConfig.Flags().IntP("index", "i", -1, "The index of the array property on which to act")
+	subcomands = append(subcomands, cmdConfig)
 
 	cmdClean.Flags().BoolVarP(
 		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
@@ -354,10 +325,9 @@ func main() {
 	subcomands = append(subcomands, cmdClean)
 	// add --debug flag to every command
 	for _, cmd := range subcomands {
-		cmd.Flags().BoolVarP(&regolith.Debug, "debug", "d", false, "Enables debugging")
+		cmd.Flags().BoolVarP(&regolith.Debug, "debug", "", false, "Enables debugging")
 	}
 	// Build and run CLI
 	rootCmd.AddCommand(subcomands...)
 	rootCmd.Execute()
-
 }
