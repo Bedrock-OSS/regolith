@@ -514,38 +514,23 @@ func Clean(debug, userCache bool) error {
 
 // manageUserConfigPrint is a helper function for ManageConfig used to print
 // the specified value from the user configuration.
-func manageUserConfigPrint(debug bool, global, local bool, key string) error {
+func manageUserConfigPrint(debug, full bool, key string) error {
 	var err error // prevent shadowing
 	configPath := ""
 	userConfig := NewUserConfig()
-	if global {
+	if full {
+		userConfig, err = getCombinedUserConfig() // Combined config
+		if err != nil {
+			return WrapError(err, getUserConfigError)
+		}
+		fmt.Println("\nCOMBINED USER CONFIGURATION (CONFIG FILE + DEFAULTS):")
+	} else { // Combined
 		configPath, err = getGlobalUserConfigPath()
 		if err != nil {
 			return WrapError(err, getGlobalUserConfigPathError)
 		}
 		fmt.Printf("\nGLOBAL USER CONFIGURATION: %s\n", configPath)
 		userConfig.fillWithFileData(configPath)
-	} else if local { // local (regardless of the value of the "local" flag)
-		configPath = localUserConfigPath
-		// Make sure that it's a regolith project
-		config, err := LoadConfigAsMap()
-		if err != nil {
-			return WrappedError("Failed to load \"config.json\" file.\n" +
-				" Are you in a regolith project?")
-		}
-		_, err = ConfigFromObject(config)
-		if err != nil {
-			return WrapError(err, "Failed to load \"config.json\" file.\n"+
-				" Are you in a regolith project?")
-		}
-		fmt.Printf("\nLOCAL USER CONFIGURATION: %s\n", configPath)
-		userConfig.fillWithFileData(configPath)
-	} else { // Combined (not global and not local)
-		userConfig, err = getCombinedUserConfig() // Combined config
-		if err != nil {
-			return WrapError(err, getUserConfigError)
-		}
-		fmt.Println("\nCOMBINED USER CONFIGURATION (GLOBAL + LOCAL + DEFAULT):")
 	}
 	result, err := userConfig.stringPropertyValue(key)
 	if err != nil {
@@ -558,44 +543,26 @@ func manageUserConfigPrint(debug bool, global, local bool, key string) error {
 
 // manageUserConfigPrintAll is a helper function for ManageConfig used to print
 // whole user configuration.
-func manageUserConfigPrintAll(debug, global, local bool) error {
+func manageUserConfigPrintAll(debug, full bool) error {
 	var err error // prevent shadowing
 	configPath := ""
 	var userConfig *UserConfig
-	if global {
-		configPath, err = getGlobalUserConfigPath()
-		if err != nil {
-			return WrapError(err, getGlobalUserConfigPathError)
-		}
-		fmt.Printf("\nGLOBAL USER CONFIGURATION: %s\n", configPath)
-		userConfig, err = getGlobalUserConfig()
-		if err != nil {
-			return WrapError(err, getUserConfigError)
-		}
-	} else if local { // local (regardless of the value of the "local" flag)
-		configPath = localUserConfigPath
-		// Make sure that it's a regolith project
-		config, err := LoadConfigAsMap()
-		if err != nil {
-			return WrappedError("Failed to load \"config.json\" file.\n" +
-				" Are you in a regolith project?")
-		}
-		_, err = ConfigFromObject(config)
-		if err != nil {
-			return WrapError(err, "Failed to load \"config.json\" file.\n"+
-				" Are you in a regolith project?")
-		}
-		fmt.Printf("\nLOCAL USER CONFIGURATION: %s\n", configPath)
-		userConfig, err = getLocalUserConfig()
-		if err != nil {
-			return WrapError(err, getUserConfigError)
-		}
-	} else {
+	if full {
 		userConfig, err = getCombinedUserConfig() // Combined config
 		if err != nil {
 			return WrapError(err, getUserConfigError)
 		}
-		fmt.Println("\nCOMBINED USER CONFIGURATION (GLOBAL + LOCAL + DEFAULT):")
+		fmt.Println("\nCOMBINED USER CONFIGURATION (CONFIG FILE + DEFAULTS):")
+	} else {
+		configPath, err = getGlobalUserConfigPath()
+		if err != nil {
+			return WrapError(err, getGlobalUserConfigPathError)
+		}
+		fmt.Printf("\nUSER CONFIGURATION FROM FILE: %s\n", configPath)
+		userConfig, err = getGlobalUserConfig()
+		if err != nil {
+			return WrapError(err, getUserConfigError)
+		}
 	}
 	fmt.Println( // Print with additional indentation
 		"\t" + strings.Replace(userConfig.String(), "\n", "\n\t", -1))
@@ -604,27 +571,10 @@ func manageUserConfigPrintAll(debug, global, local bool) error {
 
 // manageUserConfigEdit is a helper function for ManageConfig used to edit
 // the specified value from the user configuration.
-func manageUserConfigEdit(debug, global bool, index int, key, value string) error {
-	var err error // prevent shadowing
-	configPath := ""
-	if global {
-		configPath, err = getGlobalUserConfigPath()
-		if err != nil {
-			return WrapError(err, getGlobalUserConfigPathError)
-		}
-	} else { // local (regardless of the value of the "local" flag)
-		configPath = localUserConfigPath
-		// Make sure that it's a regolith project
-		config, err := LoadConfigAsMap()
-		if err != nil {
-			return WrappedError("Failed to load \"config.json\" file.\n" +
-				" Are you in a regolith project?")
-		}
-		_, err = ConfigFromObject(config)
-		if err != nil {
-			return WrapError(err, "Failed to load \"config.json\" file.\n"+
-				" Are you in a regolith project?")
-		}
+func manageUserConfigEdit(debug bool, index int, key, value string) error {
+	configPath, err := getGlobalUserConfigPath()
+	if err != nil {
+		return WrapError(err, getGlobalUserConfigPathError)
 	}
 	Logger.Infof("Editing user configuration.\n\tPath: %s", configPath)
 	userConfig := NewUserConfig()
@@ -666,27 +616,10 @@ func manageUserConfigEdit(debug, global bool, index int, key, value string) erro
 
 // manageUserConfigDelete is a helper function for ManageConfig used to delete
 // the specified value from the user configuration.
-func manageUserConfigDelete(debug, global bool, index int, key string) error {
-	var err error // prevent shadowing
-	configPath := ""
-	if global {
-		configPath, err = getGlobalUserConfigPath()
-		if err != nil {
-			return WrapError(err, getGlobalUserConfigPathError)
-		}
-	} else { // local (regardless of the value of the "local" flag)
-		configPath = localUserConfigPath
-		// Make sure that it's a regolith project
-		config, err := LoadConfigAsMap()
-		if err != nil {
-			return WrappedError("Failed to load \"config.json\" file.\n" +
-				" Are you in a regolith project?")
-		}
-		_, err = ConfigFromObject(config)
-		if err != nil {
-			return WrapError(err, "Failed to load \"config.json\" file.\n"+
-				" Are you in a regolith project?")
-		}
+func manageUserConfigDelete(debug bool, index int, key string) error {
+	configPath, err := getGlobalUserConfigPath()
+	if err != nil {
+		return WrapError(err, getGlobalUserConfigPathError)
 	}
 	Logger.Infof("Editing user configuration.\n\tPath: %s", configPath)
 	userConfig := NewUserConfig()
@@ -735,12 +668,9 @@ func manageUserConfigDelete(debug, global bool, index int, key string) error {
 //   properties
 // - args - the arguments of the command, the length of the list must be 0, 1
 //   or 2. The lenght determines the action of the command.
-func ManageConfig(debug, global, local, delete, append bool, index int, args []string) error {
+func ManageConfig(debug, full, delete, append bool, index int, args []string) error {
 	InitLogging(debug)
 	// Check flag combinations that are always invalid
-	if global && local {
-		return WrappedError("Cannot use both --global and --local flags.")
-	}
 	if delete && append {
 		return WrappedError("Cannot use both --delete and --append flags.")
 	}
@@ -760,7 +690,7 @@ func ManageConfig(debug, global, local, delete, append bool, index int, args []s
 			return WrappedError("Cannot use --append without a key.")
 		}
 		// Print all
-		return manageUserConfigPrintAll(debug, global, local)
+		return manageUserConfigPrintAll(debug, full)
 	} else if len(args) == 1 {
 		// 1 ARGUMENT - Print specific or delete
 
@@ -771,12 +701,15 @@ func ManageConfig(debug, global, local, delete, append bool, index int, args []s
 
 		// Delete or print
 		if delete {
-			return manageUserConfigDelete(debug, global, index, args[0])
+			if full {
+				return WrappedError("The --full flag is only valid for printing.")
+			}
+			return manageUserConfigDelete(debug, index, args[0])
 		} else {
 			if index != -1 {
 				return WrappedError("The --index flag is not allowed for printing.")
 			}
-			return manageUserConfigPrint(debug, global, local, args[0])
+			return manageUserConfigPrint(debug, full, args[0])
 		}
 	} else if len(args) == 2 {
 		// 2 ARGUMENTS - Set or append
@@ -785,9 +718,12 @@ func ManageConfig(debug, global, local, delete, append bool, index int, args []s
 		if delete {
 			return WrappedError("When using --delete, only one argument is allowed.")
 		}
+		if full {
+			return WrappedError("The --full flag is only valid for printing.")
+		}
 
 		// Set or append
-		return manageUserConfigEdit(debug, global, index, args[0], args[1])
+		return manageUserConfigEdit(debug, index, args[0], args[1])
 	} else {
 		return WrappedError("Too many arguments.")
 	}

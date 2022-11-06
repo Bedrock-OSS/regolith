@@ -57,8 +57,7 @@ func resolveResolverUrl(url string) (string, error) {
 func DownloadResolverMaps() error {
 	Logger.Info("Downloading resolvers")
 
-	// Define function to download group of resolvers (reused for downloading
-	// global and local resolvers separately)
+	// Define function to download group of resolvers
 	downloadResolvers := func(urls []string, root string) error {
 		targetPath := filepath.Join(root, "resolvers")
 		tmpPath := filepath.Join(root, ".resolvers-tmp")
@@ -155,16 +154,7 @@ func DownloadResolverMaps() error {
 	}
 	err = downloadResolvers(globalUserConfig.Resolvers, appDataPath)
 	if err != nil {
-		return WrapError(err, "Failed to download the resolvers to app data")
-	}
-	// Download the local resolvers
-	localUserConfig, err := getLocalUserConfig()
-	if err != nil {
-		return WrapError(err, getUserConfigError)
-	}
-	err = downloadResolvers(localUserConfig.Resolvers, ".regolith")
-	if err != nil {
-		return WrapError(err, "Failed to download the resolvers to project data")
+		return WrapError(err, "Failed to download the resolvers")
 	}
 	return nil
 }
@@ -217,12 +207,6 @@ func LoadResolversAsMap() (map[string]ResolverMapItem, error) {
 	err = loadResolversFromPath(globalResolversPath)
 	if err != nil {
 		return nil, WrapError(err, "Failed to load the global resolvers")
-	}
-	// Load the local resolvers
-	localResolversPath := filepath.Join(".regolith", "resolvers")
-	err = loadResolversFromPath(localResolversPath)
-	if err != nil {
-		return nil, WrapError(err, "Failed to load the local resolvers")
 	}
 	// Get user config to access the list of resolvers
 	userConfig, err := getCombinedUserConfig()

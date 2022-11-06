@@ -9,9 +9,6 @@ import (
 	"path/filepath"
 )
 
-// localUserConfigPath is a path to the user config file
-const localUserConfigPath = ".regolith/user_config.json"
-
 var (
 	// cachedCombinedUserConfig is a global variable that stores the combined user config. It
 	// should not be accessed directly, but instead through the getUserConfig
@@ -167,22 +164,12 @@ func loadUserConfigs() error {
 	if err != nil {
 		return WrapError(err, getGlobalUserConfigPathError)
 	}
-	localConfigPath, err := filepath.Abs(localUserConfigPath)
-	if err != nil {
-		return WrapErrorf(err, filepathAbsError, localUserConfigPath)
-	}
 	// Load the config files
 	// First load the global config
 	err1 := cachedGlobalUserConfig.fillWithFileData(globalConfigPath)
 	err2 := cachedCombinedUserConfig.fillWithFileData(globalConfigPath)
 	if err = firstErr(err1, err2); err != nil {
 		return WrapError(err, "Failed to read global user_config.json")
-	}
-	// Overwrite with the local config
-	err1 = cachedLocalUserConfig.fillWithFileData(localConfigPath)
-	err2 = cachedCombinedUserConfig.fillWithFileData(localConfigPath)
-	if err = firstErr(err1, err2); err != nil {
-		return WrapError(err, "Failed to read local user_config.json")
 	}
 	return nil
 }
@@ -197,18 +184,6 @@ func getCombinedUserConfig() (*UserConfig, error) {
 		}
 	}
 	return cachedCombinedUserConfig, nil
-}
-
-// getLocalUserConfig lazily loads the user config to the global
-// cachedLocalUserConfig variable and returns it.
-func getLocalUserConfig() (*UserConfig, error) {
-	if cachedLocalUserConfig == nil {
-		err := loadUserConfigs()
-		if err != nil {
-			return nil, PassError(err)
-		}
-	}
-	return cachedLocalUserConfig, nil
 }
 
 // getGlobalUserConfig lazily loads the user config to the global

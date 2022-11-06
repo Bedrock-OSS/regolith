@@ -135,11 +135,8 @@ You can clear caches of all projects stored in user data by using the "--user-ca
 
 const regolithConfigDesc = `
 The config command is used to manage the user configuration of Regolith. It can access and modify
-global and project-specific configuration files. The global configuration file is stored in the
-application data folder in the "user_config.json" file. The project-specific configuration file is
-stored in the ".regolith/user_config.json". The project specific configuration file is used when
-the local doesn't have specific properties defined. If the global configuration doesn't define them
-either, the default values are used.
+the user configuration file. The data is stored in the application data folder in the
+"user_config.json" file.
 
 The behavior of the command changes based on the used flags and the number of provided arguments.
 The cheetsheet below shows the possible combinations of flags and arguments and what they do:
@@ -152,16 +149,9 @@ Appending to a list proeprty:                   regolith config <key> <value> --
 Replacing item in a list property:              regolith config <key> <value> --index <index>
 Deleting item in a list property:               regolith config <key> --index <index> --delete
 
-You can use the "--global" or "--local" flags for all of the above combinations. To change whether
-the command uses the global or local (project-specific) configuration file.
-
-If you skip the "--global" or "--local" flag:
--  The commands that edit the config file use the local config file by default.
--  The commands that print the config file will print a combined view of the local and global
-   configuration. This view defines, what Regolith will actually use when running the project.
-
-You can use "regolith config" command to see the full configuration to learn what properties are
-available.
+The printing commands can take the --full flag to print configuration with the default values
+included (if they're not defined in the config file). Without the flag, the undefined properties
+will be printed as null or empty list.
 `
 
 func main() {
@@ -304,16 +294,14 @@ func main() {
 		Long:  regolithConfigDesc,
 		Run: func(cmd *cobra.Command, args []string) {
 			regolith.InitLogging(regolith.Debug)
-			global, _ := cmd.Flags().GetBool("global")
-			local, _ := cmd.Flags().GetBool("local")
+			full, _ := cmd.Flags().GetBool("full")
 			delete, _ := cmd.Flags().GetBool("delete")
 			append, _ := cmd.Flags().GetBool("append")
 			index, _ := cmd.Flags().GetInt("index")
-			err = regolith.ManageConfig(regolith.Debug, global, local, delete, append, index, args)
+			err = regolith.ManageConfig(regolith.Debug, full, delete, append, index, args)
 		},
 	}
-	cmdConfig.Flags().BoolP("global", "g", false, "Use global configuration file")
-	cmdConfig.Flags().BoolP("local", "l", false, "Use local (project) configuration file")
+	cmdConfig.Flags().BoolP("full", "f", false, "When printing, prints the full configuration including default values.")
 	cmdConfig.Flags().BoolP("delete", "d", false, "Delete property")
 	cmdConfig.Flags().BoolP("append", "a", false, "Append value to array property")
 	cmdConfig.Flags().IntP("index", "i", -1, "The index of the array property on which to act")
