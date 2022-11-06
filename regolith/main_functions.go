@@ -64,7 +64,8 @@ func Install(filters []string, force, debug bool) error {
 	// Download the resolvers
 	err = DownloadResolverMaps()
 	if err != nil {
-		Logger.Warn("Failed to download resolver map.")
+		Logger.Warnf(
+			"Failed to download resolver map: %s", err.Error())
 	}
 	// Parse arguments into download tasks (requires downloading resolvers)
 	parsedArgs, err := parseInstallFilterArgs(filters)
@@ -168,7 +169,8 @@ func InstallAll(force, debug bool) error {
 	// Download the resolvers
 	err = DownloadResolverMaps()
 	if err != nil {
-		Logger.Warn("Failed to download resolver map.")
+		Logger.Warnf(
+			"Failed to download resolver map: %s", err.Error())
 	}
 	// Install the filters
 	err = installFilters(
