@@ -592,6 +592,18 @@ func manageUserConfigEdit(debug bool, index int, key, value string) error {
 			}
 			userConfig.Resolvers[index] = value
 		}
+		// Delete duplicateds, removing items from the end
+		resolversSet := make(map[string]struct{})
+		for i := 0; i < len(userConfig.Resolvers); i++ {
+			resolver := userConfig.Resolvers[i]
+			if _, ok := resolversSet[resolver]; ok {
+				userConfig.Resolvers = append(
+					userConfig.Resolvers[:i], userConfig.Resolvers[i+1:]...)
+				i--
+			} else {
+				resolversSet[resolver] = struct{}{}
+			}
+		}
 	default:
 		return WrappedErrorf(invalidUserConfigPropertyError, key)
 	}
