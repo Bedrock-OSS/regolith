@@ -61,12 +61,6 @@ func Install(filters []string, force, debug bool) error {
 		return WrapError(sessionLockErr, aquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
-	// Download the resolvers
-	err = DownloadResolverMaps()
-	if err != nil {
-		Logger.Warnf(
-			"Failed to download resolver map: %s", err.Error())
-	}
 	// Parse arguments into download tasks (requires downloading resolvers)
 	parsedArgs, err := parseInstallFilterArgs(filters)
 	if err != nil {
@@ -166,12 +160,6 @@ func InstallAll(force, debug bool) error {
 		return WrapError(sessionLockErr, aquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
-	// Download the resolvers
-	err = DownloadResolverMaps()
-	if err != nil {
-		Logger.Warnf(
-			"Failed to download resolver map: %s", err.Error())
-	}
 	// Install the filters
 	err = installFilters(
 		config.FilterDefinitions, force, config.DataPath, dotRegolithPath)
