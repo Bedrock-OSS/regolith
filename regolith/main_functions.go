@@ -658,6 +658,18 @@ func manageUserConfigDelete(debug bool, index int, key string) error {
 //   or 2. The lenght determines the action of the command.
 func ManageConfig(debug, full, delete, append bool, index int, args []string) error {
 	InitLogging(debug)
+	// Get dotRegolithPath
+	dotRegolithPath, err := GetDotRegolith(false, ".")
+	if err != nil {
+		return WrapError(
+			err, "Unable to get the path to regolith cache folder.")
+	}
+	// Lock the session
+	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	if sessionLockErr != nil {
+		return WrapError(sessionLockErr, aquireSessionLockError)
+	}
+	defer func() { sessionLockErr = unlockSession() }()
 	// Check flag combinations that are always invalid
 	if delete && append {
 		return WrappedError("Cannot use both --delete and --append flags.")
@@ -678,7 +690,11 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 			return WrappedError("Cannot use --append without a key.")
 		}
 		// Print all
-		return manageUserConfigPrintAll(debug, full)
+		err = manageUserConfigPrintAll(debug, full)
+		if err != nil {
+			return PassError(err)
+		}
+		return sessionLockErr
 	} else if len(args) == 1 {
 		// 1 ARGUMENT - Print specific or delete
 
@@ -692,12 +708,20 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 			if full {
 				return WrappedError("The --full flag is only valid for printing.")
 			}
-			return manageUserConfigDelete(debug, index, args[0])
+			err = manageUserConfigDelete(debug, index, args[0])
+			if err != nil {
+				return PassError(err)
+			}
+			return sessionLockErr
 		} else {
 			if index != -1 {
 				return WrappedError("The --index flag is not allowed for printing.")
 			}
-			return manageUserConfigPrint(debug, full, args[0])
+			err = manageUserConfigPrint(debug, full, args[0])
+			if err != nil {
+				return PassError(err)
+			}
+			return sessionLockErr
 		}
 	} else if len(args) == 2 {
 		// 2 ARGUMENTS - Set or append
@@ -711,7 +735,11 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 		}
 
 		// Set or append
-		return manageUserConfigEdit(debug, index, args[0], args[1])
+		err = manageUserConfigEdit(debug, index, args[0], args[1])
+		if err != nil {
+			return PassError(err)
+		}
+		return sessionLockErr
 	} else {
 		return WrappedError("Too many arguments.")
 	}
