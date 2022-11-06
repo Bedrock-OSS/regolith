@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-getter"
-	"muzzammil.xyz/jsonc"
 )
 
 const (
@@ -19,17 +19,12 @@ const (
 	resolverUrl = "github.com/Bedrock-OSS/regolith-filter-resolver/resolver.json"
 )
 
-type ResolverMap struct {
+type ResolverMapItem struct {
 	Url string `json:"url"`
 }
 
-type ResolverJson struct {
-	FormatVersion string                 `json:"formatVersion"`
-	Filters       map[string]ResolverMap `json:"filters"`
-}
-
-// GetRegolithConfigPath returns path to the regolith filesi in user app data
-func GetRegolithConfigPath() (string, error) {
+// GetRegolithAppDataPath returns path to the regolith files in user app data
+func GetRegolithAppDataPath() (string, error) {
 	path, err := os.UserCacheDir()
 	if err != nil {
 		return "", WrappedError(osUserCacheDirError)
@@ -55,110 +50,218 @@ func resolveResolverUrl(url string) (string, error) {
 			err,
 			"Failed to get the HEAD of the repository with the resolver.json file")
 	}
-	return fmt.Sprintf("https:/%s//%s?ref=%s", repoUrl, path, sha), nil
+	return fmt.Sprintf("git::https://%s/%s?ref=%s", repoUrl, path, sha), nil
 }
 
-// DownloadResolverMap downloads the resolver.json file
-func DownloadResolverMap() error {
-	Logger.Info("Downloading resolver.json")
-	path, err := GetRegolithConfigPath()
-	if err != nil {
-		return WrapError(err, getRegolithConfigPathError)
+// DownloadResolverMaps downloads the resolver.json files
+func DownloadResolverMaps() error {
+	Logger.Info("Downloading resolvers")
+
+	// Define function to download group of resolvers (reused for downloading
+	// global and local resolvers separately)
+	downloadResolvers := func(urls []string, root string) error {
+		targetPath := filepath.Join(root, "resolvers")
+		tmpPath := filepath.Join(root, ".resolvers-tmp")
+		tmpResolversPath := filepath.Join(tmpPath, "resolvers")
+		tmpUndoPath := filepath.Join(tmpPath, "undo")
+		// Create target directory if not exists
+		err := os.MkdirAll(targetPath, 0755)
+		if err != nil {
+			return WrapErrorf(err, osMkdirError, targetPath)
+		}
+		// Prepare the temporary directory
+		err = os.RemoveAll(tmpPath)
+		if err != nil {
+			return WrapErrorf(err, osRemoveError, tmpPath)
+		}
+		err = os.MkdirAll(tmpResolversPath, 0755)
+		if err != nil {
+			return WrapErrorf(err, osMkdirError, tmpResolversPath)
+		}
+		err = os.MkdirAll(tmpUndoPath, 0755)
+		if err != nil {
+			return WrapErrorf(err, osMkdirError, tmpUndoPath)
+		}
+		defer os.RemoveAll(tmpPath) // Schedule for deletion
+		// Prepare the revertibleFsOperations object
+		revertibleOps, err := NewRevertibleFsOperations(tmpUndoPath)
+		if err != nil {
+			return WrapErrorf(err, newRevertibleFsOperationsError, tmpUndoPath)
+		}
+		defer revertibleOps.Close() // Must be called before os.RemoveAll(tmpPath)
+		// Download the resolvers to the tmp path
+		for i, shortUrl := range urls {
+			// Get the save path and resolve the URL
+			savePath := filepath.Join(
+				tmpResolversPath, fmt.Sprintf("resolver_%d.json", i))
+			url, err := resolveResolverUrl(shortUrl)
+			if err != nil {
+				return WrapError(
+					err,
+					"Failed to resolve the URL of the resolver file for the download.\n"+
+						"Short URL: "+shortUrl)
+			}
+			Logger.Debugf("Downloading resolver using URL: %s", url)
+			err = getter.GetFile(savePath, url)
+			if err != nil {
+				return WrapErrorf(err, "Failed to download the file.\nURL: %s", url)
+			}
+			// Add "url" property to the resolver file
+			fileData := make(map[string]interface{})
+			f, err := ioutil.ReadFile(savePath)
+			if err != nil {
+				return WrapErrorf(err, fileReadError, savePath)
+			}
+			err = json.Unmarshal(f, &fileData)
+			if err != nil {
+				return WrapErrorf(err, jsonUnmarshalError, savePath)
+			}
+			fileData["url"] = shortUrl
+			// Save the file with the "url" property
+			f, _ = json.MarshalIndent(fileData, "", "\t")
+			err = ioutil.WriteFile(savePath, f, 0644)
+			if err != nil {
+				return WrapErrorf(err, fileWriteError, savePath)
+			}
+		}
+		// Make sure that the target directory is empty
+		err = revertibleOps.DeleteDir(targetPath)
+		if err != nil {
+			revertibleOps.Undo() // Don't handle the error. I don't care.
+			return WrapErrorf(err, osRemoveError, targetPath)
+		}
+		err = revertibleOps.MkdirAll(targetPath)
+		if err != nil {
+			revertibleOps.Undo() // Don't handle the error. I don't care.
+			return WrapErrorf(err, osMkdirError, targetPath)
+		}
+		// Move the resolvers to the target path
+		err = revertibleOps.MoveOrCopyDir(tmpResolversPath, targetPath)
+		if err != nil {
+			revertibleOps.Undo() // Don't handle the error. I don't care.
+			return WrapErrorf(err, moveOrCopyError, tmpResolversPath, targetPath)
+		}
+		return nil
 	}
-	// Download to tmp path first and then move it to the real path,
-	// overwritting the old file is possible only if download is successful
-	tmpPath := filepath.Join(path, ".resolver-tmp.json")
-	targetPath := filepath.Join(path, "resolver.json")
-	userConfig, err := getUserConfig()
+	// Download the global resolvers
+	appDataPath, err := GetRegolithAppDataPath()
+	if err != nil {
+		return WrapError(err, getRegolithAppDataPathError)
+	}
+	globalUserConfig, err := getGlobalUserConfig()
+	globalUserConfig.fillDefaults() // The file must have the default resolver URL
 	if err != nil {
 		return WrapError(err, getUserConfigError)
 	}
-	url, err := resolveResolverUrl(userConfig.Resolvers[0])
+	err = downloadResolvers(globalUserConfig.Resolvers, appDataPath)
 	if err != nil {
-		return WrapError(err,
-			"Failed to resolve the URL of the resolver.json file into a full"+
-				" URL to download the file")
+		return WrapError(err, "Failed to download the resolvers to app data")
 	}
-	err = getter.GetFile(tmpPath, url)
+	// Download the local resolvers
+	localUserConfig, err := getLocalUserConfig()
 	if err != nil {
-		os.Remove(tmpPath) // I don't think errors matter here
-		return WrapErrorf(
-			err,
-			"Unable to download filter resolver map file."+
-				"Download URL: %s"+
-				"Download path (for saving file): %s",
-			userConfig.Resolvers[0], tmpPath)
+		return WrapError(err, getUserConfigError)
 	}
-	os.Remove(targetPath)
-	err = os.Rename(tmpPath, targetPath)
+	err = downloadResolvers(localUserConfig.Resolvers, ".regolith")
 	if err != nil {
-		return WrapErrorf(err, osRenameError, tmpPath, targetPath)
+		return WrapError(err, "Failed to download the resolvers to project data")
 	}
 	return nil
 }
 
-func LoadResolverAsMap() (map[string]interface{}, error) {
-	resolverPath, err := GetRegolithConfigPath()
-	if err != nil {
-		return nil, WrapError(err, getRegolithConfigPathError)
-	}
-	resolverPath = filepath.Join(resolverPath, "resolver.json")
-	file, err := ioutil.ReadFile(resolverPath)
-	if err != nil {
-		return nil, WrapErrorf(
-			err, fileReadError, resolverPath)
-	}
-	var resolverJson map[string]interface{}
-	err = jsonc.Unmarshal(file, &resolverJson)
-	if err != nil {
-		return nil, WrapErrorf(err, jsonUnmarshalError, resolverPath)
-	}
-	return resolverJson, nil
-}
-
-func ResolverFromObject(obj map[string]interface{}) (ResolverJson, error) {
-	result := ResolverJson{}
-	// FormatVersion
-	formatVersionObj, ok := obj["formatVersion"]
-	if !ok {
-		return result, WrappedErrorf(
-			jsonPathMissingError, "formatVersion")
-	}
-	formatVersion, ok := formatVersionObj.(string)
-	if !ok {
-		return result, WrappedErrorf(
-			jsonPathTypeError, "formatVersion", "string")
-	}
-	result.FormatVersion = formatVersion
-	// Filters
-	filtersObj, ok := obj["filters"]
-	if !ok {
-		return result, WrappedErrorf(jsonPathMissingError, "filters")
-	}
-	filters, ok := filtersObj.(map[string]interface{})
-	if !ok {
-		return result, WrappedErrorf(jsonPathParseError, "filters", "object")
-	}
-	result.Filters = make(map[string]ResolverMap)
-	for shortName, filterObj := range filters {
-		filter, ok := filterObj.(map[string]interface{})
-		if !ok {
-			return result, WrappedErrorf(
-				jsonPathTypeError,
-				"filters->"+shortName, "object")
-		}
-		filterMap, err := ResolverMapFromObject(filter)
+// LoadResolversAsMap loads all of the resolver files into a single map
+func LoadResolversAsMap() (map[string]ResolverMapItem, error) {
+	result := make(map[string]ResolverMapItem)
+	// Load all resolver files into a map, where the ke is the URL of the resovler
+	// file and the value is the content of the file. Based on this map and
+	// the combined user config, the final resolver map is created.
+	resolvers := make(map[string]interface{})
+	loadResolversFromPath := func(path string) error {
+		globalResolvers, err := ioutil.ReadDir(path)
 		if err != nil {
-			return result, WrapErrorf(
-				err, jsonPathParseError, "filters->"+shortName)
+			return WrapErrorf(
+				err, "Failed to list files in the directory.\nPath: %s",
+				path)
 		}
-		result.Filters[shortName] = filterMap
+		for _, resolver := range globalResolvers {
+			if resolver.IsDir() {
+				continue
+			}
+			filePath := filepath.Join(path, resolver.Name())
+			f, err := ioutil.ReadFile(filePath)
+			if err != nil {
+				return WrapErrorf(err, fileReadError, filePath)
+			}
+			resolverData := make(map[string]interface{})
+			err = json.Unmarshal(f, &resolverData)
+			if err != nil {
+				return WrapErrorf(err, jsonUnmarshalError, filePath)
+			}
+			url, ok := resolverData["url"].(string)
+			if !ok {
+				return WrapErrorf(
+					err,
+					"Failed to get the URL of the resolver file.\nPath: %s",
+					filePath)
+			}
+			resolvers[url] = resolverData
+		}
+		return nil
+	}
+	// Load the global resolvers
+	appDataPath, err := GetRegolithAppDataPath()
+	if err != nil {
+		return nil, WrapError(err, getRegolithAppDataPathError)
+	}
+	globalResolversPath := filepath.Join(appDataPath, "resolvers")
+	err = loadResolversFromPath(globalResolversPath)
+	if err != nil {
+		return nil, WrapError(err, "Failed to load the global resolvers")
+	}
+	// Load the local resolvers
+	localResolversPath := filepath.Join(".regolith", "resolvers")
+	err = loadResolversFromPath(localResolversPath)
+	if err != nil {
+		return nil, WrapError(err, "Failed to load the local resolvers")
+	}
+	// Get user config to access the list of resolvers
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return nil, WrapError(err, getUserConfigError)
+	}
+	// Create the final resolver map
+	for _, resolverUrl := range userConfig.Resolvers {
+		resolverData, ok := resolvers[resolverUrl].(map[string]interface{})
+		if !ok {
+			return nil, WrapErrorf(
+				err, "Failed to get the resolver data.\nURL: %s", resolverUrl)
+		}
+		resolverResovlersData, ok := resolverData["filters"].(map[string]interface{})
+		if !ok {
+			return nil, WrapErrorf(
+				err, "Failed load resolvers from the resolver file.\nURL: %s",
+				resolverUrl)
+		}
+		for key, value := range resolverResovlersData {
+			castValue, ok := value.(map[string]interface{})
+			if !ok {
+				return nil, WrapErrorf(
+					err, "Invalid resolver data.\nURL: %s",
+					resolverUrl)
+			}
+			result[key], err = ResolverMapFromObject(castValue)
+			if err != nil {
+				return nil, WrapErrorf(
+					err, "Invalid resolver data.\nURL: %s",
+					resolverUrl)
+			}
+		}
 	}
 	return result, nil
 }
 
-func ResolverMapFromObject(obj map[string]interface{}) (ResolverMap, error) {
-	result := ResolverMap{}
+func ResolverMapFromObject(obj map[string]interface{}) (ResolverMapItem, error) {
+	result := ResolverMapItem{}
 	// Url
 	urlObj, ok := obj["url"]
 	if !ok {
@@ -176,26 +279,17 @@ func ResolverMapFromObject(obj map[string]interface{}) (ResolverMap, error) {
 // it fails it updates the resolver.json file and tries again
 func ResolveUrl(shortName string) (string, error) {
 	const resolverLoadErrror = "Unable to load the name to URL resolver map."
-	resolverObj, err := LoadResolverAsMap()
+	resolver, err := LoadResolversAsMap()
 	if err != nil {
 		return "", WrapError(err, resolverLoadErrror)
 	}
-	resolver, err := ResolverFromObject(resolverObj)
-	if err != nil {
-		return "", WrapError(err, resolverLoadErrror)
-	}
-	filterMap, ok := resolver.Filters[shortName]
-	userConfig, err := getUserConfig()
-	if err != nil {
-		return "", WrapError(err, getUserConfigError)
-	}
+	filterMap, ok := resolver[shortName]
 	if !ok {
 		return "", WrappedErrorf(
 			"The filter doesn't have known mapping to URL in the URL "+
 				"resolver.\n"+
-				"Filter name: %s\n"+
-				"Resolver URL: %s",
-			shortName, userConfig.Resolvers[0])
+				"Filter name: %s\n",
+			shortName)
 	}
 	return filterMap.Url, nil
 }

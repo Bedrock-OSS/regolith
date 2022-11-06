@@ -137,7 +137,7 @@ func ExportProject(
 		}
 	}
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
-	revertibleOps, err := NewrevertibleFsOperations(backupPath)
+	revertibleOps, err := NewRevertibleFsOperations(backupPath)
 	if err != nil {
 		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
@@ -214,7 +214,7 @@ func InplaceExportProject(
 ) error {
 	// Create revertible ops object
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
-	revertibleOps, err := NewrevertibleFsOperations(backupPath)
+	revertibleOps, err := NewRevertibleFsOperations(backupPath)
 	if err != nil {
 		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}

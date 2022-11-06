@@ -34,11 +34,6 @@ func Install(filters []string, force, debug bool) error {
 	if !hasGit() {
 		Logger.Warn(gitNotInstalledWarning)
 	}
-	// Parse arguments into download tasks
-	parsedArgs, err := parseInstallFilterArgs(filters)
-	if err != nil {
-		return WrapError(err, "Failed to parse arguments.")
-	}
 	config, err := LoadConfigAsMap()
 	if err != nil {
 		return WrapError(err, "Unable to load config file.")
@@ -66,6 +61,16 @@ func Install(filters []string, force, debug bool) error {
 		return WrapError(sessionLockErr, aquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
+	// Download the resolvers
+	err = DownloadResolverMaps()
+	if err != nil {
+		Logger.Warn("Failed to download resolver map.")
+	}
+	// Parse arguments into download tasks (requires downloading resolvers)
+	parsedArgs, err := parseInstallFilterArgs(filters)
+	if err != nil {
+		return WrapError(err, "Failed to parse arguments.")
+	}
 	// Check if the filters are already installed if force mode is disabled
 	if !force {
 		for _, parsedArg := range parsedArgs {
@@ -103,7 +108,8 @@ func Install(filters []string, force, debug bool) error {
 		filterInstallers[parsedArg.name] = remoteFilterDefinition
 	}
 	// Download the filter definitions
-	err = installFilters(filterInstallers, force, dataPath, dotRegolithPath)
+	err = installFilters(
+		filterInstallers, force, dataPath, dotRegolithPath)
 	if err != nil {
 		return WrapError(err, "Failed to install filters.")
 	}
@@ -159,6 +165,11 @@ func InstallAll(force, debug bool) error {
 		return WrapError(sessionLockErr, aquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
+	// Download the resolvers
+	err = DownloadResolverMaps()
+	if err != nil {
+		Logger.Warn("Failed to download resolver map.")
+	}
 	// Install the filters
 	err = installFilters(
 		config.FilterDefinitions, force, config.DataPath, dotRegolithPath)
@@ -372,7 +383,7 @@ func Init(debug bool) error {
 	}
 	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0644)
 	// Create new default configuration
-	userConfig, err := getUserConfig()
+	userConfig, err := getCombinedUserConfig()
 	if err != nil {
 		return WrapError(err, getUserConfigError)
 	}
@@ -528,7 +539,7 @@ func manageUserConfigPrint(debug bool, global, local bool, key string) error {
 		fmt.Printf("\nLOCAL USER CONFIGURATION: %s\n", configPath)
 		userConfig.fillWithFileData(configPath)
 	} else { // Combined (not global and not local)
-		userConfig, err = getUserConfig() // Combined config
+		userConfig, err = getCombinedUserConfig() // Combined config
 		if err != nil {
 			return WrapError(err, getUserConfigError)
 		}
@@ -548,14 +559,17 @@ func manageUserConfigPrint(debug bool, global, local bool, key string) error {
 func manageUserConfigPrintAll(debug, global, local bool) error {
 	var err error // prevent shadowing
 	configPath := ""
-	userConfig := NewUserConfig()
+	var userConfig *UserConfig
 	if global {
 		configPath, err = getGlobalUserConfigPath()
 		if err != nil {
 			return WrapError(err, getGlobalUserConfigPathError)
 		}
 		fmt.Printf("\nGLOBAL USER CONFIGURATION: %s\n", configPath)
-		userConfig.fillWithFileData(configPath)
+		userConfig, err = getGlobalUserConfig()
+		if err != nil {
+			return WrapError(err, getUserConfigError)
+		}
 	} else if local { // local (regardless of the value of the "local" flag)
 		configPath = localUserConfigPath
 		// Make sure that it's a regolith project
@@ -570,9 +584,12 @@ func manageUserConfigPrintAll(debug, global, local bool) error {
 				" Are you in a regolith project?")
 		}
 		fmt.Printf("\nLOCAL USER CONFIGURATION: %s\n", configPath)
-		userConfig.fillWithFileData(configPath)
+		userConfig, err = getLocalUserConfig()
+		if err != nil {
+			return WrapError(err, getUserConfigError)
+		}
 	} else {
-		userConfig, err = getUserConfig() // Combined config
+		userConfig, err = getCombinedUserConfig() // Combined config
 		if err != nil {
 			return WrapError(err, getUserConfigError)
 		}

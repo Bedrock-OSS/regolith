@@ -150,7 +150,7 @@ const (
 	filterRunnerRunError = "Failed to run filter.\nFilter: %s"
 
 	// Error used when GetRegolithConfigPath fails
-	getRegolithConfigPathError = "Failed to get path to Regolith's app data folder."
+	getRegolithAppDataPathError = "Failed to get path to Regolith's app data folder."
 
 	// Error used when GetUserConfig function fails
 	getUserConfigError = "Failed to get user configuration."
