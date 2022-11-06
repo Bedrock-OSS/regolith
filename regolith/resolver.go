@@ -23,6 +23,10 @@ type ResolverMapItem struct {
 	Url string `json:"url"`
 }
 
+// resolverMap is a lazy loaded map with combined resolver.json files. This
+// map should never be modified directly. Use getResolversAsMap() instead.
+var resolverMap *map[string]ResolverMapItem
+
 // GetRegolithAppDataPath returns path to the regolith files in user app data
 func GetRegolithAppDataPath() (string, error) {
 	path, err := os.UserCacheDir()
@@ -159,8 +163,17 @@ func DownloadResolverMaps() error {
 	return nil
 }
 
-// LoadResolversAsMap loads all of the resolver files into a single map
-func LoadResolversAsMap() (map[string]ResolverMapItem, error) {
+// getResolversMap downloads and lazily loads the resolverMap from the
+// resolver.json files if it is already loaded, it returns the map
+func getResolversMap() (*map[string]ResolverMapItem, error) {
+	if resolverMap != nil {
+		return resolverMap, nil
+	}
+	err := DownloadResolverMaps()
+	if err != nil {
+		Logger.Warnf(
+			"Failed to download resolver map: %s", err.Error())
+	}
 	result := make(map[string]ResolverMapItem)
 	// Load all resolver files into a map, where the ke is the URL of the resovler
 	// file and the value is the content of the file. Based on this map and
@@ -241,7 +254,8 @@ func LoadResolversAsMap() (map[string]ResolverMapItem, error) {
 			}
 		}
 	}
-	return result, nil
+	resolverMap = &result
+	return resolverMap, nil
 }
 
 func ResolverMapFromObject(obj map[string]interface{}) (ResolverMapItem, error) {
@@ -263,11 +277,11 @@ func ResolverMapFromObject(obj map[string]interface{}) (ResolverMapItem, error) 
 // it fails it updates the resolver.json file and tries again
 func ResolveUrl(shortName string) (string, error) {
 	const resolverLoadErrror = "Unable to load the name to URL resolver map."
-	resolver, err := LoadResolversAsMap()
+	resolver, err := getResolversMap()
 	if err != nil {
 		return "", WrapError(err, resolverLoadErrror)
 	}
-	filterMap, ok := resolver[shortName]
+	filterMap, ok := (*resolver)[shortName]
 	if !ok {
 		return "", WrappedErrorf(
 			"The filter doesn't have known mapping to URL in the URL "+
