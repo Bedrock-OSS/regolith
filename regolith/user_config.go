@@ -12,10 +12,22 @@ import (
 // localUserConfigPath is a path to the user config file
 const localUserConfigPath = ".regolith/user_config.json"
 
-// cachedUserConfig is a global variable that stores the combined user config. It
-// should not be accessed directly, but instead through the getUserConfig
-// function, which will lazily load the config if it hasn't been loaded yet.
-var cachedUserConfig *UserConfig
+var (
+	// cachedCombinedUserConfig is a global variable that stores the combined user config. It
+	// should not be accessed directly, but instead through the getUserConfig
+	// function, which will lazily load the config if it hasn't been loaded yet.
+	cachedCombinedUserConfig *UserConfig
+
+	// cachedLocalUserConfig is a global variable that stores the local user config. It
+	// should not be accessed directly, but instead through the getUserConfig
+	// function, which will lazily load the config if it hasn't been loaded yet.
+	cachedLocalUserConfig *UserConfig
+
+	// cachedGlobalUserConfig is a global variable that stores the global user config. It
+	// should not be accessed directly, but instead through the getUserConfig
+	// function, which will lazily load the config if it hasn't been loaded yet.
+	cachedGlobalUserConfig *UserConfig
+)
 
 type UserConfig struct {
 	// UseProjectAppDataStorage is a flag that determines whether to use the
@@ -141,44 +153,72 @@ func getGlobalUserConfigPath() (string, error) {
 	return filepath.Join(userCache, "regolith", "user_config.json"), nil
 }
 
-// readCombinedUserConfig reads the config from .regolith/user_config.json and
-// from the user app data directory. It returns the merged config or an error.
-func readCombinedUserConfig() (*UserConfig, error) {
+// loadUserConfigs reads the config from .regolith/user_config.json and
+// from the user app data directory and sets the global variables
+// cachedCombinedUserConfig, cachedLocalUserConfig and cachedGlobalUserConfig.
+func loadUserConfigs() error {
 	// Get the paths to localConfigPath and appDataConfig
-	result := NewUserConfig()
-	defer result.fillDefaults()
+	cachedGlobalUserConfig = NewUserConfig()
+	cachedLocalUserConfig = NewUserConfig()
+	cachedCombinedUserConfig = NewUserConfig()
+	defer cachedCombinedUserConfig.fillDefaults()
+
 	globalConfigPath, err := getGlobalUserConfigPath()
 	if err != nil {
-		return nil, WrapError(err, getGlobalUserConfigPathError)
+		return WrapError(err, getGlobalUserConfigPathError)
 	}
 	localConfigPath, err := filepath.Abs(localUserConfigPath)
 	if err != nil {
-		return nil, WrapErrorf(err, filepathAbsError, localUserConfigPath)
+		return WrapErrorf(err, filepathAbsError, localUserConfigPath)
 	}
 	// Load the config files
 	// First load the global config
-	err = result.fillWithFileData(globalConfigPath)
-	if err != nil {
-		return nil, WrapError(err, "Failed to read global user_config.json")
+	err1 := cachedGlobalUserConfig.fillWithFileData(globalConfigPath)
+	err2 := cachedCombinedUserConfig.fillWithFileData(globalConfigPath)
+	if err = firstErr(err1, err2); err != nil {
+		return WrapError(err, "Failed to read global user_config.json")
 	}
 	// Overwrite with the local config
-	err = result.fillWithFileData(localConfigPath)
-	if err != nil {
-		return nil, WrapError(err, "Failed to read local user_config.json")
+	err1 = cachedLocalUserConfig.fillWithFileData(localConfigPath)
+	err2 = cachedCombinedUserConfig.fillWithFileData(localConfigPath)
+	if err = firstErr(err1, err2); err != nil {
+		return WrapError(err, "Failed to read local user_config.json")
 	}
-	return result, nil
+	return nil
 }
 
-// getUserConfig lazily loads the user config to the global userConfig variable
-// and returns it. The pointer returned from this function is guaranteed to be
-// non-nil.
-func getUserConfig() (*UserConfig, error) {
-	if cachedUserConfig == nil {
-		readUserConfig, err := readCombinedUserConfig()
+// getCombinedUserConfig lazily loads the user config to the global
+// cachedCombinedUserConfig variable and returns it.
+func getCombinedUserConfig() (*UserConfig, error) {
+	if cachedCombinedUserConfig == nil {
+		err := loadUserConfigs()
 		if err != nil {
 			return nil, PassError(err)
 		}
-		cachedUserConfig = readUserConfig
 	}
-	return cachedUserConfig, nil
+	return cachedCombinedUserConfig, nil
+}
+
+// getLocalUserConfig lazily loads the user config to the global
+// cachedLocalUserConfig variable and returns it.
+func getLocalUserConfig() (*UserConfig, error) {
+	if cachedLocalUserConfig == nil {
+		err := loadUserConfigs()
+		if err != nil {
+			return nil, PassError(err)
+		}
+	}
+	return cachedLocalUserConfig, nil
+}
+
+// getGlobalUserConfig lazily loads the user config to the global
+// cachedGlobalUserConfig variable and returns it.
+func getGlobalUserConfig() (*UserConfig, error) {
+	if cachedGlobalUserConfig == nil {
+		err := loadUserConfigs()
+		if err != nil {
+			return nil, PassError(err)
+		}
+	}
+	return cachedGlobalUserConfig, nil
 }

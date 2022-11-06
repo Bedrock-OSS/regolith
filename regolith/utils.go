@@ -317,7 +317,7 @@ func getAppDataDotRegolith(silent bool, projectRoot string) (string, error) {
 // absolute path.
 func GetDotRegolith(silent bool, projectRoot string) (string, error) {
 	// App data diabled - use .regolith
-	userConfig, err := getUserConfig()
+	userConfig, err := getCombinedUserConfig()
 	if err != nil {
 		return "", WrapError(err, getUserConfigError)
 	}
