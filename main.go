@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/Bedrock-OSS/go-burrito/burrito"
+	"github.com/stirante/go-simple-eval/eval"
 	"os"
 
 	"github.com/fatih/color"
@@ -164,6 +165,8 @@ func main() {
 			_, _ = fmt.Fprintln(color.Output, color.GreenString(*updateStatus.Url))
 		}
 	}()
+	// Initialize simple eval
+	eval.Init()
 
 	// Root command
 	var rootCmd = &cobra.Command{
