@@ -5,15 +5,17 @@ go 1.18
 require (
 	github.com/fatih/color v1.13.0
 	github.com/google/go-github/v39 v39.2.0
-	github.com/hashicorp/go-getter v1.5.11
+	github.com/hashicorp/go-getter v1.6.2
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/otiai10/copy v1.7.0
 	github.com/spf13/cobra v1.6.1
 	go.uber.org/zap v1.21.0
 	golang.org/x/mod v0.5.1
-	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8
+	golang.org/x/sys v0.0.0-20220517195934-5e4e11fc645e
 	muzzammil.xyz/jsonc v1.0.0
 )
+
+replace github.com/hashicorp/go-getter => github.com/arikkfir/go-getter v1.6.3-0.20220803164326-281b7670b734
 
 require (
 	cloud.google.com/go v0.100.2 // indirect
