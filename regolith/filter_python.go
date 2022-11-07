@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"encoding/json"
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,11 +25,11 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 	filter := &PythonFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	scripObj, ok := obj["script"]
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyMissingError, "script")
+		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "script")
 	}
 	script, ok := scripObj.(string)
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyTypeError, "script", "string")
+		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
@@ -39,13 +40,13 @@ func (f *PythonFilter) run(context RunContext) error {
 	// Run filter
 	pythonCommand, err := findPython()
 	if err != nil {
-		return PassError(err)
+		return burrito.PassError(err)
 	}
 	scriptPath := filepath.Join(context.AbsoluteLocation, f.Definition.Script)
 	if needsVenv(filepath.Dir(scriptPath)) {
 		venvPath, err := f.Definition.resolveVenvPath(context.DotRegolithPath)
 		if err != nil {
-			return WrapError(err, "Failed to resolve venv path.")
+			return burrito.WrapError(err, "Failed to resolve venv path.")
 		}
 		Logger.Debug("Running Python filter using venv: ", venvPath)
 		pythonCommand = filepath.Join(
@@ -66,14 +67,14 @@ func (f *PythonFilter) run(context RunContext) error {
 		GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 		ShortFilterName(f.Id))
 	if err != nil {
-		return WrapError(err, "Failed to run Python script.")
+		return burrito.WrapError(err, "Failed to run Python script.")
 	}
 	return nil
 }
 
 func (f *PythonFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, PassError(err)
+		return false, burrito.PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -81,7 +82,7 @@ func (f *PythonFilter) Run(context RunContext) (bool, error) {
 func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, filterFromObjectError)
+		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
 	filter := &PythonFilter{
 		Filter:     *basicFilter,
@@ -102,7 +103,7 @@ func (f *PythonFilterDefinition) InstallDependencies(
 	joinedPath := filepath.Join(installLocation, f.Script)
 	scriptPath, err := filepath.Abs(joinedPath)
 	if err != nil {
-		return WrapErrorf(err, filepathAbsError, joinedPath)
+		return burrito.WrapErrorf(err, filepathAbsError, joinedPath)
 	}
 
 	// Install the filter dependencies
@@ -110,18 +111,18 @@ func (f *PythonFilterDefinition) InstallDependencies(
 	if needsVenv(filterPath) {
 		venvPath, err := f.resolveVenvPath(dotRegolithPath)
 		if err != nil {
-			return WrapError(err, "Failed to resolve venv path.")
+			return burrito.WrapError(err, "Failed to resolve venv path.")
 		}
 		Logger.Info("Creating venv...")
 		pythonCommand, err := findPython()
 		if err != nil {
-			return PassError(err)
+			return burrito.PassError(err)
 		}
 		// Create the "venv"
 		err = RunSubProcess(
 			pythonCommand, []string{"-m", "venv", venvPath}, filterPath, "", ShortFilterName(f.Id))
 		if err != nil {
-			return WrapError(err, "Failed to create venv.")
+			return burrito.WrapError(err, "Failed to create venv.")
 		}
 		// Update pip of the venv
 		venvPythonCommand := filepath.Join(
@@ -138,7 +139,7 @@ func (f *PythonFilterDefinition) InstallDependencies(
 			filepath.Join(venvPath, venvScriptsPath, "pip"+exeSuffix),
 			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
-			return WrapErrorf(
+			return burrito.WrapErrorf(
 				err, "Couldn't run Pip to install dependencies of %s",
 				f.Id,
 			)
@@ -151,11 +152,11 @@ func (f *PythonFilterDefinition) InstallDependencies(
 func (f *PythonFilterDefinition) Check(context RunContext) error {
 	pythonCommand, err := findPython()
 	if err != nil {
-		return PassError(err)
+		return burrito.PassError(err)
 	}
 	cmd, err := exec.Command(pythonCommand, "--version").Output()
 	if err != nil {
-		return WrapError(err, "Python version check failed.")
+		return burrito.WrapError(err, "Python version check failed.")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "Python ")
 	Logger.Debugf("Found Python version %s", a)
@@ -179,7 +180,7 @@ func (f *PythonFilterDefinition) resolveVenvPath(dotRegolithPath string) (string
 	resolvedPath, err := filepath.Abs(
 		filepath.Join(filepath.Join(dotRegolithPath, "cache/venvs"), strconv.Itoa(f.VenvSlot)))
 	if err != nil {
-		return "", WrapErrorf(
+		return "", burrito.WrapErrorf(
 			err, "Unable to create venv for VenvSlot %v.", f.VenvSlot)
 	}
 	return resolvedPath, nil
@@ -201,7 +202,7 @@ func findPython() (string, error) {
 			return c, nil
 		}
 	}
-	return "", WrappedError(
+	return "", burrito.WrappedError(
 		"Python not found, download and install it from " +
 			"https://www.python.org/downloads/")
 }

@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -30,7 +31,7 @@ type ResolverJson struct {
 func GetRegolithConfigPath() (string, error) {
 	path, err := os.UserCacheDir()
 	if err != nil {
-		return "", WrappedError(osUserCacheDirError)
+		return "", burrito.WrappedError(osUserCacheDirError)
 	}
 	return filepath.Join(path, regolithConfigPath), nil
 }
@@ -40,7 +41,7 @@ func DownloadResolverMap() error {
 	Logger.Info("Downloading resolver.json")
 	path, err := GetRegolithConfigPath()
 	if err != nil {
-		return WrapError(err, getRegolithConfigPathError)
+		return burrito.WrapError(err, getRegolithConfigPathError)
 	}
 	// Download to tmp path first and then move it to the real path,
 	// overwritting the old file is possible only if download is successful
@@ -49,7 +50,7 @@ func DownloadResolverMap() error {
 	err = getter.GetFile(tmpPath, resolverUrl)
 	if err != nil {
 		os.Remove(tmpPath) // I don't think errors matter here
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err,
 			"Unable to download filter resolver map file."+
 				"Download URL: %s"+
@@ -59,7 +60,7 @@ func DownloadResolverMap() error {
 	os.Remove(targetPath)
 	err = os.Rename(tmpPath, targetPath)
 	if err != nil {
-		return WrapErrorf(err, osRenameError, tmpPath, targetPath)
+		return burrito.WrapErrorf(err, osRenameError, tmpPath, targetPath)
 	}
 	return nil
 }
@@ -67,18 +68,18 @@ func DownloadResolverMap() error {
 func LoadResolverAsMap() (map[string]interface{}, error) {
 	resolverPath, err := GetRegolithConfigPath()
 	if err != nil {
-		return nil, WrapError(err, getRegolithConfigPathError)
+		return nil, burrito.WrapError(err, getRegolithConfigPathError)
 	}
 	resolverPath = filepath.Join(resolverPath, "resolver.json")
 	file, err := ioutil.ReadFile(resolverPath)
 	if err != nil {
-		return nil, WrapErrorf(
+		return nil, burrito.WrapErrorf(
 			err, fileReadError, resolverPath)
 	}
 	var resolverJson map[string]interface{}
 	err = jsonc.Unmarshal(file, &resolverJson)
 	if err != nil {
-		return nil, WrapErrorf(err, jsonUnmarshalError, resolverPath)
+		return nil, burrito.WrapErrorf(err, jsonUnmarshalError, resolverPath)
 	}
 	return resolverJson, nil
 }
@@ -88,35 +89,35 @@ func ResolverFromObject(obj map[string]interface{}) (ResolverJson, error) {
 	// FormatVersion
 	formatVersionObj, ok := obj["formatVersion"]
 	if !ok {
-		return result, WrappedErrorf(
+		return result, burrito.WrappedErrorf(
 			jsonPathMissingError, "formatVersion")
 	}
 	formatVersion, ok := formatVersionObj.(string)
 	if !ok {
-		return result, WrappedErrorf(
+		return result, burrito.WrappedErrorf(
 			jsonPathTypeError, "formatVersion", "string")
 	}
 	result.FormatVersion = formatVersion
 	// Filters
 	filtersObj, ok := obj["filters"]
 	if !ok {
-		return result, WrappedErrorf(jsonPathMissingError, "filters")
+		return result, burrito.WrappedErrorf(jsonPathMissingError, "filters")
 	}
 	filters, ok := filtersObj.(map[string]interface{})
 	if !ok {
-		return result, WrappedErrorf(jsonPathParseError, "filters", "object")
+		return result, burrito.WrappedErrorf(jsonPathParseError, "filters", "object")
 	}
 	result.Filters = make(map[string]ResolverMap)
 	for shortName, filterObj := range filters {
 		filter, ok := filterObj.(map[string]interface{})
 		if !ok {
-			return result, WrappedErrorf(
+			return result, burrito.WrappedErrorf(
 				jsonPathTypeError,
 				"filters->"+shortName, "object")
 		}
 		filterMap, err := ResolverMapFromObject(filter)
 		if err != nil {
-			return result, WrapErrorf(
+			return result, burrito.WrapErrorf(
 				err, jsonPathParseError, "filters->"+shortName)
 		}
 		result.Filters[shortName] = filterMap
@@ -129,11 +130,11 @@ func ResolverMapFromObject(obj map[string]interface{}) (ResolverMap, error) {
 	// Url
 	urlObj, ok := obj["url"]
 	if !ok {
-		return result, WrappedErrorf(jsonPropertyMissingError, "url")
+		return result, burrito.WrappedErrorf(jsonPropertyMissingError, "url")
 	}
 	url, ok := urlObj.(string)
 	if !ok {
-		return result, WrappedErrorf(jsonPropertyTypeError, "url", "string")
+		return result, burrito.WrappedErrorf(jsonPropertyTypeError, "url", "string")
 	}
 	result.Url = url
 	return result, nil
@@ -145,15 +146,15 @@ func ResolveUrl(shortName string) (string, error) {
 	const resolverLoadErrror = "Unable to load the name to URL resolver map."
 	resolverObj, err := LoadResolverAsMap()
 	if err != nil {
-		return "", WrapError(err, resolverLoadErrror)
+		return "", burrito.WrapError(err, resolverLoadErrror)
 	}
 	resolver, err := ResolverFromObject(resolverObj)
 	if err != nil {
-		return "", WrapError(err, resolverLoadErrror)
+		return "", burrito.WrapError(err, resolverLoadErrror)
 	}
 	filterMap, ok := resolver.Filters[shortName]
 	if !ok {
-		return "", WrappedErrorf(
+		return "", burrito.WrappedErrorf(
 			"The filter doesn't have known mapping to URL in the URL "+
 				"resolver.\n"+
 				"Filter name: %s\n"+

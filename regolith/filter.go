@@ -1,5 +1,7 @@
 package regolith
 
+import "github.com/Bedrock-OSS/go-burrito/burrito"
+
 type FilterDefinition struct {
 	Id string `json:"-"`
 }
@@ -32,7 +34,7 @@ type RunContext struct {
 func (c *RunContext) GetProfile() (Profile, error) {
 	profile, ok := c.Config.Profiles[c.Profile]
 	if !ok {
-		return Profile{}, WrappedErrorf("Profile with specified name doesn't exist.\n"+
+		return Profile{}, burrito.WrappedErrorf("Profile with specified name doesn't exist.\n"+
 			"Profile name: %s", c.Profile)
 	}
 	return profile, nil
@@ -52,19 +54,19 @@ func (c *RunContext) StartWatchingSourceFiles() error {
 	// their messages until the end of the program. Sending to a closed channel
 	// would cause panic.
 	if c.interruptionChannel != nil {
-		return WrappedError("Files are already being watched.")
+		return burrito.WrappedError("Files are already being watched.")
 	}
 	rpWatcher, err := NewDirWatcher(c.Config.ResourceFolder)
 	if err != nil {
-		return WrapError(err, "Could not create resource pack watcher.")
+		return burrito.WrapError(err, "Could not create resource pack watcher.")
 	}
 	bpWatcher, err := NewDirWatcher(c.Config.BehaviorFolder)
 	if err != nil {
-		return WrapError(err, "Could not create behavior pack watcher.")
+		return burrito.WrapError(err, "Could not create behavior pack watcher.")
 	}
 	dataWatcher, err := NewDirWatcher(c.Config.DataPath)
 	if err != nil {
-		return WrapError(err, "Could not create data watcher.")
+		return burrito.WrapError(err, "Could not create data watcher.")
 	}
 	c.interruptionChannel = make(chan string)
 	yieldChanges := func(
@@ -161,11 +163,11 @@ func filterFromObject(obj map[string]interface{}) (*Filter, error) {
 	// Id
 	idObj, ok := obj["filter"]
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyMissingError, "filter")
+		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "filter")
 	}
 	id, ok := idObj.(string)
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyTypeError, "filter", "string")
+		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "filter", "string")
 	}
 	filter.Id = id
 	return filter, nil
@@ -226,7 +228,7 @@ func (f *Filter) IsDisabled() (bool, error) {
 	if f.When != "" {
 		condition, err := EvalCondition(f.When)
 		if err != nil {
-			return false, WrapError(err, "Could not evaluate condition.")
+			return false, burrito.WrapError(err, "Could not evaluate condition.")
 		}
 		return !condition, nil
 	}
@@ -239,7 +241,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 	case "java":
 		filter, err := JavaFilterDefinitionFromObject(id, obj)
 		if err != nil {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err,
 				"Unable to create Java filter from %q filter definition.", id)
 		}
@@ -247,7 +249,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 	case "dotnet":
 		filter, err := DotNetFilterDefinitionFromObject(id, obj)
 		if err != nil {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err,
 				"Unable to create .Net filter from %q filter definition.", id)
 		}
@@ -255,7 +257,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 	case "nim":
 		filter, err := NimFilterDefinitionFromObject(id, obj)
 		if err != nil {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err,
 				"Unable to create Nim filter from %q filter definition.", id)
 		}
@@ -263,7 +265,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 	case "deno":
 		filter, err := DenoFilterDefinitionFromObject(id, obj)
 		if err != nil {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err,
 				"Unable to create Deno filter from %q filter definition.", id)
 		}
@@ -271,7 +273,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 	case "nodejs":
 		filter, err := NodeJSFilterDefinitionFromObject(id, obj)
 		if err != nil {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err,
 				"Unable to create NodeJs filter from %q filter definition.",
 				id)
@@ -280,7 +282,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 	case "python":
 		filter, err := PythonFilterDefinitionFromObject(id, obj)
 		if err != nil {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err,
 				"Unable to create Python filter from %q filter definition.",
 				id)
@@ -289,7 +291,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 	case "shell":
 		filter, err := ShellFilterDefinitionFromObject(id, obj)
 		if err != nil {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err,
 				"Unable to create shell filter from %q filter definition.", id)
 		}
@@ -297,7 +299,7 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 	case "exe":
 		filter, err := ExeFilterDefinitionFromObject(id, obj)
 		if err != nil {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err,
 				"Unable to create exe filter from %q filter definition.", id)
 		}
@@ -305,14 +307,14 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 	case "":
 		filter, err := RemoteFilterDefinitionFromObject(id, obj)
 		if err != nil {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err,
 				"Unable to create remote filter from %q filter definition.",
 				id)
 		}
 		return filter, nil
 	}
-	return nil, WrappedErrorf(
+	return nil, burrito.WrappedErrorf(
 		"Invalid runWith value filter definition.\n"+
 			"Filter: %s\n"+
 			"Value: %s\n"+
@@ -329,20 +331,20 @@ func FilterRunnerFromObjectAndDefinitions(
 	}
 	filterObj, ok := obj["filter"]
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyMissingError, "filter")
+		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "filter")
 	}
 	filter, ok := filterObj.(string)
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyTypeError, "filter", "string")
+		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "filter", "string")
 	}
 	if filterDefinition, ok := filterDefinitions[filter]; ok {
 		filterRunner, err := filterDefinition.CreateFilterRunner(obj)
 		if err != nil {
-			return nil, WrapErrorf(err, createFilterRunnerError, filter)
+			return nil, burrito.WrapErrorf(err, createFilterRunnerError, filter)
 		}
 		return filterRunner, nil
 	}
-	return nil, WrappedErrorf(
+	return nil, burrito.WrappedErrorf(
 		"Unable to find filter in filter definitions.\nFilter name: %s",
 		filter)
 }

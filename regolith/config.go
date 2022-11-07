@@ -1,5 +1,7 @@
 package regolith
 
+import "github.com/Bedrock-OSS/go-burrito/burrito"
+
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
 const ConfigFilePath = "config.json"
 const GitIgnore = "/build\n/.regolith"
@@ -46,40 +48,40 @@ func ConfigFromObject(obj map[string]interface{}) (*Config, error) {
 	// Name
 	name, ok := obj["name"].(string)
 	if !ok {
-		return nil, WrappedErrorf(jsonPathMissingError, "name")
+		return nil, burrito.WrappedErrorf(jsonPathMissingError, "name")
 	}
 	result.Name = name
 	// Author
 	author, ok := obj["author"].(string)
 	if !ok {
-		return nil, WrappedErrorf(jsonPathMissingError, "author")
+		return nil, burrito.WrappedErrorf(jsonPathMissingError, "author")
 	}
 	result.Author = author
 	// Packs
 	if packs, ok := obj["packs"]; ok {
 		packs, ok := packs.(map[string]interface{})
 		if !ok {
-			return nil, WrappedErrorf(jsonPathTypeError, "packs", "object")
+			return nil, burrito.WrappedErrorf(jsonPathTypeError, "packs", "object")
 		}
 		// Packs can be empty, no need to check for errors
 		result.Packs = PacksFromObject(packs)
 	} else {
-		return nil, WrappedErrorf(jsonPathMissingError, "packs")
+		return nil, burrito.WrappedErrorf(jsonPathMissingError, "packs")
 	}
 	// Regolith
 	if regolith, ok := obj["regolith"]; ok {
 		regolith, ok := regolith.(map[string]interface{})
 		if !ok {
-			return nil, WrappedErrorf(
+			return nil, burrito.WrappedErrorf(
 				jsonPathTypeError, "regolith", "object")
 		}
 		regolithProject, err := RegolithProjectFromObject(regolith)
 		if err != nil {
-			return nil, WrapErrorf(err, jsonPropertyParseError, "regolith")
+			return nil, burrito.WrapErrorf(err, jsonPropertyParseError, "regolith")
 		}
 		result.RegolithProject = regolithProject
 	} else {
-		return nil, WrappedErrorf(jsonPropertyMissingError, "regolith")
+		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "regolith")
 	}
 	return result, nil
 }
@@ -107,11 +109,11 @@ func RegolithProjectFromObject(
 	}
 	// DataPath
 	if _, ok := obj["dataPath"]; !ok {
-		return result, WrappedErrorf(jsonPropertyMissingError, "dataPath")
+		return result, burrito.WrappedErrorf(jsonPropertyMissingError, "dataPath")
 	}
 	dataPath, ok := obj["dataPath"].(string)
 	if !ok {
-		return result, WrappedErrorf(
+		return result, burrito.WrappedErrorf(
 			jsonPropertyTypeError, "dataPath", "string")
 	}
 	result.DataPath = dataPath
@@ -121,14 +123,14 @@ func RegolithProjectFromObject(
 		for filterDefinitionName, filterDefinition := range filterDefinitions {
 			filterDefinitionMap, ok := filterDefinition.(map[string]interface{})
 			if !ok {
-				return result, WrappedErrorf(
+				return result, burrito.WrappedErrorf(
 					jsonPropertyTypeError, "filterDefinitions",
 					"object")
 			}
 			filterInstaller, err := FilterInstallerFromObject(
 				filterDefinitionName, filterDefinitionMap)
 			if err != nil {
-				return result, WrapErrorf(
+				return result, burrito.WrapErrorf(
 					err, jsonPropertyParseError, "filterDefinitions")
 			}
 			result.FilterDefinitions[filterDefinitionName] = filterInstaller
@@ -137,19 +139,19 @@ func RegolithProjectFromObject(
 	// Profiles
 	profiles, ok := obj["profiles"].(map[string]interface{})
 	if !ok {
-		return result, WrappedErrorf(jsonPropertyMissingError, "profiles")
+		return result, burrito.WrappedErrorf(jsonPropertyMissingError, "profiles")
 	}
 	for profileName, profile := range profiles {
 		profileMap, ok := profile.(map[string]interface{})
 		if !ok {
-			return result, WrappedErrorf(
+			return result, burrito.WrappedErrorf(
 				jsonPropertyTypeError,
 				"profiles->"+profileName, "object")
 		}
 		profileValue, err := ProfileFromObject(
 			profileMap, result.FilterDefinitions)
 		if err != nil {
-			return result, WrapErrorf(
+			return result, burrito.WrapErrorf(
 				err, jsonPropertyParseError, "profiles->"+profileName)
 		}
 		result.Profiles[profileName] = profileValue
@@ -159,7 +161,7 @@ func RegolithProjectFromObject(
 	if _, ok := obj["useAppData"]; ok {
 		useAppData, ok = obj["useAppData"].(bool)
 		if !ok {
-			return result, WrappedErrorf(
+			return result, burrito.WrappedErrorf(
 				jsonPropertyTypeError, "useAppData", "boolean")
 		}
 	}
@@ -174,11 +176,11 @@ func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
 	// Target
 	targetObj, ok := obj["target"]
 	if !ok {
-		return result, WrappedErrorf(jsonPropertyMissingError, "target")
+		return result, burrito.WrappedErrorf(jsonPropertyMissingError, "target")
 	}
 	target, ok := targetObj.(string)
 	if !ok {
-		return result, WrappedErrorf(
+		return result, burrito.WrappedErrorf(
 			jsonPropertyTypeError, "target", "string")
 	}
 	result.Target = target

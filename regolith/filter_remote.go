@@ -3,6 +3,7 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -37,11 +38,11 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	}
 	versionObj, ok := obj["version"]
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyMissingError, "version")
+		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "version")
 	}
 	version, ok := versionObj.(string)
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyTypeError, "version", "string")
+		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "version", "string")
 	}
 	result.Version = version
 	result.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
@@ -51,7 +52,7 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 func (f *RemoteFilter) run(context RunContext) error {
 	Logger.Debugf("RunRemoteFilter \"%s\"", f.Definition.Url)
 	if !f.IsCached(context.DotRegolithPath) {
-		return WrappedErrorf(
+		return burrito.WrappedErrorf(
 			"Filter is not downloaded. "+
 				"You can download filter files using command:\n"+
 				"regolith install %s", f.Id)
@@ -59,14 +60,14 @@ func (f *RemoteFilter) run(context RunContext) error {
 
 	version, err := f.GetCachedVersion(context.DotRegolithPath)
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Failed check the version of the filter in cache."+
 				"\nFilter: %s\n"+
 				"You can try to force reinstallation fo the filter using command:"+
 				"regolith install --force %s", f.Id, f.Id)
 	}
 	if f.Definition.Version != "HEAD" && f.Definition.Version != "latest" && f.Definition.Version != *version {
-		return WrappedErrorf(
+		return burrito.WrappedErrorf(
 			"Filter version saved in cache doesn't match the version declared"+
 				" in the config file.\n"+
 				"Filter: %s\n"+
@@ -82,13 +83,13 @@ func (f *RemoteFilter) run(context RunContext) error {
 	absolutePath, _ := filepath.Abs(path)
 	filterCollection, err := f.subfilterCollection(context.DotRegolithPath)
 	if err != nil {
-		return WrapErrorf(err, remoteFilterSubfilterCollectionError)
+		return burrito.WrapErrorf(err, remoteFilterSubfilterCollectionError)
 	}
 	for i, filter := range filterCollection.Filters {
 		// Disabled filters are skipped
 		disabled, err := filter.IsDisabled()
 		if err != nil {
-			return WrapErrorf(err, "Failed to check if filter is disabled")
+			return burrito.WrapErrorf(err, "Failed to check if filter is disabled")
 		}
 		if disabled {
 			Logger.Infof(
@@ -107,7 +108,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 			DotRegolithPath:  context.DotRegolithPath,
 		})
 		if err != nil {
-			return WrapErrorf(
+			return burrito.WrapErrorf(
 				err, filterRunnerRunError,
 				NiceSubfilterName(f.Id, i))
 		}
@@ -117,7 +118,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 
 func (f *RemoteFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, PassError(err)
+		return false, burrito.PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -125,7 +126,7 @@ func (f *RemoteFilter) Run(context RunContext) (bool, error) {
 func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, filterFromObjectError)
+		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
 	filter := &RemoteFilter{
 		Filter:     *basicFilter,
@@ -141,43 +142,43 @@ func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, 
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return WrapErrorf(err, fileReadError, path)
+		return burrito.WrapErrorf(err, fileReadError, path)
 	}
 
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
-		return WrapErrorf(err, jsonUnmarshalError, path)
+		return burrito.WrapErrorf(err, jsonUnmarshalError, path)
 	}
 
 	// Filters
 	filtersObj, ok := filterCollection["filters"]
 	if !ok {
 		return extraFilterJsonErrorInfo(
-			path, WrappedErrorf(jsonPathMissingError, "filters"))
+			path, burrito.WrappedErrorf(jsonPathMissingError, "filters"))
 	}
 	filters, ok := filtersObj.([]interface{})
 	if !ok {
 		return extraFilterJsonErrorInfo(
-			path, WrappedErrorf(jsonPathTypeError, "filters", "array"))
+			path, burrito.WrappedErrorf(jsonPathTypeError, "filters", "array"))
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		jsonPath := fmt.Sprintf("filters->%d", i) // Used for error messages
 		if !ok {
 			return extraFilterJsonErrorInfo(
-				path, WrappedErrorf(jsonPathTypeError, jsonPath, "object"))
+				path, burrito.WrappedErrorf(jsonPathTypeError, jsonPath, "object"))
 		}
 		filterInstaller, err := FilterInstallerFromObject(
 			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
 		if err != nil {
 			return extraFilterJsonErrorInfo(
-				path, WrapErrorf(err, jsonPathParseError, jsonPath))
+				path, burrito.WrapErrorf(err, jsonPathParseError, jsonPath))
 		}
 		err = filterInstaller.InstallDependencies(f, dotRegolithPath)
 		if err != nil {
 			// This is not parsing error so extraErrorInfo is not necessary
-			return WrapErrorf(
+			return burrito.WrapErrorf(
 				err,
 				"Failed to install the dependencies of the %s subfilter.\n"+
 					"Filter configuration file: %s\n"+
@@ -196,25 +197,25 @@ func (f *RemoteFilterDefinition) Check(context RunContext) error {
 		"project repository:\n" +
 		"https://github.com/Bedrock-OSS/regolith/issues")
 	if err != nil { // Shouldn't happen but just in case it's better to check
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Failed to create FilterRunner for the filter.\n"+
 				shouldntHappenError, f.Id)
 	}
 	dummyFilterRunnerConverted, ok := dummyFilterRunner.(*RemoteFilter)
 	if !ok { // Shouldn't happen but just in case it's better to check
-		return WrappedErrorf(
+		return burrito.WrappedErrorf(
 			"Failed to convert to RemoteFilter.\n"+shouldntHappenError, f.Id)
 	}
 	filterCollection, err := dummyFilterRunnerConverted.subfilterCollection(
 		context.DotRegolithPath)
 	if err != nil {
-		return WrapError(err, remoteFilterSubfilterCollectionError)
+		return burrito.WrapError(err, remoteFilterSubfilterCollectionError)
 	}
 	for i, filter := range filterCollection.Filters {
 		// Overwrite the venvSlot with the parent value
 		err := filter.Check(context)
 		if err != nil {
-			return WrapErrorf(
+			return burrito.WrapErrorf(
 				err, filterRunnerCheckError, NiceSubfilterName(f.Id, i))
 		}
 	}
@@ -282,23 +283,23 @@ func (f *RemoteFilter) GetCachedVersion(dotRegolithPath string) (*string, error)
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, WrapErrorf(err, fileReadError, path)
+		return nil, burrito.WrapErrorf(err, fileReadError, path)
 	}
 
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
-		return nil, WrapErrorf(err, jsonUnmarshalError, file)
+		return nil, burrito.WrapErrorf(err, jsonUnmarshalError, file)
 	}
 	versionObj, ok := filterCollection["version"]
 	if !ok {
 		return nil, extraFilterJsonErrorInfo(
-			path, WrappedErrorf(jsonPathMissingError, "version"))
+			path, burrito.WrappedErrorf(jsonPathMissingError, "version"))
 	}
 	version, ok := versionObj.(string)
 	if !ok {
 		return nil, extraFilterJsonErrorInfo(
-			path, WrappedErrorf(jsonPathTypeError, "version", "string"))
+			path, burrito.WrappedErrorf(jsonPathTypeError, "version", "string"))
 	}
 	return &version, nil
 }
@@ -312,7 +313,7 @@ func FilterDefinitionFromTheInternet(
 	if version == "" { // "" locks the version to the latest
 		version, err = GetRemoteFilterDownloadRef(url, name, version)
 		if err != nil {
-			return nil, WrappedErrorf(
+			return nil, burrito.WrappedErrorf(
 				getRemoteFilterDownloadRefError, url, name, version)
 		}
 		version = trimFilterPrefix(version, name)
@@ -345,11 +346,11 @@ func (i *RemoteFilterDefinition) Download(
 
 	// Download the filter using Git Getter
 	if !hasGit() {
-		return WrappedError(gitNotInstalledWarning)
+		return burrito.WrappedError(gitNotInstalledWarning)
 	}
 	repoVersion, err := GetRemoteFilterDownloadRef(i.Url, i.Id, i.Version)
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, getRemoteFilterDownloadRefError, i.Url, i.Id, i.Version)
 	}
 	url := fmt.Sprintf("%s//%s?ref=%s", i.Url, i.Id, repoVersion)
@@ -362,7 +363,7 @@ func (i *RemoteFilterDefinition) Download(
 		if downloadPathIsNew { // Remove the path created by getter
 			os.Remove(downloadPath)
 		}
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Could not download filter from %s.\n"+
 				"Does that filter exist?", url)
 	}
@@ -383,7 +384,7 @@ func (i *RemoteFilterDefinition) Download(
 func (i *RemoteFilterDefinition) SaveVerssionInfo(version, dotRegolithPath string) error {
 	filterJsonMap, err := i.LoadFilterJson(dotRegolithPath)
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Could not load filter.json for \"%s\" filter.", i.Id)
 	}
 	filterJsonMap["version"] = version
@@ -391,7 +392,7 @@ func (i *RemoteFilterDefinition) SaveVerssionInfo(version, dotRegolithPath strin
 	filterJsonPath := path.Join(i.GetDownloadPath(dotRegolithPath), "filter.json")
 	err = os.WriteFile(filterJsonPath, filterJson, 0644)
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Unable to write \"filter.json\" for %q filter.", i.Id)
 	}
 	return nil
@@ -405,7 +406,7 @@ func (f *RemoteFilterDefinition) LoadFilterJson(dotRegolithPath string) (map[str
 	var filterJsonMap map[string]interface{}
 	err2 := json.Unmarshal(filterJson, &filterJsonMap)
 	if err := firstErr(err1, err2); err != nil {
-		return nil, PassError(err)
+		return nil, burrito.PassError(err)
 	}
 	return filterJsonMap, nil
 }
@@ -414,13 +415,13 @@ func (f *RemoteFilterDefinition) LoadFilterJson(dotRegolithPath string) (map[str
 func (f *RemoteFilterDefinition) InstalledVersion(dotRegolithPath string) (string, error) {
 	filterJsonMap, err := f.LoadFilterJson(dotRegolithPath)
 	if err != nil {
-		return "", WrapErrorf(
+		return "", burrito.WrapErrorf(
 			err, "Could not load filter.json for %q filter.", f.Id)
 	}
 	version, ok1 := filterJsonMap["version"]
 	versionStr, ok2 := version.(string)
 	if !ok1 || !ok2 {
-		return "", WrappedErrorf(
+		return "", burrito.WrappedErrorf(
 			"Could not read \"version\" from filter.json for %q filter",
 			f.Id)
 	}
@@ -435,7 +436,7 @@ func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string) erro
 	}
 	version, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, getRemoteFilterDownloadRefError, f.Url, f.Id, f.Version)
 	}
 	version = trimFilterPrefix(version, f.Id)
@@ -445,11 +446,11 @@ func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string) erro
 			f.Id, installedVersion, version)
 		err = f.Download(true, dotRegolithPath)
 		if err != nil {
-			return PassError(err)
+			return burrito.PassError(err)
 		}
 		err = f.InstallDependencies(f, dotRegolithPath)
 		if err != nil {
-			return PassError(err)
+			return burrito.PassError(err)
 		}
 		Logger.Infof("Filter %q updated successfully.", f.Id)
 	} else {
@@ -470,7 +471,7 @@ func (i *RemoteFilterDefinition) Uninstall(dotRegolithPath string) {
 	err := os.RemoveAll(downloadPath)
 	if err != nil {
 		Logger.Error(
-			WrapErrorf(err, osRemoveError, downloadPath))
+			burrito.WrapErrorf(err, osRemoveError, downloadPath))
 	}
 }
 
@@ -489,7 +490,7 @@ func hasGit() bool {
 // function for loading the filter.json file. Currently it's always build into
 // other functions.
 func extraFilterJsonErrorInfo(filterJsonFilePath string, err error) error {
-	return WrapErrorf(
+	return burrito.WrapErrorf(
 		err, "Failed to load the filter configuration.\n"+
 			"Filter configuration file: %s", filterJsonFilePath)
 }

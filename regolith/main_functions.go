@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"encoding/json"
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -34,26 +35,26 @@ func Install(filters []string, force, debug bool) error {
 	// Parse arguments into download tasks
 	parsedArgs, err := parseInstallFilterArgs(filters)
 	if err != nil {
-		return WrapError(err, "Failed to parse arguments.")
+		return burrito.WrapError(err, "Failed to parse arguments.")
 	}
 	config, err := LoadConfigAsMap()
 	if err != nil {
-		return WrapError(err, "Unable to load config file.")
+		return burrito.WrapError(err, "Unable to load config file.")
 	}
 	// Get parts of config file required for installation
 	dataPath, err := dataPathFromConfigMap(config)
 	if err != nil {
-		return WrapError(err, "Failed to get data path from config file.")
+		return burrito.WrapError(err, "Failed to get data path from config file.")
 	}
 	filterDefinitions, err := filterDefinitionsFromConfigMap(config)
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err,
 			"Failed to get the list of filter definitions from config file.")
 	}
 	useAppData, err := useAppDataFromConfigMap(config)
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Failed to get the value of useAppData property from the "+
 				"config file.",
 		)
@@ -61,13 +62,13 @@ func Install(filters []string, force, debug bool) error {
 	// Get dotRegolithPath
 	dotRegolithPath, err := GetDotRegolith(useAppData, false, ".")
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
 	// Lock the session
 	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
 	if sessionLockErr != nil {
-		return WrapError(sessionLockErr, aquireSessionLockError)
+		return burrito.WrapError(sessionLockErr, aquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
 	// Check if the filters are already installed if force mode is disabled
@@ -75,7 +76,7 @@ func Install(filters []string, force, debug bool) error {
 		for _, parsedArg := range parsedArgs {
 			_, ok := filterDefinitions[parsedArg.name]
 			if ok {
-				return WrappedErrorf(
+				return burrito.WrappedErrorf(
 					"The filter is already on the filter definitions list.\n"+
 						"Filter: %s\n"+
 						"If you want to force the installation of the filter, "+
@@ -91,7 +92,7 @@ func Install(filters []string, force, debug bool) error {
 		remoteFilterDefinition, err := FilterDefinitionFromTheInternet(
 			parsedArg.url, parsedArg.name, parsedArg.version)
 		if err != nil {
-			return WrapErrorf(
+			return burrito.WrapErrorf(
 				err,
 				"Unable to download the filter definition from the internet.\n"+
 					"Filter repository Url: %s\n"+
@@ -109,7 +110,7 @@ func Install(filters []string, force, debug bool) error {
 	// Download the filter definitions
 	err = installFilters(filterInstallers, force, dataPath, dotRegolithPath)
 	if err != nil {
-		return WrapError(err, "Failed to install filters.")
+		return burrito.WrapError(err, "Failed to install filters.")
 	}
 	// Add the filters to the config
 	for name, downloadedFilter := range filterInstallers {
@@ -120,7 +121,7 @@ func Install(filters []string, force, debug bool) error {
 	jsonBytes, _ := json.MarshalIndent(config, "", "\t")
 	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err,
 			"Successfully downloaded %v filters"+
 				"but failed to update the config file.\n"+
@@ -149,26 +150,26 @@ func InstallAll(force, debug bool) error {
 	configMap, err1 := LoadConfigAsMap()
 	config, err2 := ConfigFromObject(configMap)
 	if err := firstErr(err1, err2); err != nil {
-		return WrapError(err, "Failed to load config.json.")
+		return burrito.WrapError(err, "Failed to load config.json.")
 	}
 	// Get dotRegolithPath
 	dotRegolithPath, err := GetDotRegolith(
 		config.RegolithProject.UseAppData, false, ".")
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
 	// Lock the session
 	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
 	if sessionLockErr != nil {
-		return WrapError(sessionLockErr, aquireSessionLockError)
+		return burrito.WrapError(sessionLockErr, aquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
 	// Install the filters
 	err = installFilters(
 		config.FilterDefinitions, force, config.DataPath, dotRegolithPath)
 	if err != nil {
-		return WrapError(err, "Could not install filters.")
+		return burrito.WrapError(err, "Could not install filters.")
 	}
 	Logger.Info("Successfully installed the filters.")
 	return sessionLockErr // Return the error from the defer function
@@ -186,32 +187,32 @@ func runOrWatch(profileName string, debug, watch bool) error {
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
-		return WrapError(err, "Could not load \"config.json\".")
+		return burrito.WrapError(err, "Could not load \"config.json\".")
 	}
 	config, err := ConfigFromObject(configJson)
 	if err != nil {
-		return WrapError(err, "Could not load \"config.json\".")
+		return burrito.WrapError(err, "Could not load \"config.json\".")
 	}
 	profile, ok := config.Profiles[profileName]
 	if !ok {
-		return WrappedErrorf(
+		return burrito.WrappedErrorf(
 			"Profile %q does not exist in the configuration.", profileName)
 	}
 	// Get dotRegolithPath
 	dotRegolithPath, err := GetDotRegolith(
 		config.RegolithProject.UseAppData, false, ".")
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
 	err = CreateDirectoryIfNotExists(dotRegolithPath)
 	if err != nil {
-		return WrapErrorf(err, osMkdirError, dotRegolithPath)
+		return burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
 	// Lock the session
 	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
 	if sessionLockErr != nil {
-		return WrapError(sessionLockErr, aquireSessionLockError)
+		return burrito.WrapError(sessionLockErr, aquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
 	// Check the filters of the profile
@@ -234,7 +235,7 @@ func runOrWatch(profileName string, debug, watch bool) error {
 			if err != nil {
 				Logger.Errorf(
 					"Failed to run profile %q: %s",
-					profileName, PassError(err).Error())
+					profileName, burrito.PassError(err).Error())
 			} else {
 				Logger.Infof("Successfully ran the %q profile.", profileName)
 			}
@@ -246,7 +247,7 @@ func runOrWatch(profileName string, debug, watch bool) error {
 	}
 	err = RunProfile(context)
 	if err != nil {
-		return WrapErrorf(err, "Failed to run profile %q", profileName)
+		return burrito.WrapErrorf(err, "Failed to run profile %q", profileName)
 	}
 	Logger.Infof("Successfully ran the %q profile.", profileName)
 	return sessionLockErr // Return the error from the defer function
@@ -273,15 +274,15 @@ func Tool(filterName string, filterArgs []string, debug bool) error {
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
-		return WrapError(err, "Could not load \"config.json\".")
+		return burrito.WrapError(err, "Could not load \"config.json\".")
 	}
 	config, err := ConfigFromObject(configJson)
 	if err != nil {
-		return WrapError(err, "Could not load \"config.json\".")
+		return burrito.WrapError(err, "Could not load \"config.json\".")
 	}
 	filterDefinition, ok := config.FilterDefinitions[filterName]
 	if !ok {
-		return WrappedErrorf(
+		return burrito.WrappedErrorf(
 			"Unable to find the filter on the \"filterDefinitions\" list "+
 				"of the \"config.json\" file.\n"+
 				"Filter name: %s", filterName)
@@ -290,17 +291,17 @@ func Tool(filterName string, filterArgs []string, debug bool) error {
 	dotRegolithPath, err := GetDotRegolith(
 		config.RegolithProject.UseAppData, false, ".")
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
 	err = CreateDirectoryIfNotExists(dotRegolithPath)
 	if err != nil {
-		return WrapErrorf(err, osMkdirError, dotRegolithPath)
+		return burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
 	// Lock the session
 	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
 	if sessionLockErr != nil {
-		return WrapError(sessionLockErr, aquireSessionLockError)
+		return burrito.WrapError(sessionLockErr, aquireSessionLockError)
 	}
 	defer func() {
 		// WARNING: sessionLockError is not reported in case of different errors.
@@ -315,7 +316,7 @@ func Tool(filterName string, filterArgs []string, debug bool) error {
 	}
 	filterRunner, err := filterDefinition.CreateFilterRunner(runConfiguration)
 	if err != nil {
-		return WrapErrorf(err, createFilterRunnerError, filterName)
+		return burrito.WrapErrorf(err, createFilterRunnerError, filterName)
 	}
 	// Create run context
 	path, _ := filepath.Abs(".")
@@ -330,24 +331,24 @@ func Tool(filterName string, filterArgs []string, debug bool) error {
 	// Check the filter
 	err = filterRunner.Check(runContext)
 	if err != nil {
-		return WrapErrorf(err, filterRunnerCheckError, filterName)
+		return burrito.WrapErrorf(err, filterRunnerCheckError, filterName)
 	}
 	// Setup tmp directory
 	err = SetupTmpFiles(*config, dotRegolithPath)
 	if err != nil {
-		return WrapErrorf(err, setupTmpFilesError, dotRegolithPath)
+		return burrito.WrapErrorf(err, setupTmpFilesError, dotRegolithPath)
 	}
 	// Run the filter
 	Logger.Infof("Running the \"%s\" filter.", filterName)
 	_, err = filterRunner.Run(runContext)
 	if err != nil {
-		return WrapErrorf(err, filterRunnerRunError, filterName)
+		return burrito.WrapErrorf(err, filterRunnerRunError, filterName)
 	}
 	// Export files to the source files
 	Logger.Info("Overwriting the source files.")
 	err = InplaceExportProject(config, dotRegolithPath)
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Failed to overwrite the source files with generated files.")
 	}
 	Logger.Infof("Successfully ran the \"%s\" filter.", filterName)
@@ -365,14 +366,14 @@ func Init(debug bool) error {
 
 	wd, err := os.Getwd()
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, osGetwdError)
 	}
 	if isEmpty, err := IsDirEmpty(wd); err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Failed to check if %s is an empty directory.", wd)
 	} else if !isEmpty {
-		return WrappedErrorf(
+		return burrito.WrappedErrorf(
 			"Cannot initialze the project, because %s is not an empty "+
 				"directory.\n\"regolith init\" can be used only in empty "+
 				"directories.", wd)
@@ -411,7 +412,7 @@ func Init(debug bool) error {
 
 	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
 	if err != nil {
-		return WrapErrorf(err, "Failed to write data to %q", ConfigFilePath)
+		return burrito.WrapErrorf(err, "Failed to write data to %q", ConfigFilePath)
 	}
 	var ConfigurationFolders = []string{
 		"packs",
@@ -438,7 +439,7 @@ func Init(debug bool) error {
 func clean(dotRegolithPath string) error {
 	err := os.RemoveAll(dotRegolithPath)
 	if err != nil {
-		return WrapErrorf(err, "failed to remove %q folder", dotRegolithPath)
+		return burrito.WrapErrorf(err, "failed to remove %q folder", dotRegolithPath)
 	}
 	return nil
 }
@@ -448,11 +449,11 @@ func CleanCurrentProject() error {
 	// Load the useAppData property form config
 	config, err := LoadConfigAsMap()
 	if err != nil {
-		return WrapError(err, "Unable to load config file.")
+		return burrito.WrapError(err, "Unable to load config file.")
 	}
 	useAppData, err := useAppDataFromConfigMap(config)
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Failed to get the value of useAppData property from the "+
 				"config file.",
 		)
@@ -473,13 +474,13 @@ func CleanCurrentProject() error {
 		Logger.Infof("Cleaning the cache in application data folder...")
 		dotRegolithPath, err := GetDotRegolith(true, true, ".")
 		if err != nil {
-			return WrapError(
+			return burrito.WrapError(
 				err, "Unable to get the path to regolith cache folder.")
 		}
 		Logger.Infof("Regolith cache folder is: %s", dotRegolithPath)
 		err = clean(dotRegolithPath)
 		if err != nil {
-			return WrapErrorf(
+			return burrito.WrapErrorf(
 				err, "Failed to clean the cache from %q.", dotRegolithPath)
 		}
 	} else {
@@ -494,7 +495,7 @@ func CleanCurrentProject() error {
 		Logger.Infof("Cleaning \".regolith\"...")
 		err = clean(".regolith")
 		if err != nil {
-			return WrapErrorf(
+			return burrito.WrapErrorf(
 				err, "Failed to clean the cache from \".regolith\".")
 		}
 	}
@@ -507,13 +508,13 @@ func CleanUserCache() error {
 	// App data enabled - use user cache dir
 	userCache, err := os.UserCacheDir()
 	if err != nil {
-		return WrappedError(osUserCacheDirError)
+		return burrito.WrappedError(osUserCacheDirError)
 	}
 	regolithCacheFiles := filepath.Join(userCache, appDataCachePath)
 	Logger.Infof("Regolith cache files are located in: %s", regolithCacheFiles)
 	err = os.RemoveAll(regolithCacheFiles)
 	if err != nil {
-		return WrapErrorf(err, "failed to remove %q folder", regolithCacheFiles)
+		return burrito.WrapErrorf(err, "failed to remove %q folder", regolithCacheFiles)
 	}
 	os.MkdirAll(regolithCacheFiles, 0755)
 	Logger.Infof("All regolith files cached in user app data cleaned.")

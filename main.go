@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os"
 
 	"github.com/fatih/color"
@@ -179,7 +180,7 @@ func main() {
 		Short: "Initializes a Regolith project in current directory",
 		Long:  regolithInitDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Init(regolith.Debug)
+			err = regolith.Init(burrito.Debug)
 		},
 	}
 	subcomands = append(subcomands, cmdInit)
@@ -190,7 +191,7 @@ func main() {
 		Short: "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
 		Long:  regolithInitDesc,
 		Run: func(cmd *cobra.Command, filters []string) {
-			err = regolith.Install(filters, force, regolith.Debug)
+			err = regolith.Install(filters, force, burrito.Debug)
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
@@ -202,7 +203,7 @@ func main() {
 		Short: "Installs all undownloaded or outdated filters defined in filterDefintions list",
 		Long:  regolithInstallAllDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.InstallAll(force, regolith.Debug)
+			err = regolith.InstallAll(force, burrito.Debug)
 		},
 	}
 	cmdInstallAll.Flags().BoolVarP(
@@ -218,7 +219,7 @@ func main() {
 			if len(args) != 0 {
 				profile = args[0]
 			}
-			err = regolith.Run(profile, regolith.Debug)
+			err = regolith.Run(profile, burrito.Debug)
 		},
 	}
 	subcomands = append(subcomands, cmdRun)
@@ -232,7 +233,7 @@ func main() {
 			if len(args) != 0 {
 				profile = args[0]
 			}
-			err = regolith.Watch(profile, regolith.Debug)
+			err = regolith.Watch(profile, burrito.Debug)
 		},
 	}
 	subcomands = append(subcomands, cmdWatch)
@@ -243,7 +244,7 @@ func main() {
 		Long:  regolithToolDesc,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
-				err = regolith.WrappedError(
+				err = burrito.WrappedError(
 					"You must specify a filter name when running " +
 						"the \"regolith tool\" command.\n" +
 						"Use \"regolith help tool\" to learn more details.")
@@ -251,7 +252,7 @@ func main() {
 			}
 			filter := args[0]
 			filterArgs := args[1:] // First arg is the filter name
-			err = regolith.Tool(filter, filterArgs, regolith.Debug)
+			err = regolith.Tool(filter, filterArgs, burrito.Debug)
 		},
 	}
 	subcomands = append(subcomands, cmdTool)
@@ -262,7 +263,7 @@ func main() {
 		Short: "Cleans Regolith cache",
 		Long:  regolithCleanDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Clean(regolith.Debug, userCache)
+			err = regolith.Clean(burrito.Debug, userCache)
 		},
 	}
 	cmdClean.Flags().BoolVarP(
@@ -271,7 +272,7 @@ func main() {
 	subcomands = append(subcomands, cmdClean)
 	// add --debug flag to every command
 	for _, cmd := range subcomands {
-		cmd.Flags().BoolVarP(&regolith.Debug, "debug", "d", false, "Enables debugging")
+		cmd.Flags().BoolVarP(&burrito.Debug, "debug", "d", false, "Enables debugging")
 	}
 	// Build and run CLI
 	rootCmd.AddCommand(subcomands...)

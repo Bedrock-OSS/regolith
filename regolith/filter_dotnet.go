@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"encoding/json"
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os"
 	"os/exec"
 )
@@ -20,18 +21,18 @@ func DotNetFilterDefinitionFromObject(id string, obj map[string]interface{}) (*D
 	filter := &DotNetFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	pathObj, ok := obj["path"]
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyMissingError, "path")
+		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "path")
 	}
 	path, ok := pathObj.(string)
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyTypeError, "path", "string")
+		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "path", "string")
 	}
 	filter.Path = path
 	return filter, nil
 }
 func (f *DotNetFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, PassError(err)
+		return false, burrito.PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -53,7 +54,7 @@ func (f *DotNetFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return WrapError(err, "Failed to run .Net filter")
+			return burrito.WrapError(err, "Failed to run .Net filter")
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -70,7 +71,7 @@ func (f *DotNetFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return PassError(err)
+			return burrito.PassError(err)
 		}
 	}
 	return nil
@@ -79,7 +80,7 @@ func (f *DotNetFilter) run(context RunContext) error {
 func (f *DotNetFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, filterFromObjectError)
+		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
 	filter := &DotNetFilter{
 		Filter:     *basicFilter,
@@ -95,14 +96,14 @@ func (f *DotNetFilterDefinition) InstallDependencies(*RemoteFilterDefinition, st
 func (f *DotNetFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("dotnet")
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err,
 			".Net not found, download and install it"+
 				" from https://dotnet.microsoft.com/download")
 	}
 	cmd, err := exec.Command("dotnet", "--version").Output()
 	if err != nil {
-		return WrapError(err, "Failed to check .Net version")
+		return burrito.WrapError(err, "Failed to check .Net version")
 	}
 	cmdStr := string(cmd)
 	if len(cmdStr) > 1 {
