@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"go/constant"
 	"go/token"
 	"go/types"
@@ -12,10 +13,10 @@ func EvalCondition(condition string) (bool, error) {
 	t := preparePackage()
 	eval, err := types.Eval(token.NewFileSet(), t, token.NoPos, condition)
 	if err != nil {
-		return false, WrapErrorf(err, "Failed to evaluate condition: %s", condition)
+		return false, burrito.WrapErrorf(err, "Failed to evaluate condition: %s", condition)
 	}
 	if eval.Type != types.Typ[types.Bool] && eval.Type != types.Typ[types.UntypedBool] {
-		return false, WrappedErrorf("Condition did not evaluate to a boolean: %s", condition)
+		return false, burrito.WrappedErrorf("Condition did not evaluate to a boolean: %s", condition)
 	}
 	Logger.Debugf("Condition evaluated to: %t", constant.BoolVal(eval.Value))
 	return constant.BoolVal(eval.Value), nil
@@ -26,7 +27,7 @@ func preparePackage() *types.Package {
 	addStringConstant(t, "os", runtime.GOOS)
 	addStringConstant(t, "arch", runtime.GOARCH)
 	addStringConstant(t, "version", Version)
-	addBoolConstant(t, "debug", Debug)
+	addBoolConstant(t, "debug", burrito.Debug)
 	return t
 }
 

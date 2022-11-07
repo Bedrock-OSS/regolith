@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"encoding/json"
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"path/filepath"
 )
 
@@ -22,11 +23,11 @@ func ExeFilterDefinitionFromObject(
 		FilterDefinition: *FilterDefinitionFromObject(id)}
 	exeObj, ok := obj["exe"]
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyMissingError, "exe")
+		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "exe")
 	}
 	exe, ok := exeObj.(string)
 	if !ok {
-		return nil, WrappedErrorf(
+		return nil, burrito.WrappedErrorf(
 			jsonPropertyTypeError, "exe", "string")
 	}
 
@@ -36,7 +37,7 @@ func ExeFilterDefinitionFromObject(
 
 func (f *ExeFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(f.Settings, context); err != nil {
-		return false, PassError(err)
+		return false, burrito.PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -46,7 +47,7 @@ func (f *ExeFilterDefinition) CreateFilterRunner(
 ) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, filterFromObjectError)
+		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
 	filter := &ExeFilter{
 		Filter:     *basicFilter,
@@ -88,7 +89,7 @@ func (f *ExeFilter) run(
 				context.DotRegolithPath))
 	}
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Failed to run exe file.\nPath: %s", f.Definition.Exe)
 	}
 	return nil
@@ -101,7 +102,7 @@ func executeExeFile(id string,
 	Logger.Debugf("Running exe file %s:", exe)
 	err := RunSubProcess(exe, args, filterDir, workingDir, id)
 	if err != nil {
-		return WrapErrorf(err, runSubProcessError)
+		return burrito.WrapErrorf(err, runSubProcessError)
 	}
 	return nil
 }

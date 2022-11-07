@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os"
 	"path/filepath"
 )
@@ -14,7 +15,7 @@ func GetExportPaths(
 	if exportTarget.Target == "development" {
 		comMojang, err := FindMojangDir()
 		if err != nil {
-			return "", "", WrapError(
+			return "", "", burrito.WrapError(
 				err, "Failed to find \"com.mojang\" directory.")
 		}
 
@@ -25,7 +26,7 @@ func GetExportPaths(
 	} else if exportTarget.Target == "preview" {
 		comMojang, err := FindPreviewDir()
 		if err != nil {
-			return "", "", WrapError(
+			return "", "", burrito.WrapError(
 				err, "Failed to find preview \"com.mojang\" directory.")
 		}
 
@@ -39,7 +40,7 @@ func GetExportPaths(
 	} else if exportTarget.Target == "world" {
 		if exportTarget.WorldPath != "" {
 			if exportTarget.WorldName != "" {
-				return "", "", WrappedError(
+				return "", "", burrito.WrappedError(
 					"Using both \"worldName\" and \"worldPath\" is not" +
 						" allowed.")
 			}
@@ -50,12 +51,12 @@ func GetExportPaths(
 		} else if exportTarget.WorldName != "" {
 			dir, err := FindMojangDir()
 			if err != nil {
-				return "", "", WrapError(
+				return "", "", burrito.WrapError(
 					err, "Failed to find \"com.mojang\" directory.")
 			}
 			worlds, err := ListWorlds(dir)
 			if err != nil {
-				return "", "", WrapError(err, "Failed to list worlds.")
+				return "", "", burrito.WrapError(err, "Failed to list worlds.")
 			}
 			for _, world := range worlds {
 				if world.Name == exportTarget.WorldName {
@@ -66,7 +67,7 @@ func GetExportPaths(
 				}
 			}
 		} else {
-			err = WrappedError(
+			err = burrito.WrappedError(
 				"The \"world\" export target requires either a " +
 					"\"worldName\" or \"worldPath\" property")
 		}
@@ -74,7 +75,7 @@ func GetExportPaths(
 		bpPath = "build/BP/"
 		rpPath = "build/RP/"
 	} else {
-		err = WrappedErrorf(
+		err = burrito.WrappedErrorf(
 			"Export target %q is not valid", exportTarget.Target)
 	}
 	return
@@ -88,7 +89,7 @@ func ExportProject(
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Failed to get generate export paths.")
 	}
 
@@ -96,7 +97,7 @@ func ExportProject(
 	editedFiles := LoadEditedFiles(dotRegolithPath)
 	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err,
 			"Safety mechanism stopped Regolith to protect unexpected files "+
 				"from your export targets.\n"+
@@ -111,13 +112,13 @@ func ExportProject(
 	// Spooky, I hope file protection works, and it won't do any damage
 	err = os.RemoveAll(bpPath)
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Failed to clear behavior pack from build path %q.\n"+
 				"Are user permissions correct?", bpPath)
 	}
 	err = os.RemoveAll(rpPath)
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Failed to clear resource pack from build path %q.\n"+
 				"Are user permissions correct?", rpPath)
 	}
@@ -131,7 +132,7 @@ func ExportProject(
 			err1 = os.MkdirAll(dataPath, 0755)
 		}
 		if err1 != nil {
-			return WrapErrorf(
+			return burrito.WrapErrorf(
 				err, "Failed to read the files from the data path %q",
 				dataPath)
 		}
@@ -139,20 +140,20 @@ func ExportProject(
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
 	revertibleOps, err := NewrevertibleFsOperations(backupPath)
 	if err != nil {
-		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
+		return burrito.WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
 	for _, path := range paths {
 		path := filepath.Join(dataPath, path.Name())
 		err = revertibleOps.DeleteDir(path)
 		if err != nil {
 			handlerError := revertibleOps.Undo()
-			mainError := WrapErrorf(err, updateSourceFilesError, path)
+			mainError := burrito.WrapErrorf(err, updateSourceFilesError, path)
 			if handlerError != nil {
-				return WrapErrorHandlerError(
+				return burrito.WrapErrorHandlerError(
 					mainError, handlerError, errorConnector, fsUndoError)
 			}
 			if handlerError := revertibleOps.Close(); handlerError != nil {
-				return PassErrorHandlerError(
+				return burrito.PassErrorHandlerError(
 					mainError, handlerError, errorConnector)
 			}
 			return mainError
@@ -162,26 +163,26 @@ func ExportProject(
 	Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
 	err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
 	if err != nil {
-		return WrapError(err, "Failed to export behavior pack.")
+		return burrito.WrapError(err, "Failed to export behavior pack.")
 	}
 	Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
 	err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
 	if err != nil {
-		return WrapError(err, "Failed to export resource pack.")
+		return burrito.WrapError(err, "Failed to export resource pack.")
 	}
 	err = revertibleOps.MoveOrCopyDir(
 		filepath.Join(dotRegolithPath, "tmp/data"), dataPath)
 	if err != nil {
 		handlerError := revertibleOps.Undo()
-		mainError := WrapError(
+		mainError := burrito.WrapError(
 			err, "Failed to move the filter data back to the project's "+
 				"data folder.")
 		if handlerError != nil {
-			return WrapErrorHandlerError(
+			return burrito.WrapErrorHandlerError(
 				mainError, handlerError, errorConnector, fsUndoError)
 		}
 		if handlerError := revertibleOps.Close(); handlerError != nil {
-			return PassErrorHandlerError(
+			return burrito.PassErrorHandlerError(
 				mainError, handlerError, errorConnector)
 		}
 		return mainError
@@ -190,18 +191,18 @@ func ExportProject(
 	// Update or create edited_files.json
 	err = editedFiles.UpdateFromPaths(rpPath, bpPath)
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err,
 			"Failed to create a list of files edited by this 'regolith run'")
 	}
 	err = editedFiles.Dump(dotRegolithPath)
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Failed to update the list of the files edited by Regolith."+
 				"This may cause the next run to fail.")
 	}
 	if err := revertibleOps.Close(); err != nil {
-		return PassError(err)
+		return burrito.PassError(err)
 	}
 	return nil
 }
@@ -216,7 +217,7 @@ func InplaceExportProject(
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
 	revertibleOps, err := NewrevertibleFsOperations(backupPath)
 	if err != nil {
-		return WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
+		return burrito.WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
 	// Schedule Undo in case of an revertible ops error and schedule Close()
 	defer func() {
@@ -224,20 +225,20 @@ func InplaceExportProject(
 			Logger.Warnf("Reverting changes...")
 			handlerError := revertibleOps.Undo()
 			if handlerError != nil {
-				err = WrapErrorHandlerError(
+				err = burrito.WrapErrorHandlerError(
 					err, handlerError, errorConnector,
 					fsUndoError)
 				return
 			}
 			handlerError = revertibleOps.Close()
 			if handlerError != nil {
-				err = PassErrorHandlerError(
+				err = burrito.PassErrorHandlerError(
 					err, handlerError, errorConnector)
 			}
 		} else { // No previous error but Close() must be called
 			err = revertibleOps.Close()
 			if err != nil {
-				err = PassError(err)
+				err = burrito.PassError(err)
 			}
 		}
 	}()
@@ -248,7 +249,7 @@ func InplaceExportProject(
 		if deleteDir != "" {
 			err = revertibleOps.DeleteDir(deleteDir)
 			if err != nil {
-				err = WrapErrorf(
+				err = burrito.WrapErrorf(
 					err, updateSourceFilesError, deleteDir)
 				return err // Overwritten by defer
 			}
@@ -265,7 +266,7 @@ func InplaceExportProject(
 		if source != "" {
 			err = revertibleOps.MoveOrCopy(source, target, true)
 			if err != nil {
-				err = WrapErrorf(
+				err = burrito.WrapErrorf(
 					err, moveOrCopyError, source, target)
 				return err // Overwritten by defer
 			}

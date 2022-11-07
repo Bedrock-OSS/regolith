@@ -2,6 +2,7 @@
 package regolith
 
 import (
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -30,12 +31,12 @@ func installFilters(
 	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
 	err := CreateDirectoryIfNotExists(joinedPath)
 	if err != nil {
-		return WrapErrorf(err, osMkdirError, "cache/filters")
+		return burrito.WrapErrorf(err, osMkdirError, "cache/filters")
 	}
 	joinedPath = filepath.Join(dotRegolithPath, "cache/venvs")
 	err = CreateDirectoryIfNotExists(joinedPath)
 	if err != nil {
-		return WrapErrorf(err, osMkdirError, "cache/venvs")
+		return burrito.WrapErrorf(err, osMkdirError, "cache/venvs")
 	}
 
 	// Download all of the remote filters
@@ -54,7 +55,7 @@ func installFilters(
 			// Download the remote filter, and its dependencies
 			err := remoteFilter.Update(force, dotRegolithPath)
 			if err != nil {
-				return WrapErrorf(err, remoteFilterDownloadError, name)
+				return burrito.WrapErrorf(err, remoteFilterDownloadError, name)
 			}
 			// Copy the data of the remote filter to the data path
 			remoteFilter.CopyFilterData(dataPath, dotRegolithPath)
@@ -65,7 +66,7 @@ func installFilters(
 			Logger.Infof("Installing %q filter dependencies...", name)
 			err = filterDefinition.InstallDependencies(nil, dotRegolithPath)
 			if err != nil {
-				return WrapErrorf(
+				return burrito.WrapErrorf(
 					err,
 					"Failed to install dependencies of the filter.\nFilter: %s.",
 					name)
@@ -82,7 +83,7 @@ func parseInstallFilterArgs(
 ) ([]*parsedInstallFilterArg, error) {
 	result := []*parsedInstallFilterArg{}
 	if len(filters) == 0 {
-		return nil, WrappedError(
+		return nil, burrito.WrappedError(
 			"No filters specified.\n" +
 				"Please specify at least one filter to install.")
 	}
@@ -99,7 +100,7 @@ func parseInstallFilterArgs(
 		if strings.Contains(arg, "==") {
 			splitStr := strings.Split(arg, "==")
 			if len(splitStr) != 2 {
-				return nil, WrappedErrorf(
+				return nil, burrito.WrappedErrorf(
 					"Unable to parse argument.\n"+
 						"Argument: %s\n"+
 						"The argument should contain an URL and optionally a "+
@@ -128,7 +129,7 @@ func parseInstallFilterArgs(
 			name = url
 			url, err = ResolveUrl(name)
 			if err != nil {
-				return nil, WrapErrorf(
+				return nil, burrito.WrapErrorf(
 					err,
 					"Unable to resolve filter name to URL.\n"+
 						"Filter name: %s", name)
@@ -136,7 +137,7 @@ func parseInstallFilterArgs(
 		}
 		key := [2]string{url, name}
 		if _, ok := parsedArgs[key]; ok {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err, "Duplicate filter:\nURL: %s\nFilter name: %s",
 				url, name)
 		}
@@ -177,7 +178,7 @@ func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 			return version, nil
 		}
 	}
-	return "", WrappedError(
+	return "", burrito.WrappedError(
 		"Unable to find version of the filter that satisfies the " +
 			"specified constraints.")
 }
@@ -191,7 +192,7 @@ func GetLatestRemoteFilterTag(url, name string) (string, error) {
 			lastTag := tags[len(tags)-1]
 			return lastTag, nil
 		}
-		return "", WrappedError(
+		return "", burrito.WrappedError(
 			"No version tags found for the filter on its repository.")
 	}
 	return "", err
@@ -204,7 +205,7 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 	output, err := exec.Command("git", commandArgs...).Output()
 	if err != nil {
 		command := "git " + strings.Join(commandArgs, " ")
-		return nil, WrapErrorf(err, execCommandError, command)
+		return nil, burrito.WrapErrorf(err, execCommandError, command)
 	}
 	// Go line by line though the output
 	var tags []string
@@ -233,7 +234,7 @@ func GetHeadSha(url, name string) (string, error) {
 		"ls-remote", "--symref", "https://" + url, "HEAD"}
 	output, err := exec.Command("git", commandArgs...).Output()
 	if err != nil {
-		return "", WrapErrorf(err, execCommandError, name)
+		return "", burrito.WrapErrorf(err, execCommandError, name)
 	}
 	// The result is on the second line.
 	lines := strings.Split(string(output), "\n")

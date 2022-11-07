@@ -1,5 +1,7 @@
 package regolith
 
+import "github.com/Bedrock-OSS/go-burrito/burrito"
+
 type ProfileFilter struct {
 	Filter
 	Profile string `json:"-"`
@@ -21,13 +23,13 @@ func (f *ProfileFilter) Check(context RunContext) error {
 	// Check if the profile exists
 	profile, ok := context.Config.Profiles[f.Profile]
 	if !ok {
-		return WrappedErrorf("Profile not found.\nProfile: %s", f.Profile)
+		return burrito.WrappedErrorf("Profile not found.\nProfile: %s", f.Profile)
 	}
 	// Check if the profile we're nesting wasn't already nested
 	parent := context.Parent
 	for parent != nil {
 		if parent.Profile == f.Profile {
-			return WrappedErrorf(
+			return burrito.WrappedErrorf(
 				"Found circular dependency in the profile."+
 					"Profile: %s", f.Profile)
 		}

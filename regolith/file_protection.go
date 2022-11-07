@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"encoding/json"
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -39,18 +40,18 @@ func LoadEditedFiles(dotRegolithPath string) EditedFiles {
 func (f *EditedFiles) Dump(dotRegolithPath string) error {
 	result, err := json.MarshalIndent(f, "", "\t")
 	if err != nil { // This should never happen.
-		return WrapError(err, "Failed to marshal edited files list JSON.")
+		return burrito.WrapError(err, "Failed to marshal edited files list JSON.")
 	}
 	// Create parent directory of EditedFilesPath
 	efp := filepath.Join(dotRegolithPath, EditedFilesPath)
 	parentDir := filepath.Dir(efp)
 	err = os.MkdirAll(parentDir, 0755)
 	if err != nil {
-		return WrapErrorf(err, osMkdirError, parentDir)
+		return burrito.WrapErrorf(err, osMkdirError, parentDir)
 	}
 	err = os.WriteFile(efp, result, 0644)
 	if err != nil {
-		return WrapErrorf(err, fileWriteError, efp)
+		return burrito.WrapErrorf(err, fileWriteError, efp)
 	}
 	return nil
 }
@@ -64,7 +65,7 @@ func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
 	}
 	err := checkDeletionSafety(rpPath, files)
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Deletion safety check for resource pack failed.")
 	}
 	files, ok = f.Bp[bpPath]
@@ -73,7 +74,7 @@ func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
 	}
 	err = checkDeletionSafety(bpPath, files)
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "Deletion safety check for behavior pack failed.")
 	}
 	return nil
@@ -84,11 +85,11 @@ func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
 func (f *EditedFiles) UpdateFromPaths(rpPath string, bpPath string) error {
 	rpFiles, err := listFiles(rpPath)
 	if err != nil {
-		return WrapError(err, "Failed to list resource pack files.")
+		return burrito.WrapError(err, "Failed to list resource pack files.")
 	}
 	bpFiles, err := listFiles(bpPath)
 	if err != nil {
-		return WrapError(err, "Failed to list behavior pack files.")
+		return burrito.WrapError(err, "Failed to list behavior pack files.")
 	}
 	f.Rp[rpPath] = rpFiles
 	f.Bp[bpPath] = bpFiles
@@ -113,19 +114,19 @@ func listFiles(path string) ([]string, error) {
 	err := filepath.WalkDir(path,
 		func(s string, d fs.DirEntry, e error) error {
 			if e != nil {
-				return PassError(e)
+				return burrito.PassError(e)
 			}
 			if !d.IsDir() {
 				relpath, err := filepath.Rel(path, s)
 				if err != nil {
-					return WrapErrorf(err, osRelError, path, s)
+					return burrito.WrapErrorf(err, osRelError, path, s)
 				}
 				result = append(result, relpath)
 			}
 			return nil
 		})
 	if err != nil {
-		return make([]string, 0), WrapErrorf(err, osWalkError, path)
+		return make([]string, 0), burrito.WrapErrorf(err, osWalkError, path)
 	}
 	return result, nil
 }
@@ -142,28 +143,28 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 		if os.IsNotExist(err) {
 			return nil // directory doesn't exist there is nothing to check
 		}
-		return WrapErrorf(err, osStatErrorAny, path)
+		return burrito.WrapErrorf(err, osStatErrorAny, path)
 	} else if !stats.IsDir() {
-		return WrappedErrorf(isDirNotADirError, path)
+		return burrito.WrappedErrorf(isDirNotADirError, path)
 	}
 	err = filepath.WalkDir(path,
 		func(s string, d fs.DirEntry, e error) error {
 			if e != nil {
-				return WrapErrorf(e, osWalkError, path)
+				return burrito.WrapErrorf(e, osWalkError, path)
 			}
 			if d.IsDir() { // Directories aren't checked
 				return nil
 			}
 			relpath, err := filepath.Rel(path, s)
 			if err != nil {
-				return WrapErrorf(err, osRelError, path, s)
+				return burrito.WrapErrorf(err, osRelError, path, s)
 			}
 			s = relpath // remove path from the file path
 			const notRegolithFileError = "File is not on the list of files" +
 				" created by Regolith.\nPath: %s"
 			for {
 				if i >= len(removableFiles) {
-					return WrappedErrorf(notRegolithFileError, s)
+					return burrito.WrappedErrorf(notRegolithFileError, s)
 				}
 				currPath := removableFiles[i]
 				i++
@@ -171,13 +172,13 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 				if cmpVal == 0 { // found path on the list
 					break
 				} else if cmpVal < 0 { // this path won't be on the list
-					return WrappedErrorf(notRegolithFileError, s)
+					return burrito.WrappedErrorf(notRegolithFileError, s)
 				}
 			}
 			return nil
 		})
 	if err != nil {
-		return PassError(err)
+		return burrito.PassError(err)
 	}
 	return nil
 }

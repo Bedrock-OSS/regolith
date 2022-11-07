@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"encoding/json"
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,11 +25,11 @@ func NimFilterDefinitionFromObject(
 	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	scriptObj, ok := obj["script"]
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyMissingError, "script")
+		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "script")
 	}
 	script, ok := scriptObj.(string)
 	if !ok {
-		return nil, WrappedErrorf(
+		return nil, burrito.WrappedErrorf(
 			jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
@@ -50,7 +51,7 @@ func (f *NimFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return PassError(err)
+			return burrito.PassError(err)
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -67,7 +68,7 @@ func (f *NimFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return PassError(err)
+			return burrito.PassError(err)
 		}
 	}
 	return nil
@@ -75,7 +76,7 @@ func (f *NimFilter) run(context RunContext) error {
 
 func (f *NimFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, PassError(err)
+		return false, burrito.PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -83,7 +84,7 @@ func (f *NimFilter) Run(context RunContext) (bool, error) {
 func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, filterFromObjectError)
+		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
 	filter := &NimFilter{
 		Filter:     *basicFilter,
@@ -104,7 +105,7 @@ func (f *NimFilterDefinition) InstallDependencies(
 	joinedPath := filepath.Join(installLocation, f.Script)
 	scriptPath, err := filepath.Abs(joinedPath)
 	if err != nil {
-		return WrapErrorf(err, filepathAbsError, joinedPath)
+		return burrito.WrapErrorf(err, filepathAbsError, joinedPath)
 	}
 	filterPath := filepath.Dir(scriptPath)
 	if hasNimble(filterPath) {
@@ -112,7 +113,7 @@ func (f *NimFilterDefinition) InstallDependencies(
 		err := RunSubProcess(
 			"nimble", []string{"install --deps-only -y"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
-			return WrapErrorf(
+			return burrito.WrapErrorf(
 				err, "Failed to run nimble to install dependencies of a filter."+
 					"Filter name: %s.",
 				f.Id)
@@ -125,14 +126,14 @@ func (f *NimFilterDefinition) InstallDependencies(
 func (f *NimFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("nim")
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err,
 			"Nim not found, download and install it from"+
 				" https://nim-lang.org/")
 	}
 	cmd, err := exec.Command("nim", "--version").Output()
 	if err != nil {
-		return WrapError(err, "Failed to check Nim version.")
+		return burrito.WrapError(err, "Failed to check Nim version.")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
 	Logger.Debugf("Found Nim version %s.", a)
