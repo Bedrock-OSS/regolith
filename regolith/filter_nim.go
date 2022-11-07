@@ -117,7 +117,6 @@ func (f *NimFilterDefinition) InstallDependencies(
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	var requirementsPath string
 	if f.Requirements == "" {
-		Logger.Debug("Unable to find the requirements property, using the parent folder instead.")
 		// Deduce the path from the script path
 		joinedPath := filepath.Join(installLocation, f.Script)
 		scriptPath, err := filepath.Abs(joinedPath)

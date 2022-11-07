@@ -12,6 +12,10 @@ import (
 type NodeJSFilterDefinition struct {
 	FilterDefinition
 	Script string `json:"script,omitempty"`
+
+	// Requirements is an optional path to the folder with the package.json file.
+	// If not specified the parent of thhe script path is used instead.
+	Requirements string `json:"requirements,omitempty"`
 }
 
 type NodeJSFilter struct {
@@ -31,6 +35,16 @@ func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*N
 			jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
+
+	requirementsObj, ok := obj["requirements"]
+	if ok {
+		requirements, ok := requirementsObj.(string)
+		if !ok {
+			return nil, WrappedErrorf(
+				jsonPropertyTypeError, "requirements", "string")
+		}
+		filter.Requirements = requirements
+	}
 	return filter, nil
 }
 
@@ -96,16 +110,26 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 		installLocation = parent.GetDownloadPath(dotRegolithPath)
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
-	joinedPath := filepath.Join(installLocation, f.Script)
-	scriptPath, err := filepath.Abs(joinedPath)
-	if err != nil {
-		return WrapErrorf(err, filepathAbsError, joinedPath)
+	var requirementsPath string
+	if f.Requirements == "" {
+		// Deduce the path from the script path
+		joinedPath := filepath.Join(installLocation, f.Script)
+		scriptPath, err := filepath.Abs(joinedPath)
+		if err != nil {
+			return WrapErrorf(err, filepathAbsError, joinedPath)
+		}
+		requirementsPath = filepath.Dir(scriptPath)
+	} else {
+		joinedPath := filepath.Join(installLocation, f.Requirements)
+		installPath, err := filepath.Abs(joinedPath)
+		if err != nil {
+			return WrapErrorf(err, filepathAbsError, joinedPath)
+		}
+		requirementsPath = installPath
 	}
-
-	filterPath := filepath.Dir(scriptPath)
-	if hasPackageJson(filterPath) {
+	if hasPackageJson(requirementsPath) {
 		Logger.Info("Installing npm dependencies...")
-		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath, filterPath, ShortFilterName(f.Id))
+		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to run npm and install dependencies."+
