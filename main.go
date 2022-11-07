@@ -133,6 +133,27 @@ the Regolith data folder to remove the cache files of the projects that you don'
 You can clear caches of all projects stored in user data by using the "--user-cache" flag.
 `
 
+const regolithConfigDesc = `
+The config command is used to manage the user configuration of Regolith. It can access and modify
+the user configuration file. The data is stored in the application data folder in the
+"user_config.json" file.
+
+The behavior of the command changes based on the used flags and the number of provided arguments.
+The cheetsheet below shows the possible combinations of flags and arguments and what they do:
+
+Printing all properties:                        regolith config
+Printing specified property:                    regolith config <key>
+Setting property value:                         regolith config <key> <value>
+Deleting a property:                            regolith config <key> --delete
+Appending to a list proeprty:                   regolith config <key> <value> --append
+Replacing item in a list property:              regolith config <key> <value> --index <index>
+Deleting item in a list property:               regolith config <key> --index <index> --delete
+
+The printing commands can take the --full flag to print configuration with the default values
+included (if they're not defined in the config file). Without the flag, the undefined properties
+will be printed as null or empty list.
+`
+
 func main() {
 	// Schedule error handling
 	var err error
@@ -190,6 +211,10 @@ func main() {
 		Short: "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
 		Long:  regolithInitDesc,
 		Run: func(cmd *cobra.Command, filters []string) {
+			if len(filters) == 0 {
+				cmd.Help()
+				return
+			}
 			err = regolith.Install(filters, force, regolith.Debug)
 		},
 	}
@@ -243,10 +268,7 @@ func main() {
 		Long:  regolithToolDesc,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
-				err = regolith.WrappedError(
-					"You must specify a filter name when running " +
-						"the \"regolith tool\" command.\n" +
-						"Use \"regolith help tool\" to learn more details.")
+				cmd.Help()
 				return
 			}
 			filter := args[0]
@@ -265,16 +287,35 @@ func main() {
 			err = regolith.Clean(regolith.Debug, userCache)
 		},
 	}
+	// regolith config
+	cmdConfig := &cobra.Command{
+		Use:   "config [key] [value]",
+		Short: " Print or modify the user configuration.",
+		Long:  regolithConfigDesc,
+		Run: func(cmd *cobra.Command, args []string) {
+			regolith.InitLogging(regolith.Debug)
+			full, _ := cmd.Flags().GetBool("full")
+			delete, _ := cmd.Flags().GetBool("delete")
+			append, _ := cmd.Flags().GetBool("append")
+			index, _ := cmd.Flags().GetInt("index")
+			err = regolith.ManageConfig(regolith.Debug, full, delete, append, index, args)
+		},
+	}
+	cmdConfig.Flags().BoolP("full", "f", false, "When printing, prints the full configuration including default values.")
+	cmdConfig.Flags().BoolP("delete", "d", false, "Delete property")
+	cmdConfig.Flags().BoolP("append", "a", false, "Append value to array property")
+	cmdConfig.Flags().IntP("index", "i", -1, "The index of the array property on which to act")
+	subcomands = append(subcomands, cmdConfig)
+
 	cmdClean.Flags().BoolVarP(
 		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
 			"the current project")
 	subcomands = append(subcomands, cmdClean)
 	// add --debug flag to every command
 	for _, cmd := range subcomands {
-		cmd.Flags().BoolVarP(&regolith.Debug, "debug", "d", false, "Enables debugging")
+		cmd.Flags().BoolVarP(&regolith.Debug, "debug", "", false, "Enables debugging")
 	}
 	// Build and run CLI
 	rootCmd.AddCommand(subcomands...)
 	rootCmd.Execute()
-
 }

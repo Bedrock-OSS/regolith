@@ -2,12 +2,12 @@
 permalink: /docs/configuration
 layout: single
 classes: wide
-title: Configuration File
+title: Project Configuration File
 sidebar:
   nav: "sidebar"
 ---
 
-The configuration of regolith is stored inside of `config.json`, at the top level of your Regolith project. This file will be created when you run `regolith init`.
+The configuration of Regolith project is stored inside of `config.json`, at the top level of your Regolith project. This file will be created when you run `regolith init`.
 
 ## Project Config Standard
 

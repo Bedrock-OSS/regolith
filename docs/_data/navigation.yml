@@ -23,7 +23,7 @@ sidebar:
         url: /docs/troubleshooting
   - title: Project Configuration
     children:
-      - title: "Configuration File"
+      - title: "Project Configuration File"
         url: /docs/configuration
       - title: "Data Folder"
         url: /docs/data-folder
@@ -31,6 +31,10 @@ sidebar:
         url: /docs/export-targets
       - title: "Profiles"
         url: /docs/profiles
+  - title: User Configuration
+    children:
+      - title: "User Configuration"
+        url: /docs/user_config
   - title: Working with filters
     children:
       - title: "Installing and Updating Filters"

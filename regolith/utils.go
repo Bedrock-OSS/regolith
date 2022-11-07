@@ -278,19 +278,8 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 	}
 }
 
-// GetDotRegolith returns the path to the directory where Regolith stores
-// its cached data (like filters, Python venvs, etc.). If useAppData is set to
-// false it returns relative director: ".regolith" otherwise it returns path
-// inside the AppData directory. Based on the hash value of the
-// project's root directory. If the path isn't .regolith it also logs a message
-// which tells where the data is stored unless the silent flag is set to true.
-// The projectRoot path can be relative or absolute and is resolved to an
-// absolute path.
-func GetDotRegolith(useAppData, silent bool, projectRoot string) (string, error) {
-	// App data diabled - use .regolith
-	if !useAppData {
-		return ".regolith", nil
-	}
+// getAppDataDotRegolith gets the dotRegolithPath from th app data folder
+func getAppDataDotRegolith(silent bool, projectRoot string) (string, error) {
 	// App data enabled - use user cache dir
 	userCache, err := os.UserCacheDir()
 	if err != nil {
@@ -315,6 +304,27 @@ func GetDotRegolith(useAppData, silent bool, projectRoot string) (string, error)
 			dotRegolithPath)
 	}
 	return dotRegolithPath, nil
+}
+
+// GetDotRegolith returns the path to the directory where Regolith stores
+// its cached data (like filters, Python venvs, etc.). If user confg setting
+// for using app data by profiles is is set to false it returns relative
+// directory: ".regolith" otherwise it returns path inside the AppData directory.
+// Based on the hash value of the project's root directory. If the path isn't
+// .regolith it also logs a message which tells where the data is stored
+// unless the silent flag is set to true. The projectRoot path can be relative
+// or absolute and is resolved to an
+// absolute path.
+func GetDotRegolith(silent bool, projectRoot string) (string, error) {
+	// App data diabled - use .regolith
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return "", WrapError(err, getUserConfigError)
+	}
+	if !*userConfig.UseProjectAppDataStorage {
+		return ".regolith", nil
+	}
+	return getAppDataDotRegolith(silent, projectRoot)
 }
 
 // AquireSessionLock creates a lock file in specified directory and

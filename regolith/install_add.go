@@ -39,18 +39,9 @@ func installFilters(
 	}
 
 	// Download all of the remote filters
-	resolverUpdated := false
 	for name, filterDefinition := range filterDefinitions {
 		Logger.Infof("Downloading %q filter...", name)
 		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
-			// Download resolver once if remote filter is found
-			if !resolverUpdated {
-				err = DownloadResolverMap()
-				if err != nil {
-					Logger.Warn("Failed to download resolver map.")
-				}
-				resolverUpdated = true
-			}
 			// Download the remote filter, and its dependencies
 			err := remoteFilter.Update(force, dotRegolithPath)
 			if err != nil {
@@ -90,7 +81,6 @@ func parseInstallFilterArgs(
 	// Parse the filter argument
 	var url, name, version string
 	var err error
-	updatedResolver := false
 	// resolvedArgs is used for finding duplicates (duplicate is a filter with
 	// the same name and url)
 	parsedArgs := make(map[[2]string]struct{})
@@ -118,13 +108,6 @@ func parseInstallFilterArgs(
 			url = strings.Join(splitStr[:len(splitStr)-1], "/")
 		} else {
 			// Example inputs: "name_ninja==HEAD", "name_ninja"
-			if !updatedResolver {
-				err := DownloadResolverMap()
-				if err != nil {
-					Logger.Warn("Failed to download resolver map.")
-				}
-				updatedResolver = true
-			}
 			name = url
 			url, err = ResolveUrl(name)
 			if err != nil {
@@ -159,12 +142,13 @@ func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 	// changing the function signature. In order to pass it in the 'vg' list.
 	type vg []func(string, string) (string, error)
 	var versionGetters vg
+	getHeadSha := func(url, _ string) (string, error) { return GetHeadSha(url) }
 	if version == "" {
-		versionGetters = vg{GetLatestRemoteFilterTag, GetHeadSha}
+		versionGetters = vg{GetLatestRemoteFilterTag, getHeadSha}
 	} else if version == "latest" {
 		versionGetters = vg{GetLatestRemoteFilterTag}
 	} else if version == "HEAD" {
-		versionGetters = vg{GetHeadSha}
+		versionGetters = vg{getHeadSha}
 	} else {
 		if semver.IsValid("v" + version) {
 			version = name + "-" + version
@@ -228,12 +212,13 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 // GetHeadSha returns the SHA of the HEAD of the repository specified by the
 // filter URL. This function does not check whether the filter actually exists
 // in the repository.
-func GetHeadSha(url, name string) (string, error) {
+func GetHeadSha(url string) (string, error) {
 	commandArgs := []string{
 		"ls-remote", "--symref", "https://" + url, "HEAD"}
 	output, err := exec.Command("git", commandArgs...).Output()
 	if err != nil {
-		return "", WrapErrorf(err, execCommandError, name)
+		commandText := "git " + strings.Join(commandArgs, " ")
+		return "", WrapErrorf(err, execCommandError, commandText)
 	}
 	// The result is on the second line.
 	lines := strings.Split(string(output), "\n")

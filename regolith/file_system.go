@@ -30,8 +30,8 @@ type revertibleFsOperations struct {
 	backupFileCounter int
 }
 
-// NewrevertibleFsOperations creates a new FsOperationBatch struct.
-func NewrevertibleFsOperations(backupPath string) (*revertibleFsOperations, error) {
+// NewRevertibleFsOperations creates a new FsOperationBatch struct.
+func NewRevertibleFsOperations(backupPath string) (*revertibleFsOperations, error) {
 	// Resolve the path to backups in case of changing the working directory
 	// during runtime
 	fullBackupPath, err := filepath.Abs(backupPath)
