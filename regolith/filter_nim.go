@@ -110,7 +110,7 @@ func (f *NimFilterDefinition) InstallDependencies(
 	if hasNimble(filterPath) {
 		Logger.Info("Installing nim dependencies...")
 		err := RunSubProcess(
-			"nimble", []string{"install --deps-only -y"}, filterPath, filterPath, ShortFilterName(f.Id))
+			"nimble", []string{"install", "-d", "-y"}, filterPath, filterPath, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
 				err, "Failed to run nimble to install dependencies of a filter."+
