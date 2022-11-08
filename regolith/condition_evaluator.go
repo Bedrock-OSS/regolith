@@ -1,10 +1,11 @@
 package regolith
 
 import (
+	"runtime"
+
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"github.com/stirante/go-simple-eval/eval"
 	"github.com/stirante/go-simple-eval/eval/utils"
-	"runtime"
 )
 
 func EvalCondition(condition string) (bool, error) {

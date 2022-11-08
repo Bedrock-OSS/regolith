@@ -1,9 +1,10 @@
 package regolith
 
 import (
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"io/ioutil"
 	"path"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 type World struct {

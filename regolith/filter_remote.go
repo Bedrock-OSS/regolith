@@ -3,12 +3,13 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 
 	"github.com/hashicorp/go-getter"
 	"github.com/otiai10/copy"

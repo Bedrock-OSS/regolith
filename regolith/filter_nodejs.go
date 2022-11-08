@@ -2,12 +2,13 @@ package regolith
 
 import (
 	"encoding/json"
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 type NodeJSFilterDefinition struct {

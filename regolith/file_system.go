@@ -2,7 +2,6 @@ package regolith
 
 import (
 	"bytes"
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -11,6 +10,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 
 	"github.com/otiai10/copy"
 )

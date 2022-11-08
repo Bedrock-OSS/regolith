@@ -2,11 +2,12 @@ package regolith
 
 import (
 	"encoding/json"
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 const EditedFilesPath = "cache/edited_files.json"

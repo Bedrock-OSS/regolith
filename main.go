@@ -6,7 +6,6 @@ import (
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"github.com/stirante/go-simple-eval/eval"
-	"os"
 
 	"github.com/fatih/color"
 
