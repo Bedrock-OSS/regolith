@@ -13,6 +13,10 @@ type PythonFilterDefinition struct {
 	FilterDefinition
 	Script   string `json:"script,omitempty"`
 	VenvSlot int    `json:"venvSlot,omitempty"`
+
+	// Requirements is an optional path to the folder with the requirements.txt
+	// file. If not specified, the parant path of the scipt is used.
+	Requirements string `json:"requirements,omitempty"`
 }
 
 type PythonFilter struct {
@@ -32,6 +36,16 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 	}
 	filter.Script = script
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+
+	requirementsObj, ok := obj["requirements"]
+	if ok {
+		requirements, ok := requirementsObj.(string)
+		if !ok {
+			return nil, WrappedErrorf(
+				jsonPropertyTypeError, "requirements", "string")
+		}
+		filter.Requirements = requirements
+	}
 	return filter, nil
 }
 
@@ -42,7 +56,14 @@ func (f *PythonFilter) run(context RunContext) error {
 		return PassError(err)
 	}
 	scriptPath := filepath.Join(context.AbsoluteLocation, f.Definition.Script)
-	if needsVenv(filepath.Dir(scriptPath)) {
+	requirementsFolder := ""
+	if f.Definition.Requirements == "" {
+		requirementsFolder = filepath.Dir(scriptPath)
+	} else {
+		requirementsFolder = filepath.Join(
+			context.AbsoluteLocation, f.Definition.Requirements)
+	}
+	if needsVenv(requirementsFolder) {
 		venvPath, err := f.Definition.resolveVenvPath(context.DotRegolithPath)
 		if err != nil {
 			return WrapError(err, "Failed to resolve venv path.")
@@ -107,7 +128,18 @@ func (f *PythonFilterDefinition) InstallDependencies(
 
 	// Install the filter dependencies
 	filterPath := filepath.Dir(scriptPath)
-	if needsVenv(filterPath) {
+	var requirementsFolder string
+	if f.Requirements == "" {
+		requirementsFolder = filterPath
+	} else {
+		requirementsFolder = filepath.Join(
+			installLocation, f.Requirements)
+		requirementsFolder, err = filepath.Abs(requirementsFolder)
+		if err != nil {
+			return WrapErrorf(err, filepathAbsError, requirementsFolder)
+		}
+	}
+	if needsVenv(requirementsFolder) {
 		venvPath, err := f.resolveVenvPath(dotRegolithPath)
 		if err != nil {
 			return WrapError(err, "Failed to resolve venv path.")
@@ -133,10 +165,12 @@ func (f *PythonFilterDefinition) InstallDependencies(
 		if err != nil {
 			Logger.Warn("Failed to upgrade pip in venv.")
 		}
+		// Install the dependencies
 		Logger.Info("Installing pip dependencies...")
 		err = RunSubProcess(
 			filepath.Join(venvPath, venvScriptsPath, "pip"+exeSuffix),
-			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath, ShortFilterName(f.Id))
+			[]string{"install", "-r", "requirements.txt"}, requirementsFolder,
+			requirementsFolder, ShortFilterName(f.Id))
 		if err != nil {
 			return WrapErrorf(
 				err, "Couldn't run Pip to install dependencies of %s",
