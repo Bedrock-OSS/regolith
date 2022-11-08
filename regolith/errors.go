@@ -150,7 +150,10 @@ const (
 	filterRunnerRunError = "Failed to run filter.\nFilter: %s"
 
 	// Error used when GetRegolithConfigPath fails
-	getRegolithConfigPathError = "Failed to get path to Regolith's app data folder."
+	getRegolithAppDataPathError = "Failed to get path to Regolith's app data folder."
+
+	// Error used when GetUserConfig function fails
+	getUserConfigError = "Failed to get user configuration."
 
 	// Error used whe Regolith fails to undo failed file system operation.
 	fsUndoError = "Filed to undo file system operation."
@@ -172,4 +175,16 @@ const (
 		"program (usually terminal).\n" +
 		"Please close your terminal and try again.\n" +
 		"Make sure that you open it directly inside the root of the Regolith project."
+
+	// Error used on attempt to access user config property that is not known
+	// to Regolith.
+	invalidUserConfigPropertyError = "Invalid user configuration property:\n" +
+		"Property name: %s\n"
+
+	// Error used when the getGlobalUserConfigPath function fails
+	getGlobalUserConfigPathError = "Failed to get global user_config.json path"
+
+	// Error used when the dump method of the UserConfig object failse
+	userConfigDumpError = "Failed to save the user configuration.\n" +
+		"Path: %s"
 )
