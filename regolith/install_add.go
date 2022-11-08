@@ -2,10 +2,11 @@
 package regolith
 
 import (
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 
 	"golang.org/x/mod/semver"
 )
