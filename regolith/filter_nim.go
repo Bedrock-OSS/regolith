@@ -2,11 +2,12 @@ package regolith
 
 import (
 	"encoding/json"
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 type NimFilterDefinition struct {

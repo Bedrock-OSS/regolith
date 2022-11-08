@@ -2,8 +2,9 @@ package regolith
 
 import (
 	"encoding/json"
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"path/filepath"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 type ExeFilterDefinition struct {

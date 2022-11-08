@@ -4,9 +4,10 @@
 package regolith
 
 import (
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os"
 	"path/filepath"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 
 	"golang.org/x/sys/windows"
 )

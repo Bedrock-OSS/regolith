@@ -1,9 +1,10 @@
 package regolith
 
 import (
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"os"
 	"path/filepath"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 // GetExportPaths returns file paths for exporting behavior pack and
