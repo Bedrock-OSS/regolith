@@ -6,8 +6,9 @@
 package regolith
 
 import (
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"io/ioutil"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 
 	"muzzammil.xyz/jsonc"
 )
