@@ -39,7 +39,6 @@ type RegolithProject struct {
 	Profiles          map[string]Profile         `json:"profiles,omitempty"`
 	FilterDefinitions map[string]FilterInstaller `json:"filterDefinitions"`
 	DataPath          string                     `json:"dataPath,omitempty"`
-	UseAppData        bool                       `json:"useAppData,omitempty"`
 }
 
 // ConfigFromObject creates a "Config" object from map[string]interface{}
@@ -156,16 +155,6 @@ func RegolithProjectFromObject(
 		}
 		result.Profiles[profileName] = profileValue
 	}
-	// UseAppData (optional, false by default)
-	useAppData := false
-	if _, ok := obj["useAppData"]; ok {
-		useAppData, ok = obj["useAppData"].(bool)
-		if !ok {
-			return result, burrito.WrappedErrorf(
-				jsonPropertyTypeError, "useAppData", "boolean")
-		}
-	}
-	result.UseAppData = useAppData
 	return result, nil
 }
 
