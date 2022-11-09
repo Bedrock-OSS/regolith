@@ -20,12 +20,16 @@ The syntax for running a nodejs filter is this:
 ```json
 {
   "runWith": "nodejs",
-  "script": "./filters/example.js"
+  "script": "./filters/example.js",
+
+  // Optional property that defines the path to the folder with the package.json file
+  "requirements": "./filters"
 }
 ```
 
 ## Requirements and Dependencies
 
-When installing, regolith will check for a `package.json` file at the top level of the filter folder.
+When installing, regolith will check for a `package.json` file. If requirements property is specified
+reqolith will look in that folder, otherwise it will look in the folder with the script.
 
 When developing a Node filter with dependencies, you must create this file. You can create a `package.json` file yourself by using `npm init`.
