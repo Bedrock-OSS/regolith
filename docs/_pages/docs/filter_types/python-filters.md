@@ -41,7 +41,7 @@ The syntax for running a python script is this:
 When installing, regolith will check for a `requirements.txt` file. Regolith will look for the requirements file in
 the path defined by the "requirements" property or if it's not specified, in the folder with the script.
 
-If `reqirements.txt` file exits, Regolith will attempt to install these dependencies into a venv, as described bellow.
+If `reqirements.txt` file exits, Regolith will attempt to install these dependencies into a venv, as described below.
 
 When developing a python filter with dependencies, you must create this file. You can create a `requirements.txt` file yourself by using `pip freeze`. 
 
