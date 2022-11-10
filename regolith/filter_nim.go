@@ -13,6 +13,10 @@ import (
 type NimFilterDefinition struct {
 	FilterDefinition
 	Script string `json:"script,omitempty"`
+
+	// Requirements is an optional path to the folder with the nimble file. If not specified
+	// the parent of the script path is used instead.
+	Requirements string `json:"requirements,omitempty"`
 }
 
 type NimFilter struct {
@@ -34,6 +38,16 @@ func NimFilterDefinitionFromObject(
 			jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
+
+	requirementsObj, ok := obj["requirements"]
+	if ok {
+		requirements, ok := requirementsObj.(string)
+		if !ok {
+			return nil, burrito.WrappedErrorf(
+				jsonPropertyTypeError, "requirements", "string")
+		}
+		filter.Requirements = requirements
+	}
 	return filter, nil
 }
 
@@ -103,19 +117,31 @@ func (f *NimFilterDefinition) InstallDependencies(
 		installLocation = parent.GetDownloadPath(dotRegolithPath)
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
-	joinedPath := filepath.Join(installLocation, f.Script)
-	scriptPath, err := filepath.Abs(joinedPath)
-	if err != nil {
-		return burrito.WrapErrorf(err, filepathAbsError, joinedPath)
+	var requirementsPath string
+	if f.Requirements == "" {
+		// Deduce the path from the script path
+		joinedPath := filepath.Join(installLocation, f.Script)
+		scriptPath, err := filepath.Abs(joinedPath)
+		if err != nil {
+			return burrito.WrapErrorf(err, filepathAbsError, joinedPath)
+		}
+		requirementsPath = filepath.Dir(scriptPath)
+	} else {
+		joinedPath := filepath.Join(installLocation, f.Requirements)
+		scriptPath, err := filepath.Abs(joinedPath)
+		if err != nil {
+			return burrito.WrapErrorf(err, filepathAbsError, joinedPath)
+		}
+		requirementsPath = scriptPath
 	}
-	filterPath := filepath.Dir(scriptPath)
-	if hasNimble(filterPath) {
+	Logger.Debugf("Installing dependencies using nimble in %s", requirementsPath)
+	if hasNimble(requirementsPath) {
 		Logger.Info("Installing nim dependencies...")
 		err := RunSubProcess(
-			"nimble", []string{"install --deps-only -y"}, filterPath, filterPath, ShortFilterName(f.Id))
+			"nimble", []string{"install", "-d", "-y"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
 		if err != nil {
 			return burrito.WrapErrorf(
-				err, "Failed to run nimble to install dependencies of a filter."+
+				err, "Failed to run nimble to install dependencies of a filter.\n"+
 					"Filter name: %s.",
 				f.Id)
 		}
@@ -148,7 +174,7 @@ func (f *NimFilter) Check(context RunContext) error {
 func hasNimble(filterPath string) bool {
 	nimble := false
 	filepath.Walk(filterPath, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
+		if err != nil || info.IsDir() {
 			return nil
 		}
 		if filepath.Ext(path) == ".nimble" {
