@@ -15,6 +15,11 @@ type PythonFilterDefinition struct {
 	FilterDefinition
 	Script   string `json:"script,omitempty"`
 	VenvSlot int    `json:"venvSlot,omitempty"`
+
+	// Requirements is an optional path to the file with the requirements
+	// (usually requirements.txt). If not specified, the parant path of the
+	// scipt is used.
+	Requirements string `json:"requirements,omitempty"`
 }
 
 type PythonFilter struct {
@@ -34,6 +39,16 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 	}
 	filter.Script = script
 	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+
+	requirementsObj, ok := obj["requirements"]
+	if ok {
+		requirements, ok := requirementsObj.(string)
+		if !ok {
+			return nil, burrito.WrappedErrorf(
+				jsonPropertyTypeError, "requirements", "string")
+		}
+		filter.Requirements = requirements
+	}
 	return filter, nil
 }
 
@@ -44,7 +59,20 @@ func (f *PythonFilter) run(context RunContext) error {
 		return burrito.PassError(err)
 	}
 	scriptPath := filepath.Join(context.AbsoluteLocation, f.Definition.Script)
-	if needsVenv(filepath.Dir(scriptPath)) {
+	filterPath := filepath.Dir(scriptPath)
+	var requirementsFile string
+	if f.Definition.Requirements == "" {
+		requirementsFile = filepath.Join(filterPath, "requirements.txt")
+	} else {
+		requirementsFile = filepath.Join(
+			context.AbsoluteLocation, f.Definition.Requirements)
+		requirementsFile, err = filepath.Abs(requirementsFile)
+		if err != nil {
+			return burrito.WrapErrorf(err, filepathAbsError, requirementsFile)
+		}
+	}
+
+	if needsVenv(requirementsFile) {
 		venvPath, err := f.Definition.resolveVenvPath(context.DotRegolithPath)
 		if err != nil {
 			return burrito.WrapError(err, "Failed to resolve venv path.")
@@ -109,7 +137,18 @@ func (f *PythonFilterDefinition) InstallDependencies(
 
 	// Install the filter dependencies
 	filterPath := filepath.Dir(scriptPath)
-	if needsVenv(filterPath) {
+	var requirementsFile string
+	if f.Requirements == "" {
+		requirementsFile = filepath.Join(filterPath, "requirements.txt")
+	} else {
+		requirementsFile = filepath.Join(
+			installLocation, f.Requirements)
+		requirementsFile, err = filepath.Abs(requirementsFile)
+		if err != nil {
+			return burrito.WrapErrorf(err, filepathAbsError, requirementsFile)
+		}
+	}
+	if needsVenv(requirementsFile) {
 		venvPath, err := f.resolveVenvPath(dotRegolithPath)
 		if err != nil {
 			return burrito.WrapError(err, "Failed to resolve venv path.")
@@ -135,10 +174,13 @@ func (f *PythonFilterDefinition) InstallDependencies(
 		if err != nil {
 			Logger.Warn("Failed to upgrade pip in venv.")
 		}
+		// Install the dependencies
 		Logger.Info("Installing pip dependencies...")
+		requirementsFolder := filepath.Dir(requirementsFile)
 		err = RunSubProcess(
 			filepath.Join(venvPath, venvScriptsPath, "pip"+exeSuffix),
-			[]string{"install", "-r", "requirements.txt"}, filterPath, filterPath, ShortFilterName(f.Id))
+			[]string{"install", "-r", filepath.Base(requirementsFile)}, requirementsFolder,
+			requirementsFolder, ShortFilterName(f.Id))
 		if err != nil {
 			return burrito.WrapErrorf(
 				err, "Couldn't run Pip to install dependencies of %s",
@@ -187,8 +229,8 @@ func (f *PythonFilterDefinition) resolveVenvPath(dotRegolithPath string) (string
 	return resolvedPath, nil
 }
 
-func needsVenv(filterPath string) bool {
-	stats, err := os.Stat(filepath.Join(filterPath, "requirements.txt"))
+func needsVenv(requirementsFilePath string) bool {
+	stats, err := os.Stat(requirementsFilePath)
 	if err == nil {
 		return !stats.IsDir()
 	}

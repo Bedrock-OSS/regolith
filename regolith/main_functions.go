@@ -406,7 +406,7 @@ func Init(debug bool) error {
 	// Add the schema property, this is a little hacky
 	rawJsonData := make(map[string]interface{}, 0)
 	json.Unmarshal(jsonBytes, &rawJsonData)
-	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.json"
+	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.1.json"
 	jsonBytes, _ = json.MarshalIndent(rawJsonData, "", "\t")
 
 	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
