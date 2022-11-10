@@ -31,21 +31,19 @@ The syntax for running a python script is this:
   "runWith": "python",
   "script": "./filters/example.py",
 
-  // Optional property that defines the folder where regolith should look for the requriements.txt file
+  // Optional property that defines the path to the file with the requirements
   "requirements": "./filters/requirements.txt
 }
 ```
 
 ## Requirements and Dependencies
 
-When installing, regolith will check for a `requirements.txt` file. Regolith will look for the requirements file in
-the path defined by the "requirements" property or if it's not specified, Regolith will look for the `requirements.txt`
-file in the same folder as the script.
+When installing, Regolith will check if the filter has any requirements. If the "requirements" property is set,
+Regolith will use the file specified in the property to install the dependencies. If the property is not set,
+Regolith will look for a file named "requirements.txt" in the same directory as the script.
+If requirements file exits, Regolith will attempt to install these dependencies into a venv, as described below.
 
-
-If `reqirements.txt` file exits, Regolith will attempt to install these dependencies into a venv, as described below.
-
-When developing a python filter with dependencies, you must create this file. You can create a `requirements.txt` file yourself by using `pip freeze`. 
+When developing a Python filter with dependencies, you must create this file. You can create a `requirements.txt` file yourself by using `pip freeze`. 
 
 ## Venv Handling
 
