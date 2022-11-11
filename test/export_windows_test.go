@@ -21,6 +21,9 @@ import (
 // development_*_packs folders that contain them, the test fails.
 // To compare permissions, this function uses "icacls.exe"
 func TestMoveFilesAcl(t *testing.T) {
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping test on local machine")
+	}
 	// Switching working directories in this test, make sure to go back
 	wd, err := os.Getwd()
 	if err != nil {
