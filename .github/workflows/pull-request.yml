@@ -49,4 +49,5 @@ jobs:
 
       - name: Run Tests
         run: |
-          CI=true go test ./...
+          $ENV:CI='true'
+          go test ./...
