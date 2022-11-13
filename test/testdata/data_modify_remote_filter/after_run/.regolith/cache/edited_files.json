@@ -1,8 +1,12 @@
 {
 	"rp": {
-		"build/RP/": []
+		"build/RP/": [
+			".ignoreme"
+		]
 	},
 	"bp": {
-		"build/BP/": []
+		"build/BP/": [
+			".ignoreme"
+		]
 	}
 }
