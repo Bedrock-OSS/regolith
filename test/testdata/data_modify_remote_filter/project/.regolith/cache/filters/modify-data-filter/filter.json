@@ -1,0 +1,11 @@
+{
+	"exportData": true,
+	"filters": [
+		{
+			"name": "regolith-test-filters: Modify data filter",
+			"runWith": "python",
+			"script": "./main.py"
+		}
+	],
+	"version": "6230216184232e5bc7439caaf20cdd4c0dc17ca2"
+}
