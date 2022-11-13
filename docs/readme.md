@@ -1,14 +1,14 @@
 # Regolith Docs
 
-This folder contains all the docs for Regolith. It is built using Jekyll, the [Minimal Mistakes](https://mmistakes.github.io/minimal-mistakes/) theme.
+This folder contains all the docs for Regolith. It is built using [VitePress](https://vitepress.vuejs.org/)
 
 ## Running Locally
-You can locally test the website by [installing Jekyll](https://jekyllrb.com/docs/installation/#guides) and then running  `bundle install` and `bundle exec jekyll serve`.
+You can locally test the website by [installing Node.js](https://nodejs.dev/en/) and then running `cd docs` and `npm run docs:dev`.
 
-Assuming the Ruby dependencies installed correctly, the local server will run and you should see `http://127.0.0.1:4000`
+Assuming the dependencies were installed correctly, the local server will run and you should see `http://localhost:5173/`
 printed out.
 
-You can now make changes to any of the markdown files and you'll see the changes reflected at that URL in your browser! Note the site can take several seconds to rebuild, so have an eye on your terminal window
+You can now make changes to any of the markdown files and you'll see the changes reflected at that URL in your browser!
 
 ## Contribution Guidelines
 
