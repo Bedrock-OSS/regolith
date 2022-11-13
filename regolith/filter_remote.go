@@ -22,6 +22,8 @@ type RemoteFilterDefinition struct {
 	// RemoteFilters can propagate some of the properties unique to other types
 	// of filers (like Python's venvSlot).
 	VenvSlot int `json:"venvSlot,omitempty"`
+
+	ExportData bool `json:"exportData,omitempty"`
 }
 
 type RemoteFilter struct {
@@ -47,6 +49,8 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	}
 	result.Version = version
 	result.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+
+	result.ExportData, _ = obj["exportData"].(bool) // default exportData is false
 	return result, nil
 }
 
@@ -303,6 +307,10 @@ func (f *RemoteFilter) GetCachedVersion(dotRegolithPath string) (*string, error)
 			path, burrito.WrappedErrorf(jsonPathTypeError, "version", "string"))
 	}
 	return &version, nil
+}
+
+func (f *RemoteFilter) IsUsingDataExport() bool {
+	return f.Definition.ExportData
 }
 
 // FilterDefinitionFromTheInternet downloads a filter from the internet and

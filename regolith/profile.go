@@ -125,7 +125,7 @@ start:
 		goto start
 	}
 	// Run the profile
-	interrupted, err := WatchProfileImpl(context)
+	interrupted, err := RunProfileImpl(context)
 	if err != nil {
 		return burrito.PassError(err)
 	}
@@ -147,9 +147,9 @@ start:
 	return nil
 }
 
-// WatchProfileImpl runs the profile from the given context and returns true
+// RunProfileImpl runs the profile from the given context and returns true
 // if the execution was interrupted.
-func WatchProfileImpl(context RunContext) (bool, error) {
+func RunProfileImpl(context RunContext) (bool, error) {
 	profile, err := context.GetProfile()
 	if err != nil {
 		return false, burrito.WrapErrorf(err, runContextGetProfileError)
