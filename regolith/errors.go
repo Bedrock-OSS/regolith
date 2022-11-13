@@ -187,4 +187,11 @@ const (
 	// Error used when the dump method of the UserConfig object failse
 	userConfigDumpError = "Failed to save the user configuration.\n" +
 		"Path: %s"
+
+	// readFilterJsonError is used when loding the filter.json file fails
+	readFilterJsonError = "Couldn't read filter data from path.\n" +
+		"Path: %s\n" +
+		"Did you install the filter?\n" +
+		"You can install all of the filters by running:\n" +
+		"regolith install-all"
 )

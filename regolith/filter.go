@@ -202,7 +202,7 @@ type FilterRunner interface {
 
 	// IsUsingDataExport returns whether the filter wahts its data to be
 	// exported back to the data folder after running the profile.
-	IsUsingDataExport() bool
+	IsUsingDataExport(dotRegolithPath string) (bool, error)
 }
 
 func (f *Filter) CopyArguments(parent *RemoteFilter) {
@@ -239,8 +239,8 @@ func (f *Filter) IsDisabled() (bool, error) {
 	return false, nil
 }
 
-func (f *Filter) IsUsingDataExport() bool {
-	return false
+func (f *Filter) IsUsingDataExport(_ string) (bool, error) {
+	return false, nil
 }
 
 func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterInstaller, error) {

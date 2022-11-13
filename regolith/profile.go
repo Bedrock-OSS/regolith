@@ -192,14 +192,7 @@ func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterColle
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, burrito.WrappedErrorf( // Don't pass OS error here. It's often confusing
-			"Couldn't read filter data from path:\n"+
-				"%s\n"+
-				"Did you install the filter?\n"+
-				"You can install all of the filters by running:\n"+
-				"regolith install-all",
-			path,
-		)
+		return nil, burrito.WrappedErrorf(readFilterJsonError, path)
 	}
 
 	var filterCollection map[string]interface{}
