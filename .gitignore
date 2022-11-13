@@ -5,4 +5,5 @@
 local
 docs/scraper/__pycache__/
 docs/node_modules
+docs/docs/.vitepress/dist
 test/local_test.go
