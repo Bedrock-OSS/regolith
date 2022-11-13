@@ -1,25 +1,21 @@
 ---
-permalink: /docs/introduction
-layout: single
-classes: wide
-title: Introduction
-sidebar:
-  nav: "sidebar"
+title: What is Regolith?
+description: Learn more about how Regolith works.
 ---
 
+# What is Regolith?
 
 Regolith is an Addon Compiler for the Bedrock Edition of Minecraft.
 
-This page introduces Regolith at a conceptual level. If you prefer, you can jump to the [installation instructions](/regolith/docs/installing).
-{: .notice--warning}
+::: warning
+This page introduces Regolith at a conceptual level. If you prefer, you can jump to the [installation instructions](/guide/installing).
+:::
 
 Regolith introduces the concept of a "project folder", where your addons are written, including the Resource Pack, Behavior Pack, and any models, textures or configuration files. This single-folder-structure is great for version control, and allows you to keep your "source-of-truth" outside of com.mojang!
 
 Here is what a newly initialized Regolith project looks like:
 
-
-![](/regolith/assets/images/introduction/project_folder.png)
-
+![](/assets/images/introduction/project_folder.png)
 
 ## Compiling
 
@@ -39,7 +35,7 @@ Since the data folder is saved back to your project, you can store persistent da
 
 ## Filters
 
-A filter is any program or script that takes the files inside of your RP and BP and *transforms* them in some way. Many of these filters have already been written, and are included as part of the [standard library](/regolith/docs/standard-library). 
+A filter is any program or script that takes the files inside of your RP and BP and *transforms* them in some way. Many of these filters have already been written, and are included as part of the [standard library](/standard-library). 
 
 For example, one of our standard filters is called `texture_convert`, which *filters* image formats for photo editing programs, and converts them into `.png` files.
 
@@ -47,7 +43,7 @@ With this filter turned on, you can place Photoshop, Krita, or Gimp files direct
 
 ### Creating your own Filters
 
-You can write filters in Python, JavaScript, Java, or any other language, using our shell integration. You can learn more about creating custom filters [here](/regolith/docs/custom-filters).
+You can write filters in Python, JavaScript, Java, or any other language, using our shell integration. You can learn more about creating custom filters [here](/filters/custom-filters).
 
 ## Why Regolith?
 
@@ -57,7 +53,7 @@ Regolith allows you to create and extend addon-syntax. As long as you can write 
 
 For example, the [subfunctions](https://github.com/Nusiq/regolith-filters/tree/master/subfunctions) community filter allows you to define functions within functions, without creating an additional file:
 
-```s
+```
 # Some code
 function <aaa>:
     # The code of the subfunction
@@ -86,7 +82,6 @@ This means as you add new entities, the names will be handled for you, without y
 
 In other words, Regolith adds compiled content on top of your hand written content, leaving you free to create your content, without working around tool-generated content.
 
-*If this sounds interesting to you, you might be interested in the [name ninja filter](https://github.com/Bedrock-OSS/regolith-filters/tree/master/name_ninja).*
-
-
-
+::: tip
+If this sounds interesting to you, you might be interested in the [name ninja filter](https://github.com/Bedrock-OSS/regolith-filters/tree/master/name_ninja).
+:::
