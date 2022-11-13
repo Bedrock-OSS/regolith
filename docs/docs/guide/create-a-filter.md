@@ -1,27 +1,26 @@
 ---
-permalink: /docs/creating-a-filter
-layout: single
-classes: wide
-title: Your first Filter
-sidebar:
-  nav: "sidebar"
+title: Create a Filter
 ---
 
-This step-by-step tutorial will guide you through the creation of your first Regolith filter, in the Python programming language. If you're new to Regolith, you may enjoy trying out some of our [standard filters](/regolith/docs/standard-library) first.
+# Create a Filter
 
-This page is an in-depth tutorial for Regolith filter creation, including detailed information about data-flow and semantics. If you just want to get started programming, you may consider checking out the documentation on [custom filters.](/regolith/docs/custom-filters)
-{: .notice--warning}
+This step-by-step tutorial will guide you through the creation of your first Regolith filter, in the Python programming language. If you're new to Regolith, you may enjoy trying out some of our [standard filters](/standard-library) first.
+
+::: warning
+This page is an in-depth tutorial for Regolith filter creation, including detailed information about data-flow and semantics. If you just want to get started programming, you may consider checking out the documentation on [custom filters.](/guide/custom-filters)
+:::
 
 ## Installing Python
 
-Before you can begin, you need to ensure that Python is installed on your system. There are [download instructions](/regolith/docs/python-filters) on our Python Filter page.
+Before you can begin, you need to ensure that Python is installed on your system. There are [download instructions](/guide/python-filters) on our Python Filter page.
 
 ## Getting Started
 
 If you don't have one yet, you should create a new Regolith project by navigating to a blank folder, and typing `regolith init`.
 
+::: tip
 During this tutorial, `project` refers to the project folder you just created!
-{: .notice--warning}
+:::
 
 The first step is creating a new python file in `project/filters/giant_mobs.py`. Our first step will be simply printing `hello world!`, so add `print("hello world!")` into your new filter file.
 
@@ -94,7 +93,7 @@ In this filter, we are going to "filter" every entity in the project, and double
 
 To get started, you should structure your python file a bit better:
 
-```
+```python
 def main():
   print("put code here!")
 

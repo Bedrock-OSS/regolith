@@ -1,11 +1,8 @@
 ---
-permalink: /docs/shell-filters
-layout: single
-classes: wide
 title: Shell Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# Shell Filters
 
 Shell Filters allow you to run arbitrary shell commands. This is useful for running scripts that are not natively supported in Regolith.
 

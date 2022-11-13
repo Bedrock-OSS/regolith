@@ -1,16 +1,12 @@
 ---
-permalink: /docs/nim-filters
-layout: single
-classes: wide
 title: Nim Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# Nim Filters
 
 Nim is a statically typed compiled systems programming language. It combines successful concepts from mature languages like Python, Ada and Modula. 
 
 ## Installing Nim
-
 
   1. Download the newest version of [choosenim.](https://nim-lang.org/install_windows.html)
   2. Open a terminal in the same directory that you downloaded `choosenim`.

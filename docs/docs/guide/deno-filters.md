@@ -1,11 +1,8 @@
 ---
-permalink: /docs/deno-filters
-layout: single
-classes: wide
 title: Deno Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# Deno Filters
 
 Deno is a new age javascript/typescript runtime with first class typescript support.
 

@@ -1,11 +1,8 @@
 ---
-permalink: /docs/dotnet-filters
-layout: single
-classes: wide
 title: .NET Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# .NET Filters
 
 .NET filters run programs written in the .NET framework using `dotnet` command.
 

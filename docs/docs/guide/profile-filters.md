@@ -1,11 +1,8 @@
 ---
-permalink: /docs/profile-filters
-layout: single
-classes: wide
 title: Profile Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# Profile Filters
 
 Profile filters are a convinient way of working with multiple profiles on one project. They save you from writing repetitive code by letting you run one filter from another. Recursive dependencies are not allowed.
 

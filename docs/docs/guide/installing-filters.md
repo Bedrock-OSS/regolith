@@ -1,11 +1,8 @@
 ---
-permalink: /docs/installing-filters
-layout: single
-classes: wide
 title: Installing and Updating Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# Installing and Updating Filters
 
 To start using a filter, you need to do four things:
 
@@ -14,17 +11,18 @@ To start using a filter, you need to do four things:
  3. Add the filter to the profile which you would like to use it.
  4. Run your profile, to test it out!
 
-### Filter Dependencies
+## Filter Dependencies
 
 Filters are written in [programming languages](https://www.wikiwand.com/en/Programming_language). These languages may not be installed on your computer by default. Before installing a filter, you should ensure you have the proper programming language installed. The "Filter Types" documentation has detailed installation instructions for every regolith-supported language!
 
-For example, if the filter relies on Python, you can find installation instructions [here](/regolith/docs/python-filters).
+For example, if the filter relies on Python, you can find installation instructions [here](/guide/python-filters).
 
-### Installing a Filter
+## Installing a Filter
 
 Regolith contains a powerful installation command, which will download a filter from GitHub, and install any required libraries for you. In general, the format is like this: `regolith install <filter_identifier>`
 
 The value of `filter_identifier` will depend on where the filter is hosted. Filters listed on the [Bedrock-OSS/regolith-filter-resolver](https://github.com/Bedrock-OSS/regolith-filter-resolver/blob/main/resolver.json) repository can be installed by their name. For example, to install the `name_ninja` filter, you would run the:
+
 ```
 regolith install name_ninja
 ```
@@ -32,16 +30,18 @@ If the filter is not listed on the resolver repository, you will need to use the
 `github.com/<user>/<repository>/<folder>`.
 
 For example, to install `name_ninja` using the full format, you would run:
+
 ```
 regolith install github.com/Bedrock-OSS/regolith-filters/name_ninja
 ```
 The longer form can be used to install filters from private repositories.
 
 
-{: .notice--warning}
+::: warning
 The `install` command relies on `git`. You may download git [here](https://git-scm.com/download/win).
+:::
 
-### Adding Filter to Profile
+## Adding Filter to Profile
 
 After installing, the filter will appear inside of `filter_definitions` of `config.json`. You can now add this filter to a profile like this:
 

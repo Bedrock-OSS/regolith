@@ -1,11 +1,8 @@
 ---
-permalink: /docs/profiles
-layout: single
-classes: wide
 title: Profiles
-sidebar:
-  nav: "sidebar"
 ---
+
+# Profiles
 
 A `profile` is a collection of filters, settings, and export information. By default, a Regolith project will be initialized with a single profile, called `default`. You can add additional profiles, as you need them.
 
@@ -68,4 +65,6 @@ For the most part, any setting inside of the Regolith config can be overridden i
 
 For example, `dataPath` can be defined at the top level, but customized per-profile if desired, by placing the key again inside of the profile: This path will be used when running this filter.
 
-You can learn more about the configuration options available in Regolith [here](/regolith/docs/configuration).
+::: tip
+You can learn more about the configuration options available in Regolith [here](/guide/configuration).
+:::
