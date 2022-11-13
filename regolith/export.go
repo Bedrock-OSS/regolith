@@ -128,7 +128,14 @@ func ExportProject(
 	exportPaths := make(map[string]struct{})
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
-		if filter.IsUsingDataExport() {
+		usingDataPath, err := filter.IsUsingDataExport(dotRegolithPath)
+		if err != nil {
+			return burrito.WrapErrorf(
+				err,
+				"Failed to check if filter is using data export.\n"+
+					"Path: %s", filter.GetId())
+		}
+		if usingDataPath {
 			exportPaths[filter.GetId()] = struct{}{}
 		}
 	}
