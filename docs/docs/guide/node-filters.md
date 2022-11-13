@@ -1,11 +1,8 @@
 ---
-permalink: /docs/node-filters
-layout: single
-classes: wide
 title: NodeJS Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# NodeJS Filters
 
 As an asynchronous event-driven JavaScript runtime, Node.js is designed to build scalable network applications.
 

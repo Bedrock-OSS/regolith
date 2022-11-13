@@ -1,11 +1,8 @@
 ---
-permalink: /docs/configuration
-layout: single
-classes: wide
 title: Project Configuration File
-sidebar:
-  nav: "sidebar"
 ---
+
+# Configuration File
 
 The configuration of Regolith project is stored inside of `config.json`, at the top level of your Regolith project. This file will be created when you run `regolith init`.
 
@@ -17,8 +14,9 @@ Regolith follows the [Project Config Standard](https://github.com/Bedrock-OSS/pr
 
 Regolith builds on this standard with the addition of the `regolith` namespace, which is where all regolith-specific information is stored.
 
-{: .notice--warning}
-**Warning:** This page only shows an example configuration. There are other documentation pages to fully explain concepts such as `filters` and `profiles`.
+::: warning
+This page only shows an example configuration. There are other documentation pages to fully explain concepts such as `filters` and `profiles`.
+:::
 
 Example config, with many options explained:
 

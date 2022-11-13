@@ -1,11 +1,8 @@
 ---
-permalink: /docs/export-targets
-layout: single
-classes: wide
 title: Export Targets
-sidebar:
-  nav: "sidebar"
 ---
+
+# Export Targets
 
 Export Targets determine where your generated files will go, after Regolith is finished compiling. You can set this target at the top level of Regolith, but it can be overridden inside individual profiles, if needed.
 

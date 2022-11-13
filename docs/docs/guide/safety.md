@@ -1,11 +1,8 @@
 ---
-permalink: /docs/safety
-layout: single
-classes: wide
 title: Safety
-sidebar:
-  nav: "sidebar"
 ---
+
+# Safety
 
 Please be aware that Regolith is only intended to be used by users experienced with working inside command prompt. Due to the extreme power and flexibility that Regolith offers, there is an increased chance of harm to your system, if used improperly. We cannot accept any liability. You are fully responsible for the safety of your system.
 

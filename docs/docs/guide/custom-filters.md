@@ -1,17 +1,14 @@
 ---
-permalink: /docs/custom-filters
-layout: single
-classes: wide
 title: Custom Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# Custom Filters
 
 Regolith allows you to write your own local files, and register them directly as filters. Special support is provided for filters written with Python, Node JS, and other languages.
 
 To start writing a custom filter, you first need a script to run. We will use `hello_world.py` as an example:
 
-```py
+```python
 print("Hello world!")
 ```
 
@@ -23,7 +20,7 @@ Once this folder is created, you can add your scripts here. You can organize wit
 
 ## Filter Data
 
-The accepted flow for Regolith is to store configuration scripts and configs inside of the `data` folder. This folder has special support that makes it easy to access during compilation. Read more about the data folder [here](/regolith/docs/data-folder).
+The accepted flow for Regolith is to store configuration scripts and configs inside of the `data` folder. This folder has special support that makes it easy to access during compilation. Read more about the data folder [here](/guide/data-folder).
 
 ## Registering Custom Filter
 
@@ -63,14 +60,14 @@ Now you can register your script by placing the filter into `filterDefinitions`.
 ```
 
 You can use the following "runWith" types:
- - [python](/regolith/docs/python-filters)
- - [nodejs](/regolith/docs/node-filters)
- - [deno](/regolith/docs/deno-filters)
- - [java](/regolith/docs/java-filters)
- - [nim](/regolith/docs/nim-filters)
- - [shell](/regolith/docs/shell-filters)
+ - [python](/guide/python-filters)
+ - [nodejs](/guide/node-filters)
+ - [deno](/guide/deno-filters)
+ - [java](/guide/java-filters)
+ - [nim](/guide/nim-filters)
+ - [shell](/guide/shell-filters)
 
-There is also the [profile](/regolith/docs/profile-filters) filter with slightly different syntax. It lets you nest profiles.
+There is also the [profile](/guide/profile-filters) filter with slightly different syntax. It lets you nest profiles.
 
 Please see the dedicated pages for these run-types for more information!
 

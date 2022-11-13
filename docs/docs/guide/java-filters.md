@@ -1,11 +1,8 @@
 ---
-permalink: /docs/java-filters
-layout: single
-classes: wide
 title: Java Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# Java Filters
 
 Java is a high-level compiled language, that runs inside the Java Virtual Machine.
 

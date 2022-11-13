@@ -1,11 +1,8 @@
 ---
-permalink: /docs/data-folder
-layout: single
-classes: wide
 title: Data Folder
-sidebar:
-  nav: "sidebar"
 ---
+
+# Data Folder
 
 The Regolith `data` folder is a special folder where configuration files can be stored.
 
@@ -21,16 +18,17 @@ When a remote filter is installed, it has the opportunity to place some files in
 
 If the remote filter repository contains a `data` folder, at the same level as `filter.json`, the contents will be moved into `data/filter_name/*`. This is our supported "first time setup" flow. If you're developing a remote filter, you are encouraged to use the data folder, and create configuration files with sensible defaults.
 
-{: .notice--warning}
+::: warning
 Don't worry! Your data won't be lost. `regolith install` will never overwrite your data files. If the folder is already in use during installation, a warning will be logged and the step will be skipped.
+:::
 
 ## Accessing the Data Folder
 
 When Regolith runs, it will move the `data` folder into the `tmp` directory, along with the `RP` and `BP` folders. You can access the files here directly, just as you do the pack files.
 
-For example: `(python)`
+For example:
 
-```py
+```python
 with open('./data/bump_manifest/version.json', 'r') as f:
   print(json.load(f))
 ```
@@ -39,12 +37,13 @@ with open('./data/bump_manifest/version.json', 'r') as f:
 
 When regolith is finished running, the data folder will be moved from the temporary location, back into the normal location. This flow allows you to store persistent data, by editing or creating new files. 
 
-{: .notice--warning}
+::: warning
 This stands in contrast to the `RP` and `BP` folders, which will not be saved back into the project!
+:::
 
-For example: `(python)`
+For example:
 
-```py
+```python
 with open('./data/bump_manifest/version.json', 'w') as f:
   json.dump({'version': '1.0'}, f)
 ```

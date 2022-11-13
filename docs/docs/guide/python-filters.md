@@ -1,11 +1,8 @@
 ---
-permalink: /docs/python-filters
-layout: single
-classes: wide
 title: Python Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# Python Filters
 
 Python is an interpreted high-level general-purpose programming language.
 
@@ -15,12 +12,13 @@ Before you can run Python filters, you will need to [install python](https://www
 
 Please ensure that you add python to your path:
 
-![](/regolith/assets/images/installing/python.png)
+![](/assets/images/installing/python.png)
 
 We recommend that you download more or less recent versions of Python.
 
-**Warning:** It's generally not acceptable to install python via the Microsoft Store. Python installed from here is not available on the path. If you have trouble running Python filters with Regolith, please reinstall using the link above.
-{: .notice--warning}
+::: warning
+It's generally not acceptable to install python via the Microsoft Store. Python installed from here is not available on the path. If you have trouble running Python filters with Regolith, please reinstall using the link above.
+:::
 
 ## Running Python code as Filter
 

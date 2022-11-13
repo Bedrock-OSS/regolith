@@ -1,11 +1,8 @@
 ---
-permalink: /docs/filter-run-modes
-layout: single
-classes: wide
-title: Working with Filters
-sidebar:
-  nav: "sidebar"
+title: Filter Run Modes
 ---
+
+# Filter Run Modes
 
 There are 3 ways of running Regolith:
 - `regolith run`
@@ -19,12 +16,15 @@ that the `watch` command will watch for changes in the RP, BP and [data](/regoli
 and rerun the profile when they change. The `run` command will run the profile only once.
 
 The syntax for run and watch command is:
+
 ```
 regolith run [profile-name]
 ```
+
 ```
 regolith watch [profile-name]
 ```
+
 Where `[profile-name]` is the name of the profile defined your "config.json" file you want to run.
 The `[profile-name]` is optional. If you don't specify it, the `"default"` profile will be run.
 
@@ -48,6 +48,7 @@ by running the `regolith tool` command. Unlike the `regolith run` command, the `
 command runs only one filter instead of running entire profile.
 
 The command is used like this:
+
 ```
 regolith tool <filter-name> [args...]
 ```

@@ -1,11 +1,8 @@
 ---
-permalink: /docs/exe-filters
-layout: single
-classes: wide
 title: Executable Filters
-sidebar:
-  nav: "sidebar"
 ---
+
+# Executable Filters
 
 Exe filters allow the usage of executables.
 
@@ -42,4 +39,4 @@ platform:
 ```
 
 You can learn more about the `when` property on in the documentation of the "config.json" file
-[here](/regolith/docs/configuration#regolith-configuration).
+[here](/guide/configuration#regolith-configuration).
