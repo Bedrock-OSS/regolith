@@ -23,7 +23,14 @@ You should move your programs and scripts into this folder. When your filter is 
 
 ```json
 {
+  // Description is a property which currently is not used by Regolith itself, but the web scraper uses
+  // it to add descriptions to the filters page of the documentation website.
   "description": "A Hello World Filter - this will be displayed as a description on website pages.",
+
+  // exportData is a property which tells Regolith whether or not to export the data folder back to the
+  // source files after running the profile that uses this filter.
+  "exportData": true,
+
   "filters": [
     {
       "runWith": "python",
@@ -32,6 +39,17 @@ You should move your programs and scripts into this folder. When your filter is 
   ]
 }
 ```
+
+#### The `exportData` property
+
+This option lets you create remote filters that can modify their data folder. The older versions of
+Regolith like 0.0.18 used to always export the entire filter data folder back to the source files
+making the `regolith run` command destructive. This feature was added to let the filters remember
+their state between runs. Most of the filters don't need this feature, so moving the files back and
+forth was a waste of processing time. The `exportData` property is now disabled by default, but it
+can be enabled for filters that need it. The `exportData` property causes Regolith to export the
+folder named the same as the filter back to the source files. This way you can have both filters
+that can modify their data folder and filters that can't.
 
 ## Data Folder
 
