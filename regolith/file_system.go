@@ -739,11 +739,13 @@ func move(source, destination string) error {
 						source)
 				}
 			}
+			return burrito.WrapErrorf(
+				errMoving,
+				"Successfully recovered the original state of the directory "+
+					"before crash.\nPath: %s", source)
+		} else {
+			return nil
 		}
-		return burrito.WrapErrorf(
-			errMoving,
-			"Successfully recovered the original state of the directory "+
-				"before crash.\nPath: %s", source)
 	}
 	// Either source or destination is not a directory,
 	// use normal os.Rename
@@ -759,6 +761,16 @@ func move(source, destination string) error {
 func MoveOrCopy(
 	source string, destination string, makeReadOnly bool, copyParentAcl bool,
 ) error {
+	// Make destination parent if not exists
+	destinationParent := filepath.Dir(destination)
+	if _, err := os.Stat(destinationParent); os.IsNotExist(err) {
+		err = os.MkdirAll(destinationParent, 0755)
+		if err != nil {
+			return burrito.WrapErrorf(
+				err, osMkdirError, destinationParent)
+		}
+	}
+	// Move the source to the destination
 	if err := move(source, destination); err != nil {
 		Logger.Warnf(
 			"Failed to move files.\n\tSource: %s\n\tTarget: %s\n"+
