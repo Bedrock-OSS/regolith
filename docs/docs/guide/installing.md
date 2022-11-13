@@ -1,6 +1,5 @@
 ---
 title: Installing
-description: Learn how to install Regolith.
 ---
 
 # Installing

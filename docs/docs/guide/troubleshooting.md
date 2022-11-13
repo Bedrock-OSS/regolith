@@ -1,6 +1,5 @@
 ---
 title: Troubleshooting
-description: General Regolith troubleshooting
 ---
 
 # Troubleshooting
