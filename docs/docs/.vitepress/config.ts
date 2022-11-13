@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress'
+import { getLatestVersion } from './utils/latestVersion'
 
 const title = 'Regolith'
 const description =
@@ -11,6 +12,7 @@ export default defineConfig({
   description,
   lastUpdated: true,
   ignoreDeadLinks: true,
+  cleanUrls: 'with-subfolders',
 
   head: [
     ['link', { rel: 'icon', type: 'image/x-icon', href: logo }],
@@ -20,23 +22,74 @@ export default defineConfig({
     ['meta', { property: 'twitter:description', content: description }],
     ['meta', { property: 'twitter:title', content: title }],
     ['meta', { property: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { property: 'twitter:url', content: url }],
+    ['meta', { property: 'twitter:url', content: url }]
   ],
 
   themeConfig: {
     logo,
+
     editLink: {
       text: 'Suggest changes to this page.',
       pattern:
-        'https://github.com/Bedrock-OSS/regolith/docs/edit/main/docs/:path',
+        'https://github.com/Bedrock-OSS/regolith/docs/edit/main/docs/:path'
     },
+
     socialLinks: [
       { icon: 'github', link: 'https://github.com/Bedrock-OSS/regolith' },
-      { icon: 'discord', link: 'https://discord.gg/XjV87YN' },
+      { icon: 'discord', link: 'https://discord.gg/XjV87YN' }
     ],
+
     footer: {
       message: 'Released under the MIT license.',
-      copyright: `Copyright © ${new Date().getFullYear()} Bedrock OSS`,
+      copyright: `Copyright © ${new Date().getFullYear()} Bedrock OSS.`
     },
-  },
+
+    nav: [
+      {
+        text: 'Guide',
+        link: '/guide/what-is-regolith',
+        activeMatch: '/guide/'
+      },
+      {
+        text: 'Standard Library',
+        link: '/standard-library/'
+      },
+      {
+        text: await getLatestVersion(),
+        items: [
+          {
+            text: 'Release Notes',
+            link: 'https://github.com/Bedrock-OSS/regolith/releases'
+          }
+        ]
+      }
+    ],
+
+    sidebar: {
+      '/guide/': [
+        {
+          text: 'Introduction',
+          collapsible: true,
+          items: [
+            {
+              text: 'What Is Regolith?',
+              link: '/guide/what-is-regolith'
+            },
+            {
+              text: 'Installing',
+              link: '/guide/installing'
+            },
+            {
+              text: 'Getting Started',
+              link: '/guide/getting-started'
+            },
+            {
+              text: 'Troubleshooting',
+              link: '/guide/troubleshooting'
+            }
+          ]
+        }
+      ]
+    }
+  }
 })

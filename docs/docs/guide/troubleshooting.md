@@ -1,30 +1,27 @@
 ---
-permalink: /docs/troubleshooting
-layout: single
-classes: wide
 title: Troubleshooting
-sidebar:
-  nav: "sidebar"
+description: General Regolith troubleshooting
 ---
 
-Regolith is a useful tool, but its somewhat complex compilation flow leaves room for user error. This page will explain solutions to common mistakes, as well as guide you through more complex debugging strategies. 
+# Troubleshooting
 
-# General Debugging Tips
+Regolith is a useful tool, but its somewhat complex compilation flow leaves room for user error. This page will explain solutions to common mistakes, as well as guide you through more complex debugging strategies.
 
-## Reading the Console
+## General Debugging Tips
+
+### Reading the Console
 
 Regolith is a console application, which means that you will need to interact with it via the terminal. When Regolith runs, it will print information into the same log. This information is very useful in debugging, as Regolith will print as much useful information as it can during failure states.
 
 Please get comfortable reading the console output, and try to become familiar with the syntax. Warnings and errors will be printed clearly.
 
-## Check your Version
+### Check your Version
 
 Regolith is a living, breathing application, which is receiving numerous updates. You can directly install the latest version of Regolith, or watch out for the "A new Version is Available" messages in the console output.
 
+## Common Issues
 
-# Common Issues
-
-## Regolith is not Recognized
+### Regolith is not Recognized
 
 When first installing Regolith, you may get an error message like this:
 
@@ -41,17 +38,14 @@ The most common cause of this issue is incorrect installation. Here are some tro
  - 3: Try reinstalling Regolith
  - 4: If you cannot get Regolith installed, you may download the stand-alone .exe, and place this in your project
 
-## Crash when Running
+### Crash when Running
 
 The most common reason Regolith will crash is from a broken filter. The first step in debugging, is identifying which filter is failing. You can do so by navigating to the Regolith output log, and finding which filter caused the crash. 
 
 Filter errors will be printed like `[error][filter] ... `.
 
-## Python Not Found
+### Python Not Found
 
 If you get a message like `[+]: Python not found, download and install it from https://www.python.org/downloads/`, this means that Python either not installed, or is not available on the path. 
 
-We provide [installation instructions](/regolith/docs/python-filters), to help you get Python installed correctly on your system. Please be aware that Python installed via the Microsoft Store will not work with Regolith, as it generally doesn't add itself to path.
-
-
-
+We provide [installation instructions](/guide/python-filters), to help you get Python installed correctly on your system. Please be aware that Python installed via the Microsoft Store will not work with Regolith, as it generally doesn't add itself to path.

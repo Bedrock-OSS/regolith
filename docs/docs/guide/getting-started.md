@@ -1,28 +1,27 @@
 ---
-permalink: /docs/getting-started
-layout: single
-classes: wide
 title: Getting Started
-sidebar:
-  nav: "sidebar"
+description: Learn how to use Regolith.
 ---
 
-To get started with Regolith, you should first read our [introduction](/regolith/docs/introduction) page, and the [installation](/regolith/docs/installing) page.
+# Getting Started
+
+::: info
+To get started with Regolith, you should first read our [introduction](/guide/what-is-regolith) page, and the [installation](/guide/installing) page.
+:::
 
 You can test for installation by running `regolith` inside of a terminal. This guide will assume you have installed regolith directly, but you can follow along with a stand-alone build. Just ensure that the executable is placed inside of your project folder.
 
-If you run into issues installing, you can check our [troubleshooting guide](/regolith/docs/troubleshooting) for tips.
+If you run into issues installing, you can check our [troubleshooting guide](/guide/troubleshooting) for tips.
 
-{: .notice--warning}
-**Warning:** Regolith is a command line application. It assumes some familiarity with how to navigate and use the command line. You can get a refresher [here](https://tutorial.djangogirls.org/en/intro_to_command_line/).
-
+::: warning
+Regolith is a command line application. It assumes some familiarity with how to navigate and use the command line. You can get a refresher [here](https://tutorial.djangogirls.org/en/intro_to_command_line/).
+:::
 
 ## Creating a new Project
 
 To create a new project, navigate to a blank folder, and run `regolith init`. This will create a few files:
 
-
-![](/regolith/assets/images/introduction/project_folder.png)
+![](/assets/images/introduction/project_folder.png)
 
 In short:
  - `.regolith` is a special folder that regolith uses to store data. You don't need to look here.
@@ -34,7 +33,7 @@ In short:
    to ignore certain files. It's not a partof of Regolith but we highly
    recommend using Git to manage your projects.
 
-## config.json
+## Config file
 
 Next, open up `config.json`. We will be configuring a few fields here, for your addon.
 
@@ -64,9 +63,10 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
 
 Later on you can play with the additional configuration options, but for now, just set a project name, and author name.
 
-{: .notice}
+::: tip
 We suggest using a name like `dragons` or `cars` for the project name, as opposed to `My Dragon Adventure Map`, since the project name will be used as the folder name for the final export if you're
-using the "development" [export target](/regolith/docs/export-targets).
+using the ["development" export target](/guide/export-targets).
+:::
 
 ## Creating your Addon
 
@@ -74,8 +74,7 @@ At this point, you will want to add some files into your regolith project. If yo
 
 If you don't have an addon prepared, you may also create a fresh one directly in your project folder, following the normal rules. Add a `manifest.json`, a `pack_icon.png`, and any other files you want. The files should go directly into the `RP` and `BP` folders, like this:
 
-![](/regolith/assets/images/introduction/project_folder2.png)
-
+![](/assets/images/introduction/project_folder2.png)
 
 ## Running Regolith
 
@@ -96,14 +95,15 @@ based on the name of the project like `project_name_bp` and `project_name_rp`.
 
 ## Adding your first Filter
 
-Regolith contains a very powerful filter system, that allows you to write filters in many languages, as well as running existing filters from the internet. For now, we will simply use the [standard library](/regolith/docs/standard-library), which is a set of approved filters that we maintain. 
+Regolith contains a very powerful filter system, that allows you to write filters in many languages, as well as running existing filters from the internet. For now, we will simply use the [standard library](/standard-library), which is a set of approved filters that we maintain. 
 
 As an example, we will use the `texture_list` filter, which automatically creates the `texture_list.json` file for you. To learn more about this file, and why automating it is helpful, read [here](https://wiki.bedrock.dev/concepts/texture-list.html).
 
 ### Installing
 
-{: .notice--warning}
+::: warning
 The `install` command relies on `git`. You may download git [here](https://git-scm.com/download/win).
+:::
 
 You can install this filter by running `regolith install texture_list`, which will make the filter available for use. 
 
@@ -139,8 +139,8 @@ Check `com.mojang`, and open the new `texture_list.json` file in `RP/textures/te
 
 ## Whats Next
 
-Now that you've created your first Regolith project, and installed your first filters, you are well on your way to being a Regolith expert! You should check out the [standard library](/regolith/docs/standard-library), to see if additional filters might be useful for you.
+Now that you've created your first Regolith project, and installed your first filters, you are well on your way to being a Regolith expert! You should check out the [standard library](/standard-library), to see if additional filters might be useful for you.
 
-Otherwise, you can learn about writing [custom filters](/regolith/docs/custom-filters) or
-dive deeper into Regolith commands by reading about [Filter Run Modes](/regolith/docs/filter-run-modes)
-and [Installing and Updating Filters](/regolith/docs/installing-filters).
+Otherwise, you can learn about writing [custom filters](/guide/custom-filters) or
+dive deeper into Regolith commands by reading about [Filter Run Modes](/guide/filter-run-modes)
+and [Installing and Updating Filters](/guide/installing-filters).
