@@ -1,6 +1,5 @@
 ---
 title: What is Regolith?
-description: Learn more about how Regolith works.
 ---
 
 # What is Regolith?
