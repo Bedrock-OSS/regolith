@@ -4,4 +4,5 @@
 *.exe
 local
 docs/scraper/__pycache__/
+docs/node_modules
 test/local_test.go
