@@ -4,9 +4,11 @@
   "scripts": {
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:serve": "vitepress serve docs"
+    "docs:serve": "vitepress serve docs",
+    "docs:fetch-filters": "npx tsx fetch-filters.ts"
   },
   "devDependencies": {
+    "@types/node": "^18.11.9",
     "ohmyfetch": "^0.4.21",
     "vitepress": "^1.0.0-alpha.28",
     "vue": "^3.2.45"
