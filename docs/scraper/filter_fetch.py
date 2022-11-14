@@ -6,21 +6,18 @@ import requests
 import community
 import os
 
-STANDARD_PATH = 'docs/_pages/docs/filter_types/standard-library.md'
-COMMUNITY_PATH = 'docs/_pages/docs/content/community-filters.md'
+STANDARD_PATH = 'docs/docs/standard-library.md'
+COMMUNITY_PATH = 'docs/docs/community-filters.md'
 URL = 'https://api.github.com/repos/bedrock-oss/regolith-filters/contents/'
 IGNORE = ['future']
 BASE_CONTENT = """
 ---
-permalink: /docs/standard-library
-layout: single
-classes: wide
 title: Standard Library
-sidebar:
-  nav: "sidebar"
 ---
 
 <!-- This page is auto-generated. To edit it, you'll need to change the filter_fetch.py -->
+
+# Standard Library
 
 The Standard Library is a special set of filters, written by the Regolith maintainers. Standard Filters offers the safest, easiest, and best support. 
 

@@ -1,13 +1,10 @@
 ---
-permalink: /docs/standard-library
-layout: single
-classes: wide
 title: Standard Library
-sidebar:
-  nav: "sidebar"
 ---
 
 <!-- This page is auto-generated. To edit it, you'll need to change the filter_fetch.py -->
+
+# Standard Library
 
 The Standard Library is a special set of filters, written by the Regolith maintainers. Standard Filters offers the safest, easiest, and best support. 
 

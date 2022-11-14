@@ -52,7 +52,11 @@ export default defineConfig({
       },
       {
         text: 'Standard Library',
-        link: '/standard-library/'
+        link: '/standard-library'
+      },
+      {
+        text: 'Community Filters',
+        link: '/community-filters'
       },
       {
         text: await getLatestVersion(),
