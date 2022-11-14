@@ -78,7 +78,7 @@ def filterTable(fList):
     return "\n".join(tables)
 
 def updateFilters(ftables, output: str):
-    base = open(os.getcwd()+"\docs\scraper\community_base.txt", "r").read()
+    base = open(os.getcwd()+"/docs/scraper/community_base.txt", "r").read()
     if os.path.isfile(output): os.remove(output)
     updated = open(output, "x")
     updated.write(base)
