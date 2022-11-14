@@ -59,6 +59,15 @@ export default defineConfig({
         link: '/community-filters'
       },
       {
+        text: 'Resources',
+        items: [
+          {
+            text: 'Project Config Standard',
+            link: 'https://github.com/Bedrock-OSS/project-config-standard'
+          }
+        ]
+      },
+      {
         text: await getLatestVersion(),
         items: [
           {
