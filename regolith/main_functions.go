@@ -672,23 +672,8 @@ func manageUserConfigDelete(debug bool, index int, key string) error {
 //   or 2. The lenght determines the action of the command.
 func ManageConfig(debug, full, delete, append bool, index int, args []string) error {
 	InitLogging(debug)
-	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(false, ".")
-	if err != nil {
-		return burrito.WrapError(
-			err, "Unable to get the path to regolith cache folder.")
-	}
-	// Lock the session
-	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
-	if sessionLockErr != nil {
-		return burrito.WrapError(sessionLockErr, aquireSessionLockError)
-	}
-	defer func() { sessionLockErr = unlockSession() }()
-	// Check flag combinations that are always invalid
-	if delete && append {
-		return burrito.WrappedError("Cannot use both --delete and --append flags.")
-	}
 
+	var err error
 	// Based on number of arguments, determine what to do
 	if len(args) == 0 {
 		// 0 ARGUMENTS - Print all
@@ -708,7 +693,7 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 		if err != nil {
 			return burrito.PassError(err)
 		}
-		return sessionLockErr
+		return nil
 	} else if len(args) == 1 {
 		// 1 ARGUMENT - Print specific or delete
 
@@ -726,7 +711,7 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 			if err != nil {
 				return burrito.PassError(err)
 			}
-			return sessionLockErr
+			return nil
 		} else {
 			if index != -1 {
 				return burrito.WrappedError("The --index flag is not allowed for printing.")
@@ -735,7 +720,7 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 			if err != nil {
 				return burrito.PassError(err)
 			}
-			return sessionLockErr
+			return nil
 		}
 	} else if len(args) == 2 {
 		// 2 ARGUMENTS - Set or append
@@ -753,7 +738,7 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 		if err != nil {
 			return burrito.PassError(err)
 		}
-		return sessionLockErr
+		return nil
 	} else {
 		return burrito.WrappedError("Too many arguments.")
 	}
