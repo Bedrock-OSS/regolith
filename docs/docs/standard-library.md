@@ -2,7 +2,7 @@
 title: Standard Library
 ---
 
-<!-- This page is auto-generated. To edit it, you'll need to edit the "docs/fetch-filters.ts" -->
+<!-- This page is auto-generated. To edit it, you'll need to change the "docs/fetch-filters.ts" file -->
 
 # Standard Library
 
