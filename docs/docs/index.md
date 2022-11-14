@@ -14,7 +14,7 @@ hero:
     actions:
         - theme: brand
           text: Get Started
-          link: /introduction/
+          link: /guide/what-is-regolith
 
 features:
     - icon: ⚡️
