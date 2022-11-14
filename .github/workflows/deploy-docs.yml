@@ -6,7 +6,7 @@ on:
       - vitepress-docs-port
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -42,6 +42,8 @@ jobs:
         with:
             path: './docs/docs/.vitepress/dist'
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v1
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: './docs/docs/.vitepress/dist'
