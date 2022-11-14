@@ -11,6 +11,7 @@ export default defineConfig({
   description,
   lastUpdated: true,
   ignoreDeadLinks: true,
+  cleanUrls: 'with-subfolders',
   base: '/regolith/',
 
   head: [
