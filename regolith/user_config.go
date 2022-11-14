@@ -17,11 +17,6 @@ var (
 	// function, which will lazily load the config if it hasn't been loaded yet.
 	cachedCombinedUserConfig *UserConfig
 
-	// cachedLocalUserConfig is a global variable that stores the local user config. It
-	// should not be accessed directly, but instead through the getUserConfig
-	// function, which will lazily load the config if it hasn't been loaded yet.
-	cachedLocalUserConfig *UserConfig
-
 	// cachedGlobalUserConfig is a global variable that stores the global user config. It
 	// should not be accessed directly, but instead through the getUserConfig
 	// function, which will lazily load the config if it hasn't been loaded yet.
@@ -152,13 +147,11 @@ func getGlobalUserConfigPath() (string, error) {
 	return filepath.Join(userCache, "regolith", "user_config.json"), nil
 }
 
-// loadUserConfigs reads the config from .regolith/user_config.json and
-// from the user app data directory and sets the global variables
-// cachedCombinedUserConfig, cachedLocalUserConfig and cachedGlobalUserConfig.
+// loadUserConfigs reads the user config from the user app data directory
+// and sets the global variables cachedCombinedUserConfig,
+// and cachedGlobalUserConfig.
 func loadUserConfigs() error {
-	// Get the paths to localConfigPath and appDataConfig
 	cachedGlobalUserConfig = NewUserConfig()
-	cachedLocalUserConfig = NewUserConfig()
 	cachedCombinedUserConfig = NewUserConfig()
 	defer cachedCombinedUserConfig.fillDefaults()
 
@@ -171,7 +164,7 @@ func loadUserConfigs() error {
 	err1 := cachedGlobalUserConfig.fillWithFileData(globalConfigPath)
 	err2 := cachedCombinedUserConfig.fillWithFileData(globalConfigPath)
 	if err = firstErr(err1, err2); err != nil {
-		return burrito.WrapError(err, "Failed to read global user_config.json")
+		return burrito.WrapError(err, "Failed to read user_config.json")
 	}
 	return nil
 }
