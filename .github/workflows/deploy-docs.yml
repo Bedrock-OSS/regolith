@@ -3,7 +3,7 @@ name: Build and Deploy Docs
 on:
   push:
     branches:
-      - vitepress-docs-port
+      - main
 
 permissions:
   contents: write
