@@ -12,6 +12,7 @@ export default defineConfig({
   description,
   lastUpdated: true,
   ignoreDeadLinks: true,
+  base: '/regolith/',
 
   head: [
     ['link', { rel: 'icon', type: 'image/x-icon', href: logo }],
