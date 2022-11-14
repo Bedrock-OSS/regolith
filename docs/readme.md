@@ -3,7 +3,12 @@
 This folder contains all the docs for Regolith. It is built using [VitePress](https://vitepress.vuejs.org/)
 
 ## Running Locally
-You can locally test the website by [installing Node.js](https://nodejs.dev/en/) and then running `cd docs` and `npm run docs:dev`.
+You can locally test the website by [installing Node.js](https://nodejs.dev/en/) and then running:
+```
+cd docs
+npm install
+npm run docs:dev
+```
 
 Assuming the dependencies were installed correctly, the local server will run and you should see `http://localhost:5173/`
 printed out.
