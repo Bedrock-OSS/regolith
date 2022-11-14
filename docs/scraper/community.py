@@ -52,6 +52,7 @@ def comFilters():
                 mLines = mStr.split("\n")
                 for i in mLines:
                     if i.startswith("#"): continue
+                    elif i.startswith("!"): continue
                     elif i == "": continue
                     else: 
                         result = i
