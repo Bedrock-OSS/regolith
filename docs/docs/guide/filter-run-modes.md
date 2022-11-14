@@ -12,7 +12,7 @@ There are 3 ways of running Regolith:
 ## Run and Watch Commands
 
 Regolith `run` and `watch` are very similar to each other. They run a profile. The difference is
-that the `watch` command will watch for changes in the RP, BP and [data](/regolith/docs/data-folder) folders
+that the `watch` command will watch for changes in the RP, BP and [data](/guide/data-folder) folders
 and rerun the profile when they change. The `run` command will run the profile only once.
 
 The syntax for run and watch command is:

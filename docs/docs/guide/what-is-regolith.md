@@ -42,7 +42,7 @@ With this filter turned on, you can place Photoshop, Krita, or Gimp files direct
 
 ### Creating your own Filters
 
-You can write filters in Python, JavaScript, Java, or any other language, using our shell integration. You can learn more about creating custom filters [here](/filters/custom-filters).
+You can write filters in Python, JavaScript, Java, or any other language, using our shell integration. You can learn more about creating custom filters [here](/guide/custom-filters).
 
 ## Why Regolith?
 
