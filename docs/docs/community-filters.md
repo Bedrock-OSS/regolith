@@ -40,9 +40,9 @@ Having trouble? You can learn more about online filters [here](/guide/online-fil
 | [molang_insert](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/molang_insert) | Hatchibombotar | nodejs | A filter for regolith that allows you to insert molang. |
 | [init-full](https://github.com/Hatchibombotar/useful-regolith-filters/tree/main/init-full) | Hatchibombotar | nodejs | Filter that creates bedrock manifest files on install. |
 | [item_scale](https://github.com/MedicalJewel105/regolilters/tree/main/item_scale) | MedicalJewel105 | python | This filter generates render_offsets for 1.16.100+ items. |
-| [pytemplate](https://github.com/Nusiq/regolith-filters/tree/master/pytemplate) | Nusiq | python | ![](../.resources/pytemplate-title.svg) |
+| [pytemplate](https://github.com/Nusiq/regolith-filters/tree/master/pytemplate) | Nusiq | python | WARNING! THIS FILTER USES THE PYTHON `eval()` FUNCTION TO GENERATE CODE. IF |
 | [system_template](https://github.com/Nusiq/regolith-filters/tree/master/system_template) | Nusiq | python | WARNING! THIS FILTER USES THE PYTHON `eval()` FUNCTION TO GENERATE CODE. IF |
-| [subfunctions](https://github.com/Nusiq/regolith-filters/tree/master/subfunctions) | Nusiq | python | ![](../.resources/subfunctions-title.svg) |
+| [subfunctions](https://github.com/Nusiq/regolith-filters/tree/master/subfunctions) | Nusiq | python | The Subfunctions filter provide enhanced `mcfunction` syntax, allowing easy |
 | [custom_project](https://github.com/Nusiq/regolith-filters/tree/master/custom_project) | Nusiq | exe | This filter is experimental. I'm not sure if I'll keep it. |
 | [run_counter](https://github.com/Nusiq/regolith-filters/tree/master/run_counter) | Nusiq | python | A pointless filter for counting the number of uses of the 'regolith run' command. |
 | [debug_say_function_name](https://github.com/Nusiq/regolith-filters/tree/master/debug_say_function_name) | Nusiq | python | Adds tellraw command to the functions from specified paths to print `@s`and |
@@ -52,10 +52,6 @@ Having trouble? You can learn more about online filters [here](/guide/online-fil
 | [namespace](https://github.com/cda94581/regolith-filters/tree/main/namespace) | cda94581 | nodejs | Automatically apply and replace namespaces to each block, item, entity, recipe, attachable, particle, and fog. Useful for temporary namespaces before deployment. |
 | [e-backup](https://github.com/cda94581/regolith-filters/tree/main/e-backup) | cda94581 | nodejs | Backups your export target in case you made a mistake. |
 | [export](https://github.com/cda94581/regolith-filters/tree/main/export) | cda94581 | nodejs | Exports your add-on into a ".mcaddon" automatically. |
-| [module_importer](https://github.com/ShiCheng-Lu/Regolith-Filters/tree/main/module_importer) | ShiCheng-Lu | nodejs | A regolith filter for import |
-| [command_lang](https://github.com/MCDevKit/regolith-library/tree/main/command_lang) | MCDevKit | shell |  |
-| [json_templating_engine](https://github.com/MCDevKit/regolith-library/tree/main/json_templating_engine) | MCDevKit | java |  |
-| [jsonte](https://github.com/MCDevKit/regolith-library/tree/main/jsonte) | MCDevKit | exe |  |
 | [new_exec](https://github.com/evilguy50/my-regolith-filters/tree/main/new_exec) | evilguy50 | nodejs |  |
 | [classes](https://github.com/evilguy50/my-regolith-filters/tree/main/classes) | evilguy50 | nim | filter for adding OOP class like structure to functions. |
 | [ds_store](https://github.com/evilguy50/my-regolith-filters/tree/main/ds_store) | evilguy50 | nim | filter for removing .DS_Store files. |
@@ -64,5 +60,9 @@ Having trouble? You can learn more about online filters [here](/guide/online-fil
 | [style_lint](https://github.com/evilguy50/my-regolith-filters/tree/main/style_lint) | evilguy50 | python | filter for automatic project styling. |
 | [title_ui](https://github.com/evilguy50/my-regolith-filters/tree/main/title_ui) | evilguy50 | nim | filter for generating title ui bindings. |
 | [shorthand](https://github.com/evilguy50/my-regolith-filters/tree/main/shorthand) | evilguy50 | python | filter for having shorthand syntax inside of functions. |
+| [module_importer](https://github.com/ShiCheng-Lu/Regolith-Filters/tree/main/module_importer) | ShiCheng-Lu | nodejs | A regolith filter for import |
+| [command_lang](https://github.com/MCDevKit/regolith-library/tree/main/command_lang) | MCDevKit | shell |  |
+| [json_templating_engine](https://github.com/MCDevKit/regolith-library/tree/main/json_templating_engine) | MCDevKit | java |  |
+| [jsonte](https://github.com/MCDevKit/regolith-library/tree/main/jsonte) | MCDevKit | exe |  |
 | [echo](https://github.com/SirLich/echo-npc-regolith/tree/main/echo) | SirLich | python |  |
 | [scalable-teams](https://github.com/cda94581/regolith-premade-addons/tree/main/scalable-teams) | cda94581 | nodejs | Generates a pre-made teams add-on, scalable and customizable. Appends itself to developed packs. |
