@@ -12,7 +12,6 @@ export default defineConfig({
   description,
   lastUpdated: true,
   ignoreDeadLinks: true,
-  cleanUrls: 'with-subfolders',
 
   head: [
     ['link', { rel: 'icon', type: 'image/x-icon', href: logo }],
