@@ -12,7 +12,7 @@ Before you can run Python filters, you will need to [install python](https://www
 
 Please ensure that you add python to your path:
 
-![](/assets/images/installing/python.png)
+![](/installing/python.png)
 
 We recommend that you download more or less recent versions of Python.
 

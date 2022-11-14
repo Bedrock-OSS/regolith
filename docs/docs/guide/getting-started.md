@@ -21,7 +21,7 @@ Regolith is a command line application. It assumes some familiarity with how to 
 
 To create a new project, navigate to a blank folder, and run `regolith init`. This will create a few files:
 
-![](/assets/images/introduction/project_folder.png)
+![](/introduction/project_folder.png)
 
 In short:
  - `.regolith` is a special folder that regolith uses to store data. You don't need to look here.
@@ -74,7 +74,7 @@ At this point, you will want to add some files into your regolith project. If yo
 
 If you don't have an addon prepared, you may also create a fresh one directly in your project folder, following the normal rules. Add a `manifest.json`, a `pack_icon.png`, and any other files you want. The files should go directly into the `RP` and `BP` folders, like this:
 
-![](/assets/images/introduction/project_folder2.png)
+![](/introduction/project_folder2.png)
 
 ## Running Regolith
 

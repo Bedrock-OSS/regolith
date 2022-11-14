@@ -5,7 +5,6 @@ const title = 'Regolith'
 const description =
   'A flexible and language-agnostic addon-compiler for the Bedrock Edition of Minecraft.'
 const url = 'https://bedrock-oss.github.io/regolith/'
-const logo = '/assets/images/favicon.ico'
 
 export default defineConfig({
   title,
@@ -15,7 +14,7 @@ export default defineConfig({
   base: '/regolith/',
 
   head: [
-    ['link', { rel: 'icon', type: 'image/x-icon', href: logo }],
+    ['link', { rel: 'icon', type: 'image/x-icon', href: 'favicon.ico' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: title }],
     ['meta', { property: 'og:url', content: url }],
@@ -26,7 +25,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo,
+    logo: '/logo.png',
 
     editLink: {
       text: 'Suggest changes to this page.',

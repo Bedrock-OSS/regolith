@@ -9,7 +9,7 @@ hero:
     text: Addon Compiler for the Bedrock Edition of Minecraft
     tagline: Fast, flexible, and easy to use. Meet the modern Minecraft Bedrock tooling.
     image:
-        src: /assets/images/favicon.ico
+        src: /logo.png
         alt: Regolith logo
     actions:
         - theme: brand

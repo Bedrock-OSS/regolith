@@ -12,21 +12,21 @@ Regolith can be installed, or downloaded as a standalone application. Both links
 
 First, download the `regolith-x.x.x.msi` file from the [releases](https://github.com/Bedrock-OSS/regolith/releases/latest) page.
 
-![](/assets/images/installing/msi_download.png)
+![](/installing/msi_download.png)
 
 You may need to select "trust" to run the installer. The installation window will look like this:
 
-![](/assets/images/installing/regolith_msi.png)
+![](/installing/regolith_msi.png)
 
 After installing, Regolith can be used in any command-prompt by typing `regolith`. You should see something like this:
 
-![](/assets/images/installing/regolith_help.png)
+![](/installing/regolith_help.png)
 
 ## Stand-Alone (not recommended)
 
 Regolith can also be installed stand-alone. Simply install the correct zip for your operating system. For windows, this is most likely `regolith_x.x.x_Windows_x86_64.zip`.
 
-![](/assets/images/installing/exe_download.png)
+![](/installing/exe_download.png)
 
 You may unzip this package, and place the `Regolith.exe` file somewhere convenient. In stand-alone mode, you will need a copy of the regolith executable in every project that you intend to use Regolith with.
 

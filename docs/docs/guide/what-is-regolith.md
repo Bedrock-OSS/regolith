@@ -14,7 +14,7 @@ Regolith introduces the concept of a "project folder", where your addons are wri
 
 Here is what a newly initialized Regolith project looks like:
 
-![](/assets/images/introduction/project_folder.png)
+![](/introduction/project_folder.png)
 
 ## Compiling
 
