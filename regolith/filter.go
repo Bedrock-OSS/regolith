@@ -199,6 +199,10 @@ type FilterRunner interface {
 	// Check checks whether the requirements of the filter are met. For
 	// example, a Python filter requires Python to be installed.
 	Check(context RunContext) error
+
+	// IsUsingDataExport returns whether the filter wahts its data to be
+	// exported back to the data folder after running the profile.
+	IsUsingDataExport(dotRegolithPath string) (bool, error)
 }
 
 func (f *Filter) CopyArguments(parent *RemoteFilter) {
@@ -232,6 +236,10 @@ func (f *Filter) IsDisabled() (bool, error) {
 		}
 		return !condition, nil
 	}
+	return false, nil
+}
+
+func (f *Filter) IsUsingDataExport(_ string) (bool, error) {
 	return false, nil
 }
 
