@@ -67,6 +67,8 @@ const (
 	// condition. The 'expected_build_result' contains the expected result of
 	// the execution.
 	conditionalFilterPath = "testdata/conditional_filter"
+
+	dataModifyRemoteFilter = "testdata/data_modify_remote_filter"
 )
 
 // firstErr returns the first error in a list of errors. If the list is empty

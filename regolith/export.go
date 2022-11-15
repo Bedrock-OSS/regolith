@@ -87,6 +87,7 @@ func GetExportPaths(
 func ExportProject(
 	profile Profile, name, dataPath, dotRegolithPath string,
 ) error {
+	// Get the expor target paths
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
 	if err != nil {
@@ -123,6 +124,21 @@ func ExportProject(
 			err, "Failed to clear resource pack from build path %q.\n"+
 				"Are user permissions correct?", rpPath)
 	}
+	// List the names of the filters that opt-in to the data export process
+	exportPaths := make(map[string]struct{})
+	for filter := range profile.Filters {
+		filter := profile.Filters[filter]
+		usingDataPath, err := filter.IsUsingDataExport(dotRegolithPath)
+		if err != nil {
+			return burrito.WrapErrorf(
+				err,
+				"Failed to check if filter is using data export.\n"+
+					"Path: %s", filter.GetId())
+		}
+		if usingDataPath {
+			exportPaths[filter.GetId()] = struct{}{}
+		}
+	}
 	// The root of the data path cannot be deleted because the
 	// "regolith watch" function would stop watching the file changes
 	// (due to Windows API limitation).
@@ -138,17 +154,40 @@ func ExportProject(
 				dataPath)
 		}
 	}
+	// Create revertible operations object
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
 	revertibleOps, err := NewRevertibleFsOperations(backupPath)
 	if err != nil {
 		return burrito.WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
+	// Export data
 	for _, path := range paths {
-		path := filepath.Join(dataPath, path.Name())
-		err = revertibleOps.DeleteDir(path)
+		if _, ok := exportPaths[path.Name()]; !ok {
+			// Skip the paths that are not on the list
+			continue
+		}
+		// Clear export target
+		targetPath := filepath.Join(dataPath, path.Name())
+		err = revertibleOps.DeleteDir(targetPath)
 		if err != nil {
 			handlerError := revertibleOps.Undo()
-			mainError := burrito.WrapErrorf(err, updateSourceFilesError, path)
+			mainError := burrito.WrapErrorf(err, updateSourceFilesError, targetPath)
+			if handlerError != nil {
+				return burrito.WrapErrorHandlerError(
+					mainError, handlerError, errorConnector, fsUndoError)
+			}
+			if handlerError := revertibleOps.Close(); handlerError != nil {
+				return burrito.PassErrorHandlerError(
+					mainError, handlerError, errorConnector)
+			}
+			return mainError
+		}
+		// Copy data
+		sourcePath := filepath.Join(dotRegolithPath, "tmp/data", path.Name())
+		err = revertibleOps.MoveOrCopyDir(sourcePath, targetPath)
+		if err != nil {
+			handlerError := revertibleOps.Undo()
+			mainError := burrito.WrapErrorf(err, moveOrCopyError, sourcePath, targetPath)
 			if handlerError != nil {
 				return burrito.WrapErrorHandlerError(
 					mainError, handlerError, errorConnector, fsUndoError)
@@ -160,35 +199,18 @@ func ExportProject(
 			return mainError
 		}
 	}
-
+	// Export BP
 	Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
 	err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
 	if err != nil {
 		return burrito.WrapError(err, "Failed to export behavior pack.")
 	}
+	// Export RP
 	Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
 	err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
 	if err != nil {
 		return burrito.WrapError(err, "Failed to export resource pack.")
 	}
-	err = revertibleOps.MoveOrCopyDir(
-		filepath.Join(dotRegolithPath, "tmp/data"), dataPath)
-	if err != nil {
-		handlerError := revertibleOps.Undo()
-		mainError := burrito.WrapError(
-			err, "Failed to move the filter data back to the project's "+
-				"data folder.")
-		if handlerError != nil {
-			return burrito.WrapErrorHandlerError(
-				mainError, handlerError, errorConnector, fsUndoError)
-		}
-		if handlerError := revertibleOps.Close(); handlerError != nil {
-			return burrito.PassErrorHandlerError(
-				mainError, handlerError, errorConnector)
-		}
-		return mainError
-	}
-
 	// Update or create edited_files.json
 	err = editedFiles.UpdateFromPaths(rpPath, bpPath)
 	if err != nil {

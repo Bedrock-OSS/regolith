@@ -47,6 +47,7 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	}
 	result.Version = version
 	result.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+
 	return result, nil
 }
 
@@ -303,6 +304,31 @@ func (f *RemoteFilter) GetCachedVersion(dotRegolithPath string) (*string, error)
 			path, burrito.WrappedErrorf(jsonPathTypeError, "version", "string"))
 	}
 	return &version, nil
+}
+
+func (f *RemoteFilter) IsUsingDataExport(dotRegolithPath string) (bool, error) {
+	// Load the filter.json file
+	filterJsonPath := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
+	file, err := ioutil.ReadFile(filterJsonPath)
+	if err != nil {
+		return false, burrito.WrappedErrorf(readFilterJsonError, filterJsonPath)
+	}
+	var filterJsonObj map[string]interface{}
+	err = json.Unmarshal(file, &filterJsonObj)
+	if err != nil {
+		return false, burrito.WrapErrorf(err, jsonUnmarshalError, filterJsonPath)
+	}
+	// Get the exportData field (default to false)
+	exportDataObj, ok := filterJsonObj["exportData"]
+	if !ok {
+		return false, nil
+	}
+	exportData, ok := exportDataObj.(bool)
+	if !ok {
+		return false, burrito.WrappedErrorf(
+			jsonPathTypeError, "exportData", "bool")
+	}
+	return exportData, nil
 }
 
 // FilterDefinitionFromTheInternet downloads a filter from the internet and

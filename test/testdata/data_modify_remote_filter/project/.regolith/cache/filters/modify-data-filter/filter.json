@@ -1,7 +1,8 @@
 {
+	"exportData": true,
 	"filters": [
 		{
-			"name": "regolith-test-filters: Hello Version Python Filter",
+			"name": "regolith-test-filters: Modify data filter",
 			"runWith": "python",
 			"script": "./main.py"
 		}
