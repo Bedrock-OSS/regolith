@@ -88,8 +88,16 @@ func (f *RemoteFilter) run(context RunContext) error {
 		return burrito.WrapErrorf(err, remoteFilterSubfilterCollectionError)
 	}
 	for i, filter := range filterCollection.Filters {
+		runContext := RunContext{
+			Config:           context.Config,
+			AbsoluteLocation: absolutePath,
+			Profile:          context.Profile,
+			Parent:           context.Parent,
+			DotRegolithPath:  context.DotRegolithPath,
+			IsTool:           context.IsTool,
+		}
 		// Disabled filters are skipped
-		disabled, err := filter.IsDisabled()
+		disabled, err := filter.IsDisabled(runContext)
 		if err != nil {
 			return burrito.WrapErrorf(err, "Failed to check if filter is disabled")
 		}
@@ -102,13 +110,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 		// Overwrite the venvSlot with the parent value
 		// TODO - remote filters can contain multiple filters, the interruption
 		// chceck should be performed after every subfilter
-		_, err = filter.Run(RunContext{
-			Config:           context.Config,
-			AbsoluteLocation: absolutePath,
-			Profile:          context.Profile,
-			Parent:           context.Parent,
-			DotRegolithPath:  context.DotRegolithPath,
-		})
+		_, err = filter.Run(runContext)
 		if err != nil {
 			return burrito.WrapErrorf(
 				err, filterRunnerRunError,

@@ -94,11 +94,16 @@ func CheckProfileImpl(
 ) error {
 	// Check whether every filter, uses a supported filter type
 	for _, f := range profile.Filters {
+		isTool := false
+		if parentContext != nil {
+			isTool = parentContext.IsTool
+		}
 		err := f.Check(RunContext{
 			Config:          &config,
 			Parent:          parentContext,
 			Profile:         profileName,
 			DotRegolithPath: dotRegolithPath,
+			IsTool:          isTool,
 		})
 		if err != nil {
 			return burrito.WrapErrorf(err, filterRunnerCheckError, f.GetId())
@@ -158,7 +163,7 @@ func RunProfileImpl(context RunContext) (bool, error) {
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
 		// Disabled filters are skipped
-		disabled, err := filter.IsDisabled()
+		disabled, err := filter.IsDisabled(context)
 		if err != nil {
 			return false, burrito.WrapErrorf(err, "Failed to check if filter is disabled")
 		}
