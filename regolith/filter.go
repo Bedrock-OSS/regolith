@@ -21,6 +21,7 @@ type RunContext struct {
 	Profile          string
 	Parent           *RunContext
 	DotRegolithPath  string
+	IsTool           bool
 
 	// interruptionChannel is a channel that is used to notify about changes
 	// in the sourec files, in order to trigger a restart of the program in
@@ -191,7 +192,7 @@ type FilterRunner interface {
 	Run(context RunContext) (bool, error)
 
 	// IsDisabled returns whether the filter is disabled.
-	IsDisabled() (bool, error)
+	IsDisabled(ctx RunContext) (bool, error)
 
 	// GetId returns the id of the filter.
 	GetId() string
@@ -225,12 +226,12 @@ func (f *Filter) GetId() string {
 	return f.Id
 }
 
-func (f *Filter) IsDisabled() (bool, error) {
+func (f *Filter) IsDisabled(ctx RunContext) (bool, error) {
 	if f.Disabled {
 		return true, nil
 	}
 	if f.When != "" {
-		condition, err := EvalCondition(f.When)
+		condition, err := EvalCondition(f.When, ctx)
 		if err != nil {
 			return false, burrito.WrapError(err, "Could not evaluate condition.")
 		}
