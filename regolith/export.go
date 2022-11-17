@@ -231,7 +231,7 @@ func ExportProject(
 }
 
 // InplaceExportProject copies the files from the tmp paths (tmp/BP, tmp/RP and
-// tmp/data) into the project's source files. It's used by the "regolith tool"
+// tmp/data) into the project's source files. It's used by the "regolith apply-filter"
 // command. This operation is destructive and cannot be undone.
 func InplaceExportProject(
 	config *Config, dotRegolithPath string,
