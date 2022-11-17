@@ -33,7 +33,7 @@ func TestApplyFilter(t *testing.T) {
 			"Unable to get absolute path to the test project:", err)
 	}
 	expectedResult, err := filepath.Abs(
-		filepath.Join(applyFilterPath, "tool_filtered_project"))
+		filepath.Join(applyFilterPath, "filtered_project"))
 	if err != nil {
 		t.Fatal(
 			"Unable to get absolute path to the expected build result:", err)

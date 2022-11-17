@@ -59,7 +59,7 @@ const (
 	// 'regolith apply-filter' command and one after. The command should run the
 	// 'test_filter' with 'Regolith' argument. The filter adds a single file
 	// with 'Hello Regolith!' greeting.
-	applyFilterPath = "testdata/tool_filter"
+	applyFilterPath = "testdata/apply_filter"
 
 	// conditionalFilterPath contains two subdirectories 'project' and
 	// 'expected_build_result'. The project is a Regolith project with a simple
