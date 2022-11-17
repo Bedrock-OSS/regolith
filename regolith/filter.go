@@ -21,7 +21,6 @@ type RunContext struct {
 	Profile          string
 	Parent           *RunContext
 	DotRegolithPath  string
-	IsTool           bool
 
 	// interruptionChannel is a channel that is used to notify about changes
 	// in the sourec files, in order to trigger a restart of the program in

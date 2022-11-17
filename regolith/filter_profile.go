@@ -16,7 +16,6 @@ func (f *ProfileFilter) Run(context RunContext) (bool, error) {
 		Parent:              &context,
 		interruptionChannel: context.interruptionChannel,
 		DotRegolithPath:     context.DotRegolithPath,
-		IsTool:              context.IsTool,
 	})
 }
 
