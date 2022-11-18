@@ -7,7 +7,7 @@ title: Filter Run Modes
 There are 3 ways of running Regolith:
 - `regolith run`
 - `regolith watch`
-- `regolith tool`
+- `regolith apply-filter`
 
 ## Run and Watch Commands
 
@@ -39,18 +39,18 @@ because after a successful run Regolith moves the files of the copy to the
 the original data folder (this is useful for the filters so that they can store
 some data between runs).
 
-## Tool Command - Running Regolith Destructively
+## Apply-Filter Command - Running Regolith Destructively
 
 Running Regolith with `regolith run` or `regolith watch` is a safe operation because the filters can
 only modify the data folder but not RP and BP. Sometimes you want to modify the RP and BP directly
-in a destructive way. This is where the tool-filters come in handy. You can use any filter as a tool
-by running the `regolith tool` command. Unlike the `regolith run` command, the `regolith tool`
+in a destructive way. This is where the apply-filter command come in handy. You can apply any filter
+by running the `regolith apply-filter` command. Unlike the `regolith run` command, the `regolith apply-filter`
 command runs only one filter instead of running entire profile.
 
 The command is used like this:
 
 ```
-regolith tool <filter-name> [args...]
+regolith apply-filter <filter-name> [args...]
 ```
 
 The `filter-name` is the name of one of the filters installed in your project. The `args` is a list of arguments passed to the filter.

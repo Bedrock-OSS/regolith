@@ -71,7 +71,6 @@ Example config, with many options explained:
             // - "arch" - the architecture (e.g. "amd64", "arm64")
             // - "version" - the version of regolith or 0.0.0 when running from source
             // - "debug" - whether the debug flag is passed to regolith or not
-            // - "isTool" - whether the filter is run from a tool subcommand or not
             // - "profile" - current profile being run
             // - "filterLocation" - absolute location of the filter folder
             "when": "os == 'windows' && arch == 'amd64'"

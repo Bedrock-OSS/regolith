@@ -223,7 +223,6 @@ func runOrWatch(profileName string, debug, watch bool) error {
 		Parent:           nil,
 		Profile:          profileName,
 		DotRegolithPath:  dotRegolithPath,
-		IsTool:           false,
 	}
 	if watch { // Loop until program termination (CTRL+C)
 		context.StartWatchingSourceFiles()
@@ -263,10 +262,10 @@ func Watch(profileName string, debug bool) error {
 	return runOrWatch(profileName, debug, true)
 }
 
-// Tool handles the "regolith tool" command. It runs a filter in a "tool mode".
-// Tool mode modifies RP and BP file in place (using source). The config and
-// properties of the tool filter are passed via commandline.
-func Tool(filterName string, filterArgs []string, debug bool) error {
+// ApplyFilter handles the "regolith apply-filter" command.
+// ApplyFilter mode modifies RP and BP file in place (using source). The config and
+// properties of the filter are passed via commandline.
+func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 	InitLogging(debug)
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
@@ -323,7 +322,6 @@ func Tool(filterName string, filterArgs []string, debug bool) error {
 		DotRegolithPath:     dotRegolithPath,
 		interruptionChannel: nil,
 		AbsoluteLocation:    path,
-		IsTool:              true,
 	}
 	// Check the filter
 	err = filterRunner.Check(runContext)
