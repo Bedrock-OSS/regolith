@@ -72,4 +72,4 @@ of useful test commands:
 There are a few ways to build:
  - `go install` (installs to gopath)
   - `go build` (creates a `.exe` file)
- - `./scripts/build-local.sh` (¯\_(ツ)_/¯)
+ - `./scripts/build-local.sh` (¯\_(ツ)_/¯) 
