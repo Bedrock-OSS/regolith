@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Bedrock-OSS/go-burrito/burrito"
+
 	"golang.org/x/mod/semver"
 )
 
@@ -30,80 +32,36 @@ func installFilters(
 	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
 	err := CreateDirectoryIfNotExists(joinedPath)
 	if err != nil {
-		return WrapErrorf(err, osMkdirError, "cache/filters")
+		return burrito.WrapErrorf(err, osMkdirError, "cache/filters")
 	}
 	joinedPath = filepath.Join(dotRegolithPath, "cache/venvs")
 	err = CreateDirectoryIfNotExists(joinedPath)
 	if err != nil {
-		return WrapErrorf(err, osMkdirError, "cache/venvs")
+		return burrito.WrapErrorf(err, osMkdirError, "cache/venvs")
 	}
 
 	// Download all of the remote filters
-	resolverUpdated := false
 	for name, filterDefinition := range filterDefinitions {
 		Logger.Infof("Downloading %q filter...", name)
 		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
-			// Download resolver once if remote filter is found
-			if !resolverUpdated {
-				err = DownloadResolverMap()
-				if err != nil {
-					Logger.Warn("Failed to download resolver map.")
-				}
-				resolverUpdated = true
-			}
-			// Download the remote filter
-			err := remoteFilter.Download(force, dotRegolithPath)
+			// Download the remote filter, and its dependencies
+			err := remoteFilter.Update(force, dotRegolithPath)
 			if err != nil {
-				return WrapErrorf(err, remoteFilterDownloadError, name)
+				return burrito.WrapErrorf(err, remoteFilterDownloadError, name)
 			}
 			// Copy the data of the remote filter to the data path
 			remoteFilter.CopyFilterData(dataPath, dotRegolithPath)
-		}
-		// Install the dependencies of the filter
-		Logger.Infof("Installing %q filter dependencies...", name)
-		err = filterDefinition.InstallDependencies(nil, dotRegolithPath)
-		if err != nil {
-			return WrapErrorf(
-				err,
-				"Failed to install dependencies of the filter.\nFilter: %s.",
-				name)
-		}
-	}
-	return nil
-}
-
-// updateFilters updates the filters from the list.
-func updateFilters(
-	remoteFilterDefinitions map[string]FilterInstaller, dotRegolithPath string,
-) error {
-	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
-	err := CreateDirectoryIfNotExists(joinedPath)
-	if err != nil {
-		return WrapErrorf(err, osMkdirError, joinedPath)
-	}
-	joinedPath = filepath.Join(dotRegolithPath, "cache/venvs")
-	err = CreateDirectoryIfNotExists(joinedPath)
-	if err != nil {
-		return WrapErrorf(err, osMkdirError, joinedPath)
-	}
-	resolverUpdated := false
-	// Download all of the remote filters
-	for name, filterDefinition := range remoteFilterDefinitions {
-		Logger.Infof("Updating %q filter...", name)
-		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
-			// Download resolver once if remote filter is found
-			if !resolverUpdated {
-				err = DownloadResolverMap()
-				if err != nil {
-					Logger.Warn("Failed to download resolver map.")
-				}
-				resolverUpdated = true
-			}
-			// Update the filter
-			err := remoteFilter.Update(dotRegolithPath)
+		} else {
+			// Non-remote filters must always update their dependencies.
+			// TODO - add option to track if the filter already installed
+			// its dependencies.
+			Logger.Infof("Installing %q filter dependencies...", name)
+			err = filterDefinition.InstallDependencies(nil, dotRegolithPath)
 			if err != nil {
-				return WrapErrorf(
-					err, "Failed to update filter.\nFilter: %s", name)
+				return burrito.WrapErrorf(
+					err,
+					"Failed to install dependencies of the filter.\nFilter: %s.",
+					name)
 			}
 		}
 	}
@@ -117,7 +75,7 @@ func parseInstallFilterArgs(
 ) ([]*parsedInstallFilterArg, error) {
 	result := []*parsedInstallFilterArg{}
 	if len(filters) == 0 {
-		return nil, WrappedError(
+		return nil, burrito.WrappedError(
 			"No filters specified.\n" +
 				"Please specify at least one filter to install.")
 	}
@@ -125,7 +83,6 @@ func parseInstallFilterArgs(
 	// Parse the filter argument
 	var url, name, version string
 	var err error
-	updatedResolver := false
 	// resolvedArgs is used for finding duplicates (duplicate is a filter with
 	// the same name and url)
 	parsedArgs := make(map[[2]string]struct{})
@@ -134,7 +91,7 @@ func parseInstallFilterArgs(
 		if strings.Contains(arg, "==") {
 			splitStr := strings.Split(arg, "==")
 			if len(splitStr) != 2 {
-				return nil, WrappedErrorf(
+				return nil, burrito.WrappedErrorf(
 					"Unable to parse argument.\n"+
 						"Argument: %s\n"+
 						"The argument should contain an URL and optionally a "+
@@ -153,17 +110,10 @@ func parseInstallFilterArgs(
 			url = strings.Join(splitStr[:len(splitStr)-1], "/")
 		} else {
 			// Example inputs: "name_ninja==HEAD", "name_ninja"
-			if !updatedResolver {
-				err := DownloadResolverMap()
-				if err != nil {
-					Logger.Warn("Failed to download resolver map.")
-				}
-				updatedResolver = true
-			}
 			name = url
 			url, err = ResolveUrl(name)
 			if err != nil {
-				return nil, WrapErrorf(
+				return nil, burrito.WrapErrorf(
 					err,
 					"Unable to resolve filter name to URL.\n"+
 						"Filter name: %s", name)
@@ -171,7 +121,7 @@ func parseInstallFilterArgs(
 		}
 		key := [2]string{url, name}
 		if _, ok := parsedArgs[key]; ok {
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err, "Duplicate filter:\nURL: %s\nFilter name: %s",
 				url, name)
 		}
@@ -194,12 +144,13 @@ func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 	// changing the function signature. In order to pass it in the 'vg' list.
 	type vg []func(string, string) (string, error)
 	var versionGetters vg
+	getHeadSha := func(url, _ string) (string, error) { return GetHeadSha(url) }
 	if version == "" {
-		versionGetters = vg{GetLatestRemoteFilterTag, GetHeadSha}
+		versionGetters = vg{GetLatestRemoteFilterTag, getHeadSha}
 	} else if version == "latest" {
 		versionGetters = vg{GetLatestRemoteFilterTag}
 	} else if version == "HEAD" {
-		versionGetters = vg{GetHeadSha}
+		versionGetters = vg{getHeadSha}
 	} else {
 		if semver.IsValid("v" + version) {
 			version = name + "-" + version
@@ -212,7 +163,7 @@ func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 			return version, nil
 		}
 	}
-	return "", WrappedError(
+	return "", burrito.WrappedError(
 		"Unable to find version of the filter that satisfies the " +
 			"specified constraints.")
 }
@@ -226,7 +177,7 @@ func GetLatestRemoteFilterTag(url, name string) (string, error) {
 			lastTag := tags[len(tags)-1]
 			return lastTag, nil
 		}
-		return "", WrappedError(
+		return "", burrito.WrappedError(
 			"No version tags found for the filter on its repository.")
 	}
 	return "", err
@@ -239,7 +190,7 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 	output, err := exec.Command("git", commandArgs...).Output()
 	if err != nil {
 		command := "git " + strings.Join(commandArgs, " ")
-		return nil, WrapErrorf(err, execCommandError, command)
+		return nil, burrito.WrapErrorf(err, execCommandError, command)
 	}
 	// Go line by line though the output
 	var tags []string
@@ -263,12 +214,13 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 // GetHeadSha returns the SHA of the HEAD of the repository specified by the
 // filter URL. This function does not check whether the filter actually exists
 // in the repository.
-func GetHeadSha(url, name string) (string, error) {
+func GetHeadSha(url string) (string, error) {
 	commandArgs := []string{
 		"ls-remote", "--symref", "https://" + url, "HEAD"}
 	output, err := exec.Command("git", commandArgs...).Output()
 	if err != nil {
-		return "", WrapErrorf(err, execCommandError, name)
+		commandText := "git " + strings.Join(commandArgs, " ")
+		return "", burrito.WrapErrorf(err, execCommandError, commandText)
 	}
 	// The result is on the second line.
 	lines := strings.Split(string(output), "\n")

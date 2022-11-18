@@ -7,11 +7,17 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 type NodeJSFilterDefinition struct {
 	FilterDefinition
 	Script string `json:"script,omitempty"`
+
+	// Requirements is an optional path to the folder with the package.json file.
+	// If not specified the parent of thhe script path is used instead.
+	Requirements string `json:"requirements,omitempty"`
 }
 
 type NodeJSFilter struct {
@@ -23,14 +29,24 @@ func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*N
 	filter := &NodeJSFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	scriptObj, ok := obj["script"]
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyMissingError, "script")
+		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "script")
 	}
 	script, ok := scriptObj.(string)
 	if !ok {
-		return nil, WrappedErrorf(
+		return nil, burrito.WrappedErrorf(
 			jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
+
+	requirementsObj, ok := obj["requirements"]
+	if ok {
+		requirements, ok := requirementsObj.(string)
+		if !ok {
+			return nil, burrito.WrappedErrorf(
+				jsonPropertyTypeError, "requirements", "string")
+		}
+		filter.Requirements = requirements
+	}
 	return filter, nil
 }
 
@@ -49,7 +65,7 @@ func (f *NodeJSFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return PassError(err)
+			return burrito.PassError(err)
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -64,7 +80,7 @@ func (f *NodeJSFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return PassError(err)
+			return burrito.PassError(err)
 		}
 	}
 	return nil
@@ -72,7 +88,7 @@ func (f *NodeJSFilter) run(context RunContext) error {
 
 func (f *NodeJSFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, PassError(err)
+		return false, burrito.PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -80,7 +96,7 @@ func (f *NodeJSFilter) Run(context RunContext) (bool, error) {
 func (f *NodeJSFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, filterFromObjectError)
+		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
 	filter := &NodeJSFilter{
 		Filter:     *basicFilter,
@@ -96,18 +112,28 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 		installLocation = parent.GetDownloadPath(dotRegolithPath)
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
-	joinedPath := filepath.Join(installLocation, f.Script)
-	scriptPath, err := filepath.Abs(joinedPath)
-	if err != nil {
-		return WrapErrorf(err, filepathAbsError, joinedPath)
-	}
-
-	filterPath := filepath.Dir(scriptPath)
-	if hasPackageJson(filterPath) {
-		Logger.Info("Installing npm dependencies...")
-		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, filterPath, filterPath, ShortFilterName(f.Id))
+	var requirementsPath string
+	if f.Requirements == "" {
+		// Deduce the path from the script path
+		joinedPath := filepath.Join(installLocation, f.Script)
+		scriptPath, err := filepath.Abs(joinedPath)
 		if err != nil {
-			return WrapErrorf(
+			return burrito.WrapErrorf(err, filepathAbsError, joinedPath)
+		}
+		requirementsPath = filepath.Dir(scriptPath)
+	} else {
+		joinedPath := filepath.Join(installLocation, f.Requirements)
+		installPath, err := filepath.Abs(joinedPath)
+		if err != nil {
+			return burrito.WrapErrorf(err, filepathAbsError, joinedPath)
+		}
+		requirementsPath = installPath
+	}
+	if hasPackageJson(requirementsPath) {
+		Logger.Info("Installing npm dependencies...")
+		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
+		if err != nil {
+			return burrito.WrapErrorf(
 				err, "Failed to run npm and install dependencies."+
 					"\nFilter name: %s", f.Id)
 		}
@@ -119,13 +145,13 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 func (f *NodeJSFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("node")
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err, "NodeJS not found, download and install it from"+
 				" https://nodejs.org/en/")
 	}
 	cmd, err := exec.Command("node", "--version").Output()
 	if err != nil {
-		return WrapError(err, "Failed to check NodeJS version")
+		return burrito.WrapError(err, "Failed to check NodeJS version")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
 	Logger.Debugf("Found NodeJS version %s", a)

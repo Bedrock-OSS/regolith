@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os/exec"
 	"strings"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 type ShellFilterDefinition struct {
@@ -23,11 +25,11 @@ func ShellFilterDefinitionFromObject(
 		FilterDefinition: *FilterDefinitionFromObject(id)}
 	commandObj, ok := obj["command"]
 	if !ok {
-		return nil, WrapErrorf(nil, jsonPropertyMissingError, "command")
+		return nil, burrito.WrapErrorf(nil, jsonPropertyMissingError, "command")
 	}
 	command, ok := commandObj.(string)
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyTypeError, "command", "string")
+		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "command", "string")
 	}
 	filter.Command = command
 	return filter, nil
@@ -35,7 +37,7 @@ func ShellFilterDefinitionFromObject(
 
 func (f *ShellFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(f.Settings, context); err != nil {
-		return false, PassError(err)
+		return false, burrito.PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -45,7 +47,7 @@ func (f *ShellFilterDefinition) CreateFilterRunner(
 ) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, filterFromObjectError)
+		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
 	filter := &ShellFilter{
 		Filter:     *basicFilter,
@@ -61,7 +63,7 @@ func (f *ShellFilterDefinition) InstallDependencies(*RemoteFilterDefinition, str
 func (f *ShellFilterDefinition) Check(context RunContext) error {
 	shell, _, err := findShell()
 	if err != nil {
-		return WrapError(err, "Shell requirements check failed")
+		return burrito.WrapError(err, "Shell requirements check failed")
 	}
 	Logger.Debugf("Using shell: %s", shell)
 	return nil
@@ -93,7 +95,7 @@ func (f *ShellFilter) run(
 			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
 	}
 	if err != nil {
-		return WrapError(err, "Failed to run shell command.")
+		return burrito.WrapError(err, "Failed to run shell command.")
 	}
 	return nil
 }
@@ -105,11 +107,11 @@ func executeCommand(id string,
 	Logger.Debugf("Executing command: %s", joined)
 	shell, arg, err := findShell()
 	if err != nil {
-		return WrapError(err, "Unable to find a valid shell.")
+		return burrito.WrapError(err, "Unable to find a valid shell.")
 	}
 	err = RunSubProcess(shell, []string{arg, joined}, filterDir, workingDir, ShortFilterName(id))
 	if err != nil {
-		return WrapError(err, runSubProcessError)
+		return burrito.WrapError(err, runSubProcessError)
 	}
 	return nil
 }
@@ -121,5 +123,5 @@ func findShell() (string, string, error) {
 			return shell[0], shell[1], nil
 		}
 	}
-	return "", "", WrappedError("Unable to find a valid shell.")
+	return "", "", burrito.WrappedError("Unable to find a valid shell.")
 }
