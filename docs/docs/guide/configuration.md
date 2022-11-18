@@ -65,11 +65,11 @@ Example config, with many options explained:
             // "disabled" is a bolean that determines whether or not to run this filter (optional).
             "disabled": true,
 
-            // "when" lets you specify a condition using Go's syntax, which determines whether or not to run
+            // "when" lets you specify a condition, which determines whether or not to run
             // this filter. "when" has access to following variables:
             // - "os" - the operating system (e.g. "windows", "linux", "darwin")
             // - "arch" - the architecture (e.g. "amd64", "arm64")
-            // - "version" - the version of regolith
+            // - "version" - the version of regolith or 0.0.0 when running from source
             // - "debug" - whether the debug flag is passed to regolith or not
             // - "profile" - current profile being run
             // - "filterLocation" - absolute location of the filter folder
