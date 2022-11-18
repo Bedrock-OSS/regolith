@@ -36,17 +36,17 @@ every time a change in files of the project's RP, BP, or data folders is detecte
 uses the same syntax as "regolith run". You can use "regolith help run" to learn more about the
 command.
 `
-const regolithToolDesc = `
-This command runs single selected filter as a tool for modifying project source files. Running this
-is a destructive operation that modifies RP, BP and data folders, so it is recommended to be cautious
-when using this command and to have a way to revert the changes (e.g. using Git).
+const regolithApplyFilter = `
+This command runs single selected filter and applies its changes to the project source files. Running
+this is a destructive operation that modifies RP, BP and data folders, so it is recommended to be
+cautious when using this command and to have a way to revert the changes (e.g. using Git).
 
-Every filter can be used as a tool as long as it's defined in the "config.json" file in the
+Every filter can be used this way as long as it's defined in the "config.json" file in the
 "filterDefinitions" section.
 
-The "regolith tool" command runs on a copy of the project's files and copies them back to the
-project only if the filter was successful. This means that if the filter fails, the project's files
-will not be modified.
+The "regolith apply-filter" command runs on a copy of the project's files and copies them back to the
+project only if the filter is successful. This means that if the filter fails, the project's files
+aren't modified.
 `
 const regolithInstallDesc = `
 Downloads and installs Regolith filters from the internet, and adds them to the "filterDefinitions"
@@ -266,11 +266,11 @@ func main() {
 		},
 	}
 	subcomands = append(subcomands, cmdWatch)
-	// regolith tool
-	cmdTool := &cobra.Command{
-		Use:   "tool <filter_name> [filter_args...]",
+	// regolith apply-filter
+	cmdApplyFilter := &cobra.Command{
+		Use:   "apply-filter <filter_name> [filter_args...]",
 		Short: "Runs selected filter to destructively modify the project files",
-		Long:  regolithToolDesc,
+		Long:  regolithApplyFilter,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
 				cmd.Help()
@@ -278,10 +278,10 @@ func main() {
 			}
 			filter := args[0]
 			filterArgs := args[1:] // First arg is the filter name
-			err = regolith.Tool(filter, filterArgs, burrito.Debug)
+			err = regolith.ApplyFilter(filter, filterArgs, burrito.Debug)
 		},
 	}
-	subcomands = append(subcomands, cmdTool)
+	subcomands = append(subcomands, cmdApplyFilter)
 	// regolith clean
 	var userCache bool
 	cmdClean := &cobra.Command{

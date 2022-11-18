@@ -10,8 +10,8 @@ import (
 	"github.com/otiai10/copy"
 )
 
-// TestToolFilter tests the 'regolith tool' command
-func TestToolFilter(t *testing.T) {
+// TestApplyFilter tests the 'regolith apply-filter' command
+func TestApplyFilter(t *testing.T) {
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal("Unable to get current working directory")
@@ -27,13 +27,13 @@ func TestToolFilter(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	defer os.Chdir(wd)
 	// Copy the test project to the working directory
-	project, err := filepath.Abs(filepath.Join(toolFilterPath, "project"))
+	project, err := filepath.Abs(filepath.Join(applyFilterPath, "project"))
 	if err != nil {
 		t.Fatal(
 			"Unable to get absolute path to the test project:", err)
 	}
 	expectedResult, err := filepath.Abs(
-		filepath.Join(toolFilterPath, "tool_filtered_project"))
+		filepath.Join(applyFilterPath, "filtered_project"))
 	if err != nil {
 		t.Fatal(
 			"Unable to get absolute path to the expected build result:", err)
@@ -51,8 +51,8 @@ func TestToolFilter(t *testing.T) {
 	}
 	// THE TEST
 	os.Chdir(tmpDir)
-	if err := regolith.Tool("test_filter", []string{"Regolith"}, true); err != nil {
-		t.Fatal("'regolith tool' failed:", err.Error())
+	if err := regolith.ApplyFilter("test_filter", []string{"Regolith"}, true); err != nil {
+		t.Fatal("'regolith apply-filter' failed:", err.Error())
 	}
 	// Load expected result
 	expectedPaths, err := listPaths(expectedResult, expectedResult)

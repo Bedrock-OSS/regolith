@@ -21,7 +21,6 @@ type RunContext struct {
 	Profile          string
 	Parent           *RunContext
 	DotRegolithPath  string
-	IsTool           bool
 
 	// interruptionChannel is a channel that is used to notify about changes
 	// in the sourec files, in order to trigger a restart of the program in
@@ -130,7 +129,7 @@ func filterFromObject(obj map[string]interface{}) (*Filter, error) {
 	if ok {
 		// Try to parse arguments as []interface{} and as []string
 		// one format is used when parsed from JSON, and the other format is
-		// used by the Tool() function.
+		// used by the ApplyFilter() function.
 		switch arguments := arguments.(type) {
 		case []interface{}:
 			s := make([]string, len(arguments))

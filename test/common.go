@@ -54,12 +54,12 @@ const (
 	// filter.
 	regolithUpdatePath = "testdata/regolith_update"
 
-	// toolFilterPath is a directory that contains the files for testing
-	// 'regolith tool' command. It contains two projects, one before running
-	// 'regolith tool' command and one after. The command should run the
+	// applyFilterPath is a directory that contains the files for testing
+	// 'regolith apply-filter' command. It contains two projects, one before running
+	// 'regolith apply-filter' command and one after. The command should run the
 	// 'test_filter' with 'Regolith' argument. The filter adds a single file
 	// with 'Hello Regolith!' greeting.
-	toolFilterPath = "testdata/tool_filter"
+	applyFilterPath = "testdata/apply_filter"
 
 	// conditionalFilterPath contains two subdirectories 'project' and
 	// 'expected_build_result'. The project is a Regolith project with a simple
