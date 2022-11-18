@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 type JavaFilterDefinition struct {
@@ -24,18 +26,18 @@ func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*Jav
 	if !ok {
 		scriptObj, ok := obj["script"]
 		if !ok {
-			return nil, WrappedErrorf(jsonPropertyMissingError, "path")
+			return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "path")
 		}
 		Logger.Warnf("\"script\" property in %s definition is deprecated, use \"path\" instead.", FullFilterToNiceFilterName(filter.Id))
 		path, ok = scriptObj.(string)
 		if !ok {
-			return nil, WrappedErrorf(jsonPropertyTypeError, "script", "string")
+			return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "script", "string")
 		}
 
 	} else {
 		path, ok = pathObj.(string)
 		if !ok {
-			return nil, WrappedErrorf(jsonPropertyTypeError, "path", "string")
+			return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "path", "string")
 		}
 	}
 	filter.Script = path
@@ -43,7 +45,7 @@ func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*Jav
 }
 func (f *JavaFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
-		return false, PassError(err)
+		return false, burrito.PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -65,7 +67,7 @@ func (f *JavaFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return WrapError(err, "Failed to run Java filter")
+			return burrito.WrapError(err, "Failed to run Java filter")
 		}
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
@@ -82,7 +84,7 @@ func (f *JavaFilter) run(context RunContext) error {
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
-			return PassError(err)
+			return burrito.PassError(err)
 		}
 	}
 	return nil
@@ -91,7 +93,7 @@ func (f *JavaFilter) run(context RunContext) error {
 func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, filterFromObjectError)
+		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
 	filter := &JavaFilter{
 		Filter:     *basicFilter,
@@ -107,14 +109,14 @@ func (f *JavaFilterDefinition) InstallDependencies(*RemoteFilterDefinition, stri
 func (f *JavaFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("java")
 	if err != nil {
-		return WrapError(
+		return burrito.WrapError(
 			err,
 			"Java not found, download and install it"+
 				" from https://adoptopenjdk.net/")
 	}
 	cmd, err := exec.Command("java", "-version").Output()
 	if err != nil {
-		return WrapError(err, "Failed to check Java version")
+		return burrito.WrapError(err, "Failed to check Java version")
 	}
 	a := strings.Split(strings.Trim(string(cmd), " \n\t"), " ")
 	if len(a) > 1 {

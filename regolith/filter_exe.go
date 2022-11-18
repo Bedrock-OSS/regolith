@@ -3,15 +3,13 @@ package regolith
 import (
 	"encoding/json"
 	"path/filepath"
-	"runtime"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 type ExeFilterDefinition struct {
 	FilterDefinition
-	Exe      string `json:"exe,omitempty"`
-	ExeWin   string `json:"exeWindows,omitempty"`
-	ExeLinux string `json:"exeLinux,omitempty"`
-	ExeMac   string `json:"exeMac,omitempty"`
+	Exe string `json:"exe,omitempty"`
 }
 
 type ExeFilter struct {
@@ -26,45 +24,21 @@ func ExeFilterDefinitionFromObject(
 		FilterDefinition: *FilterDefinitionFromObject(id)}
 	exeObj, ok := obj["exe"]
 	if !ok {
-		return nil, WrappedErrorf(jsonPropertyMissingError, "exe")
+		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "exe")
 	}
 	exe, ok := exeObj.(string)
 	if !ok {
-		return nil, WrappedErrorf(
+		return nil, burrito.WrappedErrorf(
 			jsonPropertyTypeError, "exe", "string")
 	}
 
 	filter.Exe = exe
-	if exeObj, ok = obj["exeWindows"]; ok {
-		if exe, ok = exeObj.(string); ok {
-			filter.ExeWin = exe
-		} else {
-			return nil, WrappedErrorf(
-				jsonPropertyTypeError, "exeWindows", "string")
-		}
-	}
-	if exeObj, ok = obj["exeLinux"]; ok {
-		if exe, ok = exeObj.(string); ok {
-			filter.ExeLinux = exe
-		} else {
-			return nil, WrappedErrorf(
-				jsonPropertyTypeError, "exeLinux", "string")
-		}
-	}
-	if exeObj, ok = obj["exeMac"]; ok {
-		if exe, ok = exeObj.(string); ok {
-			filter.ExeMac = exe
-		} else {
-			return nil, WrappedErrorf(
-				jsonPropertyTypeError, "exeMac", "string")
-		}
-	}
 	return filter, nil
 }
 
 func (f *ExeFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(f.Settings, context); err != nil {
-		return false, PassError(err)
+		return false, burrito.PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
@@ -74,7 +48,7 @@ func (f *ExeFilterDefinition) CreateFilterRunner(
 ) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration)
 	if err != nil {
-		return nil, WrapError(err, filterFromObjectError)
+		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
 	filter := &ExeFilter{
 		Filter:     *basicFilter,
@@ -102,32 +76,22 @@ func (f *ExeFilter) run(
 	context RunContext,
 ) error {
 	var err error = nil
-	exe := f.Definition.Exe
-	if runtime.GOOS == "windows" && f.Definition.ExeWin != "" {
-		exe = f.Definition.ExeWin
-	}
-	if runtime.GOOS == "linux" && f.Definition.ExeLinux != "" {
-		exe = f.Definition.ExeLinux
-	}
-	if runtime.GOOS == "darwin" && f.Definition.ExeMac != "" {
-		exe = f.Definition.ExeMac
-	}
 	if len(settings) == 0 {
 		err = executeExeFile(f.Id,
-			exe,
+			f.Definition.Exe,
 			f.Arguments, context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
 		err = executeExeFile(f.Id,
-			exe,
+			f.Definition.Exe,
 			append([]string{string(jsonSettings)}, f.Arguments...),
 			context.AbsoluteLocation, GetAbsoluteWorkingDirectory(
 				context.DotRegolithPath))
 	}
 	if err != nil {
-		return WrapErrorf(
-			err, "Failed to run exe file.\nPath: %s", exe)
+		return burrito.WrapErrorf(
+			err, "Failed to run exe file.\nPath: %s", f.Definition.Exe)
 	}
 	return nil
 }
@@ -139,7 +103,7 @@ func executeExeFile(id string,
 	Logger.Debugf("Running exe file %s:", exe)
 	err := RunSubProcess(exe, args, filterDir, workingDir, id)
 	if err != nil {
-		return WrapErrorf(err, runSubProcessError)
+		return burrito.WrapErrorf(err, runSubProcessError)
 	}
 	return nil
 }

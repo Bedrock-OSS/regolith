@@ -1,0 +1,41 @@
+{
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.1.json",
+	"name": "regolith_test_project",
+	"author": "Bedrock-OSS",
+	"packs": {
+		"behaviorPack": "./packs/BP",
+		"resourcePack": "./packs/RP"
+	},
+	"regolith": {
+		"filterDefinitions": {
+			"print_to_bp": {
+				"runWith": "python",
+				"script": "local_filters/print_to_bp.py"
+			}
+		},
+		"profiles": {
+			"default": {
+				"filters": [
+					{
+						"filter": "print_to_bp",
+						"settings": {
+							"output_text": "2 + 2 == 4"
+						},
+						"when": "2 + 2 == 4"
+					},
+					{
+						"filter": "print_to_bp",
+						"settings": {
+							"output_text": "2 + 2 == 5"
+						},
+						"when": "2 + 2 == 5"
+					}
+				],
+				"export": {
+					"target": "local"
+				}
+			}
+		},
+		"dataPath": "./packs/data"
+	}
+}

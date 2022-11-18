@@ -47,6 +47,28 @@ const (
 	// ProfileFilter. It contains a project and an expected result. The
 	// projects has both valid and invalid profiles.
 	profileFilterPath = "testdata/profile_filter"
+
+	// regolithUpdatePath is a directory that contains files for testing
+	// "regolith install-all" command. It has multiple projects, each with
+	// different config.json for installing different versions of the same
+	// filter.
+	regolithUpdatePath = "testdata/regolith_update"
+
+	// applyFilterPath is a directory that contains the files for testing
+	// 'regolith apply-filter' command. It contains two projects, one before running
+	// 'regolith apply-filter' command and one after. The command should run the
+	// 'test_filter' with 'Regolith' argument. The filter adds a single file
+	// with 'Hello Regolith!' greeting.
+	applyFilterPath = "testdata/apply_filter"
+
+	// conditionalFilterPath contains two subdirectories 'project' and
+	// 'expected_build_result'. The project is a Regolith project with a simple
+	// Python filter and with configuration that runs it based on a 'when'
+	// condition. The 'expected_build_result' contains the expected result of
+	// the execution.
+	conditionalFilterPath = "testdata/conditional_filter"
+
+	dataModifyRemoteFilter = "testdata/data_modify_remote_filter"
 )
 
 // firstErr returns the first error in a list of errors. If the list is empty

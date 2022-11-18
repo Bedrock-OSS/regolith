@@ -8,85 +8,25 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Bedrock-OSS/go-burrito/burrito"
+
 	"github.com/otiai10/copy"
 )
 
-// RecycledSetupTmpFiles set up the workspace for the filters. The function
-// uses cached data about the state of the project files to reduce the number
-// of file system operations.
-func RecycledSetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error {
-	start := time.Now()
-	tmpPath := filepath.Join(dotRegolithPath, "tmp")
-	err := os.MkdirAll(tmpPath, 0755)
-	if err != nil {
-		return WrapErrorf(err, osMkdirError, tmpPath)
-	}
-	// Copy the contents of the 'regolith' folder to '[dotRegolith]/tmp'
-	if config.ResourceFolder != "" {
-		Logger.Debugf("Copying project files to \"%s\"", tmpPath)
-		err = FullRecycledMoveOrCopy(
-			config.ResourceFolder, filepath.Join(tmpPath, "RP"),
-			RecycledMoveOrCopySettings{
-				canMove:                 false,
-				saveSourceHashes:        false,
-				saveTargetHashes:        false,
-				copyTargetAclFromParent: false,
-				reloadSourceHashes:      true,
-			})
-		if err != nil {
-			return WrapErrorf(
-				err, "Failed to setup RP folder in the temporary directory.")
-		}
-	}
-	if config.BehaviorFolder != "" {
-		err = FullRecycledMoveOrCopy(
-			config.BehaviorFolder, filepath.Join(tmpPath, "BP"),
-			RecycledMoveOrCopySettings{
-				canMove:                 false,
-				saveSourceHashes:        false,
-				saveTargetHashes:        false,
-				copyTargetAclFromParent: false,
-				reloadSourceHashes:      true,
-			})
-		if err != nil {
-			return WrapErrorf(
-				err, "Failed to setup BP folder in the temporary directory.")
-		}
-	}
-	if config.DataPath != "" {
-		err = FullRecycledMoveOrCopy(
-			config.DataPath, filepath.Join(tmpPath, "data"),
-			RecycledMoveOrCopySettings{
-				canMove:                 false,
-				saveSourceHashes:        false,
-				saveTargetHashes:        false,
-				copyTargetAclFromParent: false,
-				reloadSourceHashes:      true,
-			})
-		if err != nil {
-			return WrapErrorf(
-				err, "Failed to setup data folder in the temporary directory.")
-		}
-	}
-
-	Logger.Debug("Setup done in ", time.Since(start))
-	return nil
-}
-
 // SetupTmpFiles set up the workspace for the filters.
-func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error {
+func SetupTmpFiles(config Config, dotRegolithPath string) error {
 	start := time.Now()
 	// Setup Directories
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
 	Logger.Debugf("Cleaning \"%s\"", tmpPath)
 	err := os.RemoveAll(tmpPath)
 	if err != nil {
-		return WrapErrorf(err, osRemoveError, tmpPath)
+		return burrito.WrapErrorf(err, osRemoveError, tmpPath)
 	}
 
 	err = os.MkdirAll(tmpPath, 0755)
 	if err != nil {
-		return WrapErrorf(err, osMkdirError, tmpPath)
+		return burrito.WrapErrorf(err, osMkdirError, tmpPath)
 	}
 
 	// Copy the contents of the 'regolith' folder to '[dotRegolithPath]/tmp'
@@ -105,7 +45,7 @@ func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error
 						"%s %q does not exist", descriptiveName, path)
 					err = os.MkdirAll(p, 0755)
 					if err != nil {
-						return WrapErrorf(err, osMkdirError, p)
+						return burrito.WrapErrorf(err, osMkdirError, p)
 					}
 				}
 			} else if stats.IsDir() {
@@ -114,15 +54,15 @@ func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error
 					p,
 					copy.Options{PreserveTimes: false, Sync: false})
 				if err != nil {
-					return WrapErrorf(err, osCopyError, path, p)
+					return burrito.WrapErrorf(err, osCopyError, path, p)
 				}
 			} else { // The folder paths leads to a file
-				return WrappedErrorf(isDirNotADirError, path)
+				return burrito.WrappedErrorf(isDirNotADirError, path)
 			}
 		} else {
 			err = os.MkdirAll(p, 0755)
 			if err != nil {
-				return WrapErrorf(err, osMkdirError, p)
+				return burrito.WrapErrorf(err, osMkdirError, p)
 			}
 		}
 		return nil
@@ -130,17 +70,17 @@ func SetupTmpFiles(config Config, profile Profile, dotRegolithPath string) error
 
 	err = setup_tmp_directory(config.ResourceFolder, "RP", "resource folder")
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Failed to setup RP folder in the temporary directory.")
 	}
 	err = setup_tmp_directory(config.BehaviorFolder, "BP", "behavior folder")
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Failed to setup BP folder in the temporary directory.")
 	}
 	err = setup_tmp_directory(config.DataPath, "data", "data folder")
 	if err != nil {
-		return WrapErrorf(
+		return burrito.WrapErrorf(
 			err, "Failed to setup data folder in the temporary directory.")
 	}
 
@@ -161,86 +101,9 @@ func CheckProfileImpl(
 			DotRegolithPath: dotRegolithPath,
 		})
 		if err != nil {
-			return WrapErrorf(err, filterRunnerCheckError, f.GetId())
+			return burrito.WrapErrorf(err, filterRunnerCheckError, f.GetId())
 		}
 	}
-	return nil
-}
-
-// RecycledRunProfile loads the profile from config.json and runs it based on the
-// context. If context is in the watch mode, it can repeat the process multiple
-// times in case of interruptions (changes in the source files).
-func RecycledRunProfile(context RunContext) error {
-	// profileName string, profile *Profile, config *Config
-
-	// saveTmp saves the state of the tmp files. This is useful only if runnig
-	// in the watch mode.
-	saveTmp := func() error {
-		err1 := SaveStateInDefaultCache(filepath.Join(context.DotRegolithPath, "tmp/RP"))
-		err2 := SaveStateInDefaultCache(filepath.Join(context.DotRegolithPath, "tmp/BP"))
-		err3 := SaveStateInDefaultCache(filepath.Join(context.DotRegolithPath, "tmp/data"))
-		if err := firstErr(err1, err2, err3); err != nil {
-			err1 := ClearCachedStates() // Just to be safe - clear cached states
-			if err1 != nil {
-				err = WrapError(err1, clearCachedStatesError)
-			}
-			return WrapError(err, "Failed to save file path states in cache.")
-		}
-		return nil
-	}
-	// The label and goto can be easily changed to a loop with continue and
-	// break but I find this more readable. If you want to change it, because
-	// you believe goto is forbidden, dark art then feel free to do so.
-start:
-	// Prepare tmp files
-	profile, err := context.GetProfile()
-	if err != nil {
-		return WrapErrorf(err, runContextGetProfileError)
-	}
-	err = RecycledSetupTmpFiles(*context.Config, profile, context.DotRegolithPath)
-	if err != nil {
-		err1 := ClearCachedStates() // Just to be safe clear cached states
-		if err1 != nil {
-			err = WrapError(err1, clearCachedStatesError)
-		}
-		return WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
-	}
-	if context.IsInterrupted() {
-		if err := saveTmp(); err != nil {
-			return PassError(err)
-		}
-		goto start
-	}
-	// Run the profile
-	interrupted, err := WatchProfileImpl(context)
-	if err != nil {
-		return PassError(err)
-	}
-	if interrupted { // Save the current target state before rerun
-		if err := saveTmp(); err != nil {
-			return PassError(err)
-		}
-		goto start
-	}
-	// Export files
-	Logger.Info("Moving files to target directory.")
-	start := time.Now()
-	err = RecycledExportProject(
-		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath)
-	if err != nil {
-		err1 := ClearCachedStates() // Just to be safe clear cached states
-		if err1 != nil {
-			err = WrapError(err1, clearCachedStatesError)
-		}
-		return WrapError(err, exportProjectError)
-	}
-	if context.IsInterrupted("data") { // Ignore the interruptions from the data path
-		if err := saveTmp(); err != nil {
-			return PassError(err)
-		}
-		goto start
-	}
-	Logger.Debug("Done in ", time.Since(start))
 	return nil
 }
 
@@ -248,26 +111,23 @@ start:
 // context. If context is in the watch mode, it can repeat the process multiple
 // times in case of interruptions (changes in the source files).
 func RunProfile(context RunContext) error {
-	// Clear states to not conflict with recycled mode, error handling not
-	// important
-	ClearCachedStates()
 start:
 	// Prepare tmp files
 	profile, err := context.GetProfile()
 	if err != nil {
-		return WrapErrorf(err, runContextGetProfileError)
+		return burrito.WrapErrorf(err, runContextGetProfileError)
 	}
-	err = SetupTmpFiles(*context.Config, profile, context.DotRegolithPath)
+	err = SetupTmpFiles(*context.Config, context.DotRegolithPath)
 	if err != nil {
-		return WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
+		return burrito.WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
 	}
 	if context.IsInterrupted() {
 		goto start
 	}
 	// Run the profile
-	interrupted, err := WatchProfileImpl(context)
+	interrupted, err := RunProfileImpl(context)
 	if err != nil {
-		return PassError(err)
+		return burrito.PassError(err)
 	}
 	if interrupted {
 		goto start
@@ -278,7 +138,7 @@ start:
 	err = ExportProject(
 		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath)
 	if err != nil {
-		return WrapError(err, exportProjectError)
+		return burrito.WrapError(err, exportProjectError)
 	}
 	if context.IsInterrupted("data") {
 		goto start
@@ -287,18 +147,22 @@ start:
 	return nil
 }
 
-// WatchProfileImpl runs the profile from the given context and returns true
+// RunProfileImpl runs the profile from the given context and returns true
 // if the execution was interrupted.
-func WatchProfileImpl(context RunContext) (bool, error) {
+func RunProfileImpl(context RunContext) (bool, error) {
 	profile, err := context.GetProfile()
 	if err != nil {
-		return false, WrapErrorf(err, runContextGetProfileError)
+		return false, burrito.WrapErrorf(err, runContextGetProfileError)
 	}
 	// Run the filters!
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
 		// Disabled filters are skipped
-		if filter.IsDisabled() {
+		disabled, err := filter.IsDisabled(context)
+		if err != nil {
+			return false, burrito.WrapErrorf(err, "Failed to check if filter is disabled")
+		}
+		if disabled {
 			Logger.Infof("Filter \"%s\" is disabled, skipping.", filter.GetId())
 			continue
 		}
@@ -311,12 +175,7 @@ func WatchProfileImpl(context RunContext) (bool, error) {
 		interrupted, err := filter.Run(context)
 		Logger.Debugf("Executed in %s", time.Since(start))
 		if err != nil {
-			err1 := ClearCachedStates() // Just to be safe clear cached states
-			if err1 != nil {
-				err = WrapError(err1, clearCachedStatesError)
-			}
-			return false, WrapErrorf(
-				err, filterRunnerRunError, filter.GetId())
+			return false, burrito.WrapErrorf(err, filterRunnerRunError, filter.GetId())
 		}
 		if interrupted {
 			return true, nil
@@ -333,38 +192,31 @@ func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterColle
 	file, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		return nil, WrappedErrorf( // Don't pass OS error here. It's often confusing
-			"Couldn't read filter data from path:\n"+
-				"%s\n"+
-				"Did you install the filter?\n"+
-				"You can install all of the filters by running:\n"+
-				"regolith install-all",
-			path,
-		)
+		return nil, burrito.WrappedErrorf(readFilterJsonError, path)
 	}
 
 	var filterCollection map[string]interface{}
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
-		return nil, WrapErrorf(err, jsonUnmarshalError, path)
+		return nil, burrito.WrapErrorf(err, jsonUnmarshalError, path)
 	}
 	// Filters
 	filtersObj, ok := filterCollection["filters"]
 	if !ok {
 		return nil, extraFilterJsonErrorInfo(
-			path, WrappedErrorf(jsonPathMissingError, "filters"))
+			path, burrito.WrappedErrorf(jsonPathMissingError, "filters"))
 	}
 	filters, ok := filtersObj.([]interface{})
 	if !ok {
 		return nil, extraFilterJsonErrorInfo(
-			path, WrappedErrorf(jsonPathTypeError, "filters", "array"))
+			path, burrito.WrappedErrorf(jsonPathTypeError, "filters", "array"))
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		jsonPath := fmt.Sprintf("filters->%d", i) // Used for error messages
 		if !ok {
 			return nil, extraFilterJsonErrorInfo(
-				path, WrappedErrorf(jsonPathTypeError, jsonPath, "object"))
+				path, burrito.WrappedErrorf(jsonPathTypeError, jsonPath, "object"))
 		}
 		// Using the same JSON data to create both the filter
 		// definiton (installer) and the filter (runner)
@@ -372,7 +224,7 @@ func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterColle
 		filterInstaller, err := FilterInstallerFromObject(filterId, filter)
 		if err != nil {
 			return nil, extraFilterJsonErrorInfo(
-				path, WrapErrorf(err, jsonPathParseError, jsonPath))
+				path, burrito.WrapErrorf(err, jsonPathParseError, jsonPath))
 		}
 		// Remote filters don't have the "filter" key but this would break the
 		// code as it's required by local filters. Adding it here to make the
@@ -383,12 +235,12 @@ func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterColle
 		if err != nil {
 			// TODO - better filterName?
 			filterName := fmt.Sprintf("%v filter from %s.", nth(i), path)
-			return nil, WrapErrorf(
+			return nil, burrito.WrapErrorf(
 				err, createFilterRunnerError, filterName)
 		}
 		if _, ok := filterRunner.(*RemoteFilter); ok {
 			// TODO - we could possibly implement recursive filters here
-			return nil, WrappedErrorf(
+			return nil, burrito.WrappedErrorf(
 				"Regolith detected a reference to a remote filter inside "+
 					"another remote filter.\n"+
 					"This feature is not supported.\n"+
@@ -419,37 +271,37 @@ func ProfileFromObject(
 	result := Profile{}
 	// Filters
 	if _, ok := obj["filters"]; !ok {
-		return result, WrappedErrorf(jsonPathMissingError, "filters")
+		return result, burrito.WrappedErrorf(jsonPathMissingError, "filters")
 	}
 	filters, ok := obj["filters"].([]interface{})
 	if !ok {
-		return result, WrappedErrorf(jsonPathTypeError, "filters", "array")
+		return result, burrito.WrappedErrorf(jsonPathTypeError, "filters", "array")
 	}
 	for i, filter := range filters {
 		filter, ok := filter.(map[string]interface{})
 		if !ok {
-			return result, WrappedErrorf(
+			return result, burrito.WrappedErrorf(
 				jsonPathTypeError, fmt.Sprintf("filters->%d", i), "object")
 		}
 		filterRunner, err := FilterRunnerFromObjectAndDefinitions(
 			filter, filterDefinitions)
 		if err != nil {
-			return result, WrapErrorf(
+			return result, burrito.WrapErrorf(
 				err, jsonPathParseError, fmt.Sprintf("filters->%d", i))
 		}
 		result.Filters = append(result.Filters, filterRunner)
 	}
 	// ExportTarget
 	if _, ok := obj["export"]; !ok {
-		return result, WrappedErrorf(jsonPathMissingError, "export")
+		return result, burrito.WrappedErrorf(jsonPathMissingError, "export")
 	}
 	export, ok := obj["export"].(map[string]interface{})
 	if !ok {
-		return result, WrappedErrorf(jsonPathTypeError, "export", "object")
+		return result, burrito.WrappedErrorf(jsonPathTypeError, "export", "object")
 	}
 	exportTarget, err := ExportTargetFromObject(export)
 	if err != nil {
-		return result, WrapErrorf(err, jsonPathParseError, "export")
+		return result, burrito.WrapErrorf(err, jsonPathParseError, "export")
 	}
 	result.ExportTarget = exportTarget
 	return result, nil

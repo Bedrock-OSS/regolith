@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Bedrock-OSS/go-burrito/burrito"
+
 	"golang.org/x/sys/windows"
 )
 
@@ -28,11 +30,11 @@ func copyFileSecurityInfo(source string, target string) error {
 		windows.SE_FILE_OBJECT,
 		windows.DACL_SECURITY_INFORMATION)
 	if err != nil {
-		return WrapError(err, "Unable to get security info from the source.")
+		return burrito.WrapError(err, "Unable to get security info from the source.")
 	}
 	dacl, _, err := securityInfo.DACL()
 	if err != nil {
-		return WrapErrorf(err, "Unable to get DACL of the source.")
+		return burrito.WrapErrorf(err, "Unable to get DACL of the source.")
 	}
 	err = windows.SetNamedSecurityInfo(
 		target,
@@ -40,7 +42,7 @@ func copyFileSecurityInfo(source string, target string) error {
 		windows.DACL_SECURITY_INFORMATION, nil, nil, dacl, nil,
 	)
 	if err != nil {
-		return WrapErrorf(err, "Unable to set DACL of the target.")
+		return burrito.WrapErrorf(err, "Unable to set DACL of the target.")
 	}
 	return nil
 }
@@ -146,9 +148,9 @@ func FindMojangDir() (string, error) {
 		"com.mojang")
 	if _, err := os.Stat(result); err != nil {
 		if os.IsNotExist(err) {
-			return "", WrapErrorf(err, osStatErrorIsNotExist, result)
+			return "", burrito.WrapErrorf(err, osStatErrorIsNotExist, result)
 		}
-		return "", WrapErrorf(err, osStatErrorAny, result)
+		return "", burrito.WrapErrorf(err, osStatErrorAny, result)
 	}
 	return result, nil
 }
@@ -160,9 +162,9 @@ func FindPreviewDir() (string, error) {
 		"com.mojang")
 	if _, err := os.Stat(result); err != nil {
 		if os.IsNotExist(err) {
-			return "", WrapErrorf(err, osStatErrorIsNotExist, result)
+			return "", burrito.WrapErrorf(err, osStatErrorIsNotExist, result)
 		}
-		return "", WrapErrorf(
+		return "", burrito.WrapErrorf(
 			err, osStatErrorAny, result)
 	}
 	return result, nil

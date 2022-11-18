@@ -8,6 +8,8 @@ package regolith
 import (
 	"io/ioutil"
 
+	"github.com/Bedrock-OSS/go-burrito/burrito"
+
 	"muzzammil.xyz/jsonc"
 )
 
@@ -15,7 +17,7 @@ import (
 func LoadConfigAsMap() (map[string]interface{}, error) {
 	file, err := ioutil.ReadFile(ConfigFilePath)
 	if err != nil {
-		return nil, WrappedError( // We don't need to pass OS error. It's confusing.
+		return nil, burrito.WrappedError( // We don't need to pass OS error. It's confusing.
 			"Failed to open \"config.json\". This directory is not a Regolith project.\n" +
 				"Please make sure to run this command in a Regolith project directory.\n" +
 				"If you want to create new Regolith project here, use \"regolith init\".")
@@ -23,7 +25,7 @@ func LoadConfigAsMap() (map[string]interface{}, error) {
 	var configJson map[string]interface{}
 	err = jsonc.Unmarshal(file, &configJson)
 	if err != nil {
-		return nil, WrapErrorf(err, jsonUnmarshalError, ConfigFilePath)
+		return nil, burrito.WrapErrorf(err, jsonUnmarshalError, ConfigFilePath)
 	}
 	return configJson, nil
 }
@@ -33,11 +35,11 @@ func LoadConfigAsMap() (map[string]interface{}, error) {
 func dataPathFromConfigMap(config map[string]interface{}) (string, error) {
 	regolith, ok := config["regolith"].(map[string]interface{})
 	if !ok {
-		return "", WrappedErrorf(jsonPathMissingError, "regolith")
+		return "", burrito.WrappedErrorf(jsonPathMissingError, "regolith")
 	}
 	dataPath, ok := regolith["dataPath"].(string)
 	if !ok {
-		return "", WrappedErrorf(jsonPathMissingError, "regolith->dataPath")
+		return "", burrito.WrappedErrorf(jsonPathMissingError, "regolith->dataPath")
 	}
 	return dataPath, nil
 }
@@ -49,11 +51,11 @@ func filterDefinitionsFromConfigMap(
 ) (map[string]interface{}, error) {
 	regolith, ok := config["regolith"].(map[string]interface{})
 	if !ok {
-		return nil, WrappedErrorf(jsonPathMissingError, "regolith")
+		return nil, burrito.WrappedErrorf(jsonPathMissingError, "regolith")
 	}
 	filterDefinitions, ok := regolith["filterDefinitions"].(map[string]interface{})
 	if !ok {
-		return nil, WrappedErrorf(
+		return nil, burrito.WrappedErrorf(
 			jsonPathMissingError, "regolith->filterDefinitions")
 	}
 	return filterDefinitions, nil
@@ -64,7 +66,7 @@ func filterDefinitionsFromConfigMap(
 func useAppDataFromConfigMap(config map[string]interface{}) (bool, error) {
 	regolith, ok := config["regolith"].(map[string]interface{})
 	if !ok {
-		return false, WrappedErrorf(jsonPathMissingError, "regolith")
+		return false, burrito.WrappedErrorf(jsonPathMissingError, "regolith")
 	}
 	filterDefinitionsInterface, ok := regolith["useAppData"]
 	if !ok { // false by default
@@ -72,7 +74,7 @@ func useAppDataFromConfigMap(config map[string]interface{}) (bool, error) {
 	}
 	filterDefinitions, ok := filterDefinitionsInterface.(bool)
 	if !ok {
-		return false, WrappedErrorf(
+		return false, burrito.WrappedErrorf(
 			jsonPathTypeError, "regolith->useAppData", "bool")
 	}
 	return filterDefinitions, nil

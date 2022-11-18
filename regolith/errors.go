@@ -42,8 +42,8 @@ const (
 	// Error used when copyFileSecurityInfo fails
 	copyFileSecurityInfoError = "Failed to copy ACL.\nSource: %s\nTarget: %s"
 
-	// Error used when RevertableFsOperations.Delete fails
-	revertableFsOperationsDeleteError = "Failed to perform revertable " +
+	// Error used when revertibleFsOperations.Delete fails
+	revertibleFsOperationsDeleteError = "Failed to perform revertible " +
 		"deletion of the file or directory.\nPath: %s"
 
 	// Error used when filepath.Rel fails
@@ -102,12 +102,6 @@ const (
 	// Error used when RunSubProcess funciton fails
 	runSubProcessError = "Failed to run sub process."
 
-	// Error used when safe mode is when user tries to perform an unsafe
-	// operation with safe mode enabled
-	safeModeEnabledError = "Safe mode is enabled. " +
-		"It's a feature that protects you from running unsafe code.\n" +
-		"You can turn it off using command:\nregolith unlock"
-
 	// Error used when remote filter fails to access its subfilter collection.
 	// The error doesn't print the name of the filter because the
 	// subfilterCollection method is private and it's always a part of some
@@ -143,9 +137,6 @@ const (
 	// Error used when certain function is not implemented on this system
 	notImplementedOnThisSystemError = "Not implemented for this system."
 
-	// Error used when recycled copy ClearCachedStates function fails
-	clearCachedStatesError = "Failed to clear cached file path states."
-
 	// Error used when SetupTmpFiles function fails
 	setupTmpFilesError = "Failed to setup temporary files.\n" +
 		"Regolith files path: %s" // .regolith
@@ -159,11 +150,48 @@ const (
 	filterRunnerRunError = "Failed to run filter.\nFilter: %s"
 
 	// Error used when GetRegolithConfigPath fails
-	getRegolithConfigPathError = "Failed to get path to Regolith's app data folder."
+	getRegolithAppDataPathError = "Failed to get path to Regolith's app data folder."
+
+	// Error used when GetUserConfig function fails
+	getUserConfigError = "Failed to get user configuration."
 
 	// Error used whe Regolith fails to undo failed file system operation.
 	fsUndoError = "Filed to undo file system operation."
 
 	// Error used when aquireSessionLock function fails
 	aquireSessionLockError = "Failed to aquire session lock."
+
+	// Error used when creation of the RevertibleFsOperations object fails
+	newRevertibleFsOperationsError = "Failed to prepare backup path for revertible" +
+		" file system operations.\n" +
+		"Path that Regolith tried to use: %s"
+
+	// Error used when source files (RP, BP or data) before updating them fails.
+	// This should trigger an Undo() operation from the RevertibleFsOperations
+	// object.
+	updateSourceFilesError = "Failed to clear source files while updating them with a new version.\n" +
+		"Path: %s\n" +
+		"The most common reason for this problem is that the data path is used by another " +
+		"program (usually terminal).\n" +
+		"Please close your terminal and try again.\n" +
+		"Make sure that you open it directly inside the root of the Regolith project."
+
+	// Error used on attempt to access user config property that is not known
+	// to Regolith.
+	invalidUserConfigPropertyError = "Invalid user configuration property:\n" +
+		"Property name: %s\n"
+
+	// Error used when the getGlobalUserConfigPath function fails
+	getGlobalUserConfigPathError = "Failed to get global user_config.json path"
+
+	// Error used when the dump method of the UserConfig object failse
+	userConfigDumpError = "Failed to save the user configuration.\n" +
+		"Path: %s"
+
+	// readFilterJsonError is used when loding the filter.json file fails
+	readFilterJsonError = "Couldn't read filter data from path.\n" +
+		"Path: %s\n" +
+		"Did you install the filter?\n" +
+		"You can install all of the filters by running:\n" +
+		"regolith install-all"
 )
