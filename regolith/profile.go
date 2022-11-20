@@ -3,7 +3,6 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -189,7 +188,7 @@ func RunProfileImpl(context RunContext) (bool, error) {
 func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterCollection, error) {
 	path := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
 	result := &FilterCollection{Filters: []FilterRunner{}}
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 
 	if err != nil {
 		return nil, burrito.WrappedErrorf(readFilterJsonError, path)

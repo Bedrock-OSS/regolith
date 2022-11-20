@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -688,7 +687,7 @@ func move(source, destination string) error {
 			return burrito.WrapErrorf(err, isDirEmptyNotEmptyError, destination)
 		}
 		// Move all files in source to destination
-		files, err := ioutil.ReadDir(source)
+		files, err := os.ReadDir(source)
 		movedFiles := make([][2]string, 0, 100)
 		movingFailed := false
 		var errMoving error
