@@ -6,7 +6,7 @@
 package regolith
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 
@@ -15,7 +15,7 @@ import (
 
 // LoadConfigAsMap loads the config.json file as map[string]interface{}
 func LoadConfigAsMap() (map[string]interface{}, error) {
-	file, err := ioutil.ReadFile(ConfigFilePath)
+	file, err := os.ReadFile(ConfigFilePath)
 	if err != nil {
 		return nil, burrito.WrappedError( // We don't need to pass OS error. It's confusing.
 			"Failed to open \"config.json\". This directory is not a Regolith project.\n" +
