@@ -4,7 +4,6 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -108,7 +107,7 @@ func (u *UserConfig) fillDefaults() {
 // of the config.
 func (u *UserConfig) fillWithFileData(path string) error {
 	if _, err := os.Stat(path); err == nil {
-		file, err := ioutil.ReadFile(path)
+		file, err := os.ReadFile(path)
 		if err != nil {
 			return burrito.WrapErrorf(err, fileReadError, path)
 		}

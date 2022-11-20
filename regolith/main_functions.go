@@ -3,7 +3,6 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -117,7 +116,7 @@ func Install(filters []string, force, debug bool) error {
 	}
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "\t")
-	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
+	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
 	if err != nil {
 		return burrito.WrapErrorf(
 			err,
@@ -373,7 +372,7 @@ func Init(debug bool) error {
 				"directory.\n\"regolith init\" can be used only in empty "+
 				"directories.", wd)
 	}
-	ioutil.WriteFile(".gitignore", []byte(GitIgnore), 0644)
+	os.WriteFile(".gitignore", []byte(GitIgnore), 0644)
 	// Create new default configuration
 	userConfig, err := getCombinedUserConfig()
 	if err != nil {
@@ -409,7 +408,7 @@ func Init(debug bool) error {
 	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.1.json"
 	jsonBytes, _ = json.MarshalIndent(rawJsonData, "", "\t")
 
-	err = ioutil.WriteFile(ConfigFilePath, jsonBytes, 0644)
+	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
 	if err != nil {
 		return burrito.WrapErrorf(err, "Failed to write data to %q", ConfigFilePath)
 	}

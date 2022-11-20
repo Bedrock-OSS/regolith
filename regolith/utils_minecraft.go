@@ -1,7 +1,7 @@
 package regolith
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -19,7 +19,7 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 	var exists = struct{}{}
 
 	worldsPath := path.Join(mojangDir, "minecraftWorlds")
-	files, err := ioutil.ReadDir(worldsPath)
+	files, err := os.ReadDir(worldsPath)
 	if err != nil {
 		return nil, burrito.WrapErrorf(
 			err, "Failed to list files in the directory.\nPath: %s", worldsPath)
@@ -27,7 +27,7 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 	for _, f := range files {
 		if f.IsDir() {
 			worldPath := path.Join(worldsPath, f.Name())
-			worldname, err := ioutil.ReadFile(
+			worldname, err := os.ReadFile(
 				path.Join(worldPath, "levelname.txt"))
 			if err != nil {
 				Logger.Warnf(
