@@ -1,7 +1,6 @@
 package test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,7 +25,7 @@ func TestRegolithInit(t *testing.T) {
 		t.Fatal("Unable to get list of created paths:", err)
 	}
 	// Create temporary directory
-	tmpDir, err := ioutil.TempDir("", "regolith-test")
+	tmpDir, err := os.MkdirTemp("", "regolith-test")
 	if err != nil {
 		t.Fatal("Unable to create temporary directory:", err)
 	}
@@ -62,7 +61,7 @@ func TestRegolithRunMissingRp(t *testing.T) {
 	}
 	defer os.Chdir(wd)
 	// Create a temporary directory
-	tmpDir, err := ioutil.TempDir("", "regolith-test")
+	tmpDir, err := os.MkdirTemp("", "regolith-test")
 	if err != nil {
 		t.Fatal("Unable to create temporary directory:", err)
 	}
@@ -102,7 +101,7 @@ func TestLocalRequirementsInstallAndRun(t *testing.T) {
 	}
 	defer os.Chdir(wd)
 	// Create a temporary directory
-	tmpDir, err := ioutil.TempDir("", "regolith-test")
+	tmpDir, err := os.MkdirTemp("", "regolith-test")
 	if err != nil {
 		t.Fatal("Unable to create temporary directory:", err)
 	}
@@ -142,7 +141,7 @@ func TestExeFilterRun(t *testing.T) {
 	}
 	defer os.Chdir(wd)
 	// Create a temporary directory
-	tmpDir, err := ioutil.TempDir("", "regolith-test")
+	tmpDir, err := os.MkdirTemp("", "regolith-test")
 	if err != nil {
 		t.Fatal("Unable to create temporary directory:", err)
 	}
@@ -203,7 +202,7 @@ func TestProfileFilterRun(t *testing.T) {
 	}
 	defer os.Chdir(wd)
 	// Create a temporary directory
-	tmpDir, err := ioutil.TempDir("", "regolith-test")
+	tmpDir, err := os.MkdirTemp("", "regolith-test")
 	if err != nil {
 		t.Fatal("Unable to create temporary directory:", err)
 	}
