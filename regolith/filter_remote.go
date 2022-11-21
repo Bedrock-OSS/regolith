@@ -75,7 +75,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 				"Filter: %s\n"+
 				"Installed version: %s\n"+
 				"Required version: %s\n"+
-				"You udpate all of the filters by running:\n"+
+				"You update all of the filters by running:\n"+
 				"regolith install-all",
 			// id, cached, required
 			f.Id, *version, f.Definition.Version)
