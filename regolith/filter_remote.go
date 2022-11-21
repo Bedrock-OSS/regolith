@@ -396,7 +396,7 @@ func (i *RemoteFilterDefinition) Download(
 				"Does that filter exist?", url)
 	}
 	// Save the version of the filter we downloaded
-	i.SaveVerssionInfo(trimFilterPrefix(repoVersion, i.Id), dotRegolithPath)
+	i.SaveVersionInfo(trimFilterPrefix(repoVersion, i.Id), dotRegolithPath)
 	// Remove 'test' folder, which we never want to use (saves space on disk)
 	testFolder := path.Join(downloadPath, "test")
 	if _, err := os.Stat(testFolder); err == nil {
@@ -409,7 +409,7 @@ func (i *RemoteFilterDefinition) Download(
 
 // SaveVersionInfo saves puts the specified version string into the
 // filter.json of the remote fileter.
-func (i *RemoteFilterDefinition) SaveVerssionInfo(version, dotRegolithPath string) error {
+func (i *RemoteFilterDefinition) SaveVersionInfo(version, dotRegolithPath string) error {
 	filterJsonMap, err := i.LoadFilterJson(dotRegolithPath)
 	if err != nil {
 		return burrito.WrapErrorf(

@@ -28,7 +28,7 @@ func prepareScope(ctx RunContext) map[string]interface{} {
 	return map[string]interface{}{
 		"os":             runtime.GOOS,
 		"arch":           runtime.GOARCH,
-		"debug":          burrito.Debug,
+		"debug":          burrito.PrintStackTrace,
 		"version":        semverString,
 		"profile":        ctx.Profile,
 		"filterLocation": ctx.AbsoluteLocation,

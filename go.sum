@@ -57,8 +57,10 @@ cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9
 cloud.google.com/go/storage v1.21.0 h1:HwnT2u2D309SFDHQII6m18HlrCi3jAXhUMTLOWXYH14=
 cloud.google.com/go/storage v1.21.0/go.mod h1:XmRlxkgPjlBONznT2dDUU/5XlpU2OjMnKuqnZI01LAA=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/Bedrock-OSS/go-burrito v0.0.0-20221107114029-9e8aa6cfcdd1 h1:bWp/p6LbzZ/TQh71y5d2pALBcxAXRXogdi/yz/KKjBk=
-github.com/Bedrock-OSS/go-burrito v0.0.0-20221107114029-9e8aa6cfcdd1/go.mod h1:K8EU2Q2ZlFoOmkyn8ZfiasoNq+9UkqiwLoTJa2at4qA=
+github.com/Bedrock-OSS/go-burrito v1.0.0 h1:ulaB7cOY12bxY2a2ixGNkuT71NvPR4fhXfzA7gp1qmg=
+github.com/Bedrock-OSS/go-burrito v1.0.0/go.mod h1:K8EU2Q2ZlFoOmkyn8ZfiasoNq+9UkqiwLoTJa2at4qA=
+github.com/Bedrock-OSS/go-burrito v1.0.1 h1:w3v5Qi27EF/PSQfw193cq8TpyWyc4OrCSz26g7C4TEA=
+github.com/Bedrock-OSS/go-burrito v1.0.1/go.mod h1:K8EU2Q2ZlFoOmkyn8ZfiasoNq+9UkqiwLoTJa2at4qA=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
