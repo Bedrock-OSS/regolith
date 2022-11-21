@@ -161,7 +161,7 @@ async function writeCommunityFilters(): Promise<void> {
 
                 name = rootItem.name
                 lang = filter.filters[0].runWith
-                url = childItem.html_url
+                url = rootItem.html_url
                 description =
                   filter?.filters[0]?.description ||
                   filter?.description ||
