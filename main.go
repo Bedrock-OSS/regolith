@@ -214,7 +214,7 @@ func main() {
 	cmdInstall := &cobra.Command{
 		Use:   "install [filters...]",
 		Short: "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
-		Long:  regolithInitDesc,
+		Long:  regolithInstallDesc,
 		Run: func(cmd *cobra.Command, filters []string) {
 			if len(filters) == 0 {
 				cmd.Help()
