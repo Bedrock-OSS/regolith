@@ -689,7 +689,7 @@ func move(source, destination string) error {
 		}
 		// Move all files in source to destination
 		files, err := ioutil.ReadDir(source)
-		movedFiles := make([][2]string, 100)
+		movedFiles := make([][2]string, 0, 100)
 		movingFailed := false
 		var errMoving error
 		for _, file := range files {
@@ -699,14 +699,14 @@ func move(source, destination string) error {
 			if errMoving != nil {
 				errMoving = burrito.WrapErrorf(
 					errMoving, osRenameError, src, dst)
-				Logger.Warn(
+				Logger.Warnf(
 					"Failed to move content of directory.\n"+
 						"\tSource: %s\n"+
 						"\tTarget: %s\n\n"+
 						"\tOperation failed while moving a file:\n"+
 						"\tSource: %s\n"+
-						"\tTarget: %s\n\n",
-					"\tTrying to recover from error...",
+						"\tTarget: %s\n\n"+
+						"\tTrying to recover from error...",
 					source, destination, src, dst)
 				movingFailed = true
 				break
@@ -723,7 +723,7 @@ func move(source, destination string) error {
 					// moving files, that we had access to just a moment ago.
 					Logger.Fatalf(
 						"Regolith failed to recover from error which occured "+
-							"while moving files from directory.\b"+
+							"while moving files from directory.\n"+
 							"\tSource: %s\n"+
 							"\tTarget: %s\n\n"+
 							"\tRecovery failed while moving file.\n"+
