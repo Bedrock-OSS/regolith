@@ -205,7 +205,7 @@ func main() {
 		Short: "Initializes a Regolith project in current directory",
 		Long:  regolithInitDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Init(burrito.Debug)
+			err = regolith.Init(burrito.PrintStackTrace)
 		},
 	}
 	subcomands = append(subcomands, cmdInit)
@@ -220,7 +220,7 @@ func main() {
 				cmd.Help()
 				return
 			}
-			err = regolith.Install(filters, force, burrito.Debug)
+			err = regolith.Install(filters, force, burrito.PrintStackTrace)
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
@@ -232,7 +232,7 @@ func main() {
 		Short: "Installs all undownloaded or outdated filters defined in filterDefintions list",
 		Long:  regolithInstallAllDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.InstallAll(force, burrito.Debug)
+			err = regolith.InstallAll(force, burrito.PrintStackTrace)
 		},
 	}
 	cmdInstallAll.Flags().BoolVarP(
@@ -248,7 +248,7 @@ func main() {
 			if len(args) != 0 {
 				profile = args[0]
 			}
-			err = regolith.Run(profile, burrito.Debug)
+			err = regolith.Run(profile, burrito.PrintStackTrace)
 		},
 	}
 	subcomands = append(subcomands, cmdRun)
@@ -262,7 +262,7 @@ func main() {
 			if len(args) != 0 {
 				profile = args[0]
 			}
-			err = regolith.Watch(profile, burrito.Debug)
+			err = regolith.Watch(profile, burrito.PrintStackTrace)
 		},
 	}
 	subcomands = append(subcomands, cmdWatch)
@@ -278,7 +278,7 @@ func main() {
 			}
 			filter := args[0]
 			filterArgs := args[1:] // First arg is the filter name
-			err = regolith.ApplyFilter(filter, filterArgs, burrito.Debug)
+			err = regolith.ApplyFilter(filter, filterArgs, burrito.PrintStackTrace)
 		},
 	}
 	subcomands = append(subcomands, cmdApplyFilter)
@@ -289,7 +289,7 @@ func main() {
 		Short: "Cleans Regolith cache",
 		Long:  regolithCleanDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Clean(burrito.Debug, userCache)
+			err = regolith.Clean(burrito.PrintStackTrace, userCache)
 		},
 	}
 
@@ -299,12 +299,12 @@ func main() {
 		Short: " Print or modify the user configuration.",
 		Long:  regolithConfigDesc,
 		Run: func(cmd *cobra.Command, args []string) {
-			regolith.InitLogging(burrito.Debug)
+			regolith.InitLogging(burrito.PrintStackTrace)
 			full, _ := cmd.Flags().GetBool("full")
 			delete, _ := cmd.Flags().GetBool("delete")
 			append, _ := cmd.Flags().GetBool("append")
 			index, _ := cmd.Flags().GetInt("index")
-			err = regolith.ManageConfig(burrito.Debug, full, delete, append, index, args)
+			err = regolith.ManageConfig(burrito.PrintStackTrace, full, delete, append, index, args)
 		},
 	}
 
@@ -320,7 +320,7 @@ func main() {
 	subcomands = append(subcomands, cmdClean)
 	// add --debug flag to every command
 	for _, cmd := range subcomands {
-		cmd.Flags().BoolVarP(&burrito.Debug, "debug", "", false, "Enables debugging")
+		cmd.Flags().BoolVarP(&burrito.PrintStackTrace, "debug", "", false, "Enables debugging")
 	}
 	// Build and run CLI
 	rootCmd.AddCommand(subcomands...)

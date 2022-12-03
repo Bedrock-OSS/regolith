@@ -105,7 +105,7 @@ func CreateEnvironmentVariables(filterDir string) ([]string, error) {
 	if err != nil {
 		return nil, burrito.WrapErrorf(err, osGetwdError)
 	}
-	return append(os.Environ(), fmt.Sprintf("FILTER_DIR=%s", filterDir), fmt.Sprintf("ROOT_DIR=%s", projectDir), fmt.Sprintf("DEBUG=%t", burrito.Debug)), nil
+	return append(os.Environ(), fmt.Sprintf("FILTER_DIR=%s", filterDir), fmt.Sprintf("ROOT_DIR=%s", projectDir), fmt.Sprintf("DEBUG=%t", burrito.PrintStackTrace)), nil
 }
 
 // RunSubProcess runs a sub-process with specified arguments and working

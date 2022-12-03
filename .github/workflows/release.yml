@@ -70,6 +70,6 @@ jobs:
           git config user.email github-actions@github.com
           git add ./version
           git commit -m "Regolith v${{github.ref_name}}"
-          git tag "${{github.ref_name}}"
+          git tag "v${{github.ref_name}}"
           git push origin main
           git push --tags

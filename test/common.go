@@ -4,7 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -104,7 +104,7 @@ func listPaths(path string, root string) (map[string]string, error) {
 			if data.IsDir() {
 				result[relPath] = ""
 			} else {
-				content, err := ioutil.ReadFile(path)
+				content, err := os.ReadFile(path)
 				if err != nil {
 					return err
 				}

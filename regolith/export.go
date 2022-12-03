@@ -173,12 +173,10 @@ func ExportProject(
 			handlerError := revertibleOps.Undo()
 			mainError := burrito.WrapErrorf(err, updateSourceFilesError, targetPath)
 			if handlerError != nil {
-				return burrito.WrapErrorHandlerError(
-					mainError, handlerError, errorConnector, fsUndoError)
+				return burrito.GroupErrors(mainError, burrito.WrapError(handlerError, fsUndoError))
 			}
 			if handlerError := revertibleOps.Close(); handlerError != nil {
-				return burrito.PassErrorHandlerError(
-					mainError, handlerError, errorConnector)
+				return burrito.GroupErrors(mainError, handlerError)
 			}
 			return mainError
 		}
@@ -189,12 +187,10 @@ func ExportProject(
 			handlerError := revertibleOps.Undo()
 			mainError := burrito.WrapErrorf(err, moveOrCopyError, sourcePath, targetPath)
 			if handlerError != nil {
-				return burrito.WrapErrorHandlerError(
-					mainError, handlerError, errorConnector, fsUndoError)
+				return burrito.GroupErrors(mainError, burrito.WrapError(handlerError, fsUndoError))
 			}
 			if handlerError := revertibleOps.Close(); handlerError != nil {
-				return burrito.PassErrorHandlerError(
-					mainError, handlerError, errorConnector)
+				return burrito.GroupErrors(mainError, handlerError)
 			}
 			return mainError
 		}
@@ -248,15 +244,12 @@ func InplaceExportProject(
 			Logger.Warnf("Reverting changes...")
 			handlerError := revertibleOps.Undo()
 			if handlerError != nil {
-				err = burrito.WrapErrorHandlerError(
-					err, handlerError, errorConnector,
-					fsUndoError)
+				err = burrito.GroupErrors(err, burrito.WrapError(handlerError, fsUndoError))
 				return
 			}
 			handlerError = revertibleOps.Close()
 			if handlerError != nil {
-				err = burrito.PassErrorHandlerError(
-					err, handlerError, errorConnector)
+				err = burrito.GroupErrors(err, handlerError)
 			}
 		} else { // No previous error but Close() must be called
 			err = revertibleOps.Close()
