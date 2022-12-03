@@ -73,7 +73,7 @@ func installFilters(
 func parseInstallFilterArgs(
 	filters []string,
 ) ([]*parsedInstallFilterArg, error) {
-	result := []*parsedInstallFilterArg{}
+	var result []*parsedInstallFilterArg
 	if len(filters) == 0 {
 		return nil, burrito.WrappedError(
 			"No filters specified.\n" +

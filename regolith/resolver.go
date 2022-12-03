@@ -3,7 +3,6 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -113,7 +112,7 @@ func DownloadResolverMaps() error {
 			}
 			// Add "url" property to the resolver file
 			fileData := make(map[string]interface{})
-			f, err := ioutil.ReadFile(savePath)
+			f, err := os.ReadFile(savePath)
 			if err != nil {
 				return burrito.WrapErrorf(err, fileReadError, savePath)
 			}
@@ -124,7 +123,7 @@ func DownloadResolverMaps() error {
 			fileData["url"] = shortUrl
 			// Save the file with the "url" property
 			f, _ = json.MarshalIndent(fileData, "", "\t")
-			err = ioutil.WriteFile(savePath, f, 0644)
+			err = os.WriteFile(savePath, f, 0644)
 			if err != nil {
 				return burrito.WrapErrorf(err, fileWriteError, savePath)
 			}
@@ -182,7 +181,7 @@ func getResolversMap() (*map[string]ResolverMapItem, error) {
 	// the combined user config, the final resolver map is created.
 	resolvers := make(map[string]interface{})
 	loadResolversFromPath := func(path string) error {
-		globalResolvers, err := ioutil.ReadDir(path)
+		globalResolvers, err := os.ReadDir(path)
 		if err != nil {
 			return burrito.WrapErrorf(
 				err, "Failed to list files in the directory.\nPath: %s",
@@ -193,7 +192,7 @@ func getResolversMap() (*map[string]ResolverMapItem, error) {
 				continue
 			}
 			filePath := filepath.Join(path, resolver.Name())
-			f, err := ioutil.ReadFile(filePath)
+			f, err := os.ReadFile(filePath)
 			if err != nil {
 				return burrito.WrapErrorf(err, fileReadError, filePath)
 			}

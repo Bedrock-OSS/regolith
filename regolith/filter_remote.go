@@ -3,7 +3,6 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -142,7 +141,7 @@ func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]
 // (f *RemoteFilter) SubfilterCollection()
 func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, dotRegolithPath string) error {
 	path := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 
 	if err != nil {
 		return burrito.WrapErrorf(err, fileReadError, path)
@@ -283,7 +282,7 @@ func (f *RemoteFilter) IsCached(dotRegolithPath string) bool {
 // GetCachedVersion returns cached version of the remote filter.
 func (f *RemoteFilter) GetCachedVersion(dotRegolithPath string) (*string, error) {
 	path := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 
 	if err != nil {
 		return nil, burrito.WrapErrorf(err, fileReadError, path)
@@ -310,7 +309,7 @@ func (f *RemoteFilter) GetCachedVersion(dotRegolithPath string) (*string, error)
 func (f *RemoteFilter) IsUsingDataExport(dotRegolithPath string) (bool, error) {
 	// Load the filter.json file
 	filterJsonPath := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
-	file, err := ioutil.ReadFile(filterJsonPath)
+	file, err := os.ReadFile(filterJsonPath)
 	if err != nil {
 		return false, burrito.WrappedErrorf(readFilterJsonError, filterJsonPath)
 	}
@@ -396,7 +395,7 @@ func (i *RemoteFilterDefinition) Download(
 				"Does that filter exist?", url)
 	}
 	// Save the version of the filter we downloaded
-	i.SaveVerssionInfo(trimFilterPrefix(repoVersion, i.Id), dotRegolithPath)
+	i.SaveVersionInfo(trimFilterPrefix(repoVersion, i.Id), dotRegolithPath)
 	// Remove 'test' folder, which we never want to use (saves space on disk)
 	testFolder := path.Join(downloadPath, "test")
 	if _, err := os.Stat(testFolder); err == nil {
@@ -409,7 +408,7 @@ func (i *RemoteFilterDefinition) Download(
 
 // SaveVersionInfo saves puts the specified version string into the
 // filter.json of the remote fileter.
-func (i *RemoteFilterDefinition) SaveVerssionInfo(version, dotRegolithPath string) error {
+func (i *RemoteFilterDefinition) SaveVersionInfo(version, dotRegolithPath string) error {
 	filterJsonMap, err := i.LoadFilterJson(dotRegolithPath)
 	if err != nil {
 		return burrito.WrapErrorf(
@@ -430,7 +429,7 @@ func (i *RemoteFilterDefinition) SaveVerssionInfo(version, dotRegolithPath strin
 func (f *RemoteFilterDefinition) LoadFilterJson(dotRegolithPath string) (map[string]interface{}, error) {
 	downloadPath := f.GetDownloadPath(dotRegolithPath)
 	filterJsonPath := path.Join(downloadPath, "filter.json")
-	filterJson, err1 := ioutil.ReadFile(filterJsonPath)
+	filterJson, err1 := os.ReadFile(filterJsonPath)
 	var filterJsonMap map[string]interface{}
 	err2 := json.Unmarshal(filterJson, &filterJsonMap)
 	if err := firstErr(err1, err2); err != nil {

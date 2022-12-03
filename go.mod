@@ -3,7 +3,7 @@ module github.com/Bedrock-OSS/regolith
 go 1.18
 
 require (
-	github.com/Bedrock-OSS/go-burrito v0.0.0-20221107114029-9e8aa6cfcdd1
+	github.com/Bedrock-OSS/go-burrito v1.0.3
 	github.com/fatih/color v1.13.0
 	github.com/google/go-github/v39 v39.2.0
 	github.com/hashicorp/go-getter v1.6.2
