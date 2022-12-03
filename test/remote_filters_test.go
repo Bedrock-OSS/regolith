@@ -1,7 +1,6 @@
 package test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -29,7 +28,7 @@ func TestInstallAllAndRun(t *testing.T) {
 		t.Fatal("Unable load the expected paths:", err)
 	}
 	// Create a temporary directory
-	tmpDir, err := ioutil.TempDir("", "regolith-test")
+	tmpDir, err := os.MkdirTemp("", "regolith-test")
 	if err != nil {
 		t.Fatal("Unable to create temporary directory:", err)
 	}
@@ -90,7 +89,7 @@ func TestDataModifyRemoteFilter(t *testing.T) {
 		t.Fatal("Unable load the expected paths:", err)
 	}
 	// Create a temporary directory
-	tmpDir, err := ioutil.TempDir("", "regolith-test")
+	tmpDir, err := os.MkdirTemp("", "regolith-test")
 	if err != nil {
 		t.Fatal("Unable to create temporary directory:", err)
 	}
@@ -141,7 +140,7 @@ func TestInstall(t *testing.T) {
 	// SETUP
 	wd, err1 := os.Getwd()
 	defer os.Chdir(wd) // Go back before the test ends
-	tmpDir, err2 := ioutil.TempDir("", "regolith-test")
+	tmpDir, err2 := os.MkdirTemp("", "regolith-test")
 	defer os.RemoveAll(tmpDir)
 	defer os.Chdir(wd) // 'tmpDir' can't be used when we delete it
 	err3 := copy.Copy( // Copy the test files
@@ -202,7 +201,7 @@ func TestInstallAll(t *testing.T) {
 	// SETUP
 	wd, err1 := os.Getwd()
 	defer os.Chdir(wd) // Go back before the test ends
-	tmpDir, err2 := ioutil.TempDir("", "regolith-test")
+	tmpDir, err2 := os.MkdirTemp("", "regolith-test")
 	defer os.RemoveAll(tmpDir)
 	defer os.Chdir(wd) // 'tmpDir' can't be used when we delete it
 	err3 := copy.Copy( // Copy the test files
