@@ -5,6 +5,12 @@ package regolith
 
 import "github.com/Bedrock-OSS/go-burrito/burrito"
 
+// pythonExeNames is the list of strings with possible names of the Python
+// executable. The order of the names determines the order in which they are
+// tried.
+var pythonExeNames = []string{"python3", "python"}
+
+
 // venvScriptsPath is a folder name between "venv" and "python" that leads to
 // the python executable.
 const venvScriptsPath = "bin"
