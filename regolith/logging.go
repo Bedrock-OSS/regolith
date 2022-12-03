@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/fatih/color"
@@ -28,6 +29,10 @@ func (cw colorWriter) Sync() error {
 func InitLogging(dev bool) {
 	if Logger != nil {
 		return
+	}
+	_, b := os.LookupEnv("FORCE_COLOR")
+	if b {
+		color.NoColor = false
 	}
 	err := zap.RegisterSink("color", func(url *url.URL) (zap.Sink, error) {
 		if url.Host == "stderr" {
