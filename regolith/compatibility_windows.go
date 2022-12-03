@@ -12,6 +12,11 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// pythonExeNames is the list of strings with possible names of the Python
+// executable. The order of the names determines the order in which they are
+// tried.
+var pythonExeNames = []string{"python", "python3"}
+
 // venvScriptsPath is a folder name between "venv" and "python" that leads to
 // the python executable.
 const venvScriptsPath = "Scripts"

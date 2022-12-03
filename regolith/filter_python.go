@@ -239,7 +239,7 @@ func needsVenv(requirementsFilePath string) bool {
 
 func findPython() (string, error) {
 	var err error
-	for _, c := range []string{"python3", "python"} {
+	for _, c := range pythonExeNames {
 		_, err = exec.LookPath(c)
 		if err == nil {
 			return c, nil
