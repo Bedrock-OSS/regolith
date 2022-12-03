@@ -1,7 +1,6 @@
 package test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,7 +18,7 @@ func TestConditionalFilter(t *testing.T) {
 	}
 	defer os.Chdir(wd)
 	// Create a temporary directory
-	tmpDir, err := ioutil.TempDir("", "regolith-test")
+	tmpDir, err := os.MkdirTemp("", "regolith-test")
 	if err != nil {
 		t.Fatal("Unable to create temporary directory:", err)
 	}
