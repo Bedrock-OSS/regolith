@@ -10,7 +10,7 @@ import (
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 
-	"muzzammil.xyz/jsonc"
+	"github.com/muhammadmuzzammil1998/jsonc"
 )
 
 // LoadConfigAsMap loads the config.json file as map[string]interface{}
