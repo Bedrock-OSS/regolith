@@ -1,0 +1,38 @@
+name: List Credits
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "go.mod"
+
+permissions:
+  contents: write
+
+jobs:
+  list-credits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Generate CREDITS file using go-licenses
+        run: |
+          go install github.com/google/go-licenses@latest
+          go-licenses report github.com/Bedrock-OSS/regolith > CREDITS.csv
+
+      - name: Commit the licenses (if there are any changes)
+        run: |
+          if (git diff --quiet --cached || git diff --quiet); then
+            git config user.name github-actions
+            git config user.email github-actions@github.com
+            git add .
+            git commit -m "Generated CREDITS.csv"
+            git push
+          fi
