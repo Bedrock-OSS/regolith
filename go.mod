@@ -7,14 +7,14 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/google/go-github/v39 v39.2.0
 	github.com/hashicorp/go-getter v1.6.2
+	github.com/muhammadmuzzammil1998/jsonc v1.0.0
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/otiai10/copy v1.7.0
 	github.com/spf13/cobra v1.6.1
-	github.com/stirante/go-simple-eval v0.0.0-20221118214627-1a818b6aab27
+	github.com/stirante/go-simple-eval v0.0.0-20221204175035-70e7960fa53c
 	go.uber.org/zap v1.23.0
 	golang.org/x/mod v0.6.0
 	golang.org/x/sys v0.2.0
-	muzzammil.xyz/jsonc v1.0.0
 )
 
 replace github.com/hashicorp/go-getter => github.com/arikkfir/go-getter v1.6.3-0.20220803164326-281b7670b734
