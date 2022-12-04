@@ -1,4 +1,4 @@
-name: List Cretits
+name: List Credits
 
 on:
   workflow_dispatch:
