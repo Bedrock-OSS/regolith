@@ -31,7 +31,8 @@ jobs:
       - name: Check if there are any new changes
         id: verify_diff
         run: |
-          git diff --quiet . || echo "::set-output name=iss_different::true"
+          git diff --quiet || echo "::set-output name=iss_different::true"
+          git diff --quiet --cached || echo "::set-output name=iss_different::true"
 
       - name: Commit the licenses (if there are any changes)
         if: steps.verify_diff.outputs.iss_different == 'true'
