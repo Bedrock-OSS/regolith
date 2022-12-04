@@ -29,12 +29,12 @@ jobs:
 
       - name: Commit the licenses (if there are any changes)
         run: |
-          if (git diff --quiet --cached --ignore-blank-lines -w || git diff --quiet --ignore-blank-lines -w); then
+          if $(git diff --quiet --ignore-blank-lines -w); then
+              echo "No changes to commit"
+          else
             git config user.name github-actions
             git config user.email github-actions@github.com
             git add .
             git commit -m "Generated CREDITS.csv"
             git push
-          else
-            echo "No changes to commit"
           fi

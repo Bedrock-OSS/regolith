@@ -21,6 +21,7 @@ replace github.com/hashicorp/go-getter => github.com/arikkfir/go-getter v1.6.3-0
 
 
 
+
 require (
 	cloud.google.com/go v0.100.2 // indirect
 	cloud.google.com/go/compute v1.5.0 // indirect
