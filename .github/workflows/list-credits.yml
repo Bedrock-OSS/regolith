@@ -29,7 +29,7 @@ jobs:
 
       - name: Commit the licenses (if there are any changes)
         run: |
-          if (git diff --quiet --cached || git diff --quiet); then
+          if (git diff --quiet --cached --ignore-blank-lines -w || git diff --quiet --ignore-blank-lines -w); then
             git config user.name github-actions
             git config user.email github-actions@github.com
             git add .
