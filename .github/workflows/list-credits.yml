@@ -35,4 +35,6 @@ jobs:
             git add .
             git commit -m "Generated CREDITS.csv"
             git push
+          else
+            echo "No changes to commit"
           fi
