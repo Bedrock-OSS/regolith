@@ -26,19 +26,13 @@ jobs:
         run: |
           go install github.com/google/go-licenses@latest
           go-licenses report github.com/Bedrock-OSS/regolith > CREDITS.csv
-        shell: bash
-
-      - name: Check if there are any new changes
-        id: verify_diff
-        run: |
-          git diff --quiet || echo "iss_different=true" >> $GITHUB_OUTPUT
-          git diff --quiet --cached || echo "iss_different=true" >> $GITHUB_OUTPUT
 
       - name: Commit the licenses (if there are any changes)
-        if: steps.verify_diff.outputs.iss_different == 'true'
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add .
-          git commit -m "Generated CREDITS.csv"
-          git push
+          if (git diff --quiet --cached || git diff --quiet); then
+            git config user.name github-actions
+            git config user.email github-actions@github.com
+            git add .
+            git commit -m "Generated CREDITS.csv"
+            git push
+          fi
