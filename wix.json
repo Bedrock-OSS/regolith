@@ -11,6 +11,12 @@
     },
     {
       "path": "scripts/regolith-update.ps1"
+    },
+    {
+      "path": "CREDITS.csv"
+    },
+    {
+      "path": "LICENSE"
     }
   ],
   "environments": [
