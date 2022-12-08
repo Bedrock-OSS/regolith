@@ -57,7 +57,7 @@ func (f *DenoFilter) run(context RunContext) error {
 		err := RunSubProcess(
 			"deno",
 			append([]string{
-				"run",
+				"run", "--allow-all",
 				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
 				string(jsonSettings)}, f.Arguments...),
