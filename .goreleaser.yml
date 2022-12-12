@@ -99,6 +99,8 @@ changelog:
 release:
   extra_files:
     - glob: "./**/regolith-*.msi"
+    - glob: "./CREDITS.csv"
+    - glob: "./LICENSE"
 
 #brews:
 #  - tap:
