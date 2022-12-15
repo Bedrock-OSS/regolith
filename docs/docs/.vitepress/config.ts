@@ -37,7 +37,7 @@ export default defineConfig({
     editLink: {
       text: 'Suggest changes to this page.',
       pattern:
-        'https://github.com/Bedrock-OSS/regolith/docs/edit/main/docs/:path'
+        'https://github.com/Bedrock-OSS/regolith/edit/main/docs/docs/:path'
     },
 
     socialLinks: [
