@@ -28,16 +28,10 @@ export default defineConfig({
   themeConfig: {
     logo: '/logo.png',
 
-    algolia: {
-      appId: 'Z49USQ50YQ',
-      indexName: 'regolith',
-      apiKey: '2a232acecfcaef784386b48125416974'
-    },
-
     editLink: {
       text: 'Suggest changes to this page.',
       pattern:
-        'https://github.com/Bedrock-OSS/regolith/docs/edit/main/docs/:path'
+        'https://github.com/Bedrock-OSS/regolith/edit/main/docs/docs/:path'
     },
 
     socialLinks: [
