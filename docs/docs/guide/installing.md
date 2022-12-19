@@ -24,7 +24,7 @@ This will search the winget repository for the package "Bedrock-OSS.regolith" an
 To update Regolith in the future, simply run the following command:
 
 ```
-winget update Bedrock-OSS.regolith
+winget upgrade Bedrock-OSS.regolith
 ```
 
 This will check for any available updates to the Regolith package and install them on your system.
