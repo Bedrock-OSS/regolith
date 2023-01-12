@@ -20,7 +20,7 @@ func GetExportPaths(
 				err, "Failed to find \"com.mojang\" directory.")
 		}
 
-		// TODO - I don't like the _rp and _bp sufixes. Can we get rid of that?
+		// TODO - I don't like the _rp and _bp suffixes. Can we get rid of that?
 		// I for example always name my packs "0".
 		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
 		rpPath = comMojang + "/development_resource_packs/" + name + "_rp"
@@ -31,7 +31,7 @@ func GetExportPaths(
 				err, "Failed to find preview \"com.mojang\" directory.")
 		}
 
-		// TODO - I don't like the _rp and _bp sufixes. Can we get rid of that?
+		// TODO - I don't like the _rp and _bp suffixes. Can we get rid of that?
 		// I for example always name my packs "0".
 		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
 		rpPath = comMojang + "/development_resource_packs/" + name + "_rp"
@@ -87,7 +87,7 @@ func GetExportPaths(
 func ExportProject(
 	profile Profile, name, dataPath, dotRegolithPath string,
 ) error {
-	// Get the expor target paths
+	// Get the export target paths
 	exportTarget := profile.ExportTarget
 	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
 	if err != nil {
@@ -238,7 +238,7 @@ func InplaceExportProject(
 	if err != nil {
 		return burrito.WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
-	// Schedule Undo in case of an revertible ops error and schedule Close()
+	// Schedule Undo in case of a revertible ops error and schedule Close()
 	defer func() {
 		if err != nil { // Handle previous error
 			Logger.Warnf("Reverting changes...")

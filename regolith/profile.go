@@ -30,9 +30,9 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 
 	// Copy the contents of the 'regolith' folder to '[dotRegolithPath]/tmp'
 	Logger.Debugf("Copying project files to \"%s\"", tmpPath)
-	// Avoid repetetive code of preparing ResourceFolder, BehaviorFolder
+	// Avoid repetitive code of preparing ResourceFolder, BehaviorFolder
 	// and DataPath with a closure
-	setup_tmp_directory := func(
+	setupTmpDirectory := func(
 		path, shortName, descriptiveName string,
 	) error {
 		p := filepath.Join(tmpPath, shortName)
@@ -67,17 +67,17 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 		return nil
 	}
 
-	err = setup_tmp_directory(config.ResourceFolder, "RP", "resource folder")
+	err = setupTmpDirectory(config.ResourceFolder, "RP", "resource folder")
 	if err != nil {
 		return burrito.WrapErrorf(
 			err, "Failed to setup RP folder in the temporary directory.")
 	}
-	err = setup_tmp_directory(config.BehaviorFolder, "BP", "behavior folder")
+	err = setupTmpDirectory(config.BehaviorFolder, "BP", "behavior folder")
 	if err != nil {
 		return burrito.WrapErrorf(
 			err, "Failed to setup BP folder in the temporary directory.")
 	}
-	err = setup_tmp_directory(config.DataPath, "data", "data folder")
+	err = setupTmpDirectory(config.DataPath, "data", "data folder")
 	if err != nil {
 		return burrito.WrapErrorf(
 			err, "Failed to setup data folder in the temporary directory.")
@@ -218,7 +218,7 @@ func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterColle
 				path, burrito.WrappedErrorf(jsonPathTypeError, jsonPath, "object"))
 		}
 		// Using the same JSON data to create both the filter
-		// definiton (installer) and the filter (runner)
+		// definition (installer) and the filter (runner)
 		filterId := fmt.Sprintf("%v:subfilter%v", f.Id, i)
 		filterInstaller, err := FilterInstallerFromObject(filterId, filter)
 		if err != nil {

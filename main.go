@@ -142,13 +142,13 @@ the user configuration file. The data is stored in the application data folder i
 "user_config.json" file.
 
 The behavior of the command changes based on the used flags and the number of provided arguments.
-The cheetsheet below shows the possible combinations of flags and arguments and what they do:
+The cheatsheet below shows the possible combinations of flags and arguments and what they do:
 
 Printing all properties:                        regolith config
 Printing specified property:                    regolith config <key>
 Setting property value:                         regolith config <key> <value>
 Deleting a property:                            regolith config <key> --delete
-Appending to a list proeprty:                   regolith config <key> <value> --append
+Appending to a list property:                   regolith config <key> <value> --append
 Replacing item in a list property:              regolith config <key> <value> --index <index>
 Deleting item in a list property:               regolith config <key> --index <index> --delete
 
@@ -197,7 +197,7 @@ func main() {
 		Long:    regolithDesc,
 		Version: version,
 	}
-	subcomands := make([]*cobra.Command, 0)
+	subcommands := make([]*cobra.Command, 0)
 
 	// regolith init
 	cmdInit := &cobra.Command{
@@ -208,7 +208,7 @@ func main() {
 			err = regolith.Init(burrito.PrintStackTrace)
 		},
 	}
-	subcomands = append(subcomands, cmdInit)
+	subcommands = append(subcommands, cmdInit)
 	// regolith install
 	var force bool
 	cmdInstall := &cobra.Command{
@@ -225,11 +225,11 @@ func main() {
 	}
 	cmdInstall.Flags().BoolVarP(
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
-	subcomands = append(subcomands, cmdInstall)
+	subcommands = append(subcommands, cmdInstall)
 	// regolith install-all
 	cmdInstallAll := &cobra.Command{
 		Use:   "install-all",
-		Short: "Installs all undownloaded or outdated filters defined in filterDefintions list",
+		Short: "Installs all nonexistent or outdated filters defined in filterDefinitions list",
 		Long:  regolithInstallAllDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
 			err = regolith.InstallAll(force, burrito.PrintStackTrace)
@@ -237,7 +237,7 @@ func main() {
 	}
 	cmdInstallAll.Flags().BoolVarP(
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
-	subcomands = append(subcomands, cmdInstallAll)
+	subcommands = append(subcommands, cmdInstallAll)
 	// regolith run
 	cmdRun := &cobra.Command{
 		Use:   "run [profile_name]",
@@ -251,7 +251,7 @@ func main() {
 			err = regolith.Run(profile, burrito.PrintStackTrace)
 		},
 	}
-	subcomands = append(subcomands, cmdRun)
+	subcommands = append(subcommands, cmdRun)
 	// regolith watch
 	cmdWatch := &cobra.Command{
 		Use:   "watch [profile_name]",
@@ -265,7 +265,7 @@ func main() {
 			err = regolith.Watch(profile, burrito.PrintStackTrace)
 		},
 	}
-	subcomands = append(subcomands, cmdWatch)
+	subcommands = append(subcommands, cmdWatch)
 	// regolith apply-filter
 	cmdApplyFilter := &cobra.Command{
 		Use:   "apply-filter <filter_name> [filter_args...]",
@@ -281,7 +281,7 @@ func main() {
 			err = regolith.ApplyFilter(filter, filterArgs, burrito.PrintStackTrace)
 		},
 	}
-	subcomands = append(subcomands, cmdApplyFilter)
+	subcommands = append(subcommands, cmdApplyFilter)
 	// regolith clean
 	var userCache bool
 	cmdClean := &cobra.Command{
@@ -312,17 +312,17 @@ func main() {
 	cmdConfig.Flags().BoolP("delete", "d", false, "Delete property")
 	cmdConfig.Flags().BoolP("append", "a", false, "Append value to array property")
 	cmdConfig.Flags().IntP("index", "i", -1, "The index of the array property on which to act")
-	subcomands = append(subcomands, cmdConfig)
+	subcommands = append(subcommands, cmdConfig)
 
 	cmdClean.Flags().BoolVarP(
 		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
 			"the current project")
-	subcomands = append(subcomands, cmdClean)
+	subcommands = append(subcommands, cmdClean)
 	// add --debug flag to every command
-	for _, cmd := range subcomands {
+	for _, cmd := range subcommands {
 		cmd.Flags().BoolVarP(&burrito.PrintStackTrace, "debug", "", false, "Enables debugging")
 	}
 	// Build and run CLI
-	rootCmd.AddCommand(subcomands...)
+	rootCmd.AddCommand(subcommands...)
 	rootCmd.Execute()
 }

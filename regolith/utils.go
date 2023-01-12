@@ -165,8 +165,8 @@ func getAppDataDotRegolith(silent bool, projectRoot string) (string, error) {
 }
 
 // GetDotRegolith returns the path to the directory where Regolith stores
-// its cached data (like filters, Python venvs, etc.). If user confg setting
-// for using app data by profiles is is set to false it returns relative
+// its cached data (like filters, Python venvs, etc.). If user config setting
+// for using app data by profiles is set to false it returns relative
 // directory: ".regolith" otherwise it returns path inside the AppData directory.
 // Based on the hash value of the project's root directory. If the path isn't
 // .regolith it also logs a message which tells where the data is stored
@@ -174,7 +174,7 @@ func getAppDataDotRegolith(silent bool, projectRoot string) (string, error) {
 // or absolute and is resolved to an
 // absolute path.
 func GetDotRegolith(silent bool, projectRoot string) (string, error) {
-	// App data diabled - use .regolith
+	// App data disabled - use .regolith
 	userConfig, err := getCombinedUserConfig()
 	if err != nil {
 		return "", burrito.WrapError(err, getUserConfigError)
@@ -185,10 +185,10 @@ func GetDotRegolith(silent bool, projectRoot string) (string, error) {
 	return getAppDataDotRegolith(silent, projectRoot)
 }
 
-// AquireSessionLock creates a lock file in specified directory and
+// acquireSessionLock creates a lock file in specified directory and
 // returns a function that releases the lock.
 // The path should point to the .regolith directory.
-func aquireSessionLock(dotRegolithPath string) (func() error, error) {
+func acquireSessionLock(dotRegolithPath string) (func() error, error) {
 	// Create dotRegolithPath if it doesn't exist
 	err := CreateDirectoryIfNotExists(dotRegolithPath)
 	if err != nil {

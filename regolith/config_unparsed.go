@@ -1,8 +1,3 @@
-// Functions for accessing informations from the config file without parsing it
-// to a Config object. This is useful for accessing the config information
-// for functions that modify the content of the config file, like
-// "regolith install" and for accessing the config information when the file
-// might have some errors.
 package regolith
 
 import (
@@ -12,6 +7,12 @@ import (
 
 	"github.com/muhammadmuzzammil1998/jsonc"
 )
+
+// Functions for accessing information from the config file without parsing it
+// to a Config object. This is useful for accessing the config information
+// for functions that modify the content of the config file, like
+// "regolith install" and for accessing the config information when the file
+// might have some errors.
 
 // LoadConfigAsMap loads the config.json file as map[string]interface{}
 func LoadConfigAsMap() (map[string]interface{}, error) {

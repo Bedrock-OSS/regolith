@@ -20,7 +20,7 @@ import (
 // "filter-url" is the URL of the filter to install.
 // "filter-version" is the version of the filter. It can be semver, git commit
 // hash, "HEAD", or "latest". "HEAD" means that the filter will be
-// updated to lastest SHA commit and "latest" updates the filter to the latest
+// updated to the latest SHA commit and "latest" updates the filter to the latest
 // version tag. If "filter-version" is not specified, the filter will be
 // installed with the latest version or HEAD if there is no valid version tags.
 //
@@ -57,9 +57,9 @@ func Install(filters []string, force, debug bool) error {
 			err, "Unable to get the path to regolith cache folder.")
 	}
 	// Lock the session
-	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	unlockSession, sessionLockErr := acquireSessionLock(dotRegolithPath)
 	if sessionLockErr != nil {
-		return burrito.WrapError(sessionLockErr, aquireSessionLockError)
+		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
 	// Parse arguments into download tasks (requires downloading resolvers)
@@ -130,7 +130,7 @@ func Install(filters []string, force, debug bool) error {
 }
 
 // InstallAll handles the "regolith install-all" command. It installs all of
-// filters and their dependencies from the filtersDefinitions list in the
+// the filters and their dependencies from the filtersDefinitions list in the
 // config.json file.
 //
 // The "force" parameter is a boolean that determines if the installation
@@ -156,9 +156,9 @@ func InstallAll(force, debug bool) error {
 			err, "Unable to get the path to regolith cache folder.")
 	}
 	// Lock the session
-	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	unlockSession, sessionLockErr := acquireSessionLock(dotRegolithPath)
 	if sessionLockErr != nil {
-		return burrito.WrapError(sessionLockErr, aquireSessionLockError)
+		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
 	// Install the filters
@@ -205,9 +205,9 @@ func runOrWatch(profileName string, debug, watch bool) error {
 		return burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
 	// Lock the session
-	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	unlockSession, sessionLockErr := acquireSessionLock(dotRegolithPath)
 	if sessionLockErr != nil {
-		return burrito.WrapError(sessionLockErr, aquireSessionLockError)
+		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
 	// Check the filters of the profile
@@ -249,14 +249,14 @@ func runOrWatch(profileName string, debug, watch bool) error {
 }
 
 // Run handles the "regolith run" command. It runs selected profile and exports
-// created resource pack and behvaiour pack to the target destination.
+// created resource pack and behavior pack to the target destination.
 func Run(profileName string, debug bool) error {
 	return runOrWatch(profileName, debug, false)
 }
 
 // Watch handles the "regolith watch" command. It watches the project
-// directories and it runs selected profile and exports created resource pack
-// and behvaiour pack to the target destination when the project changes.
+// directories, and it runs selected profile and exports created resource pack
+// and behavior pack to the target destination when the project changes.
 func Watch(profileName string, debug bool) error {
 	return runOrWatch(profileName, debug, true)
 }
@@ -293,9 +293,9 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 		return burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
 	// Lock the session
-	unlockSession, sessionLockErr := aquireSessionLock(dotRegolithPath)
+	unlockSession, sessionLockErr := acquireSessionLock(dotRegolithPath)
 	if sessionLockErr != nil {
-		return burrito.WrapError(sessionLockErr, aquireSessionLockError)
+		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
 	}
 	defer func() {
 		// WARNING: sessionLockError is not reported in case of different errors.
@@ -368,7 +368,7 @@ func Init(debug bool) error {
 			err, "Failed to check if %s is an empty directory.", wd)
 	} else if !isEmpty {
 		return burrito.WrappedErrorf(
-			"Cannot initialze the project, because %s is not an empty "+
+			"Cannot initialize the project, because %s is not an empty "+
 				"directory.\n\"regolith init\" can be used only in empty "+
 				"directories.", wd)
 	}
@@ -593,7 +593,7 @@ func manageUserConfigEdit(debug bool, index int, key, value string) error {
 			}
 			userConfig.Resolvers[index] = value
 		}
-		// Delete duplicateds, removing items from the end
+		// Delete duplicates, removing items from the end
 		resolversSet := make(map[string]struct{})
 		for i := 0; i < len(userConfig.Resolvers); i++ {
 			resolver := userConfig.Resolvers[i]
@@ -663,12 +663,12 @@ func manageUserConfigDelete(debug bool, index int, key string) error {
 // - global - modify global configuration
 // - local - modify local configuration
 // - delete - delete the specified value
-// - append - append a value to a array property of the configuration. Applies
+// - append - append a value to an array property of the configuration. Applies
 //   only to the array properties
 // - index - the index of the value to modify. Applies only to the array
 //   properties
 // - args - the arguments of the command, the length of the list must be 0, 1
-//   or 2. The lenght determines the action of the command.
+//   or 2. The length determines the action of the command.
 func ManageConfig(debug, full, delete, append bool, index int, args []string) error {
 	InitLogging(debug)
 

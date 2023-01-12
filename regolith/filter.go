@@ -23,10 +23,10 @@ type RunContext struct {
 	DotRegolithPath  string
 
 	// interruptionChannel is a channel that is used to notify about changes
-	// in the sourec files, in order to trigger a restart of the program in
+	// in the source files, in order to trigger a restart of the program in
 	// the watch mode. The string send to the channel is the name of the source
 	// of the change ("rp", "bp" or "data"), which may be used to handle
-	// some interuptions differently.
+	// some interruptions differently.
 	interruptionChannel chan string
 }
 
@@ -40,7 +40,7 @@ func (c *RunContext) GetProfile() (Profile, error) {
 	return profile, nil
 }
 
-// IsWatchMode returns a value that shows whether the context is in the
+// IsInWatchMode returns a value that shows whether the context is in the
 // watch mode.
 func (c *RunContext) IsInWatchMode() bool {
 	return c.interruptionChannel == nil
@@ -95,13 +95,13 @@ func (c *RunContext) AwaitInterruption() string {
 // IsInterrupted returns true if there is a message on the interruptionChannel
 // unless the source of the interruption is on the list of ignored sources.
 // This function does not block.
-func (c *RunContext) IsInterrupted(ignoredSourece ...string) bool {
+func (c *RunContext) IsInterrupted(ignoredSource ...string) bool {
 	if c.interruptionChannel == nil {
 		return false
 	}
 	select {
 	case source := <-c.interruptionChannel:
-		for _, ignored := range ignoredSourece {
+		for _, ignored := range ignoredSource {
 			if ignored == source {
 				return false
 			}
@@ -200,7 +200,7 @@ type FilterRunner interface {
 	// example, a Python filter requires Python to be installed.
 	Check(context RunContext) error
 
-	// IsUsingDataExport returns whether the filter wahts its data to be
+	// IsUsingDataExport returns whether the filter wants its data to be
 	// exported back to the data folder after running the profile.
 	IsUsingDataExport(dotRegolithPath string) (bool, error)
 }

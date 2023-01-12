@@ -58,7 +58,7 @@ func (f *EditedFiles) Dump(dotRegolithPath string) error {
 }
 
 // CheckDeletionSafety checks whether it's safe to delete files from rpPath and
-// bpPath based on the lists of removeable files from EditedFiles object.
+// bpPath based on the lists of removable files from EditedFiles object.
 func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
 	files, ok := f.Rp[rpPath]
 	if !ok {
@@ -106,7 +106,7 @@ func NewEditedFiles() EditedFiles {
 	return result
 }
 
-// listFiles returns a slice of strings with paths to all of the files
+// listFiles returns a slice of strings with paths to all the files
 // starting from "path"
 func listFiles(path string) ([]string, error) {
 	// 150 is just an arbitrary number I chose to avoid constant memory
@@ -133,9 +133,9 @@ func listFiles(path string) ([]string, error) {
 }
 
 // checkDeletionSafety checks whether it's safe to delete files from given path
-// based on the list of removeable files. The removeableFiles list must be
+// based on the list of removable files. The removableFiles list must be
 // sorted. The function relies on filepath.WalkDir walking files
-// alphabetically. It returns nil value when its safe to delete the files or
+// alphabetically. It returns nil value when it's safe to delete the files or
 // an error in opposite case.
 func checkDeletionSafety(path string, removableFiles []string) error {
 	i := 0 // current index on the removableFiles list to check

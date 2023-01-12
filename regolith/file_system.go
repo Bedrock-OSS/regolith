@@ -122,7 +122,7 @@ func (r *revertibleFsOperations) Delete(path string) error {
 // DeleteDir deletes a directory.
 // This method is better for deleting directories than Delete method because
 // it moves the files of the directory one by one to the backup directory,
-// and it's able to undo the operation even if an error occures in the middle
+// and it's able to undo the operation even if an error occurs in the middle
 // of its execution.
 func (r *revertibleFsOperations) DeleteDir(path string) error {
 	// TODO - maybe Delete should be able to delete both directories and files and DeleteDir should be private
@@ -235,7 +235,7 @@ func (r *revertibleFsOperations) MkdirAll(path string) error {
 	}
 
 	// Get the root directory of newly created paths for undo operation
-	undoPath, found, err := GetFirstUnexistingSubpath(fullPath)
+	undoPath, found, err := GetFirstNonexistentSubpath(fullPath)
 	if err != nil {
 		return burrito.WrapErrorf(
 			err,
@@ -265,8 +265,8 @@ func (r *revertibleFsOperations) MkdirAll(path string) error {
 // The target path must not exist or be empty directory.
 // This function is better for moving or copying directories than
 // Move, Copy or MoveOrCopy functions because it moves the files of the
-// directory one by one and it's able to undo its actions even if an error
-// occures in the middle of moving.
+// directory one by one, and it's able to undo its actions even if an error
+// occurs in the middle of moving.
 func (r *revertibleFsOperations) MoveOrCopyDir(source, target string) error {
 	// Check if target is empty or doesn't exist
 	fullTargetPath, err := filepath.Abs(target)
@@ -432,12 +432,12 @@ func createBackupPath(path string) error {
 	return nil
 }
 
-// GetFirstUnexistingSubpath takes a path and returns its ancestor.
+// GetFirstNonexistentSubpath takes a path and returns its ancestor.
 // The returned path that doesn't exist but has an existing parent.
 // The function returns 3 values - the path, a boolean indicating if
 // the path was found successfully and an error. If the input path already
 // exists, it returns ("", false, nil).
-func GetFirstUnexistingSubpath(path string) (string, bool, error) {
+func GetFirstNonexistentSubpath(path string) (string, bool, error) {
 	path = filepath.Clean(path)
 	fullPath, err := filepath.Abs(path)
 	if err != nil {
@@ -469,8 +469,8 @@ func GetFirstUnexistingSubpath(path string) (string, bool, error) {
 }
 
 // IsDirEmpty checks whether the path points at empty directory. If the path
-// is not a directory or info about the path can't be obtaioned it returns
-// false. If the path is a directory and it is empty, it returns true.
+// is not a directory or info about the path can't be obtained it returns
+// false. If the path is a directory, and it is empty, it returns true.
 func IsDirEmpty(path string) (bool, error) {
 	if stat, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
@@ -755,8 +755,8 @@ func move(source, destination string) error {
 	return nil
 }
 
-// MoveOrCopy tries to move the the source to destination first and in case
-// of failore it copies the files instead.
+// MoveOrCopy tries to move the source to destination first and in case
+// of failure it copies the files instead.
 func MoveOrCopy(
 	source string, destination string, makeReadOnly bool, copyParentAcl bool,
 ) error {
@@ -804,7 +804,7 @@ func MoveOrCopy(
 			func(s string, d fs.DirEntry, e error) error {
 
 				if e != nil {
-					// Error messag isn't important as it's not passed further
+					// Error message isn't important as it's not passed further
 					// in the code
 					return e
 				}

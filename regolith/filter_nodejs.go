@@ -16,7 +16,7 @@ type NodeJSFilterDefinition struct {
 	Script string `json:"script,omitempty"`
 
 	// Requirements is an optional path to the folder with the package.json file.
-	// If not specified the parent of thhe script path is used instead.
+	// If not specified the parent of the script path is used instead.
 	Requirements string `json:"requirements,omitempty"`
 }
 

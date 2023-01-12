@@ -45,7 +45,7 @@ const (
 
 	// profileFilterPath is a directory that contains files for testing
 	// ProfileFilter. It contains a project and an expected result. The
-	// projects has both valid and invalid profiles.
+	// projects have both valid and invalid profiles.
 	profileFilterPath = "testdata/profile_filter"
 
 	// regolithUpdatePath is a directory that contains files for testing
