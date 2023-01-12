@@ -54,7 +54,7 @@ func copyFileSecurityInfo(source string, target string) error {
 
 // DirWatcher is a struct that provides easy to use methods for watching a
 // directory for changes. It uses FindFirstChangeNotification instead of
-// ReadDirectoryChanges so it doesn't provide any information about the
+// ReadDirectoryChanges, so it doesn't provide any information about the
 // changes, only the fact that something changed.
 //
 // Useful links:
@@ -104,11 +104,11 @@ func (d *DirWatcher) WaitForChange() error {
 	return nil
 }
 
-// WaitForChangeGroup locks a goroutine until it recives a change notification.
+// WaitForChangeGroup locks a goroutine until it receives a change notification.
 // When that happens it sends the interruptionMessage to the
 // interruptionChannel.
 // Then it continues locking as long as other changes keep coming with
-// intercals less than the given timeout, to group notifications that come
+// intervals less than the given timeout, to group notifications that come
 // in short intervals together.
 func (d *DirWatcher) WaitForChangeGroup(
 	groupTimeout uint32, interruptionChannel chan string,

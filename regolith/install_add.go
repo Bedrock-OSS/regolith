@@ -1,4 +1,3 @@
-// Functions used for the "regolith install --add <filters...>" command
 package regolith
 
 import (
@@ -11,12 +10,14 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+// Functions used for the "regolith install --add <filters...>" command
+
 type parsedInstallFilterArg struct {
 	// raw is the raw value of the filter argument before processing.
 	raw string
 	// url is the URL to the repository with the filter
 	url string
-	// name is the name of the filter (name of the subfoder in th repository)
+	// name is the name of the filter (name of the subfolder in th repository)
 	name string
 	// version is the version string of the filter ("HEAD", semver, etc.)
 	version string
@@ -40,7 +41,7 @@ func installFilters(
 		return burrito.WrapErrorf(err, osMkdirError, "cache/venvs")
 	}
 
-	// Download all of the remote filters
+	// Download all the remote filters
 	for name, filterDefinition := range filterDefinitions {
 		Logger.Infof("Downloading %q filter...", name)
 		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
@@ -102,7 +103,7 @@ func parseInstallFilterArgs(
 		} else {
 			url = arg
 		}
-		// Check if identifier is an URL. The last part of the URL is the name
+		// Check if identifier is a URL. The last part of the URL is the name
 		// of the filter
 		if strings.Contains(url, "/") {
 			splitStr := strings.Split(url, "/")
@@ -138,7 +139,7 @@ func parseInstallFilterArgs(
 
 // GetRemoteFilterDownloadRef returns a reference for go-getter to be used
 // to download a filter, based on the url, name and version properties from
-// from the "regolith install" command arguments.
+// the "regolith install" command arguments.
 func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 	// The custom type and a function is just to reduce the amount of code by
 	// changing the function signature. In order to pass it in the 'vg' list.

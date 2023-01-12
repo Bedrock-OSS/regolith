@@ -162,7 +162,7 @@ func TestInstall(t *testing.T) {
 		"1.0.1":  "testdata/regolith_install/1.0.1",
 		"latest": "testdata/regolith_install/latest",
 
-		// The expected result of the HEAD barnch might change in the future
+		// The expected result of the HEAD branch might change in the future
 		// once the test repository is updated. This means that the test data
 		// also needs to be updated.
 		"HEAD": "testdata/regolith_install/HEAD",
@@ -221,7 +221,7 @@ func TestInstallAll(t *testing.T) {
 		"1.0.1":  filepath.Join(regolithUpdatePath, "1.0.1"),
 		"latest": filepath.Join(regolithUpdatePath, "latest"),
 
-		// The expected result of the HEAD barnch might change in the future
+		// The expected result of the HEAD branch might change in the future
 		// once the test repository is updated. This means that the test data
 		// also needs to be updated.
 		"HEAD": filepath.Join(regolithUpdatePath, "HEAD"),

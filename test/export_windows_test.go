@@ -62,7 +62,7 @@ func TestMoveFilesAcl(t *testing.T) {
 	// Before "workingDir" the working dir of this test can't be there
 	defer os.RemoveAll(workingDir)
 	defer os.Chdir(wd)
-	// Switch wd to wrokingDir
+	// Switch wd to workingDir
 	os.Chdir(workingDir)
 	// Get the name of the config from config
 	configJson, err := regolith.LoadConfigAsMap()

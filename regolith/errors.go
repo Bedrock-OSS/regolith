@@ -2,29 +2,29 @@ package regolith
 
 // Common errors and warnings used by Regolith
 const (
-	errorConnector = "** Another error occured while handling the previous error **"
+	errorConnector = "** Another error occurred while handling the previous error **"
 
-	// Error message to display when when expecting an empty or unexisting directory
-	assertEmptyOrNewDirError = "Expected a path to an empty or unexisting " +
+	// Error message to display when expecting an empty or nonexistent directory
+	assertEmptyOrNewDirError = "Expected a path to an empty or nonexistent " +
 		"directory.\nPath: %s"
 
 	// Error message for filepath.Abs() function.
 	filepathAbsError = "Failed to get absolute path.\nBase path: %s"
 
-	// Error message for os.Stat failore
+	// Error message for os.Stat failure
 	osStatErrorAny = "Failed to access file info.\nPath: %s"
 
 	// Error message for file or directory that doesn't exist
 	osStatErrorIsNotExist = "Path doesn't exist.\nPath: %s"
 
-	// Error message for os.Stat when the funciton should fail because it's
+	// Error message for os.Stat when the function should fail because it's
 	// expected that the target path doesn't exist
 	osStatExistsError = "Path already exists.\nPath: %s"
 
-	// Error message for handling failores of os.Rename
+	// Error message for handling failures of os.Rename
 	osRenameError = "Failed to move file or directory:\nSource: %s\nTarget: %s"
 
-	// Error message for handling failores of os.Copy
+	// Error message for handling failures of os.Copy
 	osCopyError = "Failed to copy file or directory:\nSource: %s\nTarget: %s"
 
 	// Error message displayed when mkdir (or similar function) fails
@@ -36,7 +36,7 @@ const (
 	// Common Error message to be reused on top of IsDirEmpty
 	isDirEmptyError = "Failed to check if path is an empty directory.\nPath: %s"
 
-	// Error used when an empty directory is expected but it's not
+	// Error used when an empty directory is expected, but it's not
 	isDirEmptyNotEmptyError = "Path is an empty directory.\nPath: %s"
 
 	// Error used when copyFileSecurityInfo fails
@@ -82,10 +82,10 @@ const (
 	// Error used when Regolith fails to parse a property os JSON
 	jsonPropertyParseError = "Failed to parse JSON property.\nProperty: %s"
 
-	// Error used when Regolith expects a property but it's missing
+	// Error used when Regolith expects a property, but it's missing
 	jsonPropertyMissingError = "Required JSON property is missing.\nProperty: %s"
 
-	// Errror used when JSON property is not an expected type
+	// Error used when JSON property is not an expected type
 	jsonPropertyTypeError = "JSON property has unexpected type." +
 		"\nProperty: %s\nExpected: %s"
 
@@ -99,12 +99,12 @@ const (
 	jsonPathTypeError = "Invalid data type.\nJSON Path: %s\n" +
 		"Expected type: %s"
 
-	// Error used when RunSubProcess funciton fails
+	// Error used when RunSubProcess function fails
 	runSubProcessError = "Failed to run sub process."
 
 	// Error used when remote filter fails to access its subfilter collection.
 	// The error doesn't print the name of the filter because the
-	// subfilterCollection method is private and it's always a part of some
+	// subfilterCollection method is private, and it's always a part of some
 	// other, higher level action which provides that information when it
 	// fails.
 	remoteFilterSubfilterCollectionError = "Failed to list subfilters."
@@ -158,8 +158,8 @@ const (
 	// Error used whe Regolith fails to undo failed file system operation.
 	fsUndoError = "Filed to undo file system operation."
 
-	// Error used when aquireSessionLock function fails
-	aquireSessionLockError = "Failed to aquire session lock."
+	// Error used when acquireSessionLock function fails
+	acquireSessionLockError = "Failed to acquire session lock."
 
 	// Error used when creation of the RevertibleFsOperations object fails
 	newRevertibleFsOperationsError = "Failed to prepare backup path for revertible" +
@@ -184,11 +184,11 @@ const (
 	// Error used when the getGlobalUserConfigPath function fails
 	getGlobalUserConfigPathError = "Failed to get global user_config.json path"
 
-	// Error used when the dump method of the UserConfig object failse
+	// Error used when the dump method of the UserConfig object fails
 	userConfigDumpError = "Failed to save the user configuration.\n" +
 		"Path: %s"
 
-	// readFilterJsonError is used when loding the filter.json file fails
+	// readFilterJsonError is used when loading the filter.json file fails
 	readFilterJsonError = "Couldn't read filter data from path.\n" +
 		"Path: %s\n" +
 		"Did you install the filter?\n" +

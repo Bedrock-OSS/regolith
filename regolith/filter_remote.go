@@ -107,7 +107,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 		}
 		// Overwrite the venvSlot with the parent value
 		// TODO - remote filters can contain multiple filters, the interruption
-		// chceck should be performed after every subfilter
+		// check should be performed after every subfilter
 		_, err = filter.Run(runContext)
 		if err != nil {
 			return burrito.WrapErrorf(
@@ -194,10 +194,10 @@ func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, 
 func (f *RemoteFilterDefinition) Check(context RunContext) error {
 	dummyFilterRunner, err := f.CreateFilterRunner(
 		map[string]interface{}{"filter": f.Id})
-	const shouldntHappenError = ("Filter name: %s\n" +
+	const shouldntHappenError = "Filter name: %s\n" +
 		"This is a bug, please submit a bug report to the Regolith " +
 		"project repository:\n" +
-		"https://github.com/Bedrock-OSS/regolith/issues")
+		"https://github.com/Bedrock-OSS/regolith/issues"
 	if err != nil { // Shouldn't happen but just in case it's better to check
 		return burrito.WrapErrorf(
 			err, "Failed to create FilterRunner for the filter.\n"+
@@ -353,35 +353,35 @@ func FilterDefinitionFromTheInternet(
 }
 
 // Download
-func (i *RemoteFilterDefinition) Download(
+func (f *RemoteFilterDefinition) Download(
 	isForced bool, dotRegolithPath string,
 ) error {
-	if _, err := os.Stat(i.GetDownloadPath(dotRegolithPath)); err == nil {
+	if _, err := os.Stat(f.GetDownloadPath(dotRegolithPath)); err == nil {
 		if !isForced {
 			Logger.Warnf(
 				"The download path of the \"%s\" already exists.This should "+
 					"be the case only if the filter is installed.\n"+
 					"    Skipped the download. You can force the it by "+
-					"passing the \"-force\" flag.", i.Id)
+					"passing the \"-force\" flag.", f.Id)
 			return nil
 		} else {
-			i.Uninstall(dotRegolithPath)
+			f.Uninstall(dotRegolithPath)
 		}
 	}
 
-	Logger.Infof("Downloading filter %s...", i.Id)
+	Logger.Infof("Downloading filter %s...", f.Id)
 
 	// Download the filter using Git Getter
 	if !hasGit() {
 		return burrito.WrappedError(gitNotInstalledWarning)
 	}
-	repoVersion, err := GetRemoteFilterDownloadRef(i.Url, i.Id, i.Version)
+	repoVersion, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
 	if err != nil {
 		return burrito.WrapErrorf(
-			err, getRemoteFilterDownloadRefError, i.Url, i.Id, i.Version)
+			err, getRemoteFilterDownloadRefError, f.Url, f.Id, f.Version)
 	}
-	url := fmt.Sprintf("%s//%s?ref=%s", i.Url, i.Id, repoVersion)
-	downloadPath := i.GetDownloadPath(dotRegolithPath)
+	url := fmt.Sprintf("%s//%s?ref=%s", f.Url, f.Id, repoVersion)
+	downloadPath := f.GetDownloadPath(dotRegolithPath)
 
 	_, err = os.Stat(downloadPath)
 	downloadPathIsNew := os.IsNotExist(err)
@@ -395,32 +395,32 @@ func (i *RemoteFilterDefinition) Download(
 				"Does that filter exist?", url)
 	}
 	// Save the version of the filter we downloaded
-	i.SaveVersionInfo(trimFilterPrefix(repoVersion, i.Id), dotRegolithPath)
+	f.SaveVersionInfo(trimFilterPrefix(repoVersion, f.Id), dotRegolithPath)
 	// Remove 'test' folder, which we never want to use (saves space on disk)
 	testFolder := path.Join(downloadPath, "test")
 	if _, err := os.Stat(testFolder); err == nil {
 		os.RemoveAll(testFolder)
 	}
 
-	Logger.Infof("Filter \"%s\" downloaded successfully.", i.Id)
+	Logger.Infof("Filter \"%s\" downloaded successfully.", f.Id)
 	return nil
 }
 
 // SaveVersionInfo saves puts the specified version string into the
-// filter.json of the remote fileter.
-func (i *RemoteFilterDefinition) SaveVersionInfo(version, dotRegolithPath string) error {
-	filterJsonMap, err := i.LoadFilterJson(dotRegolithPath)
+// filter.json of the remote filter.
+func (f *RemoteFilterDefinition) SaveVersionInfo(version, dotRegolithPath string) error {
+	filterJsonMap, err := f.LoadFilterJson(dotRegolithPath)
 	if err != nil {
 		return burrito.WrapErrorf(
-			err, "Could not load filter.json for \"%s\" filter.", i.Id)
+			err, "Could not load filter.json for \"%s\" filter.", f.Id)
 	}
 	filterJsonMap["version"] = version
 	filterJson, _ := json.MarshalIndent(filterJsonMap, "", "\t") // no error
-	filterJsonPath := path.Join(i.GetDownloadPath(dotRegolithPath), "filter.json")
+	filterJsonPath := path.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
 	err = os.WriteFile(filterJsonPath, filterJson, 0644)
 	if err != nil {
 		return burrito.WrapErrorf(
-			err, "Unable to write \"filter.json\" for %q filter.", i.Id)
+			err, "Unable to write \"filter.json\" for %q filter.", f.Id)
 	}
 	return nil
 }
@@ -438,7 +438,7 @@ func (f *RemoteFilterDefinition) LoadFilterJson(dotRegolithPath string) (map[str
 	return filterJsonMap, nil
 }
 
-// GetInstalledVersion reads the version seaved in the filter.json
+// InstalledVersion reads the version saved in the filter.json
 func (f *RemoteFilterDefinition) InstalledVersion(dotRegolithPath string) (string, error) {
 	filterJsonMap, err := f.LoadFilterJson(dotRegolithPath)
 	if err != nil {
@@ -489,12 +489,12 @@ func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string) erro
 }
 
 // GetDownloadPath returns the path location where the filter can be found.
-func (i *RemoteFilterDefinition) GetDownloadPath(dotRegolithPath string) string {
-	return filepath.Join(filepath.Join(dotRegolithPath, "cache/filters"), i.Id)
+func (f *RemoteFilterDefinition) GetDownloadPath(dotRegolithPath string) string {
+	return filepath.Join(filepath.Join(dotRegolithPath, "cache/filters"), f.Id)
 }
 
-func (i *RemoteFilterDefinition) Uninstall(dotRegolithPath string) {
-	downloadPath := i.GetDownloadPath(dotRegolithPath)
+func (f *RemoteFilterDefinition) Uninstall(dotRegolithPath string) {
+	downloadPath := f.GetDownloadPath(dotRegolithPath)
 	err := os.RemoveAll(downloadPath)
 	if err != nil {
 		Logger.Error(
@@ -511,7 +511,7 @@ func hasGit() bool {
 // extraFilterJsonErrorInfo is used to wrap errors related to parsing the
 // filter.json file. It's common for other functions to handle loading and
 // parsing of this file, so using this is necessary to provide both the
-// finformation about the file path and reuse the errrors from errors.go
+// information about the file path and reuse the errors from errors.go
 //
 // TODO - this is an ugly solution, perhaps we should have a separate
 // function for loading the filter.json file. Currently it's always build into
