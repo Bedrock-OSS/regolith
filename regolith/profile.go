@@ -98,6 +98,7 @@ func CheckProfileImpl(
 			Parent:          parentContext,
 			Profile:         profileName,
 			DotRegolithPath: dotRegolithPath,
+			Settings:        f.GetSettings(),
 		})
 		if err != nil {
 			return burrito.WrapErrorf(err, filterRunnerCheckError, f.GetId())

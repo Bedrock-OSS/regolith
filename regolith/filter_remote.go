@@ -93,6 +93,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 			Profile:          context.Profile,
 			Parent:           context.Parent,
 			DotRegolithPath:  context.DotRegolithPath,
+			Settings:         filter.GetSettings(),
 		}
 		// Disabled filters are skipped
 		disabled, err := filter.IsDisabled(runContext)

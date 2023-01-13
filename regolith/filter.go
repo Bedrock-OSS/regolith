@@ -21,6 +21,7 @@ type RunContext struct {
 	Profile          string
 	Parent           *RunContext
 	DotRegolithPath  string
+	Settings         map[string]interface{}
 
 	// interruptionChannel is a channel that is used to notify about changes
 	// in the source files, in order to trigger a restart of the program in
@@ -196,6 +197,9 @@ type FilterRunner interface {
 	// GetId returns the id of the filter.
 	GetId() string
 
+	// GetSettings returns the settings of the filter.
+	GetSettings() map[string]interface{}
+
 	// Check checks whether the requirements of the filter are met. For
 	// example, a Python filter requires Python to be installed.
 	Check(context RunContext) error
@@ -223,6 +227,10 @@ func (f *Filter) Run(context RunContext) (bool, error) {
 
 func (f *Filter) GetId() string {
 	return f.Id
+}
+
+func (f *Filter) GetSettings() map[string]interface{} {
+	return f.Settings
 }
 
 func (f *Filter) IsDisabled(ctx RunContext) (bool, error) {
