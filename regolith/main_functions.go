@@ -222,6 +222,7 @@ func runOrWatch(profileName string, debug, watch bool) error {
 		Parent:           nil,
 		Profile:          profileName,
 		DotRegolithPath:  dotRegolithPath,
+		Settings:         map[string]interface{}{},
 	}
 	if watch { // Loop until program termination (CTRL+C)
 		context.StartWatchingSourceFiles()
@@ -321,6 +322,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 		DotRegolithPath:     dotRegolithPath,
 		interruptionChannel: nil,
 		AbsoluteLocation:    path,
+		Settings:            filterRunner.GetSettings(),
 	}
 	// Check the filter
 	err = filterRunner.Check(runContext)
