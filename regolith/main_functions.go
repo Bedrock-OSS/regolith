@@ -105,7 +105,7 @@ func Install(filters []string, force, debug bool) error {
 	}
 	// Download the filter definitions
 	err = installFilters(
-		filterInstallers, force, dataPath, dotRegolithPath)
+		filterInstallers, force, dataPath, dotRegolithPath, true)
 	if err != nil {
 		return burrito.WrapError(err, "Failed to install filters.")
 	}
@@ -163,7 +163,7 @@ func InstallAll(force, debug bool) error {
 	defer func() { sessionLockErr = unlockSession() }()
 	// Install the filters
 	err = installFilters(
-		config.FilterDefinitions, force, config.DataPath, dotRegolithPath)
+		config.FilterDefinitions, force, config.DataPath, dotRegolithPath, false)
 	if err != nil {
 		return burrito.WrapError(err, "Could not install filters.")
 	}
