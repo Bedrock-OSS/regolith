@@ -100,7 +100,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 			return burrito.WrapErrorf(err, "Failed to check if filter is disabled")
 		}
 		if disabled {
-			Logger.Infof(
+			Logger.Debugf(
 				"The %s subfilter of \"%s\" filter is disabled, skipping.",
 				nth(i), f.Id)
 			continue
@@ -455,10 +455,10 @@ func (f *RemoteFilterDefinition) InstalledVersion(dotRegolithPath string) (strin
 	return versionStr, nil
 }
 
-func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string) error {
+func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, isInstall bool) error {
 	installedVersion, err := f.InstalledVersion(dotRegolithPath)
 	installedVersion = trimFilterPrefix(installedVersion, f.Id)
-	if err != nil {
+	if err != nil && (!isInstall || force) {
 		Logger.Warnf("Unable to get installed version of filter %q.", f.Id)
 	}
 	version, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
