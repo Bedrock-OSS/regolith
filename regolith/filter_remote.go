@@ -238,13 +238,13 @@ func (f *RemoteFilterDefinition) CopyFilterData(dataPath string, dotRegolithPath
 	remoteDataPath := path.Join(f.GetDownloadPath(dotRegolithPath), "data")
 	localDataPath := path.Join(dataPath, f.Id)
 	if _, err := os.Stat(localDataPath); err == nil {
-		Logger.Warnf(
+		Logger.Warn(burrito.WrappedErrorf(
 			"Filter already has data in its data folder.\n"+
 				"Filter name: %s\n"+
 				"Filter data folder: %s\n"+
 				"If you want to download the default data from filter's "+
 				"repository, remove the data folder manually and reinstall the "+
-				"filter.", f.Id, localDataPath)
+				"filter.", f.Id, localDataPath))
 	} else if _, err := os.Stat(remoteDataPath); err == nil {
 		// Ensure folder exists
 		err = os.MkdirAll(localDataPath, 0755)
@@ -373,9 +373,11 @@ func (f *RemoteFilterDefinition) Download(
 	Logger.Infof("Downloading filter %s...", f.Id)
 
 	// Download the filter using Git Getter
+	MeasureStart("Check git")
 	if !hasGit() {
 		return burrito.WrappedError(gitNotInstalledWarning)
 	}
+	MeasureStart("Get remote filter download ref")
 	repoVersion, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
 	if err != nil {
 		return burrito.WrapErrorf(
@@ -386,6 +388,7 @@ func (f *RemoteFilterDefinition) Download(
 
 	_, err = os.Stat(downloadPath)
 	downloadPathIsNew := os.IsNotExist(err)
+	MeasureStart("go-getter Get")
 	err = getter.Get(downloadPath, url)
 	if err != nil {
 		if downloadPathIsNew { // Remove the path created by getter
@@ -396,7 +399,9 @@ func (f *RemoteFilterDefinition) Download(
 				"Does that filter exist?", url)
 	}
 	// Save the version of the filter we downloaded
+	MeasureStart("Save version info")
 	f.SaveVersionInfo(trimFilterPrefix(repoVersion, f.Id), dotRegolithPath)
+	MeasureEnd()
 	// Remove 'test' folder, which we never want to use (saves space on disk)
 	testFolder := path.Join(downloadPath, "test")
 	if _, err := os.Stat(testFolder); err == nil {
@@ -462,11 +467,13 @@ func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, isIn
 	if err != nil && (!isInstall || force) {
 		Logger.Warnf("Unable to get installed version of filter %q.", f.Id)
 	}
+	MeasureStart("Get remote filter download ref")
 	version, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
 	if err != nil {
 		return burrito.WrapErrorf(
 			err, getRemoteFilterDownloadRefError, f.Url, f.Id, f.Version)
 	}
+	MeasureEnd()
 	version = trimFilterPrefix(version, f.Id)
 	if installedVersion != version || force {
 		Logger.Infof(
@@ -495,6 +502,7 @@ func (f *RemoteFilterDefinition) GetDownloadPath(dotRegolithPath string) string 
 }
 
 func (f *RemoteFilterDefinition) Uninstall(dotRegolithPath string) {
+	Logger.Debugf("Uninstalling filter %q.", f.Id)
 	downloadPath := f.GetDownloadPath(dotRegolithPath)
 	err := os.RemoveAll(downloadPath)
 	if err != nil {

@@ -64,6 +64,7 @@ func DownloadResolverMaps() error {
 
 	// Define function to download group of resolvers
 	downloadResolvers := func(urls []string, root string) error {
+		MeasureStart("Prepare for resolvers download")
 		targetPath := filepath.Join(root, "resolvers")
 		tmpPath := filepath.Join(root, ".resolvers-tmp")
 		tmpResolversPath := filepath.Join(tmpPath, "resolvers")
@@ -98,6 +99,7 @@ func DownloadResolverMaps() error {
 			// Get the save path and resolve the URL
 			savePath := filepath.Join(
 				tmpResolversPath, fmt.Sprintf("resolver_%d.json", i))
+			MeasureStart("Resolve resolver URL")
 			url, err := resolveResolverUrl(shortUrl)
 			if err != nil {
 				return burrito.WrapError(
@@ -105,12 +107,14 @@ func DownloadResolverMaps() error {
 					"Failed to resolve the URL of the resolver file for the download.\n"+
 						"Short URL: "+shortUrl)
 			}
+			MeasureStart("Download resolver")
 			Logger.Debugf("Downloading resolver using URL: %s", url)
 			err = getter.GetFile(savePath, url)
 			if err != nil {
 				return burrito.WrapErrorf(err, "Failed to download the file.\nURL: %s", url)
 			}
 			// Add "url" property to the resolver file
+			MeasureEnd()
 			fileData := make(map[string]interface{})
 			f, err := os.ReadFile(savePath)
 			if err != nil {

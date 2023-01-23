@@ -9,8 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"github.com/nightlyone/lockfile"
@@ -212,4 +214,43 @@ func acquireSessionLock(dotRegolithPath string) (func() error, error) {
 		return sessionLock.Unlock()
 	}
 	return unlockFunc, nil
+}
+
+type measure struct {
+	// Name of the measure
+	Name string
+	// Location of the measure
+	Location string
+	// Start time of the measure
+	StartTime time.Time
+}
+
+var lastMeasure *measure
+var EnableTimings = false
+
+func MeasureStart(name string) {
+	if !EnableTimings {
+		return
+	}
+	if lastMeasure != nil {
+		MeasureEnd()
+	}
+	_, fn, line, _ := runtime.Caller(1)
+	lastMeasure = &measure{
+		Name:      name,
+		StartTime: time.Now(),
+		Location:  fmt.Sprintf("%s:%d", filepath.Base(fn), line),
+	}
+}
+
+func MeasureEnd() {
+	if !EnableTimings {
+		return
+	}
+	if lastMeasure == nil {
+		return
+	}
+	duration := time.Since(lastMeasure.StartTime)
+	Logger.Infof("%s took %s (%s)", lastMeasure.Name, duration, lastMeasure.Location)
+	lastMeasure = nil
 }

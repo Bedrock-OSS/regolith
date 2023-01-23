@@ -320,9 +320,10 @@ func main() {
 		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
 			"the current project")
 	subcommands = append(subcommands, cmdClean)
-	// add --debug flag to every command
+	// add --debug and --timings flag to every command
 	for _, cmd := range subcommands {
 		cmd.Flags().BoolVarP(&burrito.PrintStackTrace, "debug", "", false, "Enables debugging")
+		cmd.Flags().BoolVarP(&regolith.EnableTimings, "timings", "", false, "Enables timing information")
 	}
 	// Build and run CLI
 	rootCmd.AddCommand(subcommands...)
