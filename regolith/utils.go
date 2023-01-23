@@ -216,6 +216,45 @@ func acquireSessionLock(dotRegolithPath string) (func() error, error) {
 	return unlockFunc, nil
 }
 
+func splitPath(path string) []string {
+	parts := make([]string, 0)
+	for true {
+		part := ""
+		path, part = filepath.Split(path)
+		if strings.HasSuffix(path, string(os.PathSeparator)) {
+			path = path[0 : len(path)-1]
+		}
+		if path == "" && part != "" {
+			parts = append([]string{part}, parts...)
+			break
+		}
+		if part == "" || path == "" {
+			break
+		}
+		parts = append([]string{part}, parts...)
+	}
+	return parts
+}
+
+func ResolvePath(path string) (string, error) {
+	// Resolve the path
+	parts := splitPath(path)
+	for i, part := range parts {
+		if strings.HasPrefix(part, "%") && strings.HasSuffix(part, "%") {
+			envVar := part[1 : len(part)-1]
+			envVarValue, exists := os.LookupEnv(envVar)
+			if !exists {
+				return "", burrito.WrapErrorf(
+					os.ErrNotExist,
+					"Environment variable %s does not exist.",
+					envVar)
+			}
+			parts[i] = envVarValue
+		}
+	}
+	return filepath.Clean(filepath.Join(parts...)), nil
+}
+
 type measure struct {
 	// Name of the measure
 	Name string

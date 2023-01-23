@@ -36,8 +36,16 @@ func GetExportPaths(
 		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
 		rpPath = comMojang + "/development_resource_packs/" + name + "_rp"
 	} else if exportTarget.Target == "exact" {
-		bpPath = exportTarget.BpPath
-		rpPath = exportTarget.RpPath
+		bpPath, err = ResolvePath(exportTarget.BpPath)
+		if err != nil {
+			return "", "", burrito.WrapError(
+				err, "Failed to resolve behavior pack path.")
+		}
+		rpPath, err = ResolvePath(exportTarget.RpPath)
+		if err != nil {
+			return "", "", burrito.WrapError(
+				err, "Failed to resolve resource pack path.")
+		}
 	} else if exportTarget.Target == "world" {
 		if exportTarget.WorldPath != "" {
 			if exportTarget.WorldName != "" {
@@ -45,10 +53,15 @@ func GetExportPaths(
 					"Using both \"worldName\" and \"worldPath\" is not" +
 						" allowed.")
 			}
+			wPath, err := ResolvePath(exportTarget.WorldPath)
+			if err != nil {
+				return "", "", burrito.WrapError(
+					err, "Failed to resolve world path.")
+			}
 			bpPath = filepath.Join(
-				exportTarget.WorldPath, "behavior_packs", name+"_bp")
+				wPath, "behavior_packs", name+"_bp")
 			rpPath = filepath.Join(
-				exportTarget.WorldPath, "resource_packs", name+"_rp")
+				wPath, "resource_packs", name+"_rp")
 		} else if exportTarget.WorldName != "" {
 			dir, err := FindMojangDir()
 			if err != nil {
