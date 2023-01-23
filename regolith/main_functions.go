@@ -76,7 +76,7 @@ func Install(filters []string, force, debug bool) error {
 					"The filter is already on the filter definitions list.\n"+
 						"Filter: %s\n"+
 						"If you want to force the installation of the filter, "+
-						"please add \"--force\" flag to your "+
+						"please add \"--update\" flag to your "+
 						"\"regolith install\" command", parsedArg.name)
 			}
 		}
