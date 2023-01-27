@@ -49,13 +49,7 @@ func resolveResolverUrl(url string) (string, error) {
 	}
 	repoUrl := strings.Join(urlParts[0:3], "/")
 	path := strings.Join(urlParts[3:], "/")
-	sha, err := GetHeadSha(repoUrl)
-	if err != nil {
-		return "", burrito.WrapError(
-			err,
-			"Failed to get the HEAD of the repository with the resolver.json file")
-	}
-	return fmt.Sprintf("git::https://%s/%s?ref=%s", repoUrl, path, sha), nil
+	return fmt.Sprintf("git::https://%s/%s", repoUrl, path), nil
 }
 
 // DownloadResolverMaps downloads the resolver.json files
@@ -109,7 +103,7 @@ func DownloadResolverMaps() error {
 			}
 			MeasureStart("Download resolver")
 			Logger.Debugf("Downloading resolver using URL: %s", url)
-			err = getter.GetFile(savePath, url)
+			err = getter.GetFile(savePath, url+"?depth=1")
 			if err != nil {
 				return burrito.WrapErrorf(err, "Failed to download the file.\nURL: %s", url)
 			}

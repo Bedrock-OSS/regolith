@@ -109,6 +109,13 @@ func parseInstallFilterArgs(
 			splitStr := strings.Split(url, "/")
 			name = splitStr[len(splitStr)-1]
 			url = strings.Join(splitStr[:len(splitStr)-1], "/")
+			if strings.HasPrefix(strings.ToLower(url), "https://") || strings.HasPrefix(strings.ToLower(url), "http://") {
+				return nil, burrito.WrappedErrorf(
+					"Unable to parse argument.\n"+
+						"Argument: %s\n"+
+						"Filter URLs cannot start with \"https://\" or \"http://\".",
+					arg)
+			}
 		} else {
 			// Example inputs: "name_ninja==HEAD", "name_ninja"
 			name = url

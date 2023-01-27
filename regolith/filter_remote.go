@@ -383,7 +383,7 @@ func (f *RemoteFilterDefinition) Download(
 		return burrito.WrapErrorf(
 			err, getRemoteFilterDownloadRefError, f.Url, f.Id, f.Version)
 	}
-	url := fmt.Sprintf("%s//%s?ref=%s", f.Url, f.Id, repoVersion)
+	url := fmt.Sprintf("git::https://%s//%s?ref=%s", f.Url, f.Id, repoVersion)
 	downloadPath := f.GetDownloadPath(dotRegolithPath)
 
 	_, err = os.Stat(downloadPath)
