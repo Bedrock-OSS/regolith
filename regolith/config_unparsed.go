@@ -16,6 +16,10 @@ import (
 
 // LoadConfigAsMap loads the config.json file as map[string]interface{}
 func LoadConfigAsMap() (map[string]interface{}, error) {
+	err := CheckSuspiciousLocation()
+	if err != nil {
+		return nil, burrito.PassError(err)
+	}
 	file, err := os.ReadFile(ConfigFilePath)
 	if err != nil {
 		return nil, burrito.WrappedError( // We don't need to pass OS error. It's confusing.

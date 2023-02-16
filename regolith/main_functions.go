@@ -374,6 +374,10 @@ func Init(debug bool) error {
 				"directory.\n\"regolith init\" can be used only in empty "+
 				"directories.", wd)
 	}
+	err = CheckSuspiciousLocation()
+	if err != nil {
+		return burrito.WrapError(err, projectSuspiciousDirError)
+	}
 	os.WriteFile(".gitignore", []byte(GitIgnore), 0644)
 	// Create new default configuration
 	userConfig, err := getCombinedUserConfig()
