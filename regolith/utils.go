@@ -221,7 +221,7 @@ func splitPath(path string) []string {
 	for true {
 		part := ""
 		path, part = filepath.Split(path)
-		if strings.HasSuffix(path, string(os.PathSeparator)) {
+		if strings.HasSuffix(path, "/") || strings.HasSuffix(path, "\\") {
 			path = path[0 : len(path)-1]
 		}
 		if path == "" && part != "" {
