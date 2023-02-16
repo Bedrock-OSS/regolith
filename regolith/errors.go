@@ -194,4 +194,14 @@ const (
 		"Did you install the filter?\n" +
 		"You can install all of the filters by running:\n" +
 		"regolith install-all"
+
+	projectInMojangDirError = "Project is in the Minecraft directory.\n" +
+		"Path: %s\n" +
+		"Minecraft directory: %s"
+
+	projectInPreviewDirError = "Project is in the Minecraft Preview directory.\n" +
+		"Path: %s\n" +
+		"Minecraft directory: %s"
+
+	projectSuspiciousDirError = "Cannot initialize the project in a suspicious location."
 )

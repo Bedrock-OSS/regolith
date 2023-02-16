@@ -6,6 +6,7 @@ package regolith
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 
@@ -173,4 +174,48 @@ func FindPreviewDir() (string, error) {
 			err, osStatErrorAny, result)
 	}
 	return result, nil
+}
+
+func CheckSuspiciousLocation() error {
+	path, err := os.Getwd()
+	if err != nil {
+		return burrito.WrapErrorf(err, osGetwdError)
+	}
+	// Check if project directory is within mojang dir
+	dir, err := FindMojangDir()
+	if err == nil && isPathWithinDirectory(path, dir) {
+		return burrito.WrappedErrorf(projectInMojangDirError, path, dir)
+	}
+	// Check if project directory is within mojang dir
+	dir, err = FindPreviewDir()
+	if err == nil && isPathWithinDirectory(path, dir) {
+		return burrito.WrappedErrorf(projectInPreviewDirError, path, dir)
+	}
+	// Check if project directory is within OneDrive directories
+	od := os.Getenv("OneDrive")
+	if od != "" && isPathWithinDirectory(path, od) {
+		Logger.Warnf("Project directory is within OneDrive directory. Consider moving the project outside of any cloud synced directories.\nPath: %s\nOneDrive: %s", path, od)
+	} else {
+		od = os.Getenv("OneDriveConsumer")
+		if od != "" && isPathWithinDirectory(path, od) {
+			Logger.Warnf("Project directory is within OneDrive Consumer directory. Consider moving the project outside of any cloud synced directories.\nPath: %s\nOneDrive: %s", path, od)
+		} else {
+			od = os.Getenv("OneDriveCommercial")
+			if od != "" && isPathWithinDirectory(path, od) {
+				Logger.Warnf("Project directory is within OneDrive Commercial directory. Consider moving the project outside of any cloud synced directories.\nPath: %s\nOneDrive: %s", path, od)
+			}
+		}
+	}
+	return nil
+}
+
+func isPathWithinDirectory(path string, dir string) bool {
+	if path == "" || dir == "" {
+		return false
+	}
+	rel, err := filepath.Rel(dir, path)
+	if err != nil {
+		return false
+	}
+	return !strings.HasPrefix(rel, "..")
 }
