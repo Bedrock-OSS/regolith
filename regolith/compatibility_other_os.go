@@ -55,6 +55,6 @@ func FindPreviewDir() (string, error) {
 	return "", burrito.WrappedError(notImplementedOnThisSystemError)
 }
 
-func CheckSuspiciousLocation(path string) error {
+func CheckSuspiciousLocation() error {
 	return nil
 }
