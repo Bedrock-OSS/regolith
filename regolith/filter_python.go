@@ -17,8 +17,8 @@ type PythonFilterDefinition struct {
 	VenvSlot int    `json:"venvSlot,omitempty"`
 
 	// Requirements is an optional path to the file with the requirements
-	// (usually requirements.txt). If not specified, the parant path of the
-	// scipt is used.
+	// (usually requirements.txt). If not specified, the parent path of the
+	// script is used.
 	Requirements string `json:"requirements,omitempty"`
 }
 

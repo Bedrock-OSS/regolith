@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
+	"github.com/alessio/shellescape"
 )
 
 type ShellFilterDefinition struct {
@@ -103,7 +104,7 @@ func (f *ShellFilter) run(
 func executeCommand(id string,
 	command string, args []string, filterDir string, workingDir string,
 ) error {
-	joined := strings.Join(append([]string{command}, args...), " ")
+	joined := strings.Join(append([]string{command}, shellescape.QuoteCommand(args)), " ")
 	Logger.Debugf("Executing command: %s", joined)
 	shell, arg, err := findShell()
 	if err != nil {

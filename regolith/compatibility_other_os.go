@@ -10,7 +10,6 @@ import "github.com/Bedrock-OSS/go-burrito/burrito"
 // tried.
 var pythonExeNames = []string{"python3", "python"}
 
-
 // venvScriptsPath is a folder name between "venv" and "python" that leads to
 // the python executable.
 const venvScriptsPath = "bin"
@@ -54,4 +53,8 @@ func FindMojangDir() (string, error) {
 
 func FindPreviewDir() (string, error) {
 	return "", burrito.WrappedError(notImplementedOnThisSystemError)
+}
+
+func CheckSuspiciousLocation(path string) error {
+	return nil
 }
