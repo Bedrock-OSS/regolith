@@ -183,13 +183,27 @@ func CheckSuspiciousLocation() error {
 	}
 	// Check if project directory is within mojang dir
 	dir, err := FindMojangDir()
-	if err == nil && isPathWithinDirectory(path, dir) {
-		return burrito.WrappedErrorf(projectInMojangDirError, path, dir)
+	if err == nil {
+		dir1 := filepath.Join(dir, "development_behavior_packs")
+		if isPathWithinDirectory(path, dir1) {
+			return burrito.WrappedErrorf(projectInMojangDirError, path, dir1)
+		}
+		dir1 = filepath.Join(dir, "development_resource_packs")
+		if isPathWithinDirectory(path, dir1) {
+			return burrito.WrappedErrorf(projectInMojangDirError, path, dir1)
+		}
 	}
 	// Check if project directory is within mojang dir
 	dir, err = FindPreviewDir()
-	if err == nil && isPathWithinDirectory(path, dir) {
-		return burrito.WrappedErrorf(projectInPreviewDirError, path, dir)
+	if err == nil {
+		dir1 := filepath.Join(dir, "development_behavior_packs")
+		if isPathWithinDirectory(path, dir1) {
+			return burrito.WrappedErrorf(projectInPreviewDirError, path, dir1)
+		}
+		dir1 = filepath.Join(dir, "development_resource_packs")
+		if isPathWithinDirectory(path, dir1) {
+			return burrito.WrappedErrorf(projectInPreviewDirError, path, dir1)
+		}
 	}
 	// Check if project directory is within OneDrive directories
 	od := os.Getenv("OneDrive")
