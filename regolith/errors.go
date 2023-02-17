@@ -195,11 +195,11 @@ const (
 		"You can install all of the filters by running:\n" +
 		"regolith install-all"
 
-	projectInMojangDirError = "Project is in the Minecraft directory.\n" +
+	projectInMojangDirError = "Project is in the Minecraft development packs directory.\n" +
 		"Path: %s\n" +
 		"Minecraft directory: %s"
 
-	projectInPreviewDirError = "Project is in the Minecraft Preview directory.\n" +
+	projectInPreviewDirError = "Project is in the Minecraft Preview development packs directory.\n" +
 		"Path: %s\n" +
 		"Minecraft directory: %s"
 
