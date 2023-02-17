@@ -9,8 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"github.com/nightlyone/lockfile"
@@ -165,8 +167,8 @@ func getAppDataDotRegolith(silent bool, projectRoot string) (string, error) {
 }
 
 // GetDotRegolith returns the path to the directory where Regolith stores
-// its cached data (like filters, Python venvs, etc.). If user confg setting
-// for using app data by profiles is is set to false it returns relative
+// its cached data (like filters, Python venvs, etc.). If user config setting
+// for using app data by profiles is set to false it returns relative
 // directory: ".regolith" otherwise it returns path inside the AppData directory.
 // Based on the hash value of the project's root directory. If the path isn't
 // .regolith it also logs a message which tells where the data is stored
@@ -174,7 +176,7 @@ func getAppDataDotRegolith(silent bool, projectRoot string) (string, error) {
 // or absolute and is resolved to an
 // absolute path.
 func GetDotRegolith(silent bool, projectRoot string) (string, error) {
-	// App data diabled - use .regolith
+	// App data disabled - use .regolith
 	userConfig, err := getCombinedUserConfig()
 	if err != nil {
 		return "", burrito.WrapError(err, getUserConfigError)
@@ -185,10 +187,10 @@ func GetDotRegolith(silent bool, projectRoot string) (string, error) {
 	return getAppDataDotRegolith(silent, projectRoot)
 }
 
-// AquireSessionLock creates a lock file in specified directory and
+// acquireSessionLock creates a lock file in specified directory and
 // returns a function that releases the lock.
 // The path should point to the .regolith directory.
-func aquireSessionLock(dotRegolithPath string) (func() error, error) {
+func acquireSessionLock(dotRegolithPath string) (func() error, error) {
 	// Create dotRegolithPath if it doesn't exist
 	err := CreateDirectoryIfNotExists(dotRegolithPath)
 	if err != nil {
@@ -212,4 +214,82 @@ func aquireSessionLock(dotRegolithPath string) (func() error, error) {
 		return sessionLock.Unlock()
 	}
 	return unlockFunc, nil
+}
+
+func splitPath(path string) []string {
+	parts := make([]string, 0)
+	for true {
+		part := ""
+		path, part = filepath.Split(path)
+		if strings.HasSuffix(path, "/") || strings.HasSuffix(path, "\\") {
+			path = path[0 : len(path)-1]
+		}
+		if path == "" && part != "" {
+			parts = append([]string{part}, parts...)
+			break
+		}
+		if part == "" || path == "" {
+			break
+		}
+		parts = append([]string{part}, parts...)
+	}
+	return parts
+}
+
+func ResolvePath(path string) (string, error) {
+	// Resolve the path
+	parts := splitPath(path)
+	for i, part := range parts {
+		if strings.HasPrefix(part, "%") && strings.HasSuffix(part, "%") {
+			envVar := part[1 : len(part)-1]
+			envVarValue, exists := os.LookupEnv(envVar)
+			if !exists {
+				return "", burrito.WrapErrorf(
+					os.ErrNotExist,
+					"Environment variable %s does not exist.",
+					envVar)
+			}
+			parts[i] = envVarValue
+		}
+	}
+	return filepath.Clean(filepath.Join(parts...)), nil
+}
+
+type measure struct {
+	// Name of the measure
+	Name string
+	// Location of the measure
+	Location string
+	// Start time of the measure
+	StartTime time.Time
+}
+
+var lastMeasure *measure
+var EnableTimings = false
+
+func MeasureStart(name string) {
+	if !EnableTimings {
+		return
+	}
+	if lastMeasure != nil {
+		MeasureEnd()
+	}
+	_, fn, line, _ := runtime.Caller(1)
+	lastMeasure = &measure{
+		Name:      name,
+		StartTime: time.Now(),
+		Location:  fmt.Sprintf("%s:%d", filepath.Base(fn), line),
+	}
+}
+
+func MeasureEnd() {
+	if !EnableTimings {
+		return
+	}
+	if lastMeasure == nil {
+		return
+	}
+	duration := time.Since(lastMeasure.StartTime)
+	Logger.Infof("%s took %s (%s)", lastMeasure.Name, duration, lastMeasure.Location)
+	lastMeasure = nil
 }

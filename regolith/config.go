@@ -33,7 +33,7 @@ type Packs struct {
 	ResourceFolder string `json:"resourcePack,omitempty"`
 }
 
-// RegolithProject is a part of "config.json" whith the regolith namespace
+// RegolithProject is a part of "config.json" with the regolith namespace
 // within the Minecraft Project Schema
 type RegolithProject struct {
 	Profiles          map[string]Profile         `json:"profiles,omitempty"`

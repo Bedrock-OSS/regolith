@@ -24,7 +24,7 @@ type ResolverMapItem struct {
 	Url string `json:"url"`
 }
 
-// resolverMap is a lazy loaded map with combined resolver.json files. This
+// resolverMap is a lazy-loaded map with combined resolver.json files. This
 // map should never be modified directly. Use getResolversAsMap() instead.
 var resolverMap *map[string]ResolverMapItem
 
@@ -49,13 +49,7 @@ func resolveResolverUrl(url string) (string, error) {
 	}
 	repoUrl := strings.Join(urlParts[0:3], "/")
 	path := strings.Join(urlParts[3:], "/")
-	sha, err := GetHeadSha(repoUrl)
-	if err != nil {
-		return "", burrito.WrapError(
-			err,
-			"Failed to get the HEAD of the repository with the resolver.json file")
-	}
-	return fmt.Sprintf("git::https://%s/%s?ref=%s", repoUrl, path, sha), nil
+	return fmt.Sprintf("git::https://%s/%s", repoUrl, path), nil
 }
 
 // DownloadResolverMaps downloads the resolver.json files
@@ -64,6 +58,7 @@ func DownloadResolverMaps() error {
 
 	// Define function to download group of resolvers
 	downloadResolvers := func(urls []string, root string) error {
+		MeasureStart("Prepare for resolvers download")
 		targetPath := filepath.Join(root, "resolvers")
 		tmpPath := filepath.Join(root, ".resolvers-tmp")
 		tmpResolversPath := filepath.Join(tmpPath, "resolvers")
@@ -98,6 +93,7 @@ func DownloadResolverMaps() error {
 			// Get the save path and resolve the URL
 			savePath := filepath.Join(
 				tmpResolversPath, fmt.Sprintf("resolver_%d.json", i))
+			MeasureStart("Resolve resolver URL")
 			url, err := resolveResolverUrl(shortUrl)
 			if err != nil {
 				return burrito.WrapError(
@@ -105,12 +101,14 @@ func DownloadResolverMaps() error {
 					"Failed to resolve the URL of the resolver file for the download.\n"+
 						"Short URL: "+shortUrl)
 			}
+			MeasureStart("Download resolver")
 			Logger.Debugf("Downloading resolver using URL: %s", url)
-			err = getter.GetFile(savePath, url)
+			err = getter.GetFile(savePath, url+"?depth=1")
 			if err != nil {
 				return burrito.WrapErrorf(err, "Failed to download the file.\nURL: %s", url)
 			}
 			// Add "url" property to the resolver file
+			MeasureEnd()
 			fileData := make(map[string]interface{})
 			f, err := os.ReadFile(savePath)
 			if err != nil {
@@ -176,7 +174,7 @@ func getResolversMap() (*map[string]ResolverMapItem, error) {
 			"Failed to download resolver map: %s", err.Error())
 	}
 	result := make(map[string]ResolverMapItem)
-	// Load all resolver files into a map, where the ke is the URL of the resovler
+	// Load all resolver files into a map, where the ke is the URL of the resolver
 	// file and the value is the content of the file. Based on this map and
 	// the combined user config, the final resolver map is created.
 	resolvers := make(map[string]interface{})
@@ -234,13 +232,13 @@ func getResolversMap() (*map[string]ResolverMapItem, error) {
 			return nil, burrito.WrapErrorf(
 				err, "Failed to get the resolver data.\nURL: %s", resolverUrl)
 		}
-		resolverResovlersData, ok := resolverData["filters"].(map[string]interface{})
+		resolverResolversData, ok := resolverData["filters"].(map[string]interface{})
 		if !ok {
 			return nil, burrito.WrapErrorf(
 				err, "Failed load resolvers from the resolver file.\nURL: %s",
 				resolverUrl)
 		}
-		for key, value := range resolverResovlersData {
+		for key, value := range resolverResolversData {
 			castValue, ok := value.(map[string]interface{})
 			if !ok {
 				return nil, burrito.WrapErrorf(
@@ -277,10 +275,10 @@ func ResolverMapFromObject(obj map[string]interface{}) (ResolverMapItem, error) 
 // ResolveUrl tries to resolve the URL to a filter based on a shortName. If
 // it fails it updates the resolver.json file and tries again
 func ResolveUrl(shortName string) (string, error) {
-	const resolverLoadErrror = "Unable to load the name to URL resolver map."
+	const resolverLoadError = "Unable to load the name to URL resolver map."
 	resolver, err := getResolversMap()
 	if err != nil {
-		return "", burrito.WrapError(err, resolverLoadErrror)
+		return "", burrito.WrapError(err, resolverLoadError)
 	}
 	filterMap, ok := (*resolver)[shortName]
 	if !ok {

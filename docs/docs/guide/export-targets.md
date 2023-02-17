@@ -44,7 +44,7 @@ This export target will place the compiled packs into a folder called `build`, c
 
 The Exact export target will place the files to specific, user specified locations. This is useful when you need absolute control over Regoliths export functionality.
 
-`rpPath` and `bpPath` are required options.
+`rpPath` and `bpPath` are required options. Both paths support environment variables by using the `%VARIABLE_NAME%` syntax.
 
 Example:
 
@@ -60,7 +60,7 @@ Example:
 
 The World export target will place the compiled files into a specific world. This is useful for teams that prefer working in-world, as opposed to in the development pack folders.
 
-You need to use *either* `worldName` or `worldPath` to select the world.
+You need to use *either* `worldName` or `worldPath` to select the world. `worldPath` supports environment variables by using the `%VARIABLE_NAME%` syntax.
 
 Example:
 

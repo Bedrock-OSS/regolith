@@ -32,5 +32,6 @@ func prepareScope(ctx RunContext) map[string]interface{} {
 		"version":        semverString,
 		"profile":        ctx.Profile,
 		"filterLocation": ctx.AbsoluteLocation,
+		"settings":       ctx.Settings,
 	}
 }
