@@ -244,7 +244,7 @@ func ExportProject(
 // command. This operation is destructive and cannot be undone.
 func InplaceExportProject(
 	config *Config, dotRegolithPath string,
-) error {
+) (err error) {
 	// Create revertible ops object
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
 	revertibleOps, err := NewRevertibleFsOperations(backupPath)
