@@ -139,7 +139,7 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 }
 
 // getAppDataDotRegolith gets the dotRegolithPath from th app data folder
-func getAppDataDotRegolith(silent bool, projectRoot string) (string, error) {
+func getAppDataDotRegolith(projectRoot string) (string, error) {
 	// App data enabled - use user cache dir
 	userCache, err := os.UserCacheDir()
 	if err != nil {
@@ -158,11 +158,9 @@ func getAppDataDotRegolith(silent bool, projectRoot string) (string, error) {
 	// %userprofile%/AppData/Local/regolith/<md5 of project path>
 	dotRegolithPath := filepath.Join(
 		userCache, appDataCachePath, projectPathHash)
-	if !silent {
-		Logger.Infof(
-			"Regolith project cache is in:\n\t%s",
-			dotRegolithPath)
-	}
+	Logger.Infof(
+		"Regolith project cache is in:\n\t%s",
+		dotRegolithPath)
 	return dotRegolithPath, nil
 }
 
@@ -175,7 +173,7 @@ func getAppDataDotRegolith(silent bool, projectRoot string) (string, error) {
 // unless the silent flag is set to true. The projectRoot path can be relative
 // or absolute and is resolved to an
 // absolute path.
-func GetDotRegolith(silent bool, projectRoot string) (string, error) {
+func GetDotRegolith(projectRoot string) (string, error) {
 	// App data disabled - use .regolith
 	userConfig, err := getCombinedUserConfig()
 	if err != nil {
@@ -184,7 +182,7 @@ func GetDotRegolith(silent bool, projectRoot string) (string, error) {
 	if !*userConfig.UseProjectAppDataStorage {
 		return ".regolith", nil
 	}
-	return getAppDataDotRegolith(silent, projectRoot)
+	return getAppDataDotRegolith(projectRoot)
 }
 
 // acquireSessionLock creates a lock file in specified directory and
