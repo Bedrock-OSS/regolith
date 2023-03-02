@@ -51,7 +51,7 @@ func Install(filters []string, force, debug bool) error {
 			"Failed to get the list of filter definitions from config file.")
 	}
 	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(false, ".")
+	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
@@ -150,7 +150,7 @@ func InstallAll(force, debug bool) error {
 		return burrito.WrapError(err, "Failed to load config.json.")
 	}
 	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(false, ".")
+	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
@@ -195,7 +195,7 @@ func runOrWatch(profileName string, debug, watch bool) error {
 			"Profile %q does not exist in the configuration.", profileName)
 	}
 	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(false, ".")
+	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
@@ -284,7 +284,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 				"Filter name: %s", filterName)
 	}
 	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(false, ".")
+	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
@@ -460,12 +460,11 @@ func CleanCurrentProject() error {
 	}
 	// Clean cache from AppData
 	Logger.Infof("Cleaning the cache in application data folder...")
-	dotRegolithPath, err := getAppDataDotRegolith(true, ".")
+	dotRegolithPath, err := getAppDataDotRegolith(".")
 	if err != nil {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
-	Logger.Infof("Regolith cache folder is: %s", dotRegolithPath)
 	err = clean(dotRegolithPath)
 	if err != nil {
 		return burrito.WrapErrorf(
