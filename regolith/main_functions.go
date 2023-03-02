@@ -481,7 +481,7 @@ func CleanUserCache() error {
 	if err != nil {
 		return burrito.WrappedError(osUserCacheDirError)
 	}
-	regolithCacheFiles := filepath.Join(userCache, appDataCachePath)
+	regolithCacheFiles := filepath.Join(userCache, appDataProjectCachePath)
 	Logger.Infof("Regolith cache files are located in: %s", regolithCacheFiles)
 	err = os.RemoveAll(regolithCacheFiles)
 	if err != nil {
