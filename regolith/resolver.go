@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
@@ -66,7 +67,7 @@ func resolveResolverUrlNew(url string) (string, string, error) {
 }
 
 // DownloadResolverMaps downloads the resolver repositories and returns lists of urls and paths
-func DownloadResolverMaps() ([]string, []string, error) {
+func DownloadResolverMaps(forceUpdate bool) ([]string, []string, error) {
 	Logger.Info("Downloading resolvers")
 
 	// Define function to download group of resolvers
@@ -115,14 +116,27 @@ func DownloadResolverMaps() ([]string, []string, error) {
 			// If the repo exist, pull it
 			stat, err := os.Stat(filepath.Join(cachePath, ".git"))
 			if err == nil && stat.IsDir() {
-				MeasureStart("Pull repository %s", shortUrl)
-				output, err := RunGitProcess([]string{"pull"}, cachePath)
-				MeasureEnd()
-				// If pull failed, delete the repo and clone it again
-				if err != nil {
-					Logger.Debug(strings.Join(output, "\n"))
-					Logger.Warnf("Failed to pull repository, recreating repository.\nURL: %s", url)
-					err = os.RemoveAll(cachePath)
+				info, _ := os.Stat(cachePath)
+				if forceUpdate || info.ModTime().Before(time.Now().Add(-5*time.Minute)) {
+					MeasureStart("Pull repository %s", shortUrl)
+					output, err := RunGitProcess([]string{"pull"}, cachePath)
+					MeasureEnd()
+					err = os.Chtimes(cachePath, time.Now(), time.Now())
+					if err != nil {
+						Logger.Debugf("Failed to update cache file modification time.\nPath: %s", cachePath)
+					}
+					// If pull failed, delete the repo and clone it again
+					if err != nil {
+						Logger.Debug(strings.Join(output, "\n"))
+						Logger.Warnf("Failed to pull repository, recreating repository.\nURL: %s", url)
+						err = os.RemoveAll(cachePath)
+					} else {
+						err := pathCheck()
+						if err != nil {
+							return nil, err
+						}
+						continue
+					}
 				} else {
 					err := pathCheck()
 					if err != nil {
@@ -143,6 +157,10 @@ func DownloadResolverMaps() ([]string, []string, error) {
 				return nil, burrito.WrapErrorf(err, "Failed to clone repository.\nURL: %s", url)
 			}
 			MeasureEnd()
+			err = os.Chtimes(cachePath, time.Now(), time.Now())
+			if err != nil {
+				Logger.Debugf("Failed to update cache file modification time.\nPath: %s", cachePath)
+			}
 			err = pathCheck()
 			if err != nil {
 				return nil, err
@@ -169,11 +187,11 @@ func DownloadResolverMaps() ([]string, []string, error) {
 
 // getResolversMap downloads and lazily loads the resolverMap from the
 // resolver.json files if it is already loaded, it returns the map
-func getResolversMap() (*map[string]ResolverMapItem, error) {
+func getResolversMap(refreshResolvers bool) (*map[string]ResolverMapItem, error) {
 	if resolverMap != nil {
 		return resolverMap, nil
 	}
-	urls, resolvedPaths, err := DownloadResolverMaps()
+	urls, resolvedPaths, err := DownloadResolverMaps(refreshResolvers)
 	if err != nil {
 		Logger.Warnf(
 			"Failed to download resolver map: %s", err.Error())
@@ -251,9 +269,9 @@ func ResolverMapFromObject(obj map[string]interface{}) (ResolverMapItem, error) 
 
 // ResolveUrl tries to resolve the URL to a filter based on a shortName. If
 // it fails it updates the resolver.json file and tries again
-func ResolveUrl(shortName string) (string, error) {
+func ResolveUrl(shortName string, refreshResolvers bool) (string, error) {
 	const resolverLoadError = "Unable to load the name to URL resolver map."
-	resolver, err := getResolversMap()
+	resolver, err := getResolversMap(refreshResolvers)
 	if err != nil {
 		return "", burrito.WrapError(err, resolverLoadError)
 	}

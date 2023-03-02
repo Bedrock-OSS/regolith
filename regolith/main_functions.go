@@ -29,7 +29,7 @@ import (
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Install(filters []string, force, debug bool) error {
+func Install(filters []string, force, refreshResolvers, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -63,7 +63,7 @@ func Install(filters []string, force, debug bool) error {
 	}
 	defer func() { sessionLockErr = unlockSession() }()
 	// Parse arguments into download tasks (requires downloading resolvers)
-	parsedArgs, err := parseInstallFilterArgs(filters)
+	parsedArgs, err := parseInstallFilterArgs(filters, refreshResolvers)
 	if err != nil {
 		return burrito.WrapError(err, "Failed to parse arguments.")
 	}
