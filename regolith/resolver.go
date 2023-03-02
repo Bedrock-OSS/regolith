@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
-
-	"github.com/hashicorp/go-getter"
 )
 
 const (
@@ -67,118 +65,8 @@ func resolveResolverUrlNew(url string) (string, string, error) {
 	return fmt.Sprintf("https://%s", repoUrl), path, nil
 }
 
-// DownloadResolverMaps downloads the resolver.json files
-func DownloadResolverMaps() error {
-	Logger.Info("Downloading resolvers")
-
-	// Define function to download group of resolvers
-	downloadResolvers := func(urls []string, root string) error {
-		MeasureStart("Prepare for resolvers download")
-		targetPath := filepath.Join(root, "resolvers")
-		tmpPath := filepath.Join(root, ".resolvers-tmp")
-		tmpResolversPath := filepath.Join(tmpPath, "resolvers")
-		tmpUndoPath := filepath.Join(tmpPath, "undo")
-		// Create target directory if not exists
-		err := os.MkdirAll(targetPath, 0755)
-		if err != nil {
-			return burrito.WrapErrorf(err, osMkdirError, targetPath)
-		}
-		// Prepare the temporary directory
-		err = os.RemoveAll(tmpPath)
-		if err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, tmpPath)
-		}
-		err = os.MkdirAll(tmpResolversPath, 0755)
-		if err != nil {
-			return burrito.WrapErrorf(err, osMkdirError, tmpResolversPath)
-		}
-		err = os.MkdirAll(tmpUndoPath, 0755)
-		if err != nil {
-			return burrito.WrapErrorf(err, osMkdirError, tmpUndoPath)
-		}
-		defer os.RemoveAll(tmpPath) // Schedule for deletion
-		// Prepare the revertibleFsOperations object
-		revertibleOps, err := NewRevertibleFsOperations(tmpUndoPath)
-		if err != nil {
-			return burrito.WrapErrorf(err, newRevertibleFsOperationsError, tmpUndoPath)
-		}
-		defer revertibleOps.Close() // Must be called before os.RemoveAll(tmpPath)
-		// Download the resolvers to the tmp path
-		for i, shortUrl := range urls {
-			// Get the save path and resolve the URL
-			savePath := filepath.Join(
-				tmpResolversPath, fmt.Sprintf("resolver_%d.json", i))
-			MeasureStart("Resolve resolver URL")
-			url, err := resolveResolverUrl(shortUrl)
-			if err != nil {
-				return burrito.WrapError(
-					err,
-					"Failed to resolve the URL of the resolver file for the download.\n"+
-						"Short URL: "+shortUrl)
-			}
-			MeasureStart("Download resolver")
-			Logger.Debugf("Downloading resolver using URL: %s", url)
-			err = getter.GetFile(savePath, url+"?depth=1")
-			if err != nil {
-				return burrito.WrapErrorf(err, "Failed to download the file.\nURL: %s", url)
-			}
-			// Add "url" property to the resolver file
-			MeasureEnd()
-			fileData := make(map[string]interface{})
-			f, err := os.ReadFile(savePath)
-			if err != nil {
-				return burrito.WrapErrorf(err, fileReadError, savePath)
-			}
-			err = json.Unmarshal(f, &fileData)
-			if err != nil {
-				return burrito.WrapErrorf(err, jsonUnmarshalError, savePath)
-			}
-			fileData["url"] = shortUrl
-			// Save the file with the "url" property
-			f, _ = json.MarshalIndent(fileData, "", "\t")
-			err = os.WriteFile(savePath, f, 0644)
-			if err != nil {
-				return burrito.WrapErrorf(err, fileWriteError, savePath)
-			}
-		}
-		// Make sure that the target directory is empty
-		err = revertibleOps.DeleteDir(targetPath)
-		if err != nil {
-			revertibleOps.Undo() // Don't handle the error. I don't care.
-			return burrito.WrapErrorf(err, osRemoveError, targetPath)
-		}
-		err = revertibleOps.MkdirAll(targetPath)
-		if err != nil {
-			revertibleOps.Undo() // Don't handle the error. I don't care.
-			return burrito.WrapErrorf(err, osMkdirError, targetPath)
-		}
-		// Move the resolvers to the target path
-		err = revertibleOps.MoveOrCopyDir(tmpResolversPath, targetPath)
-		if err != nil {
-			revertibleOps.Undo() // Don't handle the error. I don't care.
-			return burrito.WrapErrorf(err, moveOrCopyError, tmpResolversPath, targetPath)
-		}
-		return nil
-	}
-	// Download the global resolvers
-	appDataPath, err := GetRegolithAppDataPath()
-	if err != nil {
-		return burrito.WrapError(err, getRegolithAppDataPathError)
-	}
-	globalUserConfig, err := getGlobalUserConfig()
-	globalUserConfig.fillDefaults() // The file must have the default resolver URL
-	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
-	}
-	err = downloadResolvers(globalUserConfig.Resolvers, appDataPath)
-	if err != nil {
-		return burrito.WrapError(err, "Failed to download the resolvers")
-	}
-	return nil
-}
-
-// DownloadResolverMapsNew downloads the resolver.json files
-func DownloadResolverMapsNew() ([]string, []string, error) {
+// DownloadResolverMaps downloads the resolver repositories and returns lists of urls and paths
+func DownloadResolverMaps() ([]string, []string, error) {
 	Logger.Info("Downloading resolvers")
 
 	// Define function to download group of resolvers
@@ -285,7 +173,7 @@ func getResolversMap() (*map[string]ResolverMapItem, error) {
 	if resolverMap != nil {
 		return resolverMap, nil
 	}
-	urls, resolvedPaths, err := DownloadResolverMapsNew()
+	urls, resolvedPaths, err := DownloadResolverMaps()
 	if err != nil {
 		Logger.Warnf(
 			"Failed to download resolver map: %s", err.Error())
