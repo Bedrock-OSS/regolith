@@ -18,9 +18,13 @@ import (
 	"github.com/nightlyone/lockfile"
 )
 
-// appDataCachePath is a path to the cache directory relative to the user's
+// appDataProjectCachePath is a path to the project cache directory relative to the user's
 // app data
-const appDataCachePath = "regolith/project-cache"
+const appDataProjectCachePath = "regolith/project-cache"
+
+// appDataResolverCachePath is a path to the resolver cache directory relative to the user's
+// app data
+const appDataResolverCachePath = "regolith/resolver-cache"
 
 var Version = "unversioned"
 
@@ -131,6 +135,25 @@ func RunSubProcess(command string, args []string, filterDir string, workingDir s
 	return cmd.Run()
 }
 
+// RunGitProcess runs a git command with specified arguments and working
+// directory
+func RunGitProcess(args []string, workingDir string) ([]string, error) {
+	Logger.Debugf("Exec: git %s", strings.Join(args, " "))
+	cmd := exec.Command("git", args...)
+	cmd.Dir = workingDir
+	out, _ := cmd.StdoutPipe()
+	err, _ := cmd.StderrPipe()
+	completeOutput := make([]string, 0)
+	logFunc := func(template string, args ...interface{}) {
+		completeOutput = append(completeOutput, fmt.Sprintf(template, args...))
+	}
+	go LogStd(out, logFunc, "git")
+	go LogStd(err, logFunc, "git")
+
+	return completeOutput, cmd.Run()
+}
+
+// LogStd logs the output of a sub-process
 func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{}), outputLabel string) {
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
@@ -138,30 +161,43 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 	}
 }
 
-// getAppDataDotRegolith gets the dotRegolithPath from th app data folder
-func getAppDataDotRegolith(projectRoot string) (string, error) {
+// getResolverCache gets the dotRegolithPath from th app data folder
+func getResolverCache(resolver string) (string, error) {
+	return getAppDataCachePath(appDataResolverCachePath, resolver)
+}
+
+// getAppDataCachePath gets the dotRegolithPath from th app data folder
+func getAppDataCachePath(basePath, cacheId string) (string, error) {
 	// App data enabled - use user cache dir
 	userCache, err := os.UserCacheDir()
 	if err != nil {
 		return "", burrito.WrappedError(osUserCacheDirError)
 	}
+	// Get the md5 of the project path
+	hash := md5.New()
+	hash.Write([]byte(cacheId))
+	hashInBytes := hash.Sum(nil)
+	projectPathHash := hex.EncodeToString(hashInBytes)
+	// %userprofile%/AppData/Local/<base path>/<md5 of cache ID>
+	cachePath := filepath.Join(
+		userCache, basePath, projectPathHash)
+	return cachePath, nil
+}
+
+// getAppDataDotRegolith gets the dotRegolithPath from th app data folder
+func getAppDataDotRegolith(projectRoot string) (string, error) {
 	// Make sure that projectsRoot is an absolute path
 	absoluteProjectRoot, err := filepath.Abs(projectRoot)
 	if err != nil {
 		return "", burrito.WrapErrorf(err, filepathAbsError, projectRoot)
 	}
-	// Get the md5 of the project path
-	hash := md5.New()
-	hash.Write([]byte(absoluteProjectRoot))
-	hashInBytes := hash.Sum(nil)
-	projectPathHash := hex.EncodeToString(hashInBytes)
-	// %userprofile%/AppData/Local/regolith/<md5 of project path>
-	dotRegolithPath := filepath.Join(
-		userCache, appDataCachePath, projectPathHash)
-	Logger.Infof(
-		"Regolith project cache is in:\n\t%s",
-		dotRegolithPath)
-	return dotRegolithPath, nil
+	path, err := getAppDataCachePath(appDataProjectCachePath, absoluteProjectRoot)
+	if err == nil {
+		Logger.Infof(
+			"Regolith project cache is in:\n\t%s",
+			path)
+	}
+	return path, burrito.PassError(err)
 }
 
 // GetDotRegolith returns the path to the directory where Regolith stores
@@ -265,7 +301,7 @@ type measure struct {
 var lastMeasure *measure
 var EnableTimings = false
 
-func MeasureStart(name string) {
+func MeasureStart(name string, args ...interface{}) {
 	if !EnableTimings {
 		return
 	}
@@ -274,7 +310,7 @@ func MeasureStart(name string) {
 	}
 	_, fn, line, _ := runtime.Caller(1)
 	lastMeasure = &measure{
-		Name:      name,
+		Name:      fmt.Sprintf(name, args...),
 		StartTime: time.Now(),
 		Location:  fmt.Sprintf("%s:%d", filepath.Base(fn), line),
 	}
