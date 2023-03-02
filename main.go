@@ -210,7 +210,7 @@ func main() {
 	}
 	subcommands = append(subcommands, cmdInit)
 	// regolith install
-	var force, update bool
+	var force, update, resolverRefresh bool
 	cmdInstall := &cobra.Command{
 		Use:   "install [filters...]",
 		Short: "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
@@ -220,11 +220,13 @@ func main() {
 				cmd.Help()
 				return
 			}
-			err = regolith.Install(filters, force || update, burrito.PrintStackTrace)
+			err = regolith.Install(filters, force || update, resolverRefresh, burrito.PrintStackTrace)
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+	cmdInstall.Flags().BoolVar(
+		&resolverRefresh, "force-resolver-refresh", false, "Force resolvers refresh.")
 	cmdInstall.Flags().BoolVarP(
 		&force, "update", "u", false, "An alias for --force flag. Use this flag to update filters.")
 	subcommands = append(subcommands, cmdInstall)
