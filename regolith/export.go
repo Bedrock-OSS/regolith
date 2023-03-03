@@ -293,7 +293,7 @@ func InplaceExportProject(
 	for _, moveFile := range moveFiles {
 		source, target := moveFile[0], moveFile[1]
 		if source != "" {
-			err = revertibleOps.MoveOrCopy(source, target, true)
+			err = revertibleOps.MoveOrCopyDir(source, target)
 			if err != nil {
 				err = burrito.WrapErrorf(
 					err, moveOrCopyError, source, target)
