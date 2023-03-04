@@ -157,8 +157,8 @@ included (if they're not defined in the config file). Without the flag, the unde
 will be printed as null or empty list.
 `
 const regolithUpdateResolversDesc = `
-Updates every resolver repository in the "resolvers" list in the user configuration. This command
-is especially useful when a adding a new filter to the resolver file and you want to make sure that
+Updates every resolver repository in the "resolvers" list in the user configuration. This command 
+is particularly useful if you are adding a new filter to the resolver file and want to ensure that 
 the new filter is available in the Regolith.
 `
 

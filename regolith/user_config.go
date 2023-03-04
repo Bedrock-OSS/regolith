@@ -89,9 +89,9 @@ func (u *UserConfig) stringPropertyValue(name string) (string, error) {
 	case "resolver_cache_update_cooldown":
 		value := "null"
 		if u.Username != nil {
-			value = fmt.Sprintf("%v", *u.Username)
+			value = fmt.Sprintf("%v", *u.ResolverCacheUpdateCooldown)
 		}
-		return fmt.Sprintf("username: %v", value), nil
+		return fmt.Sprintf("resolver_cache_update_cooldown: %v", value), nil
 	}
 	return "", burrito.WrapErrorf(nil, invalidUserConfigPropertyError, name)
 }
