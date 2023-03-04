@@ -507,6 +507,16 @@ func Clean(debug, userCache bool) error {
 	}
 }
 
+// UpdateResolvers handles the "regolith update-resolvers" command. It updates cached resolver repositories.
+//
+// The "debug" parameter is a boolean that determines if the debug messages
+// should be printed.
+func UpdateResolvers(debug bool) error {
+	InitLogging(debug)
+	_, _, err := DownloadResolverMaps(true)
+	return err
+}
+
 // manageUserConfigPrint is a helper function for ManageConfig used to print
 // the specified value from the user configuration.
 func manageUserConfigPrint(debug, full bool, key string) error {
