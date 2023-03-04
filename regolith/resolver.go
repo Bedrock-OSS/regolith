@@ -75,6 +75,14 @@ func DownloadResolverMaps(forceUpdate bool) ([]string, []string, error) {
 		if len(urls) == 0 {
 			return nil, nil
 		}
+		config, err := getCombinedUserConfig()
+		if err != nil {
+			return nil, burrito.WrapErrorf(err, getUserConfigError)
+		}
+		cooldown, err := time.ParseDuration(*config.ResolverCacheUpdateCooldown)
+		if err != nil {
+			return nil, burrito.WrapErrorf(err, "Failed to parse resolver cache update cooldown.\nCooldown: %s", *config.ResolverCacheUpdateCooldown)
+		}
 		MeasureStart("Prepare for resolvers download")
 		targetPath, err := getResolverCache(urls[0])
 		if err != nil {
@@ -117,7 +125,7 @@ func DownloadResolverMaps(forceUpdate bool) ([]string, []string, error) {
 			stat, err := os.Stat(filepath.Join(cachePath, ".git"))
 			if err == nil && stat.IsDir() {
 				info, _ := os.Stat(cachePath)
-				if forceUpdate || info.ModTime().Before(time.Now().Add(-5*time.Minute)) {
+				if forceUpdate || info.ModTime().Before(time.Now().Add(cooldown*-1)) {
 					MeasureStart("Pull repository %s", shortUrl)
 					output, err := RunGitProcess([]string{"pull"}, cachePath)
 					MeasureEnd()

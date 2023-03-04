@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
@@ -589,6 +590,16 @@ func manageUserConfigEdit(debug bool, index int, key, value string) error {
 			return burrito.WrappedError("Cannot use --index with non-array property.")
 		}
 		userConfig.Username = &value
+	case "resolver_cache_update_cooldown":
+		if index != -1 {
+			return burrito.WrappedError("Cannot use --index with non-array property.")
+		}
+		_, err = time.ParseDuration(value)
+		if err != nil {
+			return burrito.WrapErrorf(err, "Invalid value for duration property.\n"+
+				"\tValue: %s", value)
+		}
+		userConfig.ResolverCacheUpdateCooldown = &value
 	case "resolvers":
 		if index == -1 {
 			userConfig.Resolvers = append(userConfig.Resolvers, value)
