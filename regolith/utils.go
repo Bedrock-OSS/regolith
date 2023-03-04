@@ -192,12 +192,11 @@ func getAppDataDotRegolith(projectRoot string) (string, error) {
 		return "", burrito.WrapErrorf(err, filepathAbsError, projectRoot)
 	}
 	path, err := getAppDataCachePath(appDataProjectCachePath, absoluteProjectRoot)
-	if err == nil {
-		Logger.Infof(
-			"Regolith project cache is in:\n\t%s",
-			path)
+	if err != nil {
+		return "", burrito.PassError(err)
 	}
-	return path, burrito.PassError(err)
+	Logger.Infof("Regolith project cache is in:\n\t%s", path)
+	return path, nil
 }
 
 // GetDotRegolith returns the path to the directory where Regolith stores
