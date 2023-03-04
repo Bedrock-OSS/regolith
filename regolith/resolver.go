@@ -68,125 +68,115 @@ func resolveResolverUrlNew(url string) (string, string, error) {
 
 // DownloadResolverMaps downloads the resolver repositories and returns lists of urls and paths
 func DownloadResolverMaps(forceUpdate bool) ([]string, []string, error) {
-	Logger.Info("Downloading resolvers")
-
-	// Define function to download group of resolvers
-	downloadResolvers := func(urls []string, root string) ([]string, error) {
-		if len(urls) == 0 {
-			return nil, nil
-		}
-		config, err := getCombinedUserConfig()
-		if err != nil {
-			return nil, burrito.WrapErrorf(err, getUserConfigError)
-		}
-		cooldown, err := time.ParseDuration(*config.ResolverCacheUpdateCooldown)
-		if err != nil {
-			return nil, burrito.WrapErrorf(err, "Failed to parse resolver cache update cooldown.\nCooldown: %s", *config.ResolverCacheUpdateCooldown)
-		}
-		MeasureStart("Prepare for resolvers download")
-		targetPath, err := getResolverCache(urls[0])
-		if err != nil {
-			return nil, burrito.WrapErrorf(err, resolverPathCacheError, urls[0])
-		}
-		// Create resolver cache directory if not exists
-		dir, _ := filepath.Split(targetPath)
-		err = os.MkdirAll(dir, 0755)
-		if err != nil {
-			return nil, burrito.WrapErrorf(err, osMkdirError, targetPath)
-		}
-		resolverFilePaths := make([]string, len(urls))
-		// Download the resolvers to the cache path
-		for i, shortUrl := range urls {
-			// Get the save path and resolve the URL
-			cachePath, err := getResolverCache(shortUrl)
-			if err != nil {
-				return nil, burrito.WrapErrorf(err, resolverPathCacheError, shortUrl)
-			}
-			url, path, err := resolveResolverUrlNew(shortUrl)
-			if err != nil {
-				return nil, burrito.WrapErrorf(err, resolverResolveUrlError, shortUrl)
-			}
-			joinedPath := filepath.Join(cachePath, path)
-			pathCheck := func() error {
-				info, err := os.Stat(joinedPath)
-				if err != nil {
-					if os.IsNotExist(err) {
-						return burrito.WrapErrorf(err, "Resolver file does not exist.\nPath: %s", joinedPath)
-					} else {
-						return burrito.WrapErrorf(err, "Failed to get resolver file info.\nPath: %s", joinedPath)
-					}
-				} else if info.IsDir() {
-					return burrito.WrapErrorf(err, "Resolver file is a directory.\nPath: %s", joinedPath)
-				}
-				resolverFilePaths[i] = joinedPath
-				return nil
-			}
-			// If the repo exist, pull it
-			stat, err := os.Stat(filepath.Join(cachePath, ".git"))
-			if err == nil && stat.IsDir() {
-				info, _ := os.Stat(cachePath)
-				if forceUpdate || info.ModTime().Before(time.Now().Add(cooldown*-1)) {
-					MeasureStart("Pull repository %s", shortUrl)
-					output, err := RunGitProcess([]string{"pull"}, cachePath)
-					MeasureEnd()
-					err = os.Chtimes(cachePath, time.Now(), time.Now())
-					if err != nil {
-						Logger.Debugf("Failed to update cache file modification time.\nPath: %s", cachePath)
-					}
-					// If pull failed, delete the repo and clone it again
-					if err != nil {
-						Logger.Debug(strings.Join(output, "\n"))
-						Logger.Warnf("Failed to pull repository, recreating repository.\nURL: %s", url)
-						err = os.RemoveAll(cachePath)
-					} else {
-						err := pathCheck()
-						if err != nil {
-							return nil, err
-						}
-						continue
-					}
-				} else {
-					err := pathCheck()
-					if err != nil {
-						return nil, err
-					}
-					continue
-				}
-			}
-			err = os.MkdirAll(cachePath, 0755)
-			if err != nil {
-				return nil, burrito.WrapErrorf(err, osMkdirError, cachePath)
-			}
-			MeasureStart("Clone repository %s", shortUrl)
-			Logger.Debugf("Downloading resolver using URL: %s", url)
-			output, err := RunGitProcess([]string{"clone", url, ".", "--depth", "1"}, cachePath)
-			if err != nil {
-				Logger.Error(strings.Join(output, "\n"))
-				return nil, burrito.WrapErrorf(err, "Failed to clone repository.\nURL: %s", url)
-			}
-			MeasureEnd()
-			err = os.Chtimes(cachePath, time.Now(), time.Now())
-			if err != nil {
-				Logger.Debugf("Failed to update cache file modification time.\nPath: %s", cachePath)
-			}
-			err = pathCheck()
-			if err != nil {
-				return nil, err
-			}
-		}
-		return resolverFilePaths, nil
-	}
 	// Download the global resolvers
-	appDataPath, err := GetRegolithAppDataPath()
-	if err != nil {
-		return nil, nil, burrito.WrapError(err, getRegolithAppDataPathError)
-	}
 	globalUserConfig, err := getGlobalUserConfig()
 	globalUserConfig.fillDefaults() // The file must have the default resolver URL
 	if err != nil {
 		return nil, nil, burrito.WrapError(err, getUserConfigError)
 	}
-	resolverFilePaths, err := downloadResolvers(globalUserConfig.Resolvers, appDataPath)
+	if len(globalUserConfig.Resolvers) == 0 {
+		return nil, nil, nil
+	}
+	config, err := getCombinedUserConfig()
+	if err != nil {
+		return nil, nil, burrito.WrapErrorf(err, getUserConfigError)
+	}
+	cooldown, err := time.ParseDuration(*config.ResolverCacheUpdateCooldown)
+	if err != nil {
+		return nil, nil, burrito.WrapErrorf(err, "Failed to parse resolver cache update cooldown.\nCooldown: %s", *config.ResolverCacheUpdateCooldown)
+	}
+	MeasureStart("Prepare for resolvers download")
+	targetPath, err := getResolverCache(globalUserConfig.Resolvers[0])
+	if err != nil {
+		return nil, nil, burrito.WrapErrorf(err, resolverPathCacheError, globalUserConfig.Resolvers[0])
+	}
+	// Create resolver cache directory if not exists
+	dir, _ := filepath.Split(targetPath)
+	err = os.MkdirAll(dir, 0755)
+	if err != nil {
+		return nil, nil, burrito.WrapErrorf(err, osMkdirError, targetPath)
+	}
+	resolverFilePaths := make([]string, len(globalUserConfig.Resolvers))
+	// Download the resolvers to the cache path
+	for i, shortUrl := range globalUserConfig.Resolvers {
+		// Get the save path and resolve the URL
+		cachePath, err := getResolverCache(shortUrl)
+		if err != nil {
+			return nil, nil, burrito.WrapErrorf(err, resolverPathCacheError, shortUrl)
+		}
+		url, path, err := resolveResolverUrlNew(shortUrl)
+		if err != nil {
+			return nil, nil, burrito.WrapErrorf(err, resolverResolveUrlError, shortUrl)
+		}
+		joinedPath := filepath.Join(cachePath, path)
+		pathCheck := func() error {
+			info, err := os.Stat(joinedPath)
+			if err != nil {
+				if os.IsNotExist(err) {
+					return burrito.WrapErrorf(err, "Resolver file does not exist.\nPath: %s", joinedPath)
+				} else {
+					return burrito.WrapErrorf(err, "Failed to get resolver file info.\nPath: %s", joinedPath)
+				}
+			} else if info.IsDir() {
+				return burrito.WrapErrorf(err, "Resolver file is a directory.\nPath: %s", joinedPath)
+			}
+			resolverFilePaths[i] = joinedPath
+			return nil
+		}
+		// If the repo exist, pull it
+		stat, err := os.Stat(filepath.Join(cachePath, ".git"))
+		if err == nil && stat.IsDir() {
+			info, _ := os.Stat(cachePath)
+			if forceUpdate || info.ModTime().Before(time.Now().Add(cooldown*-1)) {
+				Logger.Infof("Updating resolver %s", shortUrl)
+				MeasureStart("Pull repository %s", shortUrl)
+				output, err := RunGitProcess([]string{"pull"}, cachePath)
+				MeasureEnd()
+				err = os.Chtimes(cachePath, time.Now(), time.Now())
+				if err != nil {
+					Logger.Debugf("Failed to update cache file modification time.\nPath: %s", cachePath)
+				}
+				// If pull failed, delete the repo and clone it again
+				if err != nil {
+					Logger.Debug(strings.Join(output, "\n"))
+					Logger.Warnf("Failed to pull repository, recreating repository.\nURL: %s", url)
+					err = os.RemoveAll(cachePath)
+				} else {
+					err := pathCheck()
+					if err != nil {
+						return nil, nil, burrito.PassError(err)
+					}
+					continue
+				}
+			} else {
+				err := pathCheck()
+				if err != nil {
+					return nil, nil, burrito.PassError(err)
+				}
+				continue
+			}
+		}
+		err = os.MkdirAll(cachePath, 0755)
+		if err != nil {
+			return nil, nil, burrito.WrapErrorf(err, osMkdirError, cachePath)
+		}
+		Logger.Infof("Downloading resolver %s", shortUrl)
+		MeasureStart("Clone repository %s", shortUrl)
+		output, err := RunGitProcess([]string{"clone", url, ".", "--depth", "1"}, cachePath)
+		if err != nil {
+			Logger.Error(strings.Join(output, "\n"))
+			return nil, nil, burrito.WrapErrorf(err, "Failed to clone repository.\nURL: %s", url)
+		}
+		MeasureEnd()
+		err = os.Chtimes(cachePath, time.Now(), time.Now())
+		if err != nil {
+			Logger.Debugf("Failed to update cache file modification time.\nPath: %s", cachePath)
+		}
+		err = pathCheck()
+		if err != nil {
+			return nil, nil, burrito.PassError(err)
+		}
+	}
 	if err != nil {
 		return nil, nil, burrito.WrapError(err, "Failed to download the resolvers")
 	}
