@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
@@ -29,7 +30,7 @@ import (
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Install(filters []string, force, debug bool) error {
+func Install(filters []string, force, refreshResolvers, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -51,7 +52,7 @@ func Install(filters []string, force, debug bool) error {
 			"Failed to get the list of filter definitions from config file.")
 	}
 	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(false, ".")
+	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
@@ -63,7 +64,7 @@ func Install(filters []string, force, debug bool) error {
 	}
 	defer func() { sessionLockErr = unlockSession() }()
 	// Parse arguments into download tasks (requires downloading resolvers)
-	parsedArgs, err := parseInstallFilterArgs(filters)
+	parsedArgs, err := parseInstallFilterArgs(filters, refreshResolvers)
 	if err != nil {
 		return burrito.WrapError(err, "Failed to parse arguments.")
 	}
@@ -150,7 +151,7 @@ func InstallAll(force, debug bool) error {
 		return burrito.WrapError(err, "Failed to load config.json.")
 	}
 	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(false, ".")
+	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
@@ -195,7 +196,7 @@ func runOrWatch(profileName string, debug, watch bool) error {
 			"Profile %q does not exist in the configuration.", profileName)
 	}
 	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(false, ".")
+	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
@@ -284,7 +285,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 				"Filter name: %s", filterName)
 	}
 	// Get dotRegolithPath
-	dotRegolithPath, err := GetDotRegolith(false, ".")
+	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
@@ -460,12 +461,11 @@ func CleanCurrentProject() error {
 	}
 	// Clean cache from AppData
 	Logger.Infof("Cleaning the cache in application data folder...")
-	dotRegolithPath, err := getAppDataDotRegolith(true, ".")
+	dotRegolithPath, err := getAppDataDotRegolith(".")
 	if err != nil {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
-	Logger.Infof("Regolith cache folder is: %s", dotRegolithPath)
 	err = clean(dotRegolithPath)
 	if err != nil {
 		return burrito.WrapErrorf(
@@ -482,7 +482,7 @@ func CleanUserCache() error {
 	if err != nil {
 		return burrito.WrappedError(osUserCacheDirError)
 	}
-	regolithCacheFiles := filepath.Join(userCache, appDataCachePath)
+	regolithCacheFiles := filepath.Join(userCache, appDataProjectCachePath)
 	Logger.Infof("Regolith cache files are located in: %s", regolithCacheFiles)
 	err = os.RemoveAll(regolithCacheFiles)
 	if err != nil {
@@ -505,6 +505,16 @@ func Clean(debug, userCache bool) error {
 	} else {
 		return CleanCurrentProject()
 	}
+}
+
+// UpdateResolvers handles the "regolith update-resolvers" command. It updates cached resolver repositories.
+//
+// The "debug" parameter is a boolean that determines if the debug messages
+// should be printed.
+func UpdateResolvers(debug bool) error {
+	InitLogging(debug)
+	_, _, err := DownloadResolverMaps(true)
+	return err
 }
 
 // manageUserConfigPrint is a helper function for ManageConfig used to print
@@ -590,6 +600,16 @@ func manageUserConfigEdit(debug bool, index int, key, value string) error {
 			return burrito.WrappedError("Cannot use --index with non-array property.")
 		}
 		userConfig.Username = &value
+	case "resolver_cache_update_cooldown":
+		if index != -1 {
+			return burrito.WrappedError("Cannot use --index with non-array property.")
+		}
+		_, err = time.ParseDuration(value)
+		if err != nil {
+			return burrito.WrapErrorf(err, "Invalid value for duration property.\n"+
+				"\tValue: %s", value)
+		}
+		userConfig.ResolverCacheUpdateCooldown = &value
 	case "resolvers":
 		if index == -1 {
 			userConfig.Resolvers = append(userConfig.Resolvers, value)
