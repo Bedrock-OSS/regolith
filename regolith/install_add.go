@@ -72,7 +72,7 @@ func installFilters(
 // parseInstallFilterArgs parses a list of arguments of the
 // "regolith install" command and returns a list of download tasks.
 func parseInstallFilterArgs(
-	filters []string,
+	filters []string, refreshResolvers bool,
 ) ([]*parsedInstallFilterArg, error) {
 	var result []*parsedInstallFilterArg
 	if len(filters) == 0 {
@@ -119,7 +119,7 @@ func parseInstallFilterArgs(
 		} else {
 			// Example inputs: "name_ninja==HEAD", "name_ninja"
 			name = url
-			url, err = ResolveUrl(name)
+			url, err = ResolveUrl(name, refreshResolvers)
 			if err != nil {
 				return nil, burrito.WrapErrorf(
 					err,

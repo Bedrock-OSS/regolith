@@ -156,6 +156,11 @@ The printing commands can take the --full flag to print configuration with the d
 included (if they're not defined in the config file). Without the flag, the undefined properties
 will be printed as null or empty list.
 `
+const regolithUpdateResolversDesc = `
+Updates every resolver repository in the "resolvers" list in the user configuration. This command 
+is particularly useful if you are adding a new filter to the resolver file and want to ensure that 
+the new filter is available in the Regolith.
+`
 
 func main() {
 	// Schedule error handling
@@ -209,8 +214,9 @@ func main() {
 		},
 	}
 	subcommands = append(subcommands, cmdInit)
+
 	// regolith install
-	var force, update bool
+	var force, update, resolverRefresh bool
 	cmdInstall := &cobra.Command{
 		Use:   "install [filters...]",
 		Short: "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
@@ -220,14 +226,17 @@ func main() {
 				cmd.Help()
 				return
 			}
-			err = regolith.Install(filters, force || update, burrito.PrintStackTrace)
+			err = regolith.Install(filters, force || update, resolverRefresh, burrito.PrintStackTrace)
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+	cmdInstall.Flags().BoolVar(
+		&resolverRefresh, "force-resolver-refresh", false, "Force resolvers refresh.")
 	cmdInstall.Flags().BoolVarP(
 		&force, "update", "u", false, "An alias for --force flag. Use this flag to update filters.")
 	subcommands = append(subcommands, cmdInstall)
+
 	// regolith install-all
 	cmdInstallAll := &cobra.Command{
 		Use:   "install-all",
@@ -240,6 +249,7 @@ func main() {
 	cmdInstallAll.Flags().BoolVarP(
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
 	subcommands = append(subcommands, cmdInstallAll)
+
 	// regolith run
 	cmdRun := &cobra.Command{
 		Use:   "run [profile_name]",
@@ -254,6 +264,7 @@ func main() {
 		},
 	}
 	subcommands = append(subcommands, cmdRun)
+
 	// regolith watch
 	cmdWatch := &cobra.Command{
 		Use:   "watch [profile_name]",
@@ -268,6 +279,7 @@ func main() {
 		},
 	}
 	subcommands = append(subcommands, cmdWatch)
+
 	// regolith apply-filter
 	cmdApplyFilter := &cobra.Command{
 		Use:   "apply-filter <filter_name> [filter_args...]",
@@ -284,16 +296,6 @@ func main() {
 		},
 	}
 	subcommands = append(subcommands, cmdApplyFilter)
-	// regolith clean
-	var userCache bool
-	cmdClean := &cobra.Command{
-		Use:   "clean",
-		Short: "Cleans Regolith cache",
-		Long:  regolithCleanDesc,
-		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Clean(burrito.PrintStackTrace, userCache)
-		},
-	}
 
 	// regolith config
 	cmdConfig := &cobra.Command{
@@ -309,17 +311,38 @@ func main() {
 			err = regolith.ManageConfig(burrito.PrintStackTrace, full, delete, append, index, args)
 		},
 	}
-
 	cmdConfig.Flags().BoolP("full", "f", false, "When printing, prints the full configuration including default values.")
 	cmdConfig.Flags().BoolP("delete", "d", false, "Delete property")
 	cmdConfig.Flags().BoolP("append", "a", false, "Append value to array property")
 	cmdConfig.Flags().IntP("index", "i", -1, "The index of the array property on which to act")
 	subcommands = append(subcommands, cmdConfig)
 
+	// regolith clean
+	var userCache bool
+	cmdClean := &cobra.Command{
+		Use:   "clean",
+		Short: "Cleans Regolith cache",
+		Long:  regolithCleanDesc,
+		Run: func(cmd *cobra.Command, _ []string) {
+			err = regolith.Clean(burrito.PrintStackTrace, userCache)
+		},
+	}
 	cmdClean.Flags().BoolVarP(
 		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
 			"the current project")
 	subcommands = append(subcommands, cmdClean)
+
+	// regolith update-resolvers
+	cmdUpdateResolvers := &cobra.Command{
+		Use:   "update-resolvers",
+		Short: "Updates cached resolver repositories",
+		Long:  regolithUpdateResolversDesc,
+		Run: func(cmd *cobra.Command, _ []string) {
+			err = regolith.UpdateResolvers(burrito.PrintStackTrace)
+		},
+	}
+	subcommands = append(subcommands, cmdUpdateResolvers)
+
 	// add --debug and --timings flag to every command
 	for _, cmd := range subcommands {
 		cmd.Flags().BoolVarP(&burrito.PrintStackTrace, "debug", "", false, "Enables debugging")

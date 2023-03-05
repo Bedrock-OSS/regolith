@@ -204,4 +204,10 @@ const (
 		"Minecraft directory: %s"
 
 	projectSuspiciousDirError = "Cannot initialize the project in a suspicious location."
+
+	resolverPathCacheError = "Failed to get the cache path of the resolver file.\n" +
+		"Short URL: %s"
+
+	resolverResolveUrlError = "Failed to resolve the URL of the resolver file for the download.\n" +
+		"Short URL: %s"
 )
