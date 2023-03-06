@@ -11,6 +11,7 @@ require (
 	github.com/muhammadmuzzammil1998/jsonc v1.0.0
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/otiai10/copy v1.7.0
+	github.com/paul-mannino/go-fuzzywuzzy v0.0.0-20200127021948-54652b135d0e
 	github.com/spf13/cobra v1.6.1
 	github.com/stirante/go-simple-eval v0.0.0-20230131075324-9ed520afbec1
 	go.uber.org/zap v1.23.0
