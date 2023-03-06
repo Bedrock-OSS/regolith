@@ -6,16 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
-
-	"github.com/hashicorp/go-getter"
+	"github.com/paul-mannino/go-fuzzywuzzy"
 )
 
 const (
-	// regolithConfigPath is a path to the regolith config relative to
-	// UserCacheDir()
-	regolithConfigPath = "regolith"
 	// resolverUrl is  the default URL to the resolver.json file
 	resolverUrl = "github.com/Bedrock-OSS/regolith-filter-resolver/resolver.json"
 )
@@ -28,147 +25,145 @@ type ResolverMapItem struct {
 // map should never be modified directly. Use getResolversAsMap() instead.
 var resolverMap *map[string]ResolverMapItem
 
-// GetRegolithAppDataPath returns path to the regolith files in user app data
-func GetRegolithAppDataPath() (string, error) {
-	path, err := os.UserCacheDir()
-	if err != nil {
-		return "", burrito.WrappedError(osUserCacheDirError)
-	}
-	return filepath.Join(path, regolithConfigPath), nil
-}
-
 // resolveResolverUrl resolves the resolver URL from the short name to a full
 // URL that can be used by go-getter
-func resolveResolverUrl(url string) (string, error) {
+func resolveResolverUrl(url string) (string, string, error) {
 	urlParts := strings.Split(url, "/")
 	if len(urlParts) < 4 {
-		return "", burrito.WrappedErrorf(
+		return "", "", burrito.WrappedErrorf(
 			"Incorrect URL format.\n" +
 				"Expected format:" +
 				"github.com/<user-name>/<repo-name>/<path-to-the-resolver-file>")
 	}
 	repoUrl := strings.Join(urlParts[0:3], "/")
 	path := strings.Join(urlParts[3:], "/")
-	return fmt.Sprintf("git::https://%s/%s", repoUrl, path), nil
+	return fmt.Sprintf("https://%s", repoUrl), path, nil
 }
 
-// DownloadResolverMaps downloads the resolver.json files
-func DownloadResolverMaps() error {
-	Logger.Info("Downloading resolvers")
-
-	// Define function to download group of resolvers
-	downloadResolvers := func(urls []string, root string) error {
-		MeasureStart("Prepare for resolvers download")
-		targetPath := filepath.Join(root, "resolvers")
-		tmpPath := filepath.Join(root, ".resolvers-tmp")
-		tmpResolversPath := filepath.Join(tmpPath, "resolvers")
-		tmpUndoPath := filepath.Join(tmpPath, "undo")
-		// Create target directory if not exists
-		err := os.MkdirAll(targetPath, 0755)
-		if err != nil {
-			return burrito.WrapErrorf(err, osMkdirError, targetPath)
-		}
-		// Prepare the temporary directory
-		err = os.RemoveAll(tmpPath)
-		if err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, tmpPath)
-		}
-		err = os.MkdirAll(tmpResolversPath, 0755)
-		if err != nil {
-			return burrito.WrapErrorf(err, osMkdirError, tmpResolversPath)
-		}
-		err = os.MkdirAll(tmpUndoPath, 0755)
-		if err != nil {
-			return burrito.WrapErrorf(err, osMkdirError, tmpUndoPath)
-		}
-		defer os.RemoveAll(tmpPath) // Schedule for deletion
-		// Prepare the revertibleFsOperations object
-		revertibleOps, err := NewRevertibleFsOperations(tmpUndoPath)
-		if err != nil {
-			return burrito.WrapErrorf(err, newRevertibleFsOperationsError, tmpUndoPath)
-		}
-		defer revertibleOps.Close() // Must be called before os.RemoveAll(tmpPath)
-		// Download the resolvers to the tmp path
-		for i, shortUrl := range urls {
-			// Get the save path and resolve the URL
-			savePath := filepath.Join(
-				tmpResolversPath, fmt.Sprintf("resolver_%d.json", i))
-			MeasureStart("Resolve resolver URL")
-			url, err := resolveResolverUrl(shortUrl)
-			if err != nil {
-				return burrito.WrapError(
-					err,
-					"Failed to resolve the URL of the resolver file for the download.\n"+
-						"Short URL: "+shortUrl)
-			}
-			MeasureStart("Download resolver")
-			Logger.Debugf("Downloading resolver using URL: %s", url)
-			err = getter.GetFile(savePath, url+"?depth=1")
-			if err != nil {
-				return burrito.WrapErrorf(err, "Failed to download the file.\nURL: %s", url)
-			}
-			// Add "url" property to the resolver file
-			MeasureEnd()
-			fileData := make(map[string]interface{})
-			f, err := os.ReadFile(savePath)
-			if err != nil {
-				return burrito.WrapErrorf(err, fileReadError, savePath)
-			}
-			err = json.Unmarshal(f, &fileData)
-			if err != nil {
-				return burrito.WrapErrorf(err, jsonUnmarshalError, savePath)
-			}
-			fileData["url"] = shortUrl
-			// Save the file with the "url" property
-			f, _ = json.MarshalIndent(fileData, "", "\t")
-			err = os.WriteFile(savePath, f, 0644)
-			if err != nil {
-				return burrito.WrapErrorf(err, fileWriteError, savePath)
-			}
-		}
-		// Make sure that the target directory is empty
-		err = revertibleOps.DeleteDir(targetPath)
-		if err != nil {
-			revertibleOps.Undo() // Don't handle the error. I don't care.
-			return burrito.WrapErrorf(err, osRemoveError, targetPath)
-		}
-		err = revertibleOps.MkdirAll(targetPath)
-		if err != nil {
-			revertibleOps.Undo() // Don't handle the error. I don't care.
-			return burrito.WrapErrorf(err, osMkdirError, targetPath)
-		}
-		// Move the resolvers to the target path
-		err = revertibleOps.MoveOrCopyDir(tmpResolversPath, targetPath)
-		if err != nil {
-			revertibleOps.Undo() // Don't handle the error. I don't care.
-			return burrito.WrapErrorf(err, moveOrCopyError, tmpResolversPath, targetPath)
-		}
-		return nil
-	}
+// DownloadResolverMaps downloads the resolver repositories and returns lists of urls and paths
+func DownloadResolverMaps(forceUpdate bool) ([]string, []string, error) {
 	// Download the global resolvers
-	appDataPath, err := GetRegolithAppDataPath()
-	if err != nil {
-		return burrito.WrapError(err, getRegolithAppDataPathError)
-	}
 	globalUserConfig, err := getGlobalUserConfig()
 	globalUserConfig.fillDefaults() // The file must have the default resolver URL
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return nil, nil, burrito.WrapError(err, getUserConfigError)
 	}
-	err = downloadResolvers(globalUserConfig.Resolvers, appDataPath)
+	if len(globalUserConfig.Resolvers) == 0 {
+		return nil, nil, nil
+	}
+	config, err := getCombinedUserConfig()
 	if err != nil {
-		return burrito.WrapError(err, "Failed to download the resolvers")
+		return nil, nil, burrito.WrapErrorf(err, getUserConfigError)
 	}
-	return nil
+	cooldown, err := time.ParseDuration(*config.ResolverCacheUpdateCooldown)
+	if err != nil {
+		return nil, nil, burrito.WrapErrorf(err, "Failed to parse resolver cache update cooldown.\nCooldown: %s", *config.ResolverCacheUpdateCooldown)
+	}
+	MeasureStart("Prepare for resolvers download")
+	targetPath, err := getResolverCache(globalUserConfig.Resolvers[0])
+	if err != nil {
+		return nil, nil, burrito.WrapErrorf(err, resolverPathCacheError, globalUserConfig.Resolvers[0])
+	}
+	// Create resolver cache directory if not exists
+	dir, _ := filepath.Split(targetPath)
+	err = os.MkdirAll(dir, 0755)
+	if err != nil {
+		return nil, nil, burrito.WrapErrorf(err, osMkdirError, targetPath)
+	}
+	resolverFilePaths := make([]string, len(globalUserConfig.Resolvers))
+	// Download the resolvers to the cache path
+	for i, shortUrl := range globalUserConfig.Resolvers {
+		// Get the save path and resolve the URL
+		cachePath, err := getResolverCache(shortUrl)
+		if err != nil {
+			return nil, nil, burrito.WrapErrorf(err, resolverPathCacheError, shortUrl)
+		}
+		url, path, err := resolveResolverUrl(shortUrl)
+		if err != nil {
+			return nil, nil, burrito.WrapErrorf(err, resolverResolveUrlError, shortUrl)
+		}
+		joinedPath := filepath.Join(cachePath, path)
+		pathCheck := func() error {
+			info, err := os.Stat(joinedPath)
+			if err != nil {
+				if os.IsNotExist(err) {
+					return burrito.WrapErrorf(err, "Resolver file does not exist.\nPath: %s", joinedPath)
+				} else {
+					return burrito.WrapErrorf(err, "Failed to get resolver file info.\nPath: %s", joinedPath)
+				}
+			} else if info.IsDir() {
+				return burrito.WrapErrorf(err, "Resolver file is a directory.\nPath: %s", joinedPath)
+			}
+			resolverFilePaths[i] = joinedPath
+			return nil
+		}
+		// If the repo exist, pull it
+		stat, err := os.Stat(filepath.Join(cachePath, ".git"))
+		if err == nil && stat.IsDir() {
+			info, _ := os.Stat(cachePath)
+			if forceUpdate || info.ModTime().Before(time.Now().Add(cooldown*-1)) {
+				Logger.Infof("Updating resolver %s", shortUrl)
+				MeasureStart("Pull repository %s", shortUrl)
+				output, err := RunGitProcess([]string{"pull"}, cachePath)
+				MeasureEnd()
+				err = os.Chtimes(cachePath, time.Now(), time.Now())
+				if err != nil {
+					Logger.Debugf("Failed to update cache file modification time.\nPath: %s", cachePath)
+				}
+				// If pull failed, delete the repo and clone it again
+				if err != nil {
+					Logger.Debug(strings.Join(output, "\n"))
+					Logger.Warnf("Failed to pull repository, recreating repository.\nURL: %s", url)
+					err = os.RemoveAll(cachePath)
+				} else {
+					err := pathCheck()
+					if err != nil {
+						return nil, nil, burrito.PassError(err)
+					}
+					continue
+				}
+			} else {
+				err := pathCheck()
+				if err != nil {
+					return nil, nil, burrito.PassError(err)
+				}
+				continue
+			}
+		}
+		err = os.MkdirAll(cachePath, 0755)
+		if err != nil {
+			return nil, nil, burrito.WrapErrorf(err, osMkdirError, cachePath)
+		}
+		Logger.Infof("Downloading resolver %s", shortUrl)
+		MeasureStart("Clone repository %s", shortUrl)
+		output, err := RunGitProcess([]string{"clone", url, ".", "--depth", "1"}, cachePath)
+		if err != nil {
+			Logger.Error(strings.Join(output, "\n"))
+			return nil, nil, burrito.WrapErrorf(err, "Failed to clone repository.\nURL: %s", url)
+		}
+		MeasureEnd()
+		err = os.Chtimes(cachePath, time.Now(), time.Now())
+		if err != nil {
+			Logger.Debugf("Failed to update cache file modification time.\nPath: %s", cachePath)
+		}
+		err = pathCheck()
+		if err != nil {
+			return nil, nil, burrito.PassError(err)
+		}
+	}
+	if err != nil {
+		return nil, nil, burrito.WrapError(err, "Failed to download the resolvers")
+	}
+	return globalUserConfig.Resolvers, resolverFilePaths, nil
 }
 
 // getResolversMap downloads and lazily loads the resolverMap from the
 // resolver.json files if it is already loaded, it returns the map
-func getResolversMap() (*map[string]ResolverMapItem, error) {
+func getResolversMap(refreshResolvers bool) (*map[string]ResolverMapItem, error) {
 	if resolverMap != nil {
 		return resolverMap, nil
 	}
-	err := DownloadResolverMaps()
+	urls, resolvedPaths, err := DownloadResolverMaps(refreshResolvers)
 	if err != nil {
 		Logger.Warnf(
 			"Failed to download resolver map: %s", err.Error())
@@ -178,55 +173,27 @@ func getResolversMap() (*map[string]ResolverMapItem, error) {
 	// file and the value is the content of the file. Based on this map and
 	// the combined user config, the final resolver map is created.
 	resolvers := make(map[string]interface{})
-	loadResolversFromPath := func(path string) error {
-		globalResolvers, err := os.ReadDir(path)
-		if err != nil {
-			return burrito.WrapErrorf(
-				err, "Failed to list files in the directory.\nPath: %s",
-				path)
-		}
-		for _, resolver := range globalResolvers {
-			if resolver.IsDir() {
-				continue
-			}
-			filePath := filepath.Join(path, resolver.Name())
-			f, err := os.ReadFile(filePath)
+	loadResolversFromPath := func(urls, paths []string) error {
+		for i, path := range paths {
+			f, err := os.ReadFile(path)
 			if err != nil {
-				return burrito.WrapErrorf(err, fileReadError, filePath)
+				return burrito.WrapErrorf(err, fileReadError, path)
 			}
 			resolverData := make(map[string]interface{})
 			err = json.Unmarshal(f, &resolverData)
 			if err != nil {
-				return burrito.WrapErrorf(err, jsonUnmarshalError, filePath)
+				return burrito.WrapErrorf(err, jsonUnmarshalError, path)
 			}
-			url, ok := resolverData["url"].(string)
-			if !ok {
-				return burrito.WrapErrorf(
-					err,
-					"Failed to get the URL of the resolver file.\nPath: %s",
-					filePath)
-			}
-			resolvers[url] = resolverData
+			resolvers[urls[i]] = resolverData
 		}
 		return nil
 	}
-	// Load the global resolvers
-	appDataPath, err := GetRegolithAppDataPath()
-	if err != nil {
-		return nil, burrito.WrapError(err, getRegolithAppDataPathError)
-	}
-	globalResolversPath := filepath.Join(appDataPath, "resolvers")
-	err = loadResolversFromPath(globalResolversPath)
+	err = loadResolversFromPath(urls, resolvedPaths)
 	if err != nil {
 		return nil, burrito.WrapError(err, "Failed to load the global resolvers")
 	}
-	// Get user config to access the list of resolvers
-	userConfig, err := getCombinedUserConfig()
-	if err != nil {
-		return nil, burrito.WrapError(err, getUserConfigError)
-	}
 	// Create the final resolver map
-	for _, resolverUrl := range userConfig.Resolvers {
+	for _, resolverUrl := range urls {
 		resolverData, ok := resolvers[resolverUrl].(map[string]interface{})
 		if !ok {
 			return nil, burrito.WrapErrorf(
@@ -274,18 +241,32 @@ func ResolverMapFromObject(obj map[string]interface{}) (ResolverMapItem, error) 
 
 // ResolveUrl tries to resolve the URL to a filter based on a shortName. If
 // it fails it updates the resolver.json file and tries again
-func ResolveUrl(shortName string) (string, error) {
+func ResolveUrl(shortName string, refreshResolvers bool) (string, error) {
 	const resolverLoadError = "Unable to load the name to URL resolver map."
-	resolver, err := getResolversMap()
+	resolver, err := getResolversMap(refreshResolvers)
 	if err != nil {
 		return "", burrito.WrapError(err, resolverLoadError)
 	}
 	filterMap, ok := (*resolver)[shortName]
 	if !ok {
+		// Try to find a close match
+		keys := make([]string, 0, len(*resolver))
+		for k := range *resolver {
+			keys = append(keys, k)
+		}
+		find, _ := fuzzy.Extract(shortName, keys, 5)
+		if find.Len() > 0 {
+			return "", burrito.WrappedErrorf(
+				"The filter doesn't have known mapping to URL in the URL "+
+					"resolver.\n"+
+					"Filter name: %s\n"+
+					"Did you mean \"%s\"?",
+				shortName, find[0].Match)
+		}
 		return "", burrito.WrappedErrorf(
 			"The filter doesn't have known mapping to URL in the URL "+
 				"resolver.\n"+
-				"Filter name: %s\n",
+				"Filter name: %s",
 			shortName)
 	}
 	return filterMap.Url, nil

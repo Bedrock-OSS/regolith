@@ -15,6 +15,7 @@ preferences for Regolith.
 Default: `false`
 
 If set to `true`, the Regolith projects will store their cache (filters, their dependencies, etc.) in the app data folder, instead of the `.regolith` folder in the project folder.
+
 ### `username: string`
 
 Default: `"Your name"`
@@ -26,6 +27,12 @@ The username of the user, which will be used in the `author` field of the `manif
 Default: `["github.com/Bedrock-OSS/regolith-filter-resolver/resolver.json"]`
 
 A list of resolvers, which will be used to resolve filter names to URLs for downloding when using the `regolith install` command. The default URL is always added to the end of the list. Note that the "URLs" used by the resolvers are not actual URLs. They have two parts, separated by `/`. The first part is an url to a repository on GitHub, and the second part is a path to the resolver file relative to the root of the repository. For example, the default resolver is on the `github.com/Bedrock-OSS/regolith-filter-resolver` repository, in the `resolver.json` file, but `github.com/Bedrock-OSS/regolith-filter-resolver/resolver.json` is not a valid URL.
+
+### `resolver_cache_update_cooldown: string`
+
+Default: `"5m"`
+
+The cooldown between cache updates for the resolvers. The cooldown is specified in the [Go duration format](https://pkg.go.dev/time#ParseDuration).
 
 ## The `regolith config` command
 

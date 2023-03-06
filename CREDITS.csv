@@ -32,6 +32,7 @@ github.com/mitchellh/go-testing-interface,https://github.com/mitchellh/go-testin
 github.com/muhammadmuzzammil1998/jsonc,https://github.com/muhammadmuzzammil1998/jsonc/blob/v1.0.0/LICENSE,MIT
 github.com/nightlyone/lockfile,https://github.com/nightlyone/lockfile/blob/v1.0.0/LICENSE,MIT
 github.com/otiai10/copy,https://github.com/otiai10/copy/blob/v1.7.0/LICENSE,MIT
+github.com/paul-mannino/go-fuzzywuzzy,https://github.com/paul-mannino/go-fuzzywuzzy/blob/54652b135d0e/LICENSE,GPL-3.0
 github.com/spf13/cobra,https://github.com/spf13/cobra/blob/v1.6.1/LICENSE.txt,Apache-2.0
 github.com/spf13/pflag,https://github.com/spf13/pflag/blob/v1.0.5/LICENSE,BSD-3-Clause
 github.com/stirante/go-simple-eval,https://github.com/stirante/go-simple-eval/blob/9ed520afbec1/LICENSE,GPL-3.0
