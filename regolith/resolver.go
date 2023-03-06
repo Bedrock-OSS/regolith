@@ -9,12 +9,10 @@ import (
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
+	"github.com/paul-mannino/go-fuzzywuzzy"
 )
 
 const (
-	// regolithConfigPath is a path to the regolith config relative to
-	// UserCacheDir()
-	regolithConfigPath = "regolith"
 	// resolverUrl is  the default URL to the resolver.json file
 	resolverUrl = "github.com/Bedrock-OSS/regolith-filter-resolver/resolver.json"
 )
@@ -27,33 +25,9 @@ type ResolverMapItem struct {
 // map should never be modified directly. Use getResolversAsMap() instead.
 var resolverMap *map[string]ResolverMapItem
 
-// GetRegolithAppDataPath returns path to the regolith files in user app data
-func GetRegolithAppDataPath() (string, error) {
-	path, err := os.UserCacheDir()
-	if err != nil {
-		return "", burrito.WrappedError(osUserCacheDirError)
-	}
-	return filepath.Join(path, regolithConfigPath), nil
-}
-
 // resolveResolverUrl resolves the resolver URL from the short name to a full
 // URL that can be used by go-getter
-func resolveResolverUrl(url string) (string, error) {
-	urlParts := strings.Split(url, "/")
-	if len(urlParts) < 4 {
-		return "", burrito.WrappedErrorf(
-			"Incorrect URL format.\n" +
-				"Expected format:" +
-				"github.com/<user-name>/<repo-name>/<path-to-the-resolver-file>")
-	}
-	repoUrl := strings.Join(urlParts[0:3], "/")
-	path := strings.Join(urlParts[3:], "/")
-	return fmt.Sprintf("git::https://%s/%s", repoUrl, path), nil
-}
-
-// resolveResolverUrl resolves the resolver URL from the short name to a full
-// URL that can be used by go-getter
-func resolveResolverUrlNew(url string) (string, string, error) {
+func resolveResolverUrl(url string) (string, string, error) {
 	urlParts := strings.Split(url, "/")
 	if len(urlParts) < 4 {
 		return "", "", burrito.WrappedErrorf(
@@ -104,7 +78,7 @@ func DownloadResolverMaps(forceUpdate bool) ([]string, []string, error) {
 		if err != nil {
 			return nil, nil, burrito.WrapErrorf(err, resolverPathCacheError, shortUrl)
 		}
-		url, path, err := resolveResolverUrlNew(shortUrl)
+		url, path, err := resolveResolverUrl(shortUrl)
 		if err != nil {
 			return nil, nil, burrito.WrapErrorf(err, resolverResolveUrlError, shortUrl)
 		}
@@ -275,10 +249,24 @@ func ResolveUrl(shortName string, refreshResolvers bool) (string, error) {
 	}
 	filterMap, ok := (*resolver)[shortName]
 	if !ok {
+		// Try to find a close match
+		keys := make([]string, 0, len(*resolver))
+		for k := range *resolver {
+			keys = append(keys, k)
+		}
+		find, _ := fuzzy.Extract(shortName, keys, 5)
+		if find.Len() > 0 {
+			return "", burrito.WrappedErrorf(
+				"The filter doesn't have known mapping to URL in the URL "+
+					"resolver.\n"+
+					"Filter name: %s\n"+
+					"Did you mean \"%s\"?",
+				shortName, find[0].Match)
+		}
 		return "", burrito.WrappedErrorf(
 			"The filter doesn't have known mapping to URL in the URL "+
 				"resolver.\n"+
-				"Filter name: %s\n",
+				"Filter name: %s",
 			shortName)
 	}
 	return filterMap.Url, nil
