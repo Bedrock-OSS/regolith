@@ -244,7 +244,7 @@ func ExportProject(
 // command. This operation is destructive and cannot be undone.
 func InplaceExportProject(
 	config *Config, dotRegolithPath string,
-) error {
+) (err error) {
 	// Create revertible ops object
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
 	revertibleOps, err := NewRevertibleFsOperations(backupPath)
@@ -293,7 +293,7 @@ func InplaceExportProject(
 	for _, moveFile := range moveFiles {
 		source, target := moveFile[0], moveFile[1]
 		if source != "" {
-			err = revertibleOps.MoveOrCopy(source, target, true)
+			err = revertibleOps.MoveOrCopyDir(source, target)
 			if err != nil {
 				err = burrito.WrapErrorf(
 					err, moveOrCopyError, source, target)
