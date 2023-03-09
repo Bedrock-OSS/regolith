@@ -204,19 +204,22 @@ func main() {
 	}
 	subcommands := make([]*cobra.Command, 0)
 
+	var force bool
 	// regolith init
 	cmdInit := &cobra.Command{
 		Use:   "init",
 		Short: "Initializes a Regolith project in current directory",
 		Long:  regolithInitDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Init(burrito.PrintStackTrace)
+			err = regolith.Init(burrito.PrintStackTrace, force)
 		},
 	}
+	cmdInit.Flags().BoolVarP(
+		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
 	subcommands = append(subcommands, cmdInit)
 
 	// regolith install
-	var force, update, resolverRefresh bool
+	var update, resolverRefresh bool
 	cmdInstall := &cobra.Command{
 		Use:   "install [filters...]",
 		Short: "Downloads and installs filters from the internet and adds them to the filterDefinitions list",

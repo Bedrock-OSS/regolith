@@ -498,6 +498,43 @@ func IsDirEmpty(path string) (bool, error) {
 	return false, nil
 }
 
+// GetMatchingDirContents returns a list of files in the directory that match the
+// ones specified in the files parameter. If the path is not a directory or
+// info about the path can't be obtained it returns an empty list and an error.
+func GetMatchingDirContents(path string, files []string) ([]string, error) {
+	result := make([]string, 0)
+	if stat, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return result, burrito.WrappedErrorf(osStatErrorIsNotExist, path)
+		}
+		return result, burrito.WrapErrorf(err, osStatErrorAny, path)
+	} else if !stat.IsDir() {
+		return result, burrito.WrappedErrorf(isDirNotADirError, path)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return result, burrito.WrapErrorf(err, osOpenError, path)
+	}
+	defer f.Close()
+	names, err := f.Readdirnames(0)
+	if err == io.EOF {
+		return result, nil
+	} else if err != nil {
+		return result, burrito.WrapErrorf(
+			err,
+			"Failed to access subdirectories list.\n"+
+				"Path: %s", path)
+	}
+	for _, name := range names {
+		// Need to use lowercase because Windows is case-insensitive
+		if stringInSlice(strings.ToLower(name), files) {
+			result = append(result, name)
+		}
+	}
+	// err is nil -> not empty
+	return result, nil
+}
+
 // AreFilesEqual compares files from two paths A and B and returns true if
 // they're equal.
 func AreFilesEqual(a, b string) (bool, error) {
