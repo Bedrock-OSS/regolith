@@ -12,6 +12,13 @@ import (
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
+var disallowedFiles = []string{
+	"config.json",
+	"packs",
+	".regolith",
+	".gitignore",
+}
+
 // Install handles the "regolith install" command. It installs specific filters
 // from the internet and adds them to the filtersDefinitions list in the
 // config.json file.
@@ -357,7 +364,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Init(debug bool) error {
+func Init(debug, force bool) error {
 	InitLogging(debug)
 	Logger.Info("Initializing Regolith project...")
 
@@ -366,14 +373,14 @@ func Init(debug bool) error {
 		return burrito.WrapError(
 			err, osGetwdError)
 	}
-	if isEmpty, err := IsDirEmpty(wd); err != nil {
+	if files, err := GetMatchingDirContents(wd, disallowedFiles); err != nil {
 		return burrito.WrapErrorf(
 			err, "Failed to check if %s is an empty directory.", wd)
-	} else if !isEmpty {
+	} else if len(files) > 0 && !force {
 		return burrito.WrappedErrorf(
-			"Cannot initialize the project, because %s is not an empty "+
-				"directory.\n\"regolith init\" can be used only in empty "+
-				"directories.", wd)
+			"Cannot initialize the project, because %s contains files, that will be overwritten on init.\n"+
+				"If you want to proceed, use --force flag\n"+
+				"Disallowed files and directories found: %s", wd, strings.Join(files, ", "))
 	}
 	err = CheckSuspiciousLocation()
 	if err != nil {
