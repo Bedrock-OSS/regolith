@@ -39,7 +39,7 @@ func TestRegolithInit(t *testing.T) {
 		t.Fatal("Unable to change working directory:", err.Error())
 	}
 	// THE TEST
-	err = regolith.Init(true)
+	err = regolith.Init(true, false)
 	if err != nil {
 		t.Fatal("'regolith init' failed:", err.Error())
 	}
