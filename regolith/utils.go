@@ -326,3 +326,12 @@ func MeasureEnd() {
 	Logger.Infof("%s took %s (%s)", lastMeasure.Name, duration, lastMeasure.Location)
 	lastMeasure = nil
 }
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
