@@ -37,7 +37,7 @@ var disallowedFiles = []string{
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Install(filters []string, force, refreshResolvers, debug bool) error {
+func Install(filters []string, force, refreshResolvers, add bool, profile string, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -121,6 +121,25 @@ func Install(filters []string, force, refreshResolvers, debug bool) error {
 	for name, downloadedFilter := range filterInstallers {
 		// Add the filter to config file
 		filterDefinitions[name] = downloadedFilter
+		if add {
+			if profile == "" {
+				profile = "default"
+			}
+			// Add the filter to the profile
+			profileMap, err := FindObjectByJSONPath(config, "regolith/profiles/"+profile)
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Profile %s does not exist or is invalid.", profile)
+			}
+			if profileMap["filters"] == nil {
+				profileMap["filters"] = make([]interface{}, 0)
+			}
+			// Add the filter to the profile
+			profileMap["filters"] = append(
+				profileMap["filters"].([]interface{}), map[string]interface{}{
+					"filter": name,
+				})
+		}
 	}
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "\t")
