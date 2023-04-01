@@ -11,7 +11,7 @@ func TestSimplePath(t *testing.T) {
 		"foo": "bar",
 	}
 	expected := "bar"
-	actual, err := regolith.FindByJSONPath(obj, "foo")
+	actual, err := regolith.FindByJSONPath[string](obj, "foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func TestSimplePath2(t *testing.T) {
 		"foo": []interface{}{"bar"},
 	}
 	expected := "bar"
-	actual, err := regolith.FindByJSONPath(obj, "foo/0")
+	actual, err := regolith.FindByJSONPath[string](obj, "foo/0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestSimplePath3(t *testing.T) {
 		},
 	}
 	expected := "baz"
-	actual, err := regolith.FindByJSONPath(obj, "foo/bar")
+	actual, err := regolith.FindByJSONPath[string](obj, "foo/bar")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestInvalidPath(t *testing.T) {
 		},
 	}
 	expected := "Invalid data type.\nJSON Path: foo->bar->baz\nExpected type: object or array"
-	_, err := regolith.FindByJSONPath(obj, "foo/bar/baz")
+	_, err := regolith.FindByJSONPath[string](obj, "foo/bar/baz")
 	if err == nil {
 		t.Fatal("Expected an error, got nil")
 	}
@@ -73,7 +73,7 @@ func TestInvalidPath2(t *testing.T) {
 		},
 	}
 	expected := "Required JSON path is missing.\nJSON Path: foo->0"
-	_, err := regolith.FindByJSONPath(obj, "foo/0/baz")
+	_, err := regolith.FindByJSONPath[string](obj, "foo/0/baz")
 	if err == nil {
 		t.Fatal("Expected an error, got nil")
 	}
@@ -84,7 +84,7 @@ func TestInvalidPath2(t *testing.T) {
 
 func TestNullObject(t *testing.T) {
 	expected := "Object is empty"
-	_, err := regolith.FindByJSONPath(nil, "foo/bar/baz")
+	_, err := regolith.FindByJSONPath[string](nil, "foo/bar/baz")
 	if err == nil {
 		t.Fatal("Expected an error, got nil")
 	}

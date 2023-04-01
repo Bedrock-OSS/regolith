@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -337,9 +338,10 @@ func stringInSlice(a string, list []string) bool {
 }
 
 // FindByJSONPath finds a value in a JSON element by a simple path. Returns nil and an error if the path is not found or invalid.
-func FindByJSONPath(obj interface{}, path string) (interface{}, error) {
+func FindByJSONPath[T any](obj interface{}, path string) (T, error) {
+	var empty T
 	if obj == nil {
-		return nil, burrito.WrappedErrorf("Object is empty")
+		return empty, burrito.WrappedErrorf("Object is empty")
 	}
 	// Split the path into parts
 	parts := strings.Split(path, "/")
@@ -354,69 +356,44 @@ func FindByJSONPath(obj interface{}, path string) (interface{}, error) {
 		if m, ok := value.(map[string]interface{}); ok {
 			value = m[part]
 			if value == nil {
-				return nil, burrito.WrappedErrorf(jsonPathMissingError, currentPath[:len(currentPath)-2])
+				return empty, burrito.WrappedErrorf(jsonPathMissingError, currentPath[:len(currentPath)-2])
 			}
 			continue
 		}
 		if a, ok := value.([]interface{}); ok {
 			index, err := strconv.Atoi(part)
 			if err != nil {
-				return nil, burrito.WrapErrorf(err, "Invalid index %s at %s", part, currentPath[:len(currentPath)-2])
+				return empty, burrito.WrapErrorf(err, "Invalid index %s at %s", part, currentPath[:len(currentPath)-2])
 			}
 			if index < 0 || index >= len(a) {
-				return nil, burrito.WrappedErrorf("Index %i is out of bounds at %s", index, currentPath[:len(currentPath)-2])
+				return empty, burrito.WrappedErrorf("Index %i is out of bounds at %s", index, currentPath[:len(currentPath)-2])
 			}
 			value = a[index]
 			if value == nil {
-				return nil, burrito.WrappedErrorf(jsonPathMissingError, currentPath[:len(currentPath)-2])
+				return empty, burrito.WrappedErrorf(jsonPathMissingError, currentPath[:len(currentPath)-2])
 			}
 			continue
 		}
-		return nil, burrito.WrappedErrorf(jsonPathTypeError, currentPath[:len(currentPath)-2], "object or array")
+		return empty, burrito.WrappedErrorf(jsonPathTypeError, currentPath[:len(currentPath)-2], "object or array")
 	}
-	return value, nil
+	if s, ok := value.(T); ok {
+		return s, nil
+	}
+	return empty, burrito.WrappedErrorf(jsonPathTypeError, path, reflect.TypeOf(empty).String())
 }
 
 func FindStringByJSONPath(obj interface{}, path string) (string, error) {
-	value, err := FindByJSONPath(obj, path)
-	if err != nil {
-		return "", burrito.PassError(err)
-	}
-	if s, ok := value.(string); ok {
-		return s, nil
-	}
-	return "", burrito.WrappedErrorf(jsonPathTypeError, path, "string")
+	return FindByJSONPath[string](obj, path)
 }
 
 func FindObjectByJSONPath(obj interface{}, path string) (map[string]interface{}, error) {
-	value, err := FindByJSONPath(obj, path)
-	if err != nil {
-		return nil, burrito.PassError(err)
-	}
-	if m, ok := value.(map[string]interface{}); ok {
-		return m, nil
-	}
-	return nil, burrito.WrappedErrorf(jsonPathTypeError, path, "object")
+	return FindByJSONPath[map[string]interface{}](obj, path)
 }
 
 func FindArrayByJSONPath(obj interface{}, path string) ([]interface{}, error) {
-	value, err := FindByJSONPath(obj, path)
-	if err != nil {
-		return nil, burrito.PassError(err)
-	}
-	if m, ok := value.([]interface{}); ok {
-		return m, nil
-	}
-	return nil, burrito.WrappedErrorf(jsonPathTypeError, path, "array")
+	return FindByJSONPath[[]interface{}](obj, path)
 }
 
 func FindBoolByJSONPath(obj interface{}, path string) (bool, error) {
-	value, err := FindByJSONPath(obj, path)
-	if err != nil {
-		return false, burrito.PassError(err)
-	}
-	if m, ok := value.(bool); ok {
-		return m, nil
-	}
-	return false, burrito.WrappedErrorf(jsonPathTypeError, path, "boolean")
+	return FindByJSONPath[bool](obj, path)
 }
