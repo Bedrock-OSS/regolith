@@ -173,7 +173,7 @@ func TestInstall(t *testing.T) {
 		expectedResultPath = filepath.Join(wd, expectedResultPath)
 		// Install the filter with given version
 		err := regolith.Install(
-			[]string{filterName + "==" + version}, true, false, false, "default", true)
+			[]string{filterName + "==" + version}, true, false, false, []string{"default"}, true)
 		if err != nil {
 			t.Fatal("'regolith install' failed:", err)
 		}
