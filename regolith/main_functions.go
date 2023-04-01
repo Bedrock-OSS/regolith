@@ -37,7 +37,7 @@ var disallowedFiles = []string{
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Install(filters []string, force, refreshResolvers, add bool, profile string, debug bool) error {
+func Install(filters []string, force, refreshResolvers, add bool, profiles []string, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -46,6 +46,20 @@ func Install(filters []string, force, refreshResolvers, add bool, profile string
 	config, err := LoadConfigAsMap()
 	if err != nil {
 		return burrito.WrapError(err, "Unable to load config file.")
+	}
+	// Check if selected profiles exist
+	if add {
+		if len(profiles) == 0 {
+			profiles = []string{"default"}
+		}
+		// Get the profile
+		for _, profile := range profiles {
+			_, err := FindObjectByJSONPath(config, "regolith/profiles/"+profile)
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Profile %s does not exist or is invalid.", profile)
+			}
+		}
 	}
 	// Get parts of config file required for installation
 	dataPath, err := dataPathFromConfigMap(config)
@@ -122,23 +136,23 @@ func Install(filters []string, force, refreshResolvers, add bool, profile string
 		// Add the filter to config file
 		filterDefinitions[name] = downloadedFilter
 		if add {
-			if profile == "" {
-				profile = "default"
-			}
 			// Add the filter to the profile
-			profileMap, err := FindObjectByJSONPath(config, "regolith/profiles/"+profile)
-			if err != nil {
-				return burrito.WrapErrorf(
-					err, "Profile %s does not exist or is invalid.", profile)
+			for _, profile := range profiles {
+				profileMap, err := FindObjectByJSONPath(config, "regolith/profiles/"+profile)
+				// This check here is not necessary, because we have identical one at the beginning, but better to be safe
+				if err != nil {
+					return burrito.WrapErrorf(
+						err, "Profile %s does not exist or is invalid.", profile)
+				}
+				if profileMap["filters"] == nil {
+					profileMap["filters"] = make([]interface{}, 0)
+				}
+				// Add the filter to the profile
+				profileMap["filters"] = append(
+					profileMap["filters"].([]interface{}), map[string]interface{}{
+						"filter": name,
+					})
 			}
-			if profileMap["filters"] == nil {
-				profileMap["filters"] = make([]interface{}, 0)
-			}
-			// Add the filter to the profile
-			profileMap["filters"] = append(
-				profileMap["filters"].([]interface{}), map[string]interface{}{
-					"filter": name,
-				})
 		}
 	}
 	// Save the config file
