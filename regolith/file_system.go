@@ -808,9 +808,9 @@ func MoveOrCopy(
 	}
 	// Move the source to the destination
 	if err := move(source, destination); err != nil {
-		Logger.Warnf(
+		Logger.Debugf(
 			"Failed to move files.\n\tSource: %s\n\tTarget: %s\n"+
-				"This error is not critical. Trying to copy files instead...",
+				"Trying to copy files instead...",
 			filepath.Clean(source), filepath.Clean(destination))
 		copyOptions := copy.Options{PreserveTimes: false, Sync: false}
 		err := copy.Copy(source, destination, copyOptions)
