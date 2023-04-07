@@ -181,17 +181,26 @@ func ExportProject(
 		}
 		// Clear export target
 		targetPath := filepath.Join(dataPath, path.Name())
-		err = revertibleOps.DeleteDir(targetPath)
-		if err != nil {
-			handlerError := revertibleOps.Undo()
-			mainError := burrito.WrapErrorf(err, updateSourceFilesError, targetPath)
-			if handlerError != nil {
-				return burrito.GroupErrors(mainError, burrito.WrapError(handlerError, fsUndoError))
+		if _, err := os.Stat(targetPath); err == nil {
+			err = revertibleOps.DeleteDir(targetPath)
+			if err != nil {
+				handlerError := revertibleOps.Undo()
+				mainError := burrito.WrapErrorf(err, updateSourceFilesError, targetPath)
+				if handlerError != nil {
+					return burrito.GroupErrors(mainError, burrito.WrapError(handlerError, fsUndoError))
+				}
+				if handlerError := revertibleOps.Close(); handlerError != nil {
+					return burrito.GroupErrors(mainError, handlerError)
+				}
+				return mainError
 			}
-			if handlerError := revertibleOps.Close(); handlerError != nil {
-				return burrito.GroupErrors(mainError, handlerError)
+		} else if os.IsNotExist(err) {
+			err = os.MkdirAll(targetPath, 0755)
+			if err != nil {
+				return burrito.WrapErrorf(err, osMkdirError, targetPath)
 			}
-			return mainError
+		} else {
+			return burrito.WrapErrorf(err, osStatErrorAny, targetPath)
 		}
 		// Copy data
 		sourcePath := filepath.Join(dotRegolithPath, "tmp/data", path.Name())
