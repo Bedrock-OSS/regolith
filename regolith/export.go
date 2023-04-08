@@ -3,6 +3,7 @@ package regolith
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
@@ -138,7 +139,7 @@ func ExportProject(
 				"Are user permissions correct?", rpPath)
 	}
 	// List the names of the filters that opt-in to the data export process
-	exportPaths := make(map[string]struct{})
+	exportedFilterNames := []string{}
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
 		usingDataPath, err := filter.IsUsingDataExport(dotRegolithPath)
@@ -149,13 +150,25 @@ func ExportProject(
 					"Path: %s", filter.GetId())
 		}
 		if usingDataPath {
-			exportPaths[filter.GetId()] = struct{}{}
+			// Make sure that the filter name isn't a path that tries to access
+			// files outside of the data path.
+			filterName := filter.GetId()
+			for _, forbidden := range []string{"..", "/", "\\", ":"} {
+				if strings.Contains(filterName, forbidden) {
+					// Other cases should be handled by mkdirAll
+					return burrito.WrappedErrorf(
+						"Filter name %q contains %q which is not allowed.",
+						filterName, forbidden)
+				}
+			}
+			// Add the filter name to the list of paths to export
+			exportedFilterNames = append(exportedFilterNames, filter.GetId())
 		}
 	}
 	// The root of the data path cannot be deleted because the
 	// "regolith watch" function would stop watching the file changes
 	// (due to Windows API limitation).
-	paths, err := os.ReadDir(dataPath)
+	_, err = os.ReadDir(dataPath)
 	if err != nil {
 		var err1 error = nil
 		if os.IsNotExist(err) {
@@ -174,13 +187,9 @@ func ExportProject(
 		return burrito.WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
 	// Export data
-	for _, path := range paths {
-		if _, ok := exportPaths[path.Name()]; !ok {
-			// Skip the paths that are not on the list
-			continue
-		}
+	for _, exportedFilterName := range exportedFilterNames {
 		// Clear export target
-		targetPath := filepath.Join(dataPath, path.Name())
+		targetPath := filepath.Join(dataPath, exportedFilterName)
 		if _, err := os.Stat(targetPath); err == nil {
 			err = revertibleOps.DeleteDir(targetPath)
 			if err != nil {
@@ -203,7 +212,7 @@ func ExportProject(
 			return burrito.WrapErrorf(err, osStatErrorAny, targetPath)
 		}
 		// Copy data
-		sourcePath := filepath.Join(dotRegolithPath, "tmp/data", path.Name())
+		sourcePath := filepath.Join(dotRegolithPath, "tmp/data", exportedFilterName)
 		err = revertibleOps.MoveOrCopyDir(sourcePath, targetPath)
 		if err != nil {
 			handlerError := revertibleOps.Undo()
