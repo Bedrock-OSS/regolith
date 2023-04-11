@@ -38,15 +38,7 @@ func LoadConfigAsMap() (map[string]interface{}, error) {
 // dataPathFromConfigMap returns the value of the data path from the config
 // file map, without parsing it to a Config object.
 func dataPathFromConfigMap(config map[string]interface{}) (string, error) {
-	regolith, ok := config["regolith"].(map[string]interface{})
-	if !ok {
-		return "", burrito.WrappedErrorf(jsonPathMissingError, "regolith")
-	}
-	dataPath, ok := regolith["dataPath"].(string)
-	if !ok {
-		return "", burrito.WrappedErrorf(jsonPathMissingError, "regolith->dataPath")
-	}
-	return dataPath, nil
+	return FindByJSONPath[string](config, "regolith/dataPath")
 }
 
 // filterDefinitionFromConfigMap returns the filter definitions as map from
@@ -54,33 +46,11 @@ func dataPathFromConfigMap(config map[string]interface{}) (string, error) {
 func filterDefinitionsFromConfigMap(
 	config map[string]interface{},
 ) (map[string]interface{}, error) {
-	regolith, ok := config["regolith"].(map[string]interface{})
-	if !ok {
-		return nil, burrito.WrappedErrorf(jsonPathMissingError, "regolith")
-	}
-	filterDefinitions, ok := regolith["filterDefinitions"].(map[string]interface{})
-	if !ok {
-		return nil, burrito.WrappedErrorf(
-			jsonPathMissingError, "regolith->filterDefinitions")
-	}
-	return filterDefinitions, nil
+	return FindByJSONPath[map[string]interface{}](config, "regolith/filterDefinitions")
 }
 
 // useAppDataFromConfigMap returns the useAppData value from the config file
 // map, without parsing it to a Config object.
 func useAppDataFromConfigMap(config map[string]interface{}) (bool, error) {
-	regolith, ok := config["regolith"].(map[string]interface{})
-	if !ok {
-		return false, burrito.WrappedErrorf(jsonPathMissingError, "regolith")
-	}
-	filterDefinitionsInterface, ok := regolith["useAppData"]
-	if !ok { // false by default
-		return false, nil
-	}
-	filterDefinitions, ok := filterDefinitionsInterface.(bool)
-	if !ok {
-		return false, burrito.WrappedErrorf(
-			jsonPathTypeError, "regolith->useAppData", "bool")
-	}
-	return filterDefinitions, nil
+	return FindByJSONPath[bool](config, "regolith/useAppData")
 }

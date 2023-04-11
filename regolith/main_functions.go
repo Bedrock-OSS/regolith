@@ -37,7 +37,7 @@ var disallowedFiles = []string{
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Install(filters []string, force, refreshResolvers, debug bool) error {
+func Install(filters []string, force, refreshResolvers, add bool, profiles []string, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -46,6 +46,20 @@ func Install(filters []string, force, refreshResolvers, debug bool) error {
 	config, err := LoadConfigAsMap()
 	if err != nil {
 		return burrito.WrapError(err, "Unable to load config file.")
+	}
+	// Check if selected profiles exist
+	if add {
+		if len(profiles) == 0 {
+			profiles = []string{"default"}
+		}
+		// Get the profile
+		for _, profile := range profiles {
+			_, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Profile %s does not exist or is invalid.", profile)
+			}
+		}
 	}
 	// Get parts of config file required for installation
 	dataPath, err := dataPathFromConfigMap(config)
@@ -121,6 +135,25 @@ func Install(filters []string, force, refreshResolvers, debug bool) error {
 	for name, downloadedFilter := range filterInstallers {
 		// Add the filter to config file
 		filterDefinitions[name] = downloadedFilter
+		if add {
+			// Add the filter to the profile
+			for _, profile := range profiles {
+				profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
+				// This check here is not necessary, because we have identical one at the beginning, but better to be safe
+				if err != nil {
+					return burrito.WrapErrorf(
+						err, "Profile %s does not exist or is invalid.", profile)
+				}
+				if profileMap["filters"] == nil {
+					profileMap["filters"] = make([]interface{}, 0)
+				}
+				// Add the filter to the profile
+				profileMap["filters"] = append(
+					profileMap["filters"].([]interface{}), map[string]interface{}{
+						"filter": name,
+					})
+			}
+		}
 	}
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "\t")
@@ -692,16 +725,16 @@ func manageUserConfigDelete(debug bool, index int, key string) error {
 
 // ManageConfig handles the "regolith config" command. It can modify or
 // print the user configuration
-// - debug - print debug messages
-// - global - modify global configuration
-// - local - modify local configuration
-// - delete - delete the specified value
-// - append - append a value to an array property of the configuration. Applies
-//   only to the array properties
-// - index - the index of the value to modify. Applies only to the array
-//   properties
-// - args - the arguments of the command, the length of the list must be 0, 1
-//   or 2. The length determines the action of the command.
+//   - debug - print debug messages
+//   - global - modify global configuration
+//   - local - modify local configuration
+//   - delete - delete the specified value
+//   - append - append a value to an array property of the configuration. Applies
+//     only to the array properties
+//   - index - the index of the value to modify. Applies only to the array
+//     properties
+//   - args - the arguments of the command, the length of the list must be 0, 1
+//     or 2. The length determines the action of the command.
 func ManageConfig(debug, full, delete, append bool, index int, args []string) error {
 	InitLogging(debug)
 

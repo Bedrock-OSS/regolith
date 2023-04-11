@@ -218,6 +218,7 @@ func main() {
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
 	subcommands = append(subcommands, cmdInit)
 
+	profiles := []string{"default"}
 	// regolith install
 	var update, resolverRefresh bool
 	cmdInstall := &cobra.Command{
@@ -229,7 +230,7 @@ func main() {
 				cmd.Help()
 				return
 			}
-			err = regolith.Install(filters, force || update, resolverRefresh, burrito.PrintStackTrace)
+			err = regolith.Install(filters, force || update, resolverRefresh, cmd.Flags().Lookup("profile").Changed, profiles, burrito.PrintStackTrace)
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
@@ -238,6 +239,8 @@ func main() {
 		&resolverRefresh, "force-resolver-refresh", false, "Force resolvers refresh.")
 	cmdInstall.Flags().BoolVarP(
 		&force, "update", "u", false, "An alias for --force flag. Use this flag to update filters.")
+	cmdInstall.Flags().StringSliceVarP(&profiles, "profile", "p", profiles, "Adds installed filters to the specified profiles. If no profile is provided, the filter will be added to the default profile.")
+	cmdInstall.Flags().Lookup("profile").NoOptDefVal = "default"
 	subcommands = append(subcommands, cmdInstall)
 
 	// regolith install-all
