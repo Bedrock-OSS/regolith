@@ -50,6 +50,34 @@ func TestSimplePath3(t *testing.T) {
 	}
 }
 
+func TestEscapedPath(t *testing.T) {
+	obj := map[string]interface{}{
+		"fo/o": "bar",
+	}
+	expected := "bar"
+	actual, err := regolith.FindByJSONPath[string](obj, "fo\\/o")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if actual != expected {
+		t.Fatalf("Expected %v, got %v", expected, actual)
+	}
+}
+
+func TestEscapedPath2(t *testing.T) {
+	obj := map[string]interface{}{
+		"fo/o": "bar",
+	}
+	expected := "bar"
+	actual, err := regolith.FindByJSONPath[string](obj, regolith.EscapePathPart("fo/o"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if actual != expected {
+		t.Fatalf("Expected %v, got %v", expected, actual)
+	}
+}
+
 func TestInvalidPath(t *testing.T) {
 	obj := map[string]interface{}{
 		"foo": map[string]interface{}{
