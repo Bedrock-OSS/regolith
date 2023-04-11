@@ -381,19 +381,3 @@ func FindByJSONPath[T any](obj interface{}, path string) (T, error) {
 	}
 	return empty, burrito.WrappedErrorf(jsonPathTypeError, path, reflect.TypeOf(empty).String())
 }
-
-func FindStringByJSONPath(obj interface{}, path string) (string, error) {
-	return FindByJSONPath[string](obj, path)
-}
-
-func FindObjectByJSONPath(obj interface{}, path string) (map[string]interface{}, error) {
-	return FindByJSONPath[map[string]interface{}](obj, path)
-}
-
-func FindArrayByJSONPath(obj interface{}, path string) ([]interface{}, error) {
-	return FindByJSONPath[[]interface{}](obj, path)
-}
-
-func FindBoolByJSONPath(obj interface{}, path string) (bool, error) {
-	return FindByJSONPath[bool](obj, path)
-}

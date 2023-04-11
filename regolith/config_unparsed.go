@@ -38,7 +38,7 @@ func LoadConfigAsMap() (map[string]interface{}, error) {
 // dataPathFromConfigMap returns the value of the data path from the config
 // file map, without parsing it to a Config object.
 func dataPathFromConfigMap(config map[string]interface{}) (string, error) {
-	return FindStringByJSONPath(config, "regolith/dataPath")
+	return FindByJSONPath[string](config, "regolith/dataPath")
 }
 
 // filterDefinitionFromConfigMap returns the filter definitions as map from
@@ -46,11 +46,11 @@ func dataPathFromConfigMap(config map[string]interface{}) (string, error) {
 func filterDefinitionsFromConfigMap(
 	config map[string]interface{},
 ) (map[string]interface{}, error) {
-	return FindObjectByJSONPath(config, "regolith/filterDefinitions")
+	return FindByJSONPath[map[string]interface{}](config, "regolith/filterDefinitions")
 }
 
 // useAppDataFromConfigMap returns the useAppData value from the config file
 // map, without parsing it to a Config object.
 func useAppDataFromConfigMap(config map[string]interface{}) (bool, error) {
-	return FindBoolByJSONPath(config, "regolith/useAppData")
+	return FindByJSONPath[bool](config, "regolith/useAppData")
 }
