@@ -54,7 +54,7 @@ func Install(filters []string, force, refreshResolvers, add bool, profiles []str
 		}
 		// Get the profile
 		for _, profile := range profiles {
-			_, err := FindObjectByJSONPath(config, "regolith/profiles/"+profile)
+			_, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+profile)
 			if err != nil {
 				return burrito.WrapErrorf(
 					err, "Profile %s does not exist or is invalid.", profile)
@@ -138,7 +138,7 @@ func Install(filters []string, force, refreshResolvers, add bool, profiles []str
 		if add {
 			// Add the filter to the profile
 			for _, profile := range profiles {
-				profileMap, err := FindObjectByJSONPath(config, "regolith/profiles/"+profile)
+				profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+profile)
 				// This check here is not necessary, because we have identical one at the beginning, but better to be safe
 				if err != nil {
 					return burrito.WrapErrorf(
@@ -725,16 +725,16 @@ func manageUserConfigDelete(debug bool, index int, key string) error {
 
 // ManageConfig handles the "regolith config" command. It can modify or
 // print the user configuration
-// - debug - print debug messages
-// - global - modify global configuration
-// - local - modify local configuration
-// - delete - delete the specified value
-// - append - append a value to an array property of the configuration. Applies
-//   only to the array properties
-// - index - the index of the value to modify. Applies only to the array
-//   properties
-// - args - the arguments of the command, the length of the list must be 0, 1
-//   or 2. The length determines the action of the command.
+//   - debug - print debug messages
+//   - global - modify global configuration
+//   - local - modify local configuration
+//   - delete - delete the specified value
+//   - append - append a value to an array property of the configuration. Applies
+//     only to the array properties
+//   - index - the index of the value to modify. Applies only to the array
+//     properties
+//   - args - the arguments of the command, the length of the list must be 0, 1
+//     or 2. The length determines the action of the command.
 func ManageConfig(debug, full, delete, append bool, index int, args []string) error {
 	InitLogging(debug)
 
