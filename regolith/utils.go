@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -334,4 +335,98 @@ func stringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
+}
+
+// FindByJSONPath finds a value in a JSON element by a simple path. Returns nil and an error if the path is not found or invalid.
+func FindByJSONPath[T any](obj interface{}, path string) (T, error) {
+	var empty T
+	if obj == nil {
+		return empty, burrito.WrappedErrorf("Object is empty")
+	}
+	// Split the path into parts
+	parts, err := splitEscapedString(path)
+	if err != nil {
+		return empty, burrito.WrapErrorf(err, "Invalid path %s", path)
+	}
+	// Find the value
+	value := obj
+	currentPath := ""
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		currentPath += part + "->"
+		if m, ok := value.(map[string]interface{}); ok {
+			value = m[part]
+			if value == nil {
+				return empty, burrito.WrappedErrorf(jsonPathMissingError, currentPath[:len(currentPath)-2])
+			}
+			continue
+		}
+		if a, ok := value.([]interface{}); ok {
+			index, err := strconv.Atoi(part)
+			if err != nil {
+				return empty, burrito.WrapErrorf(err, "Invalid index %s at %s", part, currentPath[:len(currentPath)-2])
+			}
+			if index < 0 || index >= len(a) {
+				return empty, burrito.WrappedErrorf("Index %i is out of bounds at %s", index, currentPath[:len(currentPath)-2])
+			}
+			value = a[index]
+			if value == nil {
+				return empty, burrito.WrappedErrorf(jsonPathMissingError, currentPath[:len(currentPath)-2])
+			}
+			continue
+		}
+		return empty, burrito.WrappedErrorf(jsonPathTypeError, currentPath[:len(currentPath)-2], "object or array")
+	}
+	if s, ok := value.(T); ok {
+		return s, nil
+	}
+	return empty, burrito.WrappedErrorf(jsonPathTypeError, path, reflect.TypeOf(empty).String())
+}
+
+func splitEscapedString(s string) ([]string, error) {
+	parts := make([]string, 0)
+	var sb strings.Builder
+	escape := false
+	for _, c := range s {
+		if escape {
+			if c != '\\' && c != '/' {
+				return nil, burrito.WrappedErrorf("Invalid escape sequence \\%c", c)
+			}
+			sb.WriteRune(c)
+			escape = false
+			continue
+		}
+		if c == '\\' {
+			escape = true
+			continue
+		}
+		if c == '/' {
+			if sb.String() != "" {
+				parts = append(parts, sb.String())
+			}
+			sb.Reset()
+			continue
+		}
+		sb.WriteRune(c)
+	}
+	if escape {
+		return nil, burrito.WrappedErrorf("Invalid escape sequence \\")
+	}
+	if sb.String() != "" {
+		parts = append(parts, sb.String())
+	}
+	return parts, nil
+}
+
+func EscapePathPart(s string) string {
+	var sb strings.Builder
+	for _, c := range s {
+		if c == '\\' || c == '/' {
+			sb.WriteRune('\\')
+		}
+		sb.WriteRune(c)
+	}
+	return sb.String()
 }
