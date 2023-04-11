@@ -54,7 +54,7 @@ func Install(filters []string, force, refreshResolvers, add bool, profiles []str
 		}
 		// Get the profile
 		for _, profile := range profiles {
-			_, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+profile)
+			_, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
 			if err != nil {
 				return burrito.WrapErrorf(
 					err, "Profile %s does not exist or is invalid.", profile)
@@ -138,7 +138,7 @@ func Install(filters []string, force, refreshResolvers, add bool, profiles []str
 		if add {
 			// Add the filter to the profile
 			for _, profile := range profiles {
-				profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+profile)
+				profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
 				// This check here is not necessary, because we have identical one at the beginning, but better to be safe
 				if err != nil {
 					return burrito.WrapErrorf(
