@@ -27,6 +27,10 @@ const appDataProjectCachePath = "regolith/project-cache"
 // app data
 const appDataResolverCachePath = "regolith/resolver-cache"
 
+// appDataResolverCachePath is a path to the resolver cache directory relative to the user's
+// app data
+const appDataFilterCachePath = "regolith/filter-cache"
+
 var Version = "unversioned"
 
 // nth returns the ordinal numeral of the index of a table. For example:
@@ -165,6 +169,11 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 // getResolverCache gets the dotRegolithPath from th app data folder
 func getResolverCache(resolver string) (string, error) {
 	return getAppDataCachePath(appDataResolverCachePath, resolver)
+}
+
+// getResolverCache gets the dotRegolithPath from th app data folder
+func getFilterCache(url string) (string, error) {
+	return getAppDataCachePath(appDataFilterCachePath, url)
 }
 
 // getAppDataCachePath gets the dotRegolithPath from th app data folder

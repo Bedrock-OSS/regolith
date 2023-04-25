@@ -7,10 +7,10 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 
-	"github.com/hashicorp/go-getter"
 	"github.com/otiai10/copy"
 )
 
@@ -383,24 +383,26 @@ func (f *RemoteFilterDefinition) Download(
 		return burrito.WrapErrorf(
 			err, getRemoteFilterDownloadRefError, f.Url, f.Id, f.Version)
 	}
-	url := fmt.Sprintf("git::https://%s//%s?ref=%s", f.Url, f.Id, repoVersion)
+	url := fmt.Sprintf("https://%s", f.Url)
 	downloadPath := f.GetDownloadPath(dotRegolithPath)
 
 	_, err = os.Stat(downloadPath)
 	downloadPathIsNew := os.IsNotExist(err)
-	MeasureStart("go-getter Get")
-	err = getter.Get(downloadPath, url)
+	err = downloadFilterRepository(downloadPath, url, repoVersion, f.Id, true)
 	if err != nil {
 		if downloadPathIsNew { // Remove the path created by getter
 			os.Remove(downloadPath)
 		}
 		return burrito.WrapErrorf(
 			err, "Could not download filter from %s.\n"+
-				"Does that filter exist?", url)
+				"Does that filter exist?", f.Url)
 	}
 	// Save the version of the filter we downloaded
 	MeasureStart("Save version info")
-	f.SaveVersionInfo(trimFilterPrefix(repoVersion, f.Id), dotRegolithPath)
+	err = f.SaveVersionInfo(trimFilterPrefix(repoVersion, f.Id), dotRegolithPath)
+	if err != nil {
+		return burrito.PassError(err)
+	}
 	MeasureEnd()
 	// Remove 'test' folder, which we never want to use (saves space on disk)
 	testFolder := path.Join(downloadPath, "test")
@@ -409,6 +411,61 @@ func (f *RemoteFilterDefinition) Download(
 	}
 
 	Logger.Infof("Filter \"%s\" downloaded successfully.", f.Id)
+	return nil
+}
+
+func downloadFilterRepository(downloadPath, url, ref, filter string, forceUpdate bool) error {
+	cache, err := getFilterCache(url)
+	if err != nil {
+		return burrito.WrapErrorf(err, "Could not get cache path for %s", url)
+	}
+	// Check if exists in cache
+clone:
+	if _, err := os.Stat(cache); err != nil && os.IsNotExist(err) {
+		err := os.MkdirAll(cache, 0755)
+		if err != nil {
+			return burrito.WrapErrorf(err, osMkdirError, cache)
+		}
+		// Clone the repository
+		MeasureStart("Clone repository %s", url)
+		output, err := RunGitProcess([]string{"clone", url, "."}, cache)
+		if err != nil {
+			Logger.Error(strings.Join(output, "\n"))
+			return burrito.WrapErrorf(err, "Failed to clone repository.\nURL: %s", url)
+		}
+		forceUpdate = false
+	} else if err != nil {
+		return burrito.WrapErrorf(err, osStatErrorAny, cache)
+	}
+	if forceUpdate {
+		// Fetch the repository
+		MeasureStart("Fetch repository %s", url)
+		output, err := RunGitProcess([]string{"fetch"}, cache)
+		if err != nil {
+			Logger.Error(strings.Join(output, "\n"))
+			Logger.Errorf("Failed to fetch repository.\nURL: %s", url)
+			Logger.Infof("Trying to clone the repository instead...")
+			err := os.RemoveAll(cache)
+			if err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, cache)
+			}
+			goto clone
+		}
+	}
+	// Checkout the specified ref
+	MeasureStart("Checkout ref %s", ref)
+	output, err := RunGitProcess([]string{"checkout", ref}, cache)
+	if err != nil {
+		Logger.Error(strings.Join(output, "\n"))
+		return burrito.WrapErrorf(err, "Failed to checkout ref.\nURL: %s\nRef: %s", url, ref)
+	}
+	// Copy to download path
+	MeasureStart("Copy to download path %s", downloadPath)
+	err = copy.Copy(filepath.Join(cache, filter), downloadPath)
+	if err != nil {
+		return burrito.WrapErrorf(err, osCopyError, filepath.Join(cache, filter), downloadPath)
+	}
+	MeasureEnd()
 	return nil
 }
 
