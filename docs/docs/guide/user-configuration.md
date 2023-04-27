@@ -34,6 +34,12 @@ Default: `"5m"`
 
 The cooldown between cache updates for the resolvers. The cooldown is specified in the [Go duration format](https://pkg.go.dev/time#ParseDuration).
 
+### `filter_cache_update_cooldown: string`
+
+Default: `"5m"`
+
+The cooldown between cache updates for the filters. The cooldown is specified in the [Go duration format](https://pkg.go.dev/time#ParseDuration).
+
 ## The `regolith config` command
 
 The `regolith config` command is used to manage the user configuration of Regolith. It can access and modify
