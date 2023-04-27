@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 
@@ -355,7 +356,7 @@ func FilterDefinitionFromTheInternet(
 
 // Download
 func (f *RemoteFilterDefinition) Download(
-	isForced bool, dotRegolithPath string,
+	isForced bool, dotRegolithPath string, refreshFilters bool,
 ) error {
 	if _, err := os.Stat(f.GetDownloadPath(dotRegolithPath)); err == nil {
 		if !isForced {
@@ -388,7 +389,7 @@ func (f *RemoteFilterDefinition) Download(
 
 	_, err = os.Stat(downloadPath)
 	downloadPathIsNew := os.IsNotExist(err)
-	err = downloadFilterRepository(downloadPath, url, repoVersion, f.Id, true)
+	err = downloadFilterRepository(downloadPath, url, repoVersion, f.Id, refreshFilters)
 	if err != nil {
 		if downloadPathIsNew { // Remove the path created by getter
 			os.Remove(downloadPath)
@@ -415,6 +416,17 @@ func (f *RemoteFilterDefinition) Download(
 }
 
 func downloadFilterRepository(downloadPath, url, ref, filter string, forceUpdate bool) error {
+	globalUserConfig, err := getGlobalUserConfig()
+	globalUserConfig.fillDefaults() // The file must have the default resolver URL
+	if err != nil {
+		return burrito.WrapError(err, getUserConfigError)
+	}
+	config, err := getCombinedUserConfig()
+	if err != nil {
+		return burrito.WrapErrorf(err, getUserConfigError)
+	}
+	cooldown, err := time.ParseDuration(*config.ResolverCacheUpdateCooldown)
+
 	cache, err := getFilterCache(url)
 	if err != nil {
 		return burrito.WrapErrorf(err, "Could not get cache path for %s", url)
@@ -437,7 +449,8 @@ clone:
 	} else if err != nil {
 		return burrito.WrapErrorf(err, osStatErrorAny, cache)
 	}
-	if forceUpdate {
+	info, _ := os.Stat(cache)
+	if forceUpdate || info.ModTime().Before(time.Now().Add(cooldown*-1)) {
 		// Fetch the repository
 		MeasureStart("Fetch repository %s", url)
 		output, err := RunGitProcess([]string{"fetch"}, cache)
@@ -450,6 +463,10 @@ clone:
 				return burrito.WrapErrorf(err, osRemoveError, cache)
 			}
 			goto clone
+		}
+		err = os.Chtimes(cache, time.Now(), time.Now())
+		if err != nil {
+			Logger.Debugf(osChtimesError, cache)
 		}
 	}
 	// Checkout the specified ref
@@ -518,7 +535,7 @@ func (f *RemoteFilterDefinition) InstalledVersion(dotRegolithPath string) (strin
 	return versionStr, nil
 }
 
-func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, isInstall bool) error {
+func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, isInstall, refreshFilters bool) error {
 	installedVersion, err := f.InstalledVersion(dotRegolithPath)
 	installedVersion = trimFilterPrefix(installedVersion, f.Id)
 	if err != nil && (!isInstall || force) {
@@ -536,7 +553,7 @@ func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, isIn
 		Logger.Infof(
 			"Updating filter %q to new version: %q->%q.",
 			f.Id, installedVersion, version)
-		err = f.Download(true, dotRegolithPath)
+		err = f.Download(true, dotRegolithPath, refreshFilters)
 		if err != nil {
 			return burrito.PassError(err)
 		}

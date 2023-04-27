@@ -39,6 +39,9 @@ type UserConfig struct {
 
 	// ResolverCacheUpdateCooldown is a cooldown duration, to not update resolver cache too often.
 	ResolverCacheUpdateCooldown *string `json:"resolver_cache_update_cooldown,omitempty"`
+
+	// FilterCacheUpdateCooldown is a cooldown duration, to not update resolver cache too often.
+	FilterCacheUpdateCooldown *string `json:"filter_cache_update_cooldown,omitempty"`
 }
 
 func NewUserConfig() *UserConfig {
@@ -47,6 +50,7 @@ func NewUserConfig() *UserConfig {
 		Username:                    nil,
 		Resolvers:                   []string{},
 		ResolverCacheUpdateCooldown: nil,
+		FilterCacheUpdateCooldown:   nil,
 	}
 }
 
@@ -57,6 +61,8 @@ func (u *UserConfig) String() string {
 	extra, _ = u.stringPropertyValue("resolvers")
 	result += "\n" + extra
 	extra, _ = u.stringPropertyValue("resolver_cache_update_cooldown")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("filter_cache_update_cooldown")
 	result += "\n" + extra
 	return result
 }
@@ -88,10 +94,16 @@ func (u *UserConfig) stringPropertyValue(name string) (string, error) {
 		return result, nil
 	case "resolver_cache_update_cooldown":
 		value := "null"
-		if u.Username != nil {
+		if u.ResolverCacheUpdateCooldown != nil {
 			value = fmt.Sprintf("%v", *u.ResolverCacheUpdateCooldown)
 		}
 		return fmt.Sprintf("resolver_cache_update_cooldown: %v", value), nil
+	case "filter_cache_update_cooldown":
+		value := "null"
+		if u.FilterCacheUpdateCooldown != nil {
+			value = fmt.Sprintf("%v", *u.FilterCacheUpdateCooldown)
+		}
+		return fmt.Sprintf("filter_cache_update_cooldown: %v", value), nil
 	}
 	return "", burrito.WrapErrorf(nil, invalidUserConfigPropertyError, name)
 }
@@ -109,6 +121,10 @@ func (u *UserConfig) fillDefaults() {
 	if u.ResolverCacheUpdateCooldown == nil {
 		u.ResolverCacheUpdateCooldown = new(string)
 		*u.ResolverCacheUpdateCooldown = "5m"
+	}
+	if u.FilterCacheUpdateCooldown == nil {
+		u.FilterCacheUpdateCooldown = new(string)
+		*u.FilterCacheUpdateCooldown = "5m"
 	}
 	// Make sure resolvers is not nil and append the default resolver
 	if u.Resolvers == nil {

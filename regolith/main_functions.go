@@ -37,7 +37,7 @@ var disallowedFiles = []string{
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Install(filters []string, force, refreshResolvers, add bool, profiles []string, debug bool) error {
+func Install(filters []string, force, refreshResolvers, refreshFilters, add bool, profiles []string, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -127,7 +127,7 @@ func Install(filters []string, force, refreshResolvers, add bool, profiles []str
 	}
 	// Download the filter definitions
 	err = installFilters(
-		filterInstallers, force, dataPath, dotRegolithPath, true)
+		filterInstallers, force, dataPath, dotRegolithPath, true, refreshFilters)
 	if err != nil {
 		return burrito.WrapError(err, "Failed to install filters.")
 	}
@@ -179,7 +179,7 @@ func Install(filters []string, force, refreshResolvers, add bool, profiles []str
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func InstallAll(force, debug bool) error {
+func InstallAll(force, debug, refreshFilters bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -204,7 +204,7 @@ func InstallAll(force, debug bool) error {
 	defer func() { sessionLockErr = unlockSession() }()
 	// Install the filters
 	err = installFilters(
-		config.FilterDefinitions, force, config.DataPath, dotRegolithPath, false)
+		config.FilterDefinitions, force, config.DataPath, dotRegolithPath, false, refreshFilters)
 	if err != nil {
 		return burrito.WrapError(err, "Could not install filters.")
 	}
@@ -650,6 +650,16 @@ func manageUserConfigEdit(debug bool, index int, key, value string) error {
 				"\tValue: %s", value)
 		}
 		userConfig.ResolverCacheUpdateCooldown = &value
+	case "filter_cache_update_cooldown":
+		if index != -1 {
+			return burrito.WrappedError("Cannot use --index with non-array property.")
+		}
+		_, err = time.ParseDuration(value)
+		if err != nil {
+			return burrito.WrapErrorf(err, "Invalid value for duration property.\n"+
+				"\tValue: %s", value)
+		}
+		userConfig.FilterCacheUpdateCooldown = &value
 	case "resolvers":
 		if index == -1 {
 			userConfig.Resolvers = append(userConfig.Resolvers, value)
