@@ -28,7 +28,7 @@ type parsedInstallFilterArg struct {
 // it returns an error unless the force flag is set.
 func installFilters(
 	filterDefinitions map[string]FilterInstaller, force bool,
-	dataPath, dotRegolithPath string, isInstall bool,
+	dataPath, dotRegolithPath string, isInstall, refreshFilters bool,
 ) error {
 	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
 	err := CreateDirectoryIfNotExists(joinedPath)
@@ -46,7 +46,7 @@ func installFilters(
 		Logger.Infof("Downloading %q filter...", name)
 		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
 			// Download the remote filter, and its dependencies
-			err := remoteFilter.Update(force, dotRegolithPath, isInstall)
+			err := remoteFilter.Update(force, dotRegolithPath, isInstall, refreshFilters)
 			if err != nil {
 				return burrito.WrapErrorf(err, remoteFilterDownloadError, name)
 			}
