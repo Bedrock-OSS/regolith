@@ -453,7 +453,7 @@ clone:
 	if forceUpdate || info.ModTime().Before(time.Now().Add(cooldown*-1)) {
 		// Fetch the repository
 		MeasureStart("Fetch repository %s", url)
-		output, err := RunGitProcess([]string{"fetch"}, cache)
+		output, err := RunGitProcess([]string{"fetch", "--tags"}, cache)
 		if err != nil {
 			Logger.Error(strings.Join(output, "\n"))
 			Logger.Errorf("Failed to fetch repository.\nURL: %s", url)
