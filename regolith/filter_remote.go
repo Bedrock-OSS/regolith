@@ -453,7 +453,24 @@ clone:
 	if forceUpdate || info.ModTime().Before(time.Now().Add(cooldown*-1)) {
 		// Fetch the repository
 		MeasureStart("Fetch repository %s", url)
-		output, err := RunGitProcess([]string{"fetch", "--tags"}, cache)
+		output, err := RunGitProcess([]string{"fetch"}, cache)
+		if err != nil {
+			Logger.Error(strings.Join(output, "\n"))
+			Logger.Errorf("Failed to fetch repository.\nURL: %s", url)
+			Logger.Infof("Trying to clone the repository instead...")
+			err := os.RemoveAll(cache)
+			if err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, cache)
+			}
+			goto clone
+		}
+		err = os.Chtimes(cache, time.Now(), time.Now())
+		if err != nil {
+			Logger.Debugf(osChtimesError, cache)
+		}
+		// Fetch the repository
+		MeasureStart("Fetch repository tags %s", url)
+		output, err = RunGitProcess([]string{"fetch", "--tags"}, cache)
 		if err != nil {
 			Logger.Error(strings.Join(output, "\n"))
 			Logger.Errorf("Failed to fetch repository.\nURL: %s", url)
