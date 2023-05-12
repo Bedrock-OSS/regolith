@@ -211,8 +211,12 @@ func ExportProject(
 		} else {
 			return burrito.WrapErrorf(err, osStatErrorAny, targetPath)
 		}
-		// Copy data
 		sourcePath := filepath.Join(dotRegolithPath, "tmp/data", exportedFilterName)
+		// If source path doesn't exist, skip
+		if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+			continue
+		}
+		// Copy data
 		err = revertibleOps.MoveOrCopyDir(sourcePath, targetPath)
 		if err != nil {
 			handlerError := revertibleOps.Undo()

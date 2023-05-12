@@ -292,10 +292,20 @@ func (r *revertibleFsOperations) MoveOrCopyDir(source, target string) error {
 			return burrito.WrappedErrorf(assertEmptyOrNewDirError, fullTargetPath)
 		} // else we can continue
 	}
+	// Make sure that the source path exists
+	if _, err := os.Stat(source); err != nil {
+		if os.IsNotExist(err) {
+			return burrito.WrapErrorf(err, osStatErrorIsNotExist, source)
+		}
+		return burrito.WrapErrorf(err, osStatErrorAny, source)
+	}
 
 	// Loop source, move files from source to target and create directories
 	err = PostorderWalkDir(
 		source, func(currSourcePath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return burrito.WrapErrorf(err, osWalkError, source)
+			}
 			sourceRelativePath, err := filepath.Rel(source, currSourcePath)
 			if err != nil {
 				return burrito.WrapErrorf(
