@@ -296,6 +296,9 @@ func (r *revertibleFsOperations) MoveOrCopyDir(source, target string) error {
 	// Loop source, move files from source to target and create directories
 	err = PostorderWalkDir(
 		source, func(currSourcePath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return burrito.WrapErrorf(err, osWalkError, source)
+			}
 			sourceRelativePath, err := filepath.Rel(source, currSourcePath)
 			if err != nil {
 				return burrito.WrapErrorf(
