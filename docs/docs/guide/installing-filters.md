@@ -115,7 +115,7 @@ regolith install name_ninja --force-resolver-update
 
 ### Updating filter cache
 
-Regolith caches the filter repository when you install online filters. By default, the repository cache is updated every 5 minutes. 
+Regolith caches the filter repository when you install online filters. To avoid unnecessary frequent updates, Regolith skips them for installations that occur less than 5 minutes after the last update.
 However, if you need to update the cache immediately, you can use the `--force-filter-update` flag while installing a filter.
 
 ```bash

@@ -416,11 +416,6 @@ func (f *RemoteFilterDefinition) Download(
 }
 
 func downloadFilterRepository(downloadPath, url, ref, filter string, forceUpdate bool) error {
-	globalUserConfig, err := getGlobalUserConfig()
-	globalUserConfig.fillDefaults() // The file must have the default resolver URL
-	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
-	}
 	config, err := getCombinedUserConfig()
 	if err != nil {
 		return burrito.WrapErrorf(err, getUserConfigError)
