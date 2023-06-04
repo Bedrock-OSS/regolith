@@ -533,15 +533,35 @@ func CleanUserCache() error {
 	return nil
 }
 
+func CleanFilterCache() error {
+	Logger.Infof("Cleaning Regolith filter cache files from user app data...")
+	// App data enabled - use user cache dir
+	userCache, err := os.UserCacheDir()
+	if err != nil {
+		return burrito.WrappedError(osUserCacheDirError)
+	}
+	regolithCacheFiles := filepath.Join(userCache, appDataFilterCachePath)
+	Logger.Infof("Regolith cache files are located in: %s", regolithCacheFiles)
+	err = os.RemoveAll(regolithCacheFiles)
+	if err != nil {
+		return burrito.WrapErrorf(err, "failed to remove %q folder", regolithCacheFiles)
+	}
+	os.MkdirAll(regolithCacheFiles, 0755)
+	Logger.Infof("Regolith filter files cached in user app data cleaned.")
+	return nil
+}
+
 // Clean handles the "regolith clean" command. It cleans the cache from the
 // dotRegolithPath directory.
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Clean(debug, userCache bool) error {
+func Clean(debug, userCache, filterCache bool) error {
 	InitLogging(debug)
 	if userCache {
 		return CleanUserCache()
+	} else if filterCache {
+		return CleanFilterCache()
 	} else {
 		return CleanCurrentProject()
 	}
