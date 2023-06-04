@@ -328,17 +328,20 @@ func main() {
 	subcommands = append(subcommands, cmdConfig)
 
 	// regolith clean
-	var userCache bool
+	var userCache, filterCache bool
 	cmdClean := &cobra.Command{
 		Use:   "clean",
 		Short: "Cleans Regolith cache",
 		Long:  regolithCleanDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Clean(burrito.PrintStackTrace, userCache)
+			err = regolith.Clean(burrito.PrintStackTrace, userCache, filterCache)
 		},
 	}
 	cmdClean.Flags().BoolVarP(
 		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
+			"the current project")
+	cmdClean.Flags().BoolVar(
+		&filterCache, "filter-cache", false, "Clears filter cache stored in user data, instead of the cache of "+
 			"the current project")
 	subcommands = append(subcommands, cmdClean)
 
