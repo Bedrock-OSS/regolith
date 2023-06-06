@@ -124,7 +124,7 @@ func TestLocalRequirementsInstallAndRun(t *testing.T) {
 	// Switch to the working directory
 	os.Chdir(filepath.Join(tmpDir, "project"))
 	// THE TEST
-	err = regolith.InstallAll(false, true)
+	err = regolith.InstallAll(false, true, false)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed", err.Error())
 	}
