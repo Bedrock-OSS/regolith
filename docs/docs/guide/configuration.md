@@ -34,10 +34,6 @@ Example config, with many options explained:
 
   // These fields are for Regolith specifically
   "regolith": {
-    // "useAppData" determines whether or not to use the app data folder, regolith should save its cache
-    // in user app data folder (true) or in the project folder in ".regolith" (false). This setting is
-    // optional and defaults to false. 
-    "useAppData": false,
     // Profiles are a list of filters and export information, which can be run with 'regolith run <profile>'
     "profiles": {
       // 'default' is the default profile. You can add more.

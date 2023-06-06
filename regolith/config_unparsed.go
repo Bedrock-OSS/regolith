@@ -48,9 +48,3 @@ func filterDefinitionsFromConfigMap(
 ) (map[string]interface{}, error) {
 	return FindByJSONPath[map[string]interface{}](config, "regolith/filterDefinitions")
 }
-
-// useAppDataFromConfigMap returns the useAppData value from the config file
-// map, without parsing it to a Config object.
-func useAppDataFromConfigMap(config map[string]interface{}) (bool, error) {
-	return FindByJSONPath[bool](config, "regolith/useAppData")
-}
