@@ -27,6 +27,10 @@ const appDataProjectCachePath = "regolith/project-cache"
 // app data
 const appDataResolverCachePath = "regolith/resolver-cache"
 
+// appDataResolverCachePath is a path to the resolver cache directory relative to the user's
+// app data
+const appDataFilterCachePath = "regolith/filter-cache"
+
 var Version = "unversioned"
 
 // nth returns the ordinal numeral of the index of a table. For example:
@@ -162,9 +166,18 @@ func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{})
 	}
 }
 
-// getResolverCache gets the dotRegolithPath from th app data folder
+// getResolverCache gets the appDataResolverCachePath from the app data folder
 func getResolverCache(resolver string) (string, error) {
 	return getAppDataCachePath(appDataResolverCachePath, resolver)
+}
+
+// getFilterCache gets the appDataFilterCachePath from the app data folder
+func getFilterCache(url string) (string, error) {
+	path, err := getAppDataCachePath(appDataFilterCachePath, url)
+	if err == nil {
+		Logger.Debugf("Regolith filter cache for %s is in:\n\t%s", url, path)
+	}
+	return path, err
 }
 
 // getAppDataCachePath gets the dotRegolithPath from th app data folder
@@ -185,7 +198,7 @@ func getAppDataCachePath(basePath, cacheId string) (string, error) {
 	return cachePath, nil
 }
 
-// getAppDataDotRegolith gets the dotRegolithPath from th app data folder
+// getAppDataDotRegolith gets the dotRegolithPath from the app data folder
 func getAppDataDotRegolith(projectRoot string) (string, error) {
 	// Make sure that projectsRoot is an absolute path
 	absoluteProjectRoot, err := filepath.Abs(projectRoot)

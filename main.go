@@ -220,7 +220,7 @@ func main() {
 
 	profiles := []string{"default"}
 	// regolith install
-	var update, resolverRefresh bool
+	var update, resolverRefresh, filterRefresh bool
 	cmdInstall := &cobra.Command{
 		Use:   "install [filters...]",
 		Short: "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
@@ -230,13 +230,15 @@ func main() {
 				cmd.Help()
 				return
 			}
-			err = regolith.Install(filters, force || update, resolverRefresh, cmd.Flags().Lookup("profile").Changed, profiles, burrito.PrintStackTrace)
+			err = regolith.Install(filters, force || update, resolverRefresh, filterRefresh, cmd.Flags().Lookup("profile").Changed, profiles, burrito.PrintStackTrace)
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
 	cmdInstall.Flags().BoolVar(
 		&resolverRefresh, "force-resolver-refresh", false, "Force resolvers refresh.")
+	cmdInstall.Flags().BoolVar(
+		&filterRefresh, "force-filter-refresh", false, "Force filter cache refresh.")
 	cmdInstall.Flags().BoolVarP(
 		&force, "update", "u", false, "An alias for --force flag. Use this flag to update filters.")
 	cmdInstall.Flags().StringSliceVarP(&profiles, "profile", "p", profiles, "Adds installed filters to the specified profiles. If no profile is provided, the filter will be added to the default profile.")
@@ -249,11 +251,13 @@ func main() {
 		Short: "Installs all nonexistent or outdated filters defined in filterDefinitions list",
 		Long:  regolithInstallAllDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.InstallAll(force, burrito.PrintStackTrace)
+			err = regolith.InstallAll(force, burrito.PrintStackTrace, filterRefresh)
 		},
 	}
 	cmdInstallAll.Flags().BoolVarP(
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+	cmdInstallAll.Flags().BoolVar(
+		&filterRefresh, "force-filter-refresh", false, "Force filter cache refresh.")
 	subcommands = append(subcommands, cmdInstallAll)
 
 	// regolith run
@@ -324,17 +328,20 @@ func main() {
 	subcommands = append(subcommands, cmdConfig)
 
 	// regolith clean
-	var userCache bool
+	var userCache, filterCache bool
 	cmdClean := &cobra.Command{
 		Use:   "clean",
 		Short: "Cleans Regolith cache",
 		Long:  regolithCleanDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Clean(burrito.PrintStackTrace, userCache)
+			err = regolith.Clean(burrito.PrintStackTrace, userCache, filterCache)
 		},
 	}
 	cmdClean.Flags().BoolVarP(
 		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
+			"the current project")
+	cmdClean.Flags().BoolVar(
+		&filterCache, "filter-cache", false, "Clears filter cache stored in user data, instead of the cache of "+
 			"the current project")
 	subcommands = append(subcommands, cmdClean)
 
