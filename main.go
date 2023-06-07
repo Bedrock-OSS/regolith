@@ -112,11 +112,12 @@ be an empty directory. This command creates "config.json" and a few empty folder
 RP, BP, data, and Regolith cache (.regolith folder).
 `
 const regolithCleanDesc = `
-This command cleans the Regolith cache files for the currently opened project. With the default
-Regolith configuration, the cache of Regolith is stored in the ".regolith" folder (which you can
-find at the root of the project). When "config.json" sets the "useAppData" property to true, the
-cache is stored in the user data folder, in a path based on a hash of the project's root folder
-path. "regolith clean" always cleans both cache folders, regardless of the "useAppData" property.
+This command clears the Regolith cache files for the currently open project. With the default
+Regolith configuration, the Regolith cache is stored in the ".regolith" folder (which you can
+find in the root of the project). If your user configuration has the "use_project_app_data_storage"
+setting set to "true", the cache will be stored in the user data folder, in a path based on a hash
+of the project root path. "regolith clean" will always clean both cache folders, regardless of the
+"use_project_app_data_storage" setting.
 
 Cache files include scripts/executables of Regolith filters, their virtual environments, and a list
 of files recognized by Regolith as previous outputs.
@@ -131,9 +132,10 @@ files created by Regolith. As a safety measure, Regolith never deletes the files
 recognize so running it after "clean" would result in an error saying that Regolith stopped to
 protect your files.
 
-If you're using the "useAppData" property in your projects. It is recommended to periodically clean
-the Regolith data folder to remove the cache files of the projects that you don't work on anymore.
-You can clear caches of all projects stored in user data by using the "--user-cache" flag.
+If you're using the "use_project_app_data_storage" setting in your user configuration. It is
+recommended to periodically clean the Regolith data folder to remove the cache files of the
+projects that you don't work on anymore. You can clear caches of all projects stored in user data
+by using the "--user-cache" flag.
 `
 
 const regolithConfigDesc = `
