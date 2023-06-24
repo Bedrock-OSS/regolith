@@ -211,11 +211,14 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 			}
 			strippedTag := tag[len(name)+1:]
 			if semver.IsValid("v" + strippedTag) {
-				tags = append(tags, tag)
+				tags = append(tags, "v"+strippedTag)
 			}
 		}
 	}
 	semver.Sort(tags)
+	for i, tag := range tags {
+		tags[i] = name + "-" + tag[1:]
+	}
 	return tags, nil
 }
 
