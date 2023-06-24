@@ -33,6 +33,9 @@ const (
 	// Error message displayed when os.Getwd fails
 	osGetwdError = "Failed to get current working directory."
 
+	// Error message displayed when os.Getwd fails
+	osChtimesError = "Failed to update file modification time.\nPath: %s"
+
 	// Common Error message to be reused on top of IsDirEmpty
 	isDirEmptyError = "Failed to check if path is an empty directory.\nPath: %s"
 

@@ -39,7 +39,7 @@ func TestRegolithInit(t *testing.T) {
 		t.Fatal("Unable to change working directory:", err.Error())
 	}
 	// THE TEST
-	err = regolith.Init(true)
+	err = regolith.Init(true, false)
 	if err != nil {
 		t.Fatal("'regolith init' failed:", err.Error())
 	}
@@ -124,7 +124,7 @@ func TestLocalRequirementsInstallAndRun(t *testing.T) {
 	// Switch to the working directory
 	os.Chdir(filepath.Join(tmpDir, "project"))
 	// THE TEST
-	err = regolith.InstallAll(false, true)
+	err = regolith.InstallAll(false, true, false)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed", err.Error())
 	}

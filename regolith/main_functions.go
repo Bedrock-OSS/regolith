@@ -12,6 +12,13 @@ import (
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
+var disallowedFiles = []string{
+	"config.json",
+	"packs",
+	".regolith",
+	".gitignore",
+}
+
 // Install handles the "regolith install" command. It installs specific filters
 // from the internet and adds them to the filtersDefinitions list in the
 // config.json file.
@@ -30,7 +37,7 @@ import (
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Install(filters []string, force, refreshResolvers, debug bool) error {
+func Install(filters []string, force, refreshResolvers, refreshFilters, add bool, profiles []string, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -39,6 +46,20 @@ func Install(filters []string, force, refreshResolvers, debug bool) error {
 	config, err := LoadConfigAsMap()
 	if err != nil {
 		return burrito.WrapError(err, "Unable to load config file.")
+	}
+	// Check if selected profiles exist
+	if add {
+		if len(profiles) == 0 {
+			profiles = []string{"default"}
+		}
+		// Get the profile
+		for _, profile := range profiles {
+			_, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Profile %s does not exist or is invalid.", profile)
+			}
+		}
 	}
 	// Get parts of config file required for installation
 	dataPath, err := dataPathFromConfigMap(config)
@@ -106,7 +127,7 @@ func Install(filters []string, force, refreshResolvers, debug bool) error {
 	}
 	// Download the filter definitions
 	err = installFilters(
-		filterInstallers, force, dataPath, dotRegolithPath, true)
+		filterInstallers, force, dataPath, dotRegolithPath, true, refreshFilters)
 	if err != nil {
 		return burrito.WrapError(err, "Failed to install filters.")
 	}
@@ -114,6 +135,25 @@ func Install(filters []string, force, refreshResolvers, debug bool) error {
 	for name, downloadedFilter := range filterInstallers {
 		// Add the filter to config file
 		filterDefinitions[name] = downloadedFilter
+		if add {
+			// Add the filter to the profile
+			for _, profile := range profiles {
+				profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
+				// This check here is not necessary, because we have identical one at the beginning, but better to be safe
+				if err != nil {
+					return burrito.WrapErrorf(
+						err, "Profile %s does not exist or is invalid.", profile)
+				}
+				if profileMap["filters"] == nil {
+					profileMap["filters"] = make([]interface{}, 0)
+				}
+				// Add the filter to the profile
+				profileMap["filters"] = append(
+					profileMap["filters"].([]interface{}), map[string]interface{}{
+						"filter": name,
+					})
+			}
+		}
 	}
 	// Save the config file
 	jsonBytes, _ := json.MarshalIndent(config, "", "\t")
@@ -139,7 +179,7 @@ func Install(filters []string, force, refreshResolvers, debug bool) error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func InstallAll(force, debug bool) error {
+func InstallAll(force, debug, refreshFilters bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -164,7 +204,7 @@ func InstallAll(force, debug bool) error {
 	defer func() { sessionLockErr = unlockSession() }()
 	// Install the filters
 	err = installFilters(
-		config.FilterDefinitions, force, config.DataPath, dotRegolithPath, false)
+		config.FilterDefinitions, force, config.DataPath, dotRegolithPath, false, refreshFilters)
 	if err != nil {
 		return burrito.WrapError(err, "Could not install filters.")
 	}
@@ -357,7 +397,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Init(debug bool) error {
+func Init(debug, force bool) error {
 	InitLogging(debug)
 	Logger.Info("Initializing Regolith project...")
 
@@ -366,14 +406,14 @@ func Init(debug bool) error {
 		return burrito.WrapError(
 			err, osGetwdError)
 	}
-	if isEmpty, err := IsDirEmpty(wd); err != nil {
+	if files, err := GetMatchingDirContents(wd, disallowedFiles); err != nil {
 		return burrito.WrapErrorf(
 			err, "Failed to check if %s is an empty directory.", wd)
-	} else if !isEmpty {
+	} else if len(files) > 0 && !force {
 		return burrito.WrappedErrorf(
-			"Cannot initialize the project, because %s is not an empty "+
-				"directory.\n\"regolith init\" can be used only in empty "+
-				"directories.", wd)
+			"Cannot initialize the project, because %s contains files, that will be overwritten on init.\n"+
+				"If you want to proceed, use --force flag\n"+
+				"Disallowed files and directories found: %s", wd, strings.Join(files, ", "))
 	}
 	err = CheckSuspiciousLocation()
 	if err != nil {
@@ -493,15 +533,35 @@ func CleanUserCache() error {
 	return nil
 }
 
+func CleanFilterCache() error {
+	Logger.Infof("Cleaning Regolith filter cache files from user app data...")
+	// App data enabled - use user cache dir
+	userCache, err := os.UserCacheDir()
+	if err != nil {
+		return burrito.WrappedError(osUserCacheDirError)
+	}
+	regolithCacheFiles := filepath.Join(userCache, appDataFilterCachePath)
+	Logger.Infof("Regolith cache files are located in: %s", regolithCacheFiles)
+	err = os.RemoveAll(regolithCacheFiles)
+	if err != nil {
+		return burrito.WrapErrorf(err, "failed to remove %q folder", regolithCacheFiles)
+	}
+	os.MkdirAll(regolithCacheFiles, 0755)
+	Logger.Infof("Regolith filter files cached in user app data cleaned.")
+	return nil
+}
+
 // Clean handles the "regolith clean" command. It cleans the cache from the
 // dotRegolithPath directory.
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Clean(debug, userCache bool) error {
+func Clean(debug, userCache, filterCache bool) error {
 	InitLogging(debug)
 	if userCache {
 		return CleanUserCache()
+	} else if filterCache {
+		return CleanFilterCache()
 	} else {
 		return CleanCurrentProject()
 	}
@@ -610,6 +670,16 @@ func manageUserConfigEdit(debug bool, index int, key, value string) error {
 				"\tValue: %s", value)
 		}
 		userConfig.ResolverCacheUpdateCooldown = &value
+	case "filter_cache_update_cooldown":
+		if index != -1 {
+			return burrito.WrappedError("Cannot use --index with non-array property.")
+		}
+		_, err = time.ParseDuration(value)
+		if err != nil {
+			return burrito.WrapErrorf(err, "Invalid value for duration property.\n"+
+				"\tValue: %s", value)
+		}
+		userConfig.FilterCacheUpdateCooldown = &value
 	case "resolvers":
 		if index == -1 {
 			userConfig.Resolvers = append(userConfig.Resolvers, value)
@@ -685,16 +755,16 @@ func manageUserConfigDelete(debug bool, index int, key string) error {
 
 // ManageConfig handles the "regolith config" command. It can modify or
 // print the user configuration
-// - debug - print debug messages
-// - global - modify global configuration
-// - local - modify local configuration
-// - delete - delete the specified value
-// - append - append a value to an array property of the configuration. Applies
-//   only to the array properties
-// - index - the index of the value to modify. Applies only to the array
-//   properties
-// - args - the arguments of the command, the length of the list must be 0, 1
-//   or 2. The length determines the action of the command.
+//   - debug - print debug messages
+//   - global - modify global configuration
+//   - local - modify local configuration
+//   - delete - delete the specified value
+//   - append - append a value to an array property of the configuration. Applies
+//     only to the array properties
+//   - index - the index of the value to modify. Applies only to the array
+//     properties
+//   - args - the arguments of the command, the length of the list must be 0, 1
+//     or 2. The length determines the action of the command.
 func ManageConfig(debug, full, delete, append bool, index int, args []string) error {
 	InitLogging(debug)
 

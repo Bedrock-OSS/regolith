@@ -112,11 +112,12 @@ be an empty directory. This command creates "config.json" and a few empty folder
 RP, BP, data, and Regolith cache (.regolith folder).
 `
 const regolithCleanDesc = `
-This command cleans the Regolith cache files for the currently opened project. With the default
-Regolith configuration, the cache of Regolith is stored in the ".regolith" folder (which you can
-find at the root of the project). When "config.json" sets the "useAppData" property to true, the
-cache is stored in the user data folder, in a path based on a hash of the project's root folder
-path. "regolith clean" always cleans both cache folders, regardless of the "useAppData" property.
+This command clears the Regolith cache files for the currently open project. With the default
+Regolith configuration, the Regolith cache is stored in the ".regolith" folder (which you can
+find in the root of the project). If your user configuration has the "use_project_app_data_storage"
+setting set to "true", the cache will be stored in the user data folder, in a path based on a hash
+of the project root path. "regolith clean" will always clean both cache folders, regardless of the
+"use_project_app_data_storage" setting.
 
 Cache files include scripts/executables of Regolith filters, their virtual environments, and a list
 of files recognized by Regolith as previous outputs.
@@ -131,9 +132,10 @@ files created by Regolith. As a safety measure, Regolith never deletes the files
 recognize so running it after "clean" would result in an error saying that Regolith stopped to
 protect your files.
 
-If you're using the "useAppData" property in your projects. It is recommended to periodically clean
-the Regolith data folder to remove the cache files of the projects that you don't work on anymore.
-You can clear caches of all projects stored in user data by using the "--user-cache" flag.
+If you're using the "use_project_app_data_storage" setting in your user configuration. It is
+recommended to periodically clean the Regolith data folder to remove the cache files of the
+projects that you don't work on anymore. You can clear caches of all projects stored in user data
+by using the "--user-cache" flag.
 `
 
 const regolithConfigDesc = `
@@ -204,19 +206,23 @@ func main() {
 	}
 	subcommands := make([]*cobra.Command, 0)
 
+	var force bool
 	// regolith init
 	cmdInit := &cobra.Command{
 		Use:   "init",
 		Short: "Initializes a Regolith project in current directory",
 		Long:  regolithInitDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Init(burrito.PrintStackTrace)
+			err = regolith.Init(burrito.PrintStackTrace, force)
 		},
 	}
+	cmdInit.Flags().BoolVarP(
+		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
 	subcommands = append(subcommands, cmdInit)
 
+	profiles := []string{"default"}
 	// regolith install
-	var force, update, resolverRefresh bool
+	var update, resolverRefresh, filterRefresh bool
 	cmdInstall := &cobra.Command{
 		Use:   "install [filters...]",
 		Short: "Downloads and installs filters from the internet and adds them to the filterDefinitions list",
@@ -226,15 +232,19 @@ func main() {
 				cmd.Help()
 				return
 			}
-			err = regolith.Install(filters, force || update, resolverRefresh, burrito.PrintStackTrace)
+			err = regolith.Install(filters, force || update, resolverRefresh, filterRefresh, cmd.Flags().Lookup("profile").Changed, profiles, burrito.PrintStackTrace)
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
 	cmdInstall.Flags().BoolVar(
 		&resolverRefresh, "force-resolver-refresh", false, "Force resolvers refresh.")
+	cmdInstall.Flags().BoolVar(
+		&filterRefresh, "force-filter-refresh", false, "Force filter cache refresh.")
 	cmdInstall.Flags().BoolVarP(
 		&force, "update", "u", false, "An alias for --force flag. Use this flag to update filters.")
+	cmdInstall.Flags().StringSliceVarP(&profiles, "profile", "p", profiles, "Adds installed filters to the specified profiles. If no profile is provided, the filter will be added to the default profile.")
+	cmdInstall.Flags().Lookup("profile").NoOptDefVal = "default"
 	subcommands = append(subcommands, cmdInstall)
 
 	// regolith install-all
@@ -243,11 +253,13 @@ func main() {
 		Short: "Installs all nonexistent or outdated filters defined in filterDefinitions list",
 		Long:  regolithInstallAllDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.InstallAll(force, burrito.PrintStackTrace)
+			err = regolith.InstallAll(force, burrito.PrintStackTrace, filterRefresh)
 		},
 	}
 	cmdInstallAll.Flags().BoolVarP(
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+	cmdInstallAll.Flags().BoolVar(
+		&filterRefresh, "force-filter-refresh", false, "Force filter cache refresh.")
 	subcommands = append(subcommands, cmdInstallAll)
 
 	// regolith run
@@ -318,17 +330,20 @@ func main() {
 	subcommands = append(subcommands, cmdConfig)
 
 	// regolith clean
-	var userCache bool
+	var userCache, filterCache bool
 	cmdClean := &cobra.Command{
 		Use:   "clean",
 		Short: "Cleans Regolith cache",
 		Long:  regolithCleanDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Clean(burrito.PrintStackTrace, userCache)
+			err = regolith.Clean(burrito.PrintStackTrace, userCache, filterCache)
 		},
 	}
 	cmdClean.Flags().BoolVarP(
 		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
+			"the current project")
+	cmdClean.Flags().BoolVar(
+		&filterCache, "filter-cache", false, "Clears filter cache stored in user data, instead of the cache of "+
 			"the current project")
 	subcommands = append(subcommands, cmdClean)
 

@@ -54,7 +54,7 @@ func TestInstallAllAndRun(t *testing.T) {
 	os.Chdir(workingDir)
 	// THE TEST
 	// Run InstallDependencies
-	err = regolith.InstallAll(false, true)
+	err = regolith.InstallAll(false, true, false)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed:", err)
 	}
@@ -116,7 +116,7 @@ func TestDataModifyRemoteFilter(t *testing.T) {
 	os.Chdir(workingDir)
 	// THE TEST
 	// Run InstallDependencies
-	err = regolith.InstallAll(false, true)
+	err = regolith.InstallAll(false, true, false)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed:", err)
 	}
@@ -173,7 +173,7 @@ func TestInstall(t *testing.T) {
 		expectedResultPath = filepath.Join(wd, expectedResultPath)
 		// Install the filter with given version
 		err := regolith.Install(
-			[]string{filterName + "==" + version}, true, false, true)
+			[]string{filterName + "==" + version}, true, false, false, false, []string{"default"}, true)
 		if err != nil {
 			t.Fatal("'regolith install' failed:", err)
 		}
@@ -242,7 +242,7 @@ func TestInstallAll(t *testing.T) {
 			t.Fatal("Failed to copy config file for the test setup:", err)
 		}
 		// Run 'regolith update' / 'regolith update-all'
-		err = regolith.InstallAll(false, true)
+		err = regolith.InstallAll(false, true, false)
 		if err != nil {
 			t.Fatal("'regolith update' failed:", err)
 		}

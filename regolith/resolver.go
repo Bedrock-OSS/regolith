@@ -108,7 +108,7 @@ func DownloadResolverMaps(forceUpdate bool) ([]string, []string, error) {
 				MeasureEnd()
 				err = os.Chtimes(cachePath, time.Now(), time.Now())
 				if err != nil {
-					Logger.Debugf("Failed to update cache file modification time.\nPath: %s", cachePath)
+					Logger.Debugf(osChtimesError, cachePath)
 				}
 				// If pull failed, delete the repo and clone it again
 				if err != nil {
