@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -481,6 +482,25 @@ clone:
 			Logger.Debugf(osChtimesError, cache)
 		}
 	}
+	// Check if the repo is clean
+	MeasureStart("Check if repository is clean %s", url)
+	status, err := GetRepoStatus(cache)
+	if err != nil {
+		return burrito.WrapErrorf(err, "Could not get repository status for %s", url)
+	}
+	indent, err := json.MarshalIndent(status, "", "  ")
+	if err == nil {
+		Logger.Debugf("Repository status: %s", indent)
+	}
+	if status.IsDirty {
+		Logger.Errorf("Repository is not clean.\nURL: %s", url)
+		Logger.Infof("Trying to clone the repository instead...")
+		err := os.RemoveAll(cache)
+		if err != nil {
+			return burrito.WrapErrorf(err, osRemoveError, cache)
+		}
+		goto clone
+	}
 	// Checkout the specified ref
 	MeasureStart("Checkout ref %s", ref)
 	output, err := RunGitProcess([]string{"checkout", ref}, cache)
@@ -615,4 +635,70 @@ func extraFilterJsonErrorInfo(filterJsonFilePath string, err error) error {
 	return burrito.WrapErrorf(
 		err, "Failed to load the filter configuration.\n"+
 			"Filter configuration file: %s", filterJsonFilePath)
+}
+
+type FileChange struct {
+	IsRenamedOrCopied bool
+	IsUntracked       bool
+	IsIgnored         bool
+	isUnmerged        bool
+	OriginalLine      string
+}
+
+type RepositoryStatus struct {
+	CurrentCommit  string
+	CurrentBranch  string
+	IsDirty        bool
+	Ahead          int
+	Behind         int
+	UpstreamBranch string
+	ChangedFiles   []FileChange
+}
+
+func GetRepoStatus(path string) (RepositoryStatus, error) {
+	status := RepositoryStatus{}
+	if !hasGit() {
+		return status, burrito.WrappedErrorf("Git is not installed.")
+	}
+	cmd := exec.Command("git", "status", "--porcelain=v2", "-b")
+	cmd.Dir = path
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return status, burrito.WrapErrorf(err, "Failed to get git status.\n%s", string(output))
+	}
+	lines := strings.Split(string(output), "\n")
+
+	for _, line := range lines {
+		parts := strings.Split(line, " ")
+		if strings.HasPrefix(line, "# ") {
+			switch parts[1] {
+			case "branch.oid":
+				status.CurrentCommit = parts[2]
+				break
+			case "branch.head":
+				status.CurrentBranch = parts[2]
+				break
+			case "branch.upstream":
+				status.UpstreamBranch = parts[2]
+				break
+			case "branch.ab":
+				status.Ahead, _ = strconv.Atoi(strings.TrimPrefix(parts[2], "+"))
+				status.Behind, _ = strconv.Atoi(strings.TrimPrefix(parts[3], "-"))
+				break
+			}
+		} else if strings.Trim(line, " \n\r\t") != "" {
+			status.ChangedFiles = append(status.ChangedFiles, FileChange{
+				IsRenamedOrCopied: strings.HasPrefix(line, "2 "),
+				IsUntracked:       strings.HasPrefix(line, "? "),
+				IsIgnored:         strings.HasPrefix(line, "! "),
+				isUnmerged:        strings.HasPrefix(line, "u "),
+				// Adding original line if we ever decide to expand the structure
+				OriginalLine: line,
+			})
+		}
+	}
+
+	status.IsDirty = len(status.ChangedFiles) > 0
+
+	return status, nil
 }
