@@ -26,11 +26,11 @@ We refer to these scripts and programs as `filters`. Here is the flow:
 - `RP`, `BP` and `data` folder are copied into a `tmp` folder
 - Every filter is executed in-order, editing the `tmp` folder in-place
 - The contents of `RP` and `BP` are moved into your export location
-- The contents of `data` is moved back into your data location
+- If configured, subfolders within `data` can be moved back into your data location
 
 This compilation flow allows you to make programmatic changes to your compiled addon, without effecting your source files.  
 
-Since the data folder is saved back to your project, you can store persistent data there. 
+Since the data folder can be saved back to your project, it's possible to store persistant data there.
 
 ## Filters
 
