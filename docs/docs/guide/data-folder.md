@@ -35,7 +35,11 @@ with open('./data/bump_manifest/version.json', 'r') as f:
 
 ## Saving Data
 
-When regolith is finished running, the data folder will be moved from the temporary location, back into the normal location. This flow allows you to store persistent data, by editing or creating new files. 
+To save data, you will need to add `"exportData": true,` to your `filter.json` definition. This is opt-in, to avoid slow copying of large data folders.
+
+When regolith is finished running, data folders marked with `exportData` will be moved from the temporary location, back into the normal location. This flow allows you to store persistent data, by editing or creating new files. 
+
+For example if your filter is called `hello_world`, with `exportData` set to true, then you would be expected to store data into `data/hello_world/*`. 
 
 ::: warning
 This stands in contrast to the `RP` and `BP` folders, which will not be saved back into the project!
@@ -43,6 +47,22 @@ This stands in contrast to the `RP` and `BP` folders, which will not be saved ba
 
 For example:
 
+filter.json
+```json
+{
+    "description": "An example of using export data",
+    "exportData": true,
+    "filters": [
+        {
+            "runWith": "python",
+            "script": "./main.py",
+            "name": "bump_manifest"
+        }
+    ]
+}
+```
+
+filter
 ```python
 with open('./data/bump_manifest/version.json', 'w') as f:
   json.dump({'version': '1.0'}, f)
