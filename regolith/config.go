@@ -17,10 +17,13 @@ type Config struct {
 
 // ExportTarget is a part of "config.json" that contains export information
 // for a profile, which denotes where compiled files will go.
+// When editing, adjust ExportTargetFromObject function as well.
 type ExportTarget struct {
 	Target    string `json:"target,omitempty"` // The mode of exporting. "develop" or "exact"
 	RpPath    string `json:"rpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
 	BpPath    string `json:"bpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
+	RpName    string `json:"rpName,omitempty"`
+	BpName    string `json:"bpName,omitempty"`
 	WorldName string `json:"worldName,omitempty"`
 	WorldPath string `json:"worldPath,omitempty"`
 	ReadOnly  bool   `json:"readOnly"` // Whether the exported files should be read-only
@@ -179,6 +182,12 @@ func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
 	// BpPath - can be empty
 	bpPath, _ := obj["bpPath"].(string)
 	result.BpPath = bpPath
+	// RpName - can be empty
+	rpName, _ := obj["rpName"].(string)
+	result.RpName = rpName
+	// BpName - can be empty
+	bpName, _ := obj["bpName"].(string)
+	result.BpName = bpName
 	// WorldName - can be empty
 	worldName, _ := obj["worldName"].(string)
 	result.WorldName = worldName
