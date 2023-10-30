@@ -358,10 +358,11 @@ func main() {
 	}
 	subcommands = append(subcommands, cmdUpdateResolvers)
 
-	// add --debug and --timings flag to every command
+	// add --debug, --timings and --experiment flag to every command
 	for _, cmd := range subcommands {
 		cmd.Flags().BoolVarP(&burrito.PrintStackTrace, "debug", "", false, "Enables debugging")
 		cmd.Flags().BoolVarP(&regolith.EnableTimings, "timings", "", false, "Enables timing information")
+		cmd.Flags().StringSliceVar(&regolith.EnabledExperiments, "experiments", nil, "Enables experimental features")
 	}
 	// Build and run CLI
 	rootCmd.AddCommand(subcommands...)
