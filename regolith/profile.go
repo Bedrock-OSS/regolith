@@ -51,7 +51,7 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 				err = copy.Copy(
 					path,
 					p,
-					copy.Options{PreserveTimes: false, Sync: false})
+					copy.Options{PreserveTimes: IsExperimentEnabled(SizeTimeCheck), Sync: false})
 				if err != nil {
 					return burrito.WrapErrorf(err, osCopyError, path, p)
 				}
