@@ -175,9 +175,7 @@ func ExportProject(
 			err1 = os.MkdirAll(dataPath, 0755)
 		}
 		if err1 != nil {
-			return burrito.WrapErrorf(
-				err, "Failed to read the files from the data path %q",
-				dataPath)
+			return burrito.WrapErrorf(err, osReadDirError, dataPath)
 		}
 	}
 	// Create revertible operations object

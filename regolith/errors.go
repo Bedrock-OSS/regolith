@@ -11,6 +11,9 @@ const (
 	// Error message for filepath.Abs() function.
 	filepathAbsError = "Failed to get absolute path.\nBase path: %s"
 
+	// Error message for os.ReadDir() failure
+	osReadDirError = "Failed to list files in the directory.\nPath: %s"
+
 	// Error message for os.Stat failure
 	osStatErrorAny = "Failed to access file info.\nPath: %s"
 
