@@ -91,19 +91,6 @@ func NotImplementedError(text string) error {
 	return burrito.WrappedError(text)
 }
 
-// CreateDirectoryIfNotExists creates a directory if it doesn't exist. If
-// the directory already exists, it does nothing and returns nil.
-func CreateDirectoryIfNotExists(directory string) error {
-	if _, err := os.Stat(directory); os.IsNotExist(err) {
-		err = os.MkdirAll(directory, 0755)
-		if err != nil {
-			// Error outside of this function should tell about the path
-			return burrito.PassError(err)
-		}
-	}
-	return nil
-}
-
 // GetAbsoluteWorkingDirectory returns an absolute path to [dotRegolithPath]/tmp
 func GetAbsoluteWorkingDirectory(dotRegolithPath string) string {
 	absoluteWorkingDir, _ := filepath.Abs(filepath.Join(dotRegolithPath, "tmp"))
@@ -239,7 +226,7 @@ func GetDotRegolith(projectRoot string) (string, error) {
 // The path should point to the .regolith directory.
 func acquireSessionLock(dotRegolithPath string) (func() error, error) {
 	// Create dotRegolithPath if it doesn't exist
-	err := CreateDirectoryIfNotExists(dotRegolithPath)
+	err := os.MkdirAll(dotRegolithPath, 0755)
 	if err != nil {
 		return nil, burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
