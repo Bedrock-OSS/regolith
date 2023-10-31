@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -31,12 +32,12 @@ func installFilters(
 	dataPath, dotRegolithPath string, isInstall, refreshFilters bool,
 ) error {
 	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
-	err := CreateDirectoryIfNotExists(joinedPath)
+	err := os.MkdirAll(joinedPath, 0755)
 	if err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, "cache/filters")
 	}
 	joinedPath = filepath.Join(dotRegolithPath, "cache/venvs")
-	err = CreateDirectoryIfNotExists(joinedPath)
+	err = os.MkdirAll(joinedPath, 0755)
 	if err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, "cache/venvs")
 	}

@@ -241,7 +241,7 @@ func runOrWatch(profileName string, debug, watch bool) error {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
-	err = CreateDirectoryIfNotExists(dotRegolithPath)
+	err = os.MkdirAll(dotRegolithPath, 0755)
 	if err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
@@ -330,7 +330,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
-	err = CreateDirectoryIfNotExists(dotRegolithPath)
+	err = os.MkdirAll(dotRegolithPath, 0755)
 	if err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
