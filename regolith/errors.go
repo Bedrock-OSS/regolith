@@ -40,7 +40,7 @@ const (
 	isDirEmptyError = "Failed to check if path is an empty directory.\nPath: %s"
 
 	// Error used when an empty directory is expected, but it's not
-	isDirEmptyNotEmptyError = "Path is an empty directory.\nPath: %s"
+	isDirEmptyNotEmptyError = "Path is not an empty directory.\nPath: %s"
 
 	// Error used when copyFileSecurityInfo fails
 	copyFileSecurityInfoError = "Failed to copy ACL.\nSource: %s\nTarget: %s"
