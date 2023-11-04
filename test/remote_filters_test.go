@@ -78,6 +78,7 @@ func TestDataModifyRemoteFilter(t *testing.T) {
 		t.Fatal("'regolith run' failed:", err)
 	}
 	// TEST EVALUATION
+	t.Log("Evaluating the test results...")
 	comparePaths(expectedPath, ".", t)
 }
 
@@ -128,6 +129,7 @@ func TestInstall(t *testing.T) {
 			t.Fatal("'regolith install' failed:", err)
 		}
 		// TEST EVALUATION
+		t.Log("Evaluating the test results...")
 		comparePaths(expectedResultPath, ".", t)
 	}
 }
@@ -182,6 +184,7 @@ func TestInstallAll(t *testing.T) {
 			t.Fatal("'regolith update' failed:", err)
 		}
 		// TEST EVALUATION
+		t.Log("Evaluating the test results...")
 		comparePaths(expectedResultPath, ".", t)
 	}
 }
