@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/Bedrock-OSS/regolith/regolith"
-	"github.com/otiai10/copy"
 )
 
 // TestRegolithInit tests the results of InitializeRegolithProject against
@@ -100,70 +99,37 @@ func TestExeFilterRun(t *testing.T) {
 // profile filter has circular dependencies and should fail, the valid profile
 // filter runs the same exe file as the TestExeFilterRun test.
 func TestProfileFilterRun(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal("Unable to get current working directory")
-	}
-	defer os.Chdir(wd)
-	// Create a temporary directory
-	tmpDir, err := os.MkdirTemp("", "regolith-test")
-	if err != nil {
-		t.Fatal("Unable to create temporary directory:", err)
-	}
-	t.Log("Created temporary directory:", tmpDir)
-	// Before deleting "workingDir" the test must stop using it
-	defer os.RemoveAll(tmpDir)
-	defer os.Chdir(wd)
-	// Copy the test project to the working directory
-	project, err := filepath.Abs(filepath.Join(profileFilterPath, "project"))
-	if err != nil {
-		t.Fatal(
-			"Unable to get absolute path to the test project:", err)
-	}
-	expectedBuildResult, err := filepath.Abs(
-		filepath.Join(exeFilterPath, "expected_build_result"))
-	if err != nil {
-		t.Fatal(
-			"Unable to get absolute path to the expected build result:", err)
-	}
-	err = copy.Copy(
-		project,
-		tmpDir,
-		copy.Options{PreserveTimes: false, Sync: false},
-	)
-	if err != nil {
-		t.Fatalf(
-			"Failed to copy test files from %q into the working directory %q",
-			project, tmpDir,
-		)
-	}
-	// THE TEST
+	// TEST PREPARATION
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestProfileFilterRun", t)
+
+	t.Log("Copying the project files into the testing directory...")
+	project := absOrFatal(filepath.Join(profileFilterPath, "project"), t)
+	copyFilesOrFatal(project, tmpDir, t)
+
+	// Load abs path of the expected result and switch to the working directory
+	expectedBuildResult := absOrFatal(
+		filepath.Join(exeFilterPath, "expected_build_result"), t)
 	os.Chdir(tmpDir)
-	t.Log("Running invalid profile filter with circular " +
-		"dependencies (this should fail)")
-	if err := regolith.Run(
-		"invalid_circular_profile_1", true); err == nil {
+
+	// THE TEST
+	// Invalid profile (shoud fail)
+	t.Log("Running invalid profile filter with circular dependencies (this should fail).")
+	err := regolith.Run("invalid_circular_profile_1", true)
+	if err == nil {
 		t.Fatal("'regolith run' didn't return an error after running"+
 			" a circular profile filter:", err.Error())
 	} else {
 		t.Log("Task failed successfully")
 	}
-	t.Log("Running valid profile filter ")
-	if err := regolith.Run(
-		"correct_nested_profile", true); err != nil {
+	// Valid profile (should succeed)
+	t.Log("Running valid profile filter.")
+	err = regolith.Run("correct_nested_profile", true)
+	if err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
-	// Load expected result
-	expectedPaths, err := getPathHashes(expectedBuildResult)
-	if err != nil {
-		t.Fatalf("Failed to load the expected results: %s", err)
-	}
-	// Load actual result
-	tmpDirBuild := filepath.Join(tmpDir, "build")
-	actualPaths, err := getPathHashes(tmpDirBuild)
-	if err != nil {
-		t.Fatalf("Failed to load the actual results: %s", err)
-	}
-	// Compare the results
-	comparePathMaps(expectedPaths, actualPaths, t)
+
+	// TEST EVALUATION
+	t.Log("Evaluating the test results...")
+	comparePaths(expectedBuildResult, filepath.Join(tmpDir, "build"), t)
 }
