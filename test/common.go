@@ -259,3 +259,13 @@ func absOrFatal(path string, t *testing.T) string {
 	}
 	return abs
 }
+
+// assertDirExistsOrFatal asserts that the given path is a directory or exits
+// with t.Fatal in case of error.
+func assertDirExistsOrFatal(dir string, t *testing.T) {
+	if stats, err := os.Stat(dir); err != nil {
+		t.Fatalf("Unable to get stats of %q", dir)
+	} else if !stats.IsDir() {
+		t.Fatalf("Created path %q is not a directory", dir)
+	}
+}
