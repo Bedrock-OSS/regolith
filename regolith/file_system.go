@@ -735,6 +735,9 @@ func move(source, destination string) error {
 		}
 		// Move all files in source to destination
 		files, err := os.ReadDir(source)
+		if err != nil {
+			return burrito.WrapErrorf(err, osReadDirError, source)
+		}
 		movedFiles := make([][2]string, 0, 100)
 		movingFailed := false
 		var errMoving error

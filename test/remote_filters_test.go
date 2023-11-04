@@ -15,60 +15,36 @@ import (
 // results of running the filter are compared to a project with an expected
 // result.
 func TestInstallAllAndRun(t *testing.T) {
-	// Switching working directories in this test, make sure to go back
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal("Unable to get current working directory")
-	}
-	defer os.Chdir(wd)
-	// Load expected output
-	expectedPaths, err := listPaths(
-		versionedRemoteFilterProjectAfterRun, versionedRemoteFilterProjectAfterRun)
-	if err != nil {
-		t.Fatal("Unable load the expected paths:", err)
-	}
-	// Create a temporary directory
-	tmpDir, err := os.MkdirTemp("", "regolith-test")
-	if err != nil {
-		t.Fatal("Unable to create temporary directory:", err)
-	}
-	t.Log("Created temporary directory:", tmpDir)
-	// Before deleting "workingDir" the test must stop using it
-	defer os.RemoveAll(tmpDir)
-	defer os.Chdir(wd)
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
+	// TEST PREPARATION
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestInstallAllAndRun", t)
+
+	t.Log("Copying the project files into the testing directory...")
 	workingDir := filepath.Join(tmpDir, "working-dir")
-	os.Mkdir(workingDir, 0755)
-	// Copy the test project to the working directory
-	err = copy.Copy(
-		versionedRemoteFilterProject,
-		workingDir,
-		copy.Options{PreserveTimes: false, Sync: false},
-	)
-	if err != nil {
-		t.Fatalf(
-			"Failed to copy test files %q into the working directory %q",
-			versionedRemoteFilterProject, workingDir,
-		)
-	}
-	// Switch to the working directory
+	copyFilesOrFatal(versionedRemoteFilterProject, workingDir, t)
+
+	// Load abs path of the expected result and switch to the working directory
+	expectedPath := absOrFatal(versionedRemoteFilterProjectAfterRun, t)
 	os.Chdir(workingDir)
+
 	// THE TEST
-	// Run InstallDependencies
-	err = regolith.InstallAll(false, true, false)
+	t.Log("Testing the 'regolith install-all' command...")
+	err := regolith.InstallAll(false, true, false)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed:", err)
 	}
+
+	t.Log("Testing the 'regolith run' command...")
 	err = regolith.Run("dev", true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
-	// Load created paths for comparison with expected output
-	createdPaths, err := listPaths(".", ".")
-	if err != nil {
-		t.Fatal("Unable to load the created paths:", err)
-	}
-	// Compare the installed dependencies with the expected dependencies
-	comparePathMaps(expectedPaths, createdPaths, t)
+
+	// TEST EVALUATION
+	t.Log("Evaluating the test results...")
+	comparePaths(expectedPath, ".", t) // expected vs created paths
 }
 
 // TestDataModifyRemoteFilter installs a project with one filter using
@@ -76,83 +52,56 @@ func TestInstallAllAndRun(t *testing.T) {
 // property, which means that the 'data' folder that it modifies should be
 // copied back to the source files.
 func TestDataModifyRemoteFilter(t *testing.T) {
-	// Switching working directories in this test, make sure to go back
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal("Unable to get current working directory")
-	}
-	defer os.Chdir(wd)
-	// Load expected output
-	expected := filepath.Join(dataModifyRemoteFilter, "after_run")
-	expectedPaths, err := listPaths(expected, expected)
-	if err != nil {
-		t.Fatal("Unable load the expected paths:", err)
-	}
-	// Create a temporary directory
-	tmpDir, err := os.MkdirTemp("", "regolith-test")
-	if err != nil {
-		t.Fatal("Unable to create temporary directory:", err)
-	}
-	t.Log("Created temporary directory:", tmpDir)
-	// Before deleting "workingDir" the test must stop using it
-	defer os.RemoveAll(tmpDir)
-	defer os.Chdir(wd)
-	workingDir := filepath.Join(tmpDir, "working-dir")
-	os.Mkdir(workingDir, 0755)
-	// Copy the test project to the working directory
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
+	// TEST PREPARATION
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestDataModifyRemoteFilter", t)
+
+	t.Log("Copying the project files into the testing directory...")
 	projectPath := filepath.Join(dataModifyRemoteFilter, "project")
-	err = copy.Copy(
-		projectPath,
-		workingDir,
-		copy.Options{PreserveTimes: false, Sync: false},
-	)
-	if err != nil {
-		t.Fatalf(
-			"Failed to copy test files %q into the working directory %q",
-			projectPath, workingDir,
-		)
-	}
-	// Switch to the working directory
+	workingDir := filepath.Join(tmpDir, "working-dir")
+	copyFilesOrFatal(projectPath, workingDir, t)
+
+	// Load expected output, and switch to the working directory
+	dataModifyRemoteFilterAfterRun := filepath.Join(
+		dataModifyRemoteFilter, "after_run")
+	expectedPath := absOrFatal(dataModifyRemoteFilterAfterRun, t)
 	os.Chdir(workingDir)
+
 	// THE TEST
-	// Run InstallDependencies
-	err = regolith.InstallAll(false, true, false)
+	t.Log("Testing the 'regolith install-all' command...")
+	err := regolith.InstallAll(false, true, false)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed:", err)
 	}
+
+	t.Log("Testing the 'regolith run' command...")
 	err = regolith.Run("default", true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
-	// Load created paths for comparison with expected output
-	createdPaths, err := listPaths(".", ".")
-	if err != nil {
-		t.Fatal("Unable to load the created paths:", err)
-	}
-	// Compare the installed dependencies with the expected dependencies
-	comparePathMaps(expectedPaths, createdPaths, t)
+	// TEST EVALUATION
+	t.Log("Evaluating the test results...")
+	comparePaths(expectedPath, ".", t)
 }
 
 // TestInstall tests the 'regolith install' command. It forcefully installs
 // a filter with various versions and compares the outputs with the expected
 // results.
 func TestInstall(t *testing.T) {
-	// SETUP
-	wd, err1 := os.Getwd()
-	defer os.Chdir(wd) // Go back before the test ends
-	tmpDir, err2 := os.MkdirTemp("", "regolith-test")
-	defer os.RemoveAll(tmpDir)
-	defer os.Chdir(wd) // 'tmpDir' can't be used when we delete it
-	err3 := copy.Copy( // Copy the test files
-		freshProjectPath,
-		tmpDir,
-		copy.Options{PreserveTimes: false, Sync: false},
-	)
-	err4 := os.Chdir(tmpDir)
-	if err := firstErr(err1, err2, err3, err4); err != nil {
-		t.Fatalf("Failed to setup test: %v", err)
-	}
-	t.Logf("The testing directory is in: %s", tmpDir)
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
+	// TEST PREPARATION
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestInstall", t)
+
+	t.Log("Copying the project files into the testing directory...")
+	copyFilesOrFatal(freshProjectPath, tmpDir, t)
+
+	// Switch to the working directory
+	originalWd := getWdOrFatal(t)
+	os.Chdir(tmpDir)
 
 	// THE TEST
 	filterName := "github.com/Bedrock-OSS/regolith-test-filters/" +
@@ -170,27 +119,24 @@ func TestInstall(t *testing.T) {
 		"TEST_TAG_1": "testdata/regolith_install/tag",
 	}
 	for version, expectedResultPath := range regolithInstallProjects {
-		expectedResultPath = filepath.Join(wd, expectedResultPath)
+		t.Logf("Testing 'regolith install', filter version %q", version)
+		expectedResultPath = filepath.Join(originalWd, expectedResultPath)
 		// Install the filter with given version
 		err := regolith.Install(
-			[]string{filterName + "==" + version}, true, false, false, false, []string{"default"}, true)
+			[]string{filterName + "==" + version}, // Filters list
+			true,                                  // Force
+			false,                                 // Refresh resolvers
+			false,                                 // Refresh filters
+			false,                                 // Add to config
+			[]string{"default"},                   // Profiles
+			true,                                  // Debug
+		)
 		if err != nil {
 			t.Fatal("'regolith install' failed:", err)
 		}
-		// Load expected result
-		expectedPaths, err := listPaths(expectedResultPath, expectedResultPath)
-		if err != nil {
-			t.Fatalf(
-				"Failed to load expected results for version %q: %v",
-				version, err)
-		}
-		// Load created paths for comparison with expected output
-		createdPaths, err := listPaths(".", ".")
-		if err != nil {
-			t.Fatal("Unable to load the created paths:", err)
-		}
-		// Compare the installed dependencies with the expected dependencies
-		comparePathMaps(expectedPaths, createdPaths, t)
+		// TEST EVALUATION
+		t.Log("Evaluating the test results...")
+		comparePaths(expectedResultPath, ".", t)
 	}
 }
 
@@ -198,22 +144,19 @@ func TestInstall(t *testing.T) {
 // command. It switches versions of a filter in the config.json file, runs
 // 'regolith install-all', and compares the outputs with the expected results.
 func TestInstallAll(t *testing.T) {
-	// SETUP
-	wd, err1 := os.Getwd()
-	defer os.Chdir(wd) // Go back before the test ends
-	tmpDir, err2 := os.MkdirTemp("", "regolith-test")
-	defer os.RemoveAll(tmpDir)
-	defer os.Chdir(wd) // 'tmpDir' can't be used when we delete it
-	err3 := copy.Copy( // Copy the test files
-		filepath.Join(regolithUpdatePath, "fresh_project"),
-		tmpDir,
-		copy.Options{PreserveTimes: false, Sync: false},
-	)
-	err4 := os.Chdir(tmpDir)
-	if err := firstErr(err1, err2, err3, err4); err != nil {
-		t.Fatalf("Failed to setup test: %v", err)
-	}
-	t.Logf("The testing directory is in: %s", tmpDir)
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
+	// TEST PREPARATION
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestInstallAll", t)
+
+	t.Log("Copying the project files into the testing directory...")
+	copyFilesOrFatal(
+		filepath.Join(regolithUpdatePath, "fresh_project"), tmpDir, t)
+
+	// Switch to the working directory
+	originalWd := getWdOrFatal(t)
+	os.Chdir(tmpDir)
 
 	// THE TEST
 	var regolithInstallProjects = map[string]string{
@@ -229,38 +172,27 @@ func TestInstallAll(t *testing.T) {
 			regolithUpdatePath, "sha"),
 		"TEST_TAG_1": filepath.Join(regolithUpdatePath, "tag"),
 	}
-	t.Log("Testing 'regolith install-all'")
 	for version, expectedResultPath := range regolithInstallProjects {
-		t.Logf("Testing version %q", version)
-		expectedResultPath = filepath.Join(wd, expectedResultPath)
-		// Copy the config file from expectedResultPath to tmpDir
+		t.Logf("Testing 'regolith install-all', filter version %q", version)
+		expectedResultPath = filepath.Join(originalWd, expectedResultPath)
+
+		// User's action: change the config.json file
+		t.Log("Simulating user's action (changing the config)...")
 		err := copy.Copy(
 			filepath.Join(expectedResultPath, "config.json"),
-			filepath.Join(tmpDir, "config.json"),
-		)
+			filepath.Join(tmpDir, "config.json"))
 		if err != nil {
 			t.Fatal("Failed to copy config file for the test setup:", err)
 		}
+
 		// Run 'regolith update' / 'regolith update-all'
+		t.Log("Running 'regolith update'...")
 		err = regolith.InstallAll(false, true, false)
 		if err != nil {
 			t.Fatal("'regolith update' failed:", err)
 		}
-		// Load expected result
-		expectedPaths, err := listPaths(
-			expectedResultPath, expectedResultPath)
-		if err != nil {
-			t.Fatalf(
-				"Failed to load expected results for version %q: %v",
-				version, err)
-		}
-		// Load created paths for comparison with expected output
-		createdPaths, err := listPaths(".", ".")
-		if err != nil {
-			t.Fatal("Unable to load the created paths:", err)
-		}
-		// Compare the installed dependencies with the expected
-		// dependencies
-		comparePathMaps(expectedPaths, createdPaths, t)
+		// TEST EVALUATION
+		t.Log("Evaluating the test results...")
+		comparePaths(expectedResultPath, ".", t)
 	}
 }
