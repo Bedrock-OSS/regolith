@@ -82,14 +82,15 @@ func firstErr(errors ...error) error {
 	return nil
 }
 
-// listPaths returns a dictionary with paths of the files from 'path' directory
-// relative to 'root' directory used as keys, and with md5 hashes paths as
-// values. The directory paths use empty strings instead of MD5. The function
-// ignores files called .ignoreme (they simulate empty directories
-// in git repository).
-func listPaths(path string, root string) (map[string]string, error) {
+// getPathHashes returns a dictionary with paths starting from the 'root'
+// used as keys, and with their md5 hashes as values. The directory paths use
+// empty strings instead of MD5.
+// The function ignores ".ignoreme" and "lockfile.txt" files.
+// All paths are relative to the 'root' directory.
+func getPathHashes(root string) (map[string]string, error) {
 	result := map[string]string{}
-	err := filepath.WalkDir(path,
+	err := filepath.WalkDir(
+		root,
 		func(path string, data fs.DirEntry, err error) error {
 			if err != nil {
 				return err
@@ -115,7 +116,8 @@ func listPaths(path string, root string) (map[string]string, error) {
 				result[relPath] = hex.EncodeToString(hashInBytes)
 			}
 			return nil
-		})
+		},
+	)
 	if err != nil {
 		return map[string]string{}, err
 	}

@@ -55,13 +55,13 @@ func TestConditionalFilter(t *testing.T) {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 	// Load expected result
-	expectedPaths, err := listPaths(expectedBuildResult, expectedBuildResult)
+	expectedPaths, err := getPathHashes(expectedBuildResult)
 	if err != nil {
 		t.Fatalf("Failed to load the expected results: %s", err)
 	}
 	// Load actual result
 	tmpDirBuild := filepath.Join(tmpDir, "build")
-	actualPaths, err := listPaths(tmpDirBuild, tmpDirBuild)
+	actualPaths, err := getPathHashes(tmpDirBuild)
 	if err != nil {
 		t.Fatalf("Failed to load the actual results: %s", err)
 	}
