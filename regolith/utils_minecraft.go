@@ -21,8 +21,7 @@ func ListWorlds(mojangDir string) ([]*World, error) {
 	worldsPath := path.Join(mojangDir, "minecraftWorlds")
 	files, err := os.ReadDir(worldsPath)
 	if err != nil {
-		return nil, burrito.WrapErrorf(
-			err, "Failed to list files in the directory.\nPath: %s", worldsPath)
+		return nil, burrito.WrapErrorf(err, osReadDirError, worldsPath)
 	}
 	for _, f := range files {
 		if f.IsDir() {
