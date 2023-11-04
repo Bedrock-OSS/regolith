@@ -35,7 +35,7 @@ func GetExportPaths(
 		return GetWorldExportPaths(exportTarget, bpName, rpName)
 	} else if exportTarget.Target == "local" {
 		bpPath = "build/" + bpName + "/"
-		rpPath = "build/" + bpName + "/"
+		rpPath = "build/" + rpName + "/"
 	} else if exportTarget.Target == "none" {
 		bpPath = ""
 		rpPath = ""
