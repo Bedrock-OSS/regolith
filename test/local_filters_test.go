@@ -12,41 +12,20 @@ import (
 // TestRegolithInit tests the results of InitializeRegolithProject against
 // the values from test/testdata/fresh_project.
 func TestRegolithInit(t *testing.T) {
-	// Switching working directories in this test, make sure to go back
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal("Unable to get current working directory")
-	}
-	defer os.Chdir(wd)
-	// Get paths expected in initialized project
-	expectedPaths, err := getPathHashes(freshProjectPath)
-	if err != nil {
-		t.Fatal("Unable to get list of created paths:", err)
-	}
-	// Create temporary directory
-	tmpDir, err := os.MkdirTemp("", "regolith-test")
-	if err != nil {
-		t.Fatal("Unable to create temporary directory:", err)
-	}
-	t.Log("Created temporary path:", tmpDir)
-	// Before removing working dir make sure the script isn't using it anymore
-	defer os.RemoveAll(tmpDir)
-	defer os.Chdir(wd)
+	// TEST PREPARATION
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestRegolithInit", t)
 
-	// Change working directory to the tmp path
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatal("Unable to change working directory:", err.Error())
-	}
+	expectedPath := absOrFatal(freshProjectPath, t)
+	os.Chdir(tmpDir)
+
 	// THE TEST
-	err = regolith.Init(true, false)
+	t.Log("Testing the 'regolith init' command...")
+	err := regolith.Init(true, false)
 	if err != nil {
 		t.Fatal("'regolith init' failed:", err.Error())
 	}
-	createdPaths, err := getPathHashes(".")
-	if err != nil {
-		t.Fatal("Unable to get list of created paths:", err)
-	}
-	comparePathMaps(expectedPaths, createdPaths, t)
+	comparePaths(expectedPath, ".", t)
 }
 
 // TestRegolithRunMissingRp tests the behavior of RunProfile when the packs/RP
