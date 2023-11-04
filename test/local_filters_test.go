@@ -29,41 +29,19 @@ func TestRegolithInit(t *testing.T) {
 }
 
 // TestRegolithRunMissingRp tests the behavior of RunProfile when the packs/RP
-// directory is missing.
+// directory is missing. The test just checks if the command runs without
+// errors.
 func TestRegolithRunMissingRp(t *testing.T) {
-	// SETUP
-	// Switching working directories in this test, make sure to go back
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal("Unable to get current working directory")
-	}
-	defer os.Chdir(wd)
-	// Create a temporary directory
-	tmpDir, err := os.MkdirTemp("", "regolith-test")
-	if err != nil {
-		t.Fatal("Unable to create temporary directory:", err)
-	}
-	t.Log("Created temporary directory:", tmpDir)
-	// Before deleting "workingDir" the test must stop using it
-	defer os.RemoveAll(tmpDir)
-	defer os.Chdir(wd)
-	os.Mkdir(tmpDir, 0755)
-	// Copy the test project to the working directory
-	err = copy.Copy(
-		runMissingRpProjectPath,
-		tmpDir,
-		copy.Options{PreserveTimes: false, Sync: false},
-	)
-	if err != nil {
-		t.Fatalf(
-			"Failed to copy test files %q into the working directory %q",
-			runMissingRpProjectPath, tmpDir,
-		)
-	}
-	// Switch to the working directory
+	// TEST PREPARATOIN
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestRegolithRunMissingRp", t)
+
+	t.Log("Copying the project files into the testing directory...")
+	copyFilesOrFatal(runMissingRpProjectPath, tmpDir, t)
 	os.Chdir(tmpDir)
+
 	// THE TEST
-	err = regolith.Run("dev", true)
+	err := regolith.Run("dev", true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
