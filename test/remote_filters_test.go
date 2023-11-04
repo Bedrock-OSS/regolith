@@ -136,22 +136,17 @@ func TestInstall(t *testing.T) {
 // command. It switches versions of a filter in the config.json file, runs
 // 'regolith install-all', and compares the outputs with the expected results.
 func TestInstallAll(t *testing.T) {
-	// SETUP
-	wd, err1 := os.Getwd()
-	defer os.Chdir(wd) // Go back before the test ends
-	tmpDir, err2 := os.MkdirTemp("", "regolith-test")
-	defer os.RemoveAll(tmpDir)
-	defer os.Chdir(wd) // 'tmpDir' can't be used when we delete it
-	err3 := copy.Copy( // Copy the test files
-		filepath.Join(regolithUpdatePath, "fresh_project"),
-		tmpDir,
-		copy.Options{PreserveTimes: false, Sync: false},
-	)
-	err4 := os.Chdir(tmpDir)
-	if err := firstErr(err1, err2, err3, err4); err != nil {
-		t.Fatalf("Failed to setup test: %v", err)
-	}
-	t.Logf("The testing directory is in: %s", tmpDir)
+	// TEST PREPARATION
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestInstallAll", t)
+
+	t.Log("Copying the project files into the testing directory...")
+	copyFilesOrFatal(
+		filepath.Join(regolithUpdatePath, "fresh_project"), tmpDir, t)
+
+	// Switch to the working directory
+	originalWd := getWdOrFatal(t)
+	os.Chdir(tmpDir)
 
 	// THE TEST
 	var regolithInstallProjects = map[string]string{
@@ -167,37 +162,26 @@ func TestInstallAll(t *testing.T) {
 			regolithUpdatePath, "sha"),
 		"TEST_TAG_1": filepath.Join(regolithUpdatePath, "tag"),
 	}
-	t.Log("Testing 'regolith install-all'")
 	for version, expectedResultPath := range regolithInstallProjects {
-		t.Logf("Testing version %q", version)
-		expectedResultPath = filepath.Join(wd, expectedResultPath)
-		// Copy the config file from expectedResultPath to tmpDir
+		t.Logf("Testing 'regolith install-all', filter version %q", version)
+		expectedResultPath = filepath.Join(originalWd, expectedResultPath)
+
+		// User's action: change the config.json file
+		t.Log("Simulating user's action (changing the config)...")
 		err := copy.Copy(
 			filepath.Join(expectedResultPath, "config.json"),
-			filepath.Join(tmpDir, "config.json"),
-		)
+			filepath.Join(tmpDir, "config.json"))
 		if err != nil {
 			t.Fatal("Failed to copy config file for the test setup:", err)
 		}
+
 		// Run 'regolith update' / 'regolith update-all'
+		t.Log("Running 'regolith update'...")
 		err = regolith.InstallAll(false, true, false)
 		if err != nil {
 			t.Fatal("'regolith update' failed:", err)
 		}
-		// Load expected result
-		expectedPaths, err := getPathHashes(expectedResultPath)
-		if err != nil {
-			t.Fatalf(
-				"Failed to load expected results for version %q: %v",
-				version, err)
-		}
-		// Load created paths for comparison with expected output
-		createdPaths, err := getPathHashes(".")
-		if err != nil {
-			t.Fatal("Unable to load the created paths:", err)
-		}
-		// Compare the installed dependencies with the expected
-		// dependencies
-		comparePathMaps(expectedPaths, createdPaths, t)
+		// TEST EVALUATION
+		comparePaths(expectedResultPath, ".", t)
 	}
 }
