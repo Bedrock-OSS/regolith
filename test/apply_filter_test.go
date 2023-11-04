@@ -10,6 +10,9 @@ import (
 
 // TestApplyFilter tests the 'regolith apply-filter' command
 func TestApplyFilter(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
+
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestApplyFilter", t)

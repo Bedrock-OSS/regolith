@@ -11,6 +11,9 @@ import (
 // TestConditionalFilter runs a test that checks whether the 'when' property
 // of a filter properly locks/enables the execution of the filter.
 func TestConditionalFilter(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
+
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestConditionalFilter", t)
