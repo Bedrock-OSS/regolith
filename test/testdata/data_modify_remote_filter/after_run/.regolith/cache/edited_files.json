@@ -1,11 +1,11 @@
 {
 	"rp": {
-		"build/RP/": [
+		"build/Project name_rp/": [
 			".ignoreme"
 		]
 	},
 	"bp": {
-		"build/BP/": [
+		"build/Project name_bp/": [
 			".ignoreme"
 		]
 	}
