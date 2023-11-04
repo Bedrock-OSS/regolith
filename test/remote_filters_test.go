@@ -85,22 +85,16 @@ func TestDataModifyRemoteFilter(t *testing.T) {
 // a filter with various versions and compares the outputs with the expected
 // results.
 func TestInstall(t *testing.T) {
-	// SETUP
-	wd, err1 := os.Getwd()
-	defer os.Chdir(wd) // Go back before the test ends
-	tmpDir, err2 := os.MkdirTemp("", "regolith-test")
-	defer os.RemoveAll(tmpDir)
-	defer os.Chdir(wd) // 'tmpDir' can't be used when we delete it
-	err3 := copy.Copy( // Copy the test files
-		freshProjectPath,
-		tmpDir,
-		copy.Options{PreserveTimes: false, Sync: false},
-	)
-	err4 := os.Chdir(tmpDir)
-	if err := firstErr(err1, err2, err3, err4); err != nil {
-		t.Fatalf("Failed to setup test: %v", err)
-	}
-	t.Logf("The testing directory is in: %s", tmpDir)
+	// TEST PREPARATION
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestInstall", t)
+
+	t.Log("Copying the project files into the testing directory...")
+	copyFilesOrFatal(freshProjectPath, tmpDir, t)
+
+	// Switch to the working directory
+	originalWd := getWdOrFatal(t)
+	os.Chdir(tmpDir)
 
 	// THE TEST
 	filterName := "github.com/Bedrock-OSS/regolith-test-filters/" +
@@ -118,27 +112,23 @@ func TestInstall(t *testing.T) {
 		"TEST_TAG_1": "testdata/regolith_install/tag",
 	}
 	for version, expectedResultPath := range regolithInstallProjects {
-		expectedResultPath = filepath.Join(wd, expectedResultPath)
+		t.Logf("Testing 'regolith install', filter version %q", version)
+		expectedResultPath = filepath.Join(originalWd, expectedResultPath)
 		// Install the filter with given version
 		err := regolith.Install(
-			[]string{filterName + "==" + version}, true, false, false, false, []string{"default"}, true)
+			[]string{filterName + "==" + version}, // Filters list
+			true,                                  // Force
+			false,                                 // Refresh resolvers
+			false,                                 // Refresh filters
+			false,                                 // Add to config
+			[]string{"default"},                   // Profiles
+			true,                                  // Debug
+		)
 		if err != nil {
 			t.Fatal("'regolith install' failed:", err)
 		}
-		// Load expected result
-		expectedPaths, err := getPathHashes(expectedResultPath)
-		if err != nil {
-			t.Fatalf(
-				"Failed to load expected results for version %q: %v",
-				version, err)
-		}
-		// Load created paths for comparison with expected output
-		createdPaths, err := getPathHashes(".")
-		if err != nil {
-			t.Fatal("Unable to load the created paths:", err)
-		}
-		// Compare the installed dependencies with the expected dependencies
-		comparePathMaps(expectedPaths, createdPaths, t)
+		// TEST EVALUATION
+		comparePaths(expectedResultPath, ".", t)
 	}
 }
 
