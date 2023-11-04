@@ -23,6 +23,9 @@ func TestMoveFilesAcl(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping test on local machine")
 	}
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
+
 	// TEST PREPARATION
 	// Switching working directories in this test, make sure to go back
 	originalWd := getWdOrFatal(t)
@@ -46,7 +49,10 @@ func TestMoveFilesAcl(t *testing.T) {
 		strings.Split(mojangDir, sep)[0]+sep,
 		"regolithTestProject")
 	if _, err := os.Stat(workingDir); err == nil { // The path SHOULDN'T exist
-		t.Fatalf("Clear path %q before testing", workingDir)
+		t.Fatalf(
+			"Clear path for this test manually before testing.\n"+
+				"Path: %s",
+			workingDir)
 	}
 
 	t.Log("Copying the project files into the testing directory...")

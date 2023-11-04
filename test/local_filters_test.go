@@ -11,6 +11,8 @@ import (
 // TestRegolithInit tests the results of InitializeRegolithProject against
 // the values from test/testdata/fresh_project.
 func TestRegolithInit(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestRegolithInit", t)
@@ -31,6 +33,8 @@ func TestRegolithInit(t *testing.T) {
 // directory is missing. The test just checks if the command runs without
 // errors.
 func TestRegolithRunMissingRp(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATOIN
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestRegolithRunMissingRp", t)
@@ -50,6 +54,8 @@ func TestRegolithRunMissingRp(t *testing.T) {
 // project that uses local script with requirements.txt by running
 // "regolith install" first and then "regolith run" on that project.
 func TestLocalRequirementsInstallAndRun(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestLocalRequirementsInstallAndRun", t)
@@ -72,6 +78,8 @@ func TestLocalRequirementsInstallAndRun(t *testing.T) {
 
 // TextExeFilterRun tests if Regolith can properly run an Exe filter
 func TestExeFilterRun(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestExeFilterRun", t)
@@ -99,6 +107,8 @@ func TestExeFilterRun(t *testing.T) {
 // profile filter has circular dependencies and should fail, the valid profile
 // filter runs the same exe file as the TestExeFilterRun test.
 func TestProfileFilterRun(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestProfileFilterRun", t)

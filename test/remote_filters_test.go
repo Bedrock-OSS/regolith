@@ -15,6 +15,8 @@ import (
 // results of running the filter are compared to a project with an expected
 // result.
 func TestInstallAllAndRun(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestInstallAllAndRun", t)
@@ -50,6 +52,8 @@ func TestInstallAllAndRun(t *testing.T) {
 // property, which means that the 'data' folder that it modifies should be
 // copied back to the source files.
 func TestDataModifyRemoteFilter(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestDataModifyRemoteFilter", t)
@@ -86,6 +90,8 @@ func TestDataModifyRemoteFilter(t *testing.T) {
 // a filter with various versions and compares the outputs with the expected
 // results.
 func TestInstall(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestInstall", t)
@@ -138,6 +144,8 @@ func TestInstall(t *testing.T) {
 // command. It switches versions of a filter in the config.json file, runs
 // 'regolith install-all', and compares the outputs with the expected results.
 func TestInstallAll(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestInstallAll", t)

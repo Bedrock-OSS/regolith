@@ -17,6 +17,8 @@ import (
 // This test only checks if the regolith run command runs successfuly. It
 // doesn't check if the files are exported correctly.
 func TestSwitchingExportTargets(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestSwitchingExportTargets", t)
@@ -59,6 +61,8 @@ func TestSwitchingExportTargets(t *testing.T) {
 // This test only checks if the regolith run command runs successfuly. It
 // doesn't check if the files are exported correctly.
 func TestTriggerFileProtection(t *testing.T) {
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
 	// TEST PREPARATION
 	t.Log("Clearing the testing directory...")
 	tmpDir := prepareTestDirectory("TestTriggerFileProtection", t)
