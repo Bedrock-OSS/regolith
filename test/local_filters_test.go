@@ -51,39 +51,21 @@ func TestRegolithRunMissingRp(t *testing.T) {
 // project that uses local script with requirements.txt by running
 // "regolith install" first and then "regolith run" on that project.
 func TestLocalRequirementsInstallAndRun(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal("Unable to get current working directory")
-	}
-	defer os.Chdir(wd)
-	// Create a temporary directory
-	tmpDir, err := os.MkdirTemp("", "regolith-test")
-	if err != nil {
-		t.Fatal("Unable to create temporary directory:", err)
-	}
-	t.Log("Created temporary directory:", tmpDir)
-	// Before deleting "workingDir" the test must stop using it
-	defer os.RemoveAll(tmpDir)
-	defer os.Chdir(wd)
-	// Copy the test project to the working directory
-	err = copy.Copy(
-		localRequirementsPath,
-		tmpDir,
-		copy.Options{PreserveTimes: false, Sync: false},
-	)
-	if err != nil {
-		t.Fatalf(
-			"Failed to copy test files %q into the working directory %q",
-			localRequirementsPath, tmpDir,
-		)
-	}
-	// Switch to the working directory
+	// TEST PREPARATION
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestLocalRequirementsInstallAndRun", t)
+
+	t.Log("Copying the project files into the testing directory...")
+	copyFilesOrFatal(localRequirementsPath, tmpDir, t)
 	os.Chdir(filepath.Join(tmpDir, "project"))
+
 	// THE TEST
-	err = regolith.InstallAll(false, true, false)
+	t.Log("Testing the 'regolith install-all' command...")
+	err := regolith.InstallAll(false, true, false)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed", err.Error())
 	}
+	t.Log("Testing the 'regolith run' command...")
 	if err := regolith.Run("dev", true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
