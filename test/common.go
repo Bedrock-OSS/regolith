@@ -180,13 +180,16 @@ func comparePaths(expectedPath, createdPath string, t *testing.T) {
 	expectedPaths, err := getPathHashes(expectedPath)
 	if err != nil {
 		t.Fatalf(
-			"Failed to load expected results for version %q: %v",
+			"Failed to load expected results for test result evaluation.\n"+
+				"Expected path: %v\nError: %v",
 			expectedPath, err)
 	}
 	t.Log("Loading the created paths...")
 	createdPaths, err := getPathHashes(createdPath)
 	if err != nil {
-		t.Fatal("Unable to load the created paths:", err)
+		t.Fatalf("Failed to load created paths for test result evaluation.\n"+
+			"Created path: %v\nError: %v",
+			createdPath, err)
 	}
 	t.Log("Comparing created and expected paths...")
 	comparePathMaps(expectedPaths, createdPaths, t)
