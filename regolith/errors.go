@@ -11,6 +11,9 @@ const (
 	// Error message for filepath.Abs() function.
 	filepathAbsError = "Failed to get absolute path.\nBase path: %s"
 
+	// Error message for os.ReadDir() failure
+	osReadDirError = "Failed to list files in the directory.\nPath: %s"
+
 	// Error message for os.Stat failure
 	osStatErrorAny = "Failed to access file info.\nPath: %s"
 
@@ -40,7 +43,7 @@ const (
 	isDirEmptyError = "Failed to check if path is an empty directory.\nPath: %s"
 
 	// Error used when an empty directory is expected, but it's not
-	isDirEmptyNotEmptyError = "Path is an empty directory.\nPath: %s"
+	isDirEmptyNotEmptyError = "Path is not an empty directory.\nPath: %s"
 
 	// Error used when copyFileSecurityInfo fails
 	copyFileSecurityInfoError = "Failed to copy ACL.\nSource: %s\nTarget: %s"

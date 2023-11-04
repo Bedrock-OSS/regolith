@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/otiai10/copy"
 )
 
 // The ".ignoreme" files inside the test directories are files used to simulate
@@ -82,14 +84,15 @@ func firstErr(errors ...error) error {
 	return nil
 }
 
-// listPaths returns a dictionary with paths of the files from 'path' directory
-// relative to 'root' directory used as keys, and with md5 hashes paths as
-// values. The directory paths use empty strings instead of MD5. The function
-// ignores files called .ignoreme (they simulate empty directories
-// in git repository).
-func listPaths(path string, root string) (map[string]string, error) {
+// getPathHashes returns a dictionary with paths starting from the 'root'
+// used as keys, and with their md5 hashes as values. The directory paths use
+// empty strings instead of MD5.
+// The function ignores ".ignoreme" and "lockfile.txt" files.
+// All paths are relative to the 'root' directory.
+func getPathHashes(root string) (map[string]string, error) {
 	result := map[string]string{}
-	err := filepath.WalkDir(path,
+	err := filepath.WalkDir(
+		root,
 		func(path string, data fs.DirEntry, err error) error {
 			if err != nil {
 				return err
@@ -115,7 +118,8 @@ func listPaths(path string, root string) (map[string]string, error) {
 				result[relPath] = hex.EncodeToString(hashInBytes)
 			}
 			return nil
-		})
+		},
+	)
 	if err != nil {
 		return map[string]string{}, err
 	}
@@ -131,6 +135,7 @@ func comparePathMaps(
 	checked := struct{}{}
 	checklist := map[string]struct{}{}
 	// Check if all expectedPaths are created
+	t.Log("Checking if all expected paths are correct...")
 	for k, expectedHash := range expectedPaths {
 		checklist[k] = checked
 		createdHash, exists := createdPaths[k]
@@ -149,6 +154,7 @@ func comparePathMaps(
 		}
 	}
 	// Check if all createdPaths are expected
+	t.Log("Checking if there are no unexpected paths...")
 	for k, createdHash := range createdPaths {
 		if _, checked := checklist[k]; checked {
 			continue // This is checked already (skip)
@@ -164,5 +170,102 @@ func comparePathMaps(
 			}
 			t.Fatalf("%q file is different that expected", k)
 		}
+	}
+}
+
+// comparePaths compares the paths created by the test with the expected paths
+// and runs t.Fatal in case of finding a difference.
+func comparePaths(expectedPath, createdPath string, t *testing.T) {
+	t.Log("Loading the expected results...")
+	expectedPaths, err := getPathHashes(expectedPath)
+	if err != nil {
+		t.Fatalf(
+			"Failed to load expected results for test result evaluation.\n"+
+				"Expected path: %v\nError: %v",
+			expectedPath, err)
+	}
+	t.Log("Loading the created paths...")
+	createdPaths, err := getPathHashes(createdPath)
+	if err != nil {
+		t.Fatalf("Failed to load created paths for test result evaluation.\n"+
+			"Created path: %v\nError: %v",
+			createdPath, err)
+	}
+	t.Log("Comparing created and expected paths...")
+	comparePathMaps(expectedPaths, createdPaths, t)
+}
+
+// prepareTestDirectory prepares the test directory by removing all of its files
+// or creating it if necessary and returns the path to the directory.
+// Exits with t.Fatal in case of error.
+func prepareTestDirectory(path string, t *testing.T) string {
+	const testResultsDir = "test_results"
+	// Create the output directory
+	result := filepath.Join(testResultsDir, path)
+	if err := os.RemoveAll(result); err != nil {
+		t.Fatalf(
+			"Failed to delete the files form the testing directory."+
+				"\nPath: %q\nError: %v",
+			testResultsDir, err)
+	}
+	if err := os.MkdirAll(result, 0755); err != nil {
+		t.Fatalf(
+			"Failed to prepare the testing directory.\nPath: %q\nError: %v",
+			testResultsDir, err)
+	}
+	// Get absolute path
+	result, err := filepath.Abs(result)
+	if err != nil {
+		t.Fatalf(
+			"Failed to resolve the path of the testing directory to an absolute path."+
+				"\nPath: %q\nError: %v",
+			testResultsDir, err)
+	}
+	return result
+}
+
+// getWdOrFatal returns the current working directory or exits with t.Fatal in
+// case of error.
+func getWdOrFatal(t *testing.T) string {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal("Unable to get current working directory")
+	}
+	return wd
+}
+
+// copyFilesOrFatal copies files from src to dest or exits with t.Fatal in case
+// of error.
+func copyFilesOrFatal(src, dest string, t *testing.T) {
+	os.MkdirAll(dest, 0755)
+	err := copy.Copy(
+		src, dest, copy.Options{PreserveTimes: false, Sync: false})
+	if err != nil {
+		t.Fatalf(
+			"Failed to copy files.\nSource: %s\nDestination: %s\nError: %v",
+			src, dest, err)
+	}
+}
+
+// absOrFatal returns the absolute path of the given path or exits with t.Fatal
+// in case of error.
+func absOrFatal(path string, t *testing.T) string {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		t.Fatalf(
+			"Failed to resolve the path to an absolute path.\n"+
+				"Path: %q\nError: %v",
+			path, err)
+	}
+	return abs
+}
+
+// assertDirExistsOrFatal asserts that the given path is a directory or exits
+// with t.Fatal in case of error.
+func assertDirExistsOrFatal(dir string, t *testing.T) {
+	if stats, err := os.Stat(dir); err != nil {
+		t.Fatalf("Unable to get stats of %q", dir)
+	} else if !stats.IsDir() {
+		t.Fatalf("Created path %q is not a directory", dir)
 	}
 }
