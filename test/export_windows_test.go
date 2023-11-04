@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/Bedrock-OSS/regolith/regolith"
-	"github.com/otiai10/copy"
 	"golang.org/x/sys/windows"
 )
 
@@ -24,47 +23,53 @@ func TestMoveFilesAcl(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping test on local machine")
 	}
+	// Switch to current working directory at the end of the test
+	defer os.Chdir(getWdOrFatal(t))
+
+	// TEST PREPARATION
 	// Switching working directories in this test, make sure to go back
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal("Unable to get current working directory")
-	}
-	defer os.Chdir(wd)
+	originalWd := getWdOrFatal(t)
+	defer os.Chdir(originalWd)
+
 	// Find path to com.mojang
+	t.Log("Finding the path to com.mojang...")
 	mojangDir, err := regolith.FindMojangDir()
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	// The project will be tested from C:/regolithtestProject (or whatever
+
+	// The project will be tested from C:/regolithTestProject (or whatever
 	// drive you use for Minecraft) Don't change that to ioutil.TmpDir.
 	// Current implementation assures that the working dir will be on the
 	// same drive as Minecraft which is crucial for this test.
+	t.Log("Preparing the working directory in C:/regolithTestProject...")
 	sep := string(filepath.Separator)
 	workingDir := filepath.Join(
 		// https://github.com/golang/go/issues/26953
 		strings.Split(mojangDir, sep)[0]+sep,
 		"regolithTestProject")
 	if _, err := os.Stat(workingDir); err == nil { // The path SHOULDN'T exist
-		t.Fatalf("Clear path %q before testing", workingDir)
-	}
-	// Copy the test project to the working directory
-	err = copy.Copy(
-		minimalProjectPath,
-		workingDir,
-		copy.Options{PreserveTimes: false, Sync: false},
-	)
-	if err != nil {
 		t.Fatalf(
-			"Failed to copy test files %q into the working directory %q",
-			minimalProjectPath, workingDir,
-		)
+			"Clear path for this test manually before testing.\n"+
+				"Path: %s",
+			workingDir)
 	}
-	// Before "workingDir" the working dir of this test can't be there
+
+	t.Log("Copying the project files into the testing directory...")
+	copyFilesOrFatal(minimalProjectPath, workingDir, t)
+
+	// Change to the original working directory before defered RemoveAll
+	// because otherwise RemoveAll will fail (beacuse of the path being
+	// used)
 	defer os.RemoveAll(workingDir)
-	defer os.Chdir(wd)
-	// Switch wd to workingDir
+	defer os.Chdir(originalWd)
+
+	// Switch to workingDir
 	os.Chdir(workingDir)
-	// Get the name of the config from config
+
+	// LOAD DATA FROM CONFIG
+	// Get the name of the project from config
+	t.Log("Loading the data from config, befor running the test...")
 	configJson, err := regolith.LoadConfigAsMap()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -73,32 +78,23 @@ func TestMoveFilesAcl(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+	bpPath := filepath.Join(mojangDir, "development_behavior_packs", config.Name+"_bp")
+	rpPath := filepath.Join(mojangDir, "development_resource_packs", config.Name+"_rp")
 
-	bpPath := filepath.Join(
-		mojangDir, "development_behavior_packs", config.Name+"_bp")
-	rpPath := filepath.Join(
-		mojangDir, "development_resource_packs", config.Name+"_rp")
-	os.Chdir(workingDir)
 	// THE TEST
+	t.Log("Testing the 'regolith run' command...")
 	err = regolith.Run("dev", true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
-	// Test if the RP and BP were created in the right paths
-	assertDirExists := func(dir string) {
-		if stats, err := os.Stat(dir); err != nil {
-			t.Fatalf("Unable to get stats of %q", dir)
-		} else if !stats.IsDir() {
-			t.Fatalf("Created path %q is not a directory", dir)
-		}
-	}
-	assertDirExists(rpPath)
-	defer os.RemoveAll(rpPath)
-	assertDirExists(bpPath)
-	defer os.RemoveAll(bpPath)
-	// Compare the permissions of the mojang path with the permissions of RP
-	// and BP
 
+	t.Log("Checking if the RP and BP have been exported...")
+	assertDirExistsOrFatal(rpPath, t)
+	defer os.RemoveAll(rpPath)
+	assertDirExistsOrFatal(bpPath, t)
+	defer os.RemoveAll(bpPath)
+
+	t.Log("Checking if the permissions of the exported packs are correct...")
 	// getSecurityString gets the string representation of the path security
 	// info of the path
 	getSecurityString := func(path string) string {
@@ -115,6 +111,8 @@ func TestMoveFilesAcl(t *testing.T) {
 		// dacl, defaulted, err := securityInfo.DACL()
 		return securityInfo.String()
 	}
+
+	t.Log("Getting the security settings of the com.mojang directory...")
 	mojangAcl := getSecurityString(mojangDir)
 	assertValidAcl := func(dir string) {
 		if acl := getSecurityString(dir); acl != mojangAcl {
@@ -124,6 +122,7 @@ func TestMoveFilesAcl(t *testing.T) {
 				dir, acl, mojangDir, mojangAcl)
 		}
 	}
+	t.Log("Comparing the security settings of com.mojang with the exported packs...")
 	assertValidAcl(rpPath)
 	assertValidAcl(bpPath)
 }
