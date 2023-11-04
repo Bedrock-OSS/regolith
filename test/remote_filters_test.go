@@ -22,8 +22,7 @@ func TestInstallAllAndRun(t *testing.T) {
 	}
 	defer os.Chdir(wd)
 	// Load expected output
-	expectedPaths, err := listPaths(
-		versionedRemoteFilterProjectAfterRun, versionedRemoteFilterProjectAfterRun)
+	expectedPaths, err := getPathHashes(versionedRemoteFilterProjectAfterRun)
 	if err != nil {
 		t.Fatal("Unable load the expected paths:", err)
 	}
@@ -63,7 +62,7 @@ func TestInstallAllAndRun(t *testing.T) {
 		t.Fatal("'regolith run' failed:", err)
 	}
 	// Load created paths for comparison with expected output
-	createdPaths, err := listPaths(".", ".")
+	createdPaths, err := getPathHashes(".")
 	if err != nil {
 		t.Fatal("Unable to load the created paths:", err)
 	}
@@ -84,7 +83,7 @@ func TestDataModifyRemoteFilter(t *testing.T) {
 	defer os.Chdir(wd)
 	// Load expected output
 	expected := filepath.Join(dataModifyRemoteFilter, "after_run")
-	expectedPaths, err := listPaths(expected, expected)
+	expectedPaths, err := getPathHashes(expected)
 	if err != nil {
 		t.Fatal("Unable load the expected paths:", err)
 	}
@@ -125,7 +124,7 @@ func TestDataModifyRemoteFilter(t *testing.T) {
 		t.Fatal("'regolith run' failed:", err)
 	}
 	// Load created paths for comparison with expected output
-	createdPaths, err := listPaths(".", ".")
+	createdPaths, err := getPathHashes(".")
 	if err != nil {
 		t.Fatal("Unable to load the created paths:", err)
 	}
@@ -178,14 +177,14 @@ func TestInstall(t *testing.T) {
 			t.Fatal("'regolith install' failed:", err)
 		}
 		// Load expected result
-		expectedPaths, err := listPaths(expectedResultPath, expectedResultPath)
+		expectedPaths, err := getPathHashes(expectedResultPath)
 		if err != nil {
 			t.Fatalf(
 				"Failed to load expected results for version %q: %v",
 				version, err)
 		}
 		// Load created paths for comparison with expected output
-		createdPaths, err := listPaths(".", ".")
+		createdPaths, err := getPathHashes(".")
 		if err != nil {
 			t.Fatal("Unable to load the created paths:", err)
 		}
@@ -247,15 +246,14 @@ func TestInstallAll(t *testing.T) {
 			t.Fatal("'regolith update' failed:", err)
 		}
 		// Load expected result
-		expectedPaths, err := listPaths(
-			expectedResultPath, expectedResultPath)
+		expectedPaths, err := getPathHashes(expectedResultPath)
 		if err != nil {
 			t.Fatalf(
 				"Failed to load expected results for version %q: %v",
 				version, err)
 		}
 		// Load created paths for comparison with expected output
-		createdPaths, err := listPaths(".", ".")
+		createdPaths, err := getPathHashes(".")
 		if err != nil {
 			t.Fatal("Unable to load the created paths:", err)
 		}

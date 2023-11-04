@@ -54,12 +54,12 @@ func TestApplyFilter(t *testing.T) {
 		t.Fatal("'regolith apply-filter' failed:", err.Error())
 	}
 	// Load expected result
-	expectedPaths, err := listPaths(expectedResult, expectedResult)
+	expectedPaths, err := getPathHashes(expectedResult)
 	if err != nil {
 		t.Fatalf("Failed to load the expected results: %s", err)
 	}
 	// Load actual result
-	actualPaths, err := listPaths(tmpDir, tmpDir)
+	actualPaths, err := getPathHashes(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to load the actual results: %s", err)
 	}

@@ -19,8 +19,7 @@ func TestRegolithInit(t *testing.T) {
 	}
 	defer os.Chdir(wd)
 	// Get paths expected in initialized project
-	expectedPaths, err := listPaths(
-		freshProjectPath, freshProjectPath)
+	expectedPaths, err := getPathHashes(freshProjectPath)
 	if err != nil {
 		t.Fatal("Unable to get list of created paths:", err)
 	}
@@ -43,7 +42,7 @@ func TestRegolithInit(t *testing.T) {
 	if err != nil {
 		t.Fatal("'regolith init' failed:", err.Error())
 	}
-	createdPaths, err := listPaths(".", ".")
+	createdPaths, err := getPathHashes(".")
 	if err != nil {
 		t.Fatal("Unable to get list of created paths:", err)
 	}
@@ -178,13 +177,13 @@ func TestExeFilterRun(t *testing.T) {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 	// Load expected result
-	expectedPaths, err := listPaths(expectedBuildResult, expectedBuildResult)
+	expectedPaths, err := getPathHashes(expectedBuildResult)
 	if err != nil {
 		t.Fatalf("Failed to load the expected results: %s", err)
 	}
 	// Load actual result
 	tmpDirBuild := filepath.Join(tmpDir, "build")
-	actualPaths, err := listPaths(tmpDirBuild, tmpDirBuild)
+	actualPaths, err := getPathHashes(tmpDirBuild)
 	if err != nil {
 		t.Fatalf("Failed to load the actual results: %s", err)
 	}
@@ -250,13 +249,13 @@ func TestProfileFilterRun(t *testing.T) {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 	// Load expected result
-	expectedPaths, err := listPaths(expectedBuildResult, expectedBuildResult)
+	expectedPaths, err := getPathHashes(expectedBuildResult)
 	if err != nil {
 		t.Fatalf("Failed to load the expected results: %s", err)
 	}
 	// Load actual result
 	tmpDirBuild := filepath.Join(tmpDir, "build")
-	actualPaths, err := listPaths(tmpDirBuild, tmpDirBuild)
+	actualPaths, err := getPathHashes(tmpDirBuild)
 	if err != nil {
 		t.Fatalf("Failed to load the actual results: %s", err)
 	}
