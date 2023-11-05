@@ -880,12 +880,8 @@ func SyncDirectories(
 ) error {
 	// Make destination parent if not exists
 	destinationParent := filepath.Dir(destination)
-	if _, err := os.Stat(destinationParent); os.IsNotExist(err) {
-		err = os.MkdirAll(destinationParent, 0755)
-		if err != nil {
-			return burrito.WrapErrorf(
-				err, osMkdirError, destinationParent)
-		}
+	if err := os.MkdirAll(destinationParent, 0755); err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, destinationParent)
 	}
 	err := filepath.Walk(source, func(srcPath string, info os.FileInfo, err error) error {
 		if err != nil {
