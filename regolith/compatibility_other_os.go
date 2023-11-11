@@ -3,7 +3,10 @@
 
 package regolith
 
-import "github.com/Bedrock-OSS/go-burrito/burrito"
+import (
+	"os"
+	"github.com/Bedrock-OSS/go-burrito/burrito"
+)
 
 // pythonExeNames is the list of strings with possible names of the Python
 // executable. The order of the names determines the order in which they are
@@ -48,11 +51,19 @@ func (d *DirWatcher) Close() error {
 }
 
 func FindMojangDir() (string, error) {
-	return "", burrito.WrappedError(notImplementedOnThisSystemError)
+	comMojang := os.Getenv("COM_MOJANG")
+	if comMojang == "" {
+			return "", burrito.WrappedError(comMojangEnvUnsetError)
+	}
+	return comMojang, nil
 }
 
 func FindPreviewDir() (string, error) {
-	return "", burrito.WrappedError(notImplementedOnThisSystemError)
+	comMojangPreview := os.Getenv("COM_MOJANG_PREVIEW")
+	if comMojangPreview == "" {
+			return "", burrito.WrappedError(comMojangPreviewEnvUnsetError)
+	}
+	return comMojangPreview, nil
 }
 
 func CheckSuspiciousLocation() error {
