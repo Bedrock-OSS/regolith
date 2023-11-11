@@ -143,6 +143,12 @@ const (
 	// Error used when certain function is not implemented on this system
 	notImplementedOnThisSystemError = "Not implemented for this system."
 
+	// Error used when env variable COM_MOJANG is not set on non Windows system
+	comMojangEnvUnsetError = "COM_MOJANG environment variable is not set."
+
+	// Error used when env variable COM_MOJANG_PREVIEW is not set on non Windows system
+	comMojangPreviewEnvUnsetError = "COM_MOJANG_PREVIEW environment variable is not set."
+
 	// Error used when SetupTmpFiles function fails
 	setupTmpFilesError = "Failed to setup temporary files.\n" +
 		"Regolith files path: %s" // .regolith
