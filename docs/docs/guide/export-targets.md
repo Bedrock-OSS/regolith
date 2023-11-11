@@ -16,6 +16,13 @@ Some configuration properties may be used with all export targets.
 
 `readOnly` changes the permissions of exported files to read-only. The default value is `false`. This property can be used to protect against accidental editing of files that should only be edited by Regolith!
 
+## Additional Configuration for Non-Windows Users
+
+Some of the export targets listed below wouldn't make sense on systems other than Windows with Minecraft installed. They often rely on finding the `com.mojang` path first, and then placing the files in a path relative to that. This problem can be solved by setting environment variables that Regolith will use instead of the `com.mojang` path.
+
+- `COM_MOJANG_PREVIEW` - A fake path to the `com.mojang` folder in Minecraft preview releases. This is used by the `preview` export target.
+- `COM_MOJANG` - A fake path to the `com.mojang` folder in regular Minecraft releases.
+
 # Export Targets
 
 These are the export targets that Regolith offers.
