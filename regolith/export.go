@@ -113,6 +113,9 @@ func GetWorldExportPaths(exportTarget ExportTarget, bpName, rpName string) (bpPa
 	return
 }
 
+// GetExportNames returns the names for the behavior pack and resource pack
+// based on the evaluated values of the "bpName" and "rpName" from the
+// exportTarget object.
 func GetExportNames(exportTarget ExportTarget, ctx RunContext) (bpName string, rpName string, err error) {
 	if exportTarget.BpName != "" {
 		bpName, err = EvalString(exportTarget.BpName, ctx)
