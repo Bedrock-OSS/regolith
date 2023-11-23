@@ -5,10 +5,12 @@ type Experiment int
 const (
 	// SizeTimeCheck is an experiment that checks the size and modification time when exporting
 	SizeTimeCheck Experiment = iota
+	VFS
 )
 
 var experimentNames = map[Experiment]string{
 	SizeTimeCheck: "size_time_check",
+	VFS:           "vfs",
 }
 
 var EnabledExperiments []string

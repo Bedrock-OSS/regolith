@@ -371,7 +371,9 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 		return burrito.WrapErrorf(err, filterRunnerCheckError, filterName)
 	}
 	// Setup tmp directory
-	err = SetupTmpFiles(*config, dotRegolithPath)
+	fs, err := SetupTmpFiles(*config, dotRegolithPath)
+	// in case of VFS, cleanup must be called even in case of an error
+	defer fs.Close()
 	if err != nil {
 		return burrito.WrapErrorf(err, setupTmpFilesError, dotRegolithPath)
 	}
@@ -383,6 +385,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 	}
 	// Export files to the source files
 	Logger.Info("Overwriting the source files.")
+	//TODO: Use fs variable here
 	err = InplaceExportProject(config, dotRegolithPath)
 	if err != nil {
 		return burrito.WrapError(

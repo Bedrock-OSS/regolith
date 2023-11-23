@@ -12,79 +12,145 @@ import (
 	"github.com/otiai10/copy"
 )
 
+type FileSystem interface {
+	Close()
+	SaveToPath(from, to string, makeReadOnly, copyParentAcl bool) error
+	SyncToPath(from, to string, makeReadOnly, copyParentAcl bool) error
+}
+
+type NoopFileSystem struct{}
+
+func (f *NoopFileSystem) Close() {
+
+}
+
+func (f *NoopFileSystem) SaveToPath(from, to string, makeReadOnly, copyParentAcl bool) error {
+	return nil
+}
+
+func (f *NoopFileSystem) SyncToPath(from, to string, makeReadOnly, copyParentAcl bool) error {
+	return nil
+}
+
+type TmpFileSystem struct {
+	dotRegolithPath string
+}
+
+func (f *TmpFileSystem) Close() {
+
+}
+
+func (f *TmpFileSystem) SaveToPath(from, to string, makeReadOnly, copyParentAcl bool) error {
+	return MoveOrCopy(filepath.Join(f.dotRegolithPath, "tmp", from), to, makeReadOnly, copyParentAcl)
+}
+
+func (f *TmpFileSystem) SyncToPath(from, to string, makeReadOnly, copyParentAcl bool) error {
+	return SyncDirectories(filepath.Join(f.dotRegolithPath, "tmp", from), to, makeReadOnly, copyParentAcl)
+}
+
 // SetupTmpFiles set up the workspace for the filters.
-func SetupTmpFiles(config Config, dotRegolithPath string) error {
-	start := time.Now()
+func SetupTmpFiles(config Config, dotRegolithPath string) (FileSystem, error) {
+	// Prepare cleanup function
+	var fs FileSystem = &NoopFileSystem{}
 	// Setup Directories
+	MeasureStart("SetupTmpFiles - Clean")
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
 	Logger.Debugf("Cleaning \"%s\"", tmpPath)
 	err := os.RemoveAll(tmpPath)
 	if err != nil {
-		return burrito.WrapErrorf(err, osRemoveError, tmpPath)
+		return fs, burrito.WrapErrorf(err, osRemoveError, tmpPath)
 	}
 
 	err = os.MkdirAll(tmpPath, 0755)
 	if err != nil {
-		return burrito.WrapErrorf(err, osMkdirError, tmpPath)
+		return fs, burrito.WrapErrorf(err, osMkdirError, tmpPath)
 	}
+	MeasureEnd()
 
-	// Copy the contents of the 'regolith' folder to '[dotRegolithPath]/tmp'
-	Logger.Debugf("Copying project files to \"%s\"", tmpPath)
-	// Avoid repetitive code of preparing ResourceFolder, BehaviorFolder
-	// and DataPath with a closure
-	setupTmpDirectory := func(
-		path, shortName, descriptiveName string,
-	) error {
-		p := filepath.Join(tmpPath, shortName)
-		if path != "" {
-			stats, err := os.Stat(path)
-			if err != nil {
-				if os.IsNotExist(err) {
-					Logger.Warnf(
-						"%s %q does not exist", descriptiveName, path)
-					err = os.MkdirAll(p, 0755)
-					if err != nil {
-						return burrito.WrapErrorf(err, osMkdirError, p)
-					}
-				}
-			} else if stats.IsDir() {
-				err = copy.Copy(
-					path,
-					p,
-					copy.Options{PreserveTimes: IsExperimentEnabled(SizeTimeCheck), Sync: false})
-				if err != nil {
-					return burrito.WrapErrorf(err, osCopyError, path, p)
-				}
-			} else { // The folder paths leads to a file
-				return burrito.WrappedErrorf(isDirNotADirError, path)
-			}
-		} else {
-			err = os.MkdirAll(p, 0755)
-			if err != nil {
-				return burrito.WrapErrorf(err, osMkdirError, p)
-			}
+	if IsExperimentEnabled(VFS) {
+		Logger.Debugf("Setting up VFS at \"%s\"", tmpPath)
+		MeasureStart("SetupTmpFiles - Set up VFS")
+		fs, err = NewRegolithFS([]Root{
+			{
+				Source:    config.ResourceFolder,
+				MountName: "RP",
+			},
+			{
+				Source:    config.BehaviorFolder,
+				MountName: "BP",
+			},
+			{
+				Source:    config.DataPath,
+				MountName: "data",
+			},
+		}, tmpPath)
+		if err != nil {
+			return fs, burrito.WrapErrorf(err, "Failed to create VFS at %s.", tmpPath)
 		}
-		return nil
-	}
+		MeasureEnd()
+	} else {
+		fs = &TmpFileSystem{dotRegolithPath: dotRegolithPath}
+		// Copy the contents of the 'regolith' folder to '[dotRegolithPath]/tmp'
+		Logger.Debugf("Copying project files to \"%s\"", tmpPath)
+		// Avoid repetitive code of preparing ResourceFolder, BehaviorFolder
+		// and DataPath with a closure
+		setupTmpDirectory := func(
+			path, shortName, descriptiveName string,
+		) error {
+			p := filepath.Join(tmpPath, shortName)
+			if path != "" {
+				stats, err := os.Stat(path)
+				if err != nil {
+					if os.IsNotExist(err) {
+						Logger.Warnf(
+							"%s %q does not exist", descriptiveName, path)
+						err = os.MkdirAll(p, 0755)
+						if err != nil {
+							return burrito.WrapErrorf(err, osMkdirError, p)
+						}
+					}
+				} else if stats.IsDir() {
+					err = copy.Copy(
+						path,
+						p,
+						copy.Options{PreserveTimes: IsExperimentEnabled(SizeTimeCheck), Sync: false})
+					if err != nil {
+						return burrito.WrapErrorf(err, osCopyError, path, p)
+					}
+				} else { // The folder paths leads to a file
+					return burrito.WrappedErrorf(isDirNotADirError, path)
+				}
+			} else {
+				err = os.MkdirAll(p, 0755)
+				if err != nil {
+					return burrito.WrapErrorf(err, osMkdirError, p)
+				}
+			}
+			return nil
+		}
 
-	err = setupTmpDirectory(config.ResourceFolder, "RP", "resource folder")
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, "Failed to setup RP folder in the temporary directory.")
-	}
-	err = setupTmpDirectory(config.BehaviorFolder, "BP", "behavior folder")
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, "Failed to setup BP folder in the temporary directory.")
-	}
-	err = setupTmpDirectory(config.DataPath, "data", "data folder")
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, "Failed to setup data folder in the temporary directory.")
-	}
+		MeasureStart("SetupTmpFiles - RP")
+		err = setupTmpDirectory(config.ResourceFolder, "RP", "resource folder")
+		if err != nil {
+			return fs, burrito.WrapErrorf(
+				err, "Failed to setup RP folder in the temporary directory.")
+		}
+		MeasureStart("SetupTmpFiles - BP")
+		err = setupTmpDirectory(config.BehaviorFolder, "BP", "behavior folder")
+		if err != nil {
+			return fs, burrito.WrapErrorf(
+				err, "Failed to setup BP folder in the temporary directory.")
+		}
+		MeasureStart("SetupTmpFiles - Data")
+		err = setupTmpDirectory(config.DataPath, "data", "data folder")
+		if err != nil {
+			return fs, burrito.WrapErrorf(
+				err, "Failed to setup data folder in the temporary directory.")
+		}
 
-	Logger.Debug("Setup done in ", time.Since(start))
-	return nil
+		MeasureEnd()
+	}
+	return fs, nil
 }
 
 func CheckProfileImpl(
@@ -117,11 +183,15 @@ start:
 	if err != nil {
 		return burrito.WrapErrorf(err, runContextGetProfileError)
 	}
-	err = SetupTmpFiles(*context.Config, context.DotRegolithPath)
+	fs, err := SetupTmpFiles(*context.Config, context.DotRegolithPath)
+	// in case of VFS, cleanup must be called even in case of an error
+	defer fs.Close()
 	if err != nil {
 		return burrito.WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
 	}
 	if context.IsInterrupted() {
+		// Dirty gotos break my deferred cleanup
+		fs.Close()
 		goto start
 	}
 	// Run the profile
@@ -130,17 +200,21 @@ start:
 		return burrito.PassError(err)
 	}
 	if interrupted {
+		// Dirty gotos break my deferred cleanup
+		fs.Close()
 		goto start
 	}
 	// Export files
 	Logger.Info("Moving files to target directory.")
 	start := time.Now()
 	err = ExportProject(
-		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath)
+		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath, fs)
 	if err != nil {
 		return burrito.WrapError(err, exportProjectError)
 	}
 	if context.IsInterrupted("data") {
+		// Dirty gotos break my deferred cleanup
+		fs.Close()
 		goto start
 	}
 	Logger.Debug("Done in ", time.Since(start))

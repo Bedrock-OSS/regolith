@@ -268,6 +268,10 @@ func main() {
 		Short: "Runs Regolith using specified profile",
 		Long:  regolithRunDesc,
 		Run: func(cmd *cobra.Command, args []string) {
+			if regolith.IsExperimentEnabled(regolith.VFS) {
+				fmt.Println("Running experimental virtual filesystem mode")
+				fmt.Println("It requires Dokany v1.2, that you can download here: https://github.com/dokan-dev/dokany/releases/tag/v1.2.2.1000")
+			}
 			var profile string
 			if len(args) != 0 {
 				profile = args[0]

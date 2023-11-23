@@ -98,9 +98,7 @@ func GetExportPaths(
 
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export target. The paths are generated with GetExportPaths.
-func ExportProject(
-	profile Profile, name, dataPath, dotRegolithPath string,
-) error {
+func ExportProject(profile Profile, name, dataPath, dotRegolithPath string, fs FileSystem) error {
 	MeasureStart("Export - GetExportPaths")
 	// Get the export target paths
 	exportTarget := profile.ExportTarget
@@ -176,6 +174,7 @@ func ExportProject(
 	// The root of the data path cannot be deleted because the
 	// "regolith watch" function would stop watching the file changes
 	// (due to Windows API limitation).
+	//TODO: Extend fs to handle this case
 	_, err = os.ReadDir(dataPath)
 	if err != nil {
 		var err1 error = nil
@@ -244,26 +243,26 @@ func ExportProject(
 	if IsExperimentEnabled(SizeTimeCheck) {
 		// Export BP
 		Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-		err = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
+		err = fs.SyncToPath("BP", bpPath, exportTarget.ReadOnly, true)
 		if err != nil {
 			return burrito.WrapError(err, "Failed to export behavior pack.")
 		}
 		// Export RP
 		Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
-		err = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
+		err = fs.SyncToPath("RP", rpPath, exportTarget.ReadOnly, true)
 		if err != nil {
 			return burrito.WrapError(err, "Failed to export resource pack.")
 		}
 	} else {
 		// Export BP
 		Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-		err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
+		err = fs.SaveToPath("BP", bpPath, exportTarget.ReadOnly, true)
 		if err != nil {
 			return burrito.WrapError(err, "Failed to export behavior pack.")
 		}
 		// Export RP
 		Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
-		err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
+		err = fs.SaveToPath("RP", rpPath, exportTarget.ReadOnly, true)
 		if err != nil {
 			return burrito.WrapError(err, "Failed to export resource pack.")
 		}
