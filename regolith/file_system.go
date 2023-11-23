@@ -913,6 +913,7 @@ func SyncDirectories(
 	}
 
 	// Remove files/folders in destination that are not in source
+	toRemoveList := make([]string, 0)
 	err = filepath.Walk(destination, func(destPath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -923,14 +924,29 @@ func SyncDirectories(
 		}
 		srcPath := filepath.Join(source, relPath)
 		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-			Logger.Debugf("SYNC: Removing file %s", destPath)
-			return os.RemoveAll(destPath)
+			// TODO: Not sure if this is the best way to do this
+			// The toRemoveList might get pretty big
+			if !SliceAny[string](toRemoveList, func(s string) bool {
+				return strings.HasPrefix(destPath, s)
+			}) {
+				Logger.Debugf("SYNC: Removing file %s", destPath)
+				// Add to list of files to remove, because otherwise walk function might fail
+				// when trying to walk a directory that doesn't exist anymore
+				toRemoveList = append(toRemoveList, destPath)
+			}
 		}
 		return nil
 	})
 
 	if err != nil {
-		return burrito.WrapErrorf(err, osRemoveError, source, destination)
+		return burrito.PassError(err)
+	}
+
+	for _, path := range toRemoveList {
+		err = os.RemoveAll(path)
+		if err != nil {
+			return burrito.WrapErrorf(err, osRemoveError, path)
+		}
 	}
 
 	//TODO: copy ACL. To be honest, I have no clue why it was there in the first place

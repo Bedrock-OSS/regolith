@@ -430,3 +430,12 @@ func EscapePathPart(s string) string {
 	}
 	return sb.String()
 }
+
+func SliceAny[T interface{}](slice []T, predicate func(T) bool) bool {
+	for _, item := range slice {
+		if predicate(item) {
+			return true
+		}
+	}
+	return false
+}
