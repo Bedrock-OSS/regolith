@@ -8,6 +8,7 @@ import (
 	"github.com/stirante/go-simple-eval/eval/utils"
 )
 
+// EvalCondition evaluates a condition expression with the given context.
 func EvalCondition(expression string, ctx RunContext) (bool, error) {
 	Logger.Debugf("Evaluating condition: %s", expression)
 	t := prepareScope(ctx)
@@ -20,6 +21,8 @@ func EvalCondition(expression string, ctx RunContext) (bool, error) {
 	return utils.ToBoolean(e), nil
 }
 
+// EvalString evaluates an expression with the given context and returns the
+// result as a string.
 func EvalString(expression string, ctx RunContext) (string, error) {
 	Logger.Debugf("Evaluating expression: %s", expression)
 	t := prepareScope(ctx)
