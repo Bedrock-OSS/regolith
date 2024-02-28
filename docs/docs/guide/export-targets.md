@@ -29,11 +29,21 @@ These are the export targets that Regolith offers.
 
 ## Development
 
-The development export target will place the compiled packs into your `com.mojang` `development_*_packs` folder, in a new folder called `<name>_BP` or `<name>_RP`.
+The development export target will place the compiled packs into your `com.mojang` `development_*_packs` folders.
 
 ```json
 "export": {
     "target": "development"
+}
+```
+
+Optionally, you can use `rpName` and `bpName` to specify the names of the folders that will be created in the `development_*_packs` folders. You can read more about these options at the end of this page of the documentation.
+
+```json
+"export": {
+    "target": "development",
+    "rpName": "'my_rp'",
+    "bpName": "'my_bp'"
 }
 ```
 
@@ -46,6 +56,18 @@ This export target will place the compiled packs into a folder called `build`, c
     "target": "local"
 }
 ```
+
+Local export optionally accepts `rpName` and `bpName` to specify the names of the folders that will be created in the `build` folders. You can read more about these options at the end of this page of the documentation.
+
+```json
+"export": {
+    "target": "local",
+    "rpName": "'my_rp'",
+    "bpName": "'my_bp'"
+}
+```
+
+
 
 ## Exact
 
@@ -63,6 +85,8 @@ Example:
 }
 ```
 
+The exact export target doesn't support using `rpName` and `bpName`. The `rpPath` and `bpPath` should provide full paths to the desired locations.
+
 ## World
 
 The World export target will place the compiled files into a specific world. This is useful for teams that prefer working in-world, as opposed to in the development pack folders.
@@ -74,17 +98,54 @@ Example:
 ```json
 "export": {
     "target": "world",
-    "worldName": "...",  // This
-    "worldPath": "..."   // OR this
+    "worldName": "..."  // This
+    // "worldPath": "..."   // OR this
 }
 ```
 
+Optionally, you can use `rpName` and `bpName` to specify the names of the folders that will be created in the world. You can read more about these options at the end of this page of the documentation.
+
+```json
+"export": {
+    "target": "world",
+    "worldPath": "...",
+    "rpName": "'my_rp'",
+    "bpName": "'my_bp'"
+}
+```
+
+
 ## Preview
 
-The development export target will place the compiled packs into your (minecraft preview) `com.mojang` `development_*_packs` folder, in a new folder called `<name>_bp` or `<name>_rp`.
+The development export target will place the compiled packs into your **(minecraft preview)** `com.mojang` `development_*_packs` folder.
 
 ```json
 "export": {
     "target": "preview"
 }
 ```
+
+Optionally, you can use `rpName` and `bpName` to specify the names of the folders that will be created in the `development_*_packs` folders. You can read more about these options at the end of this page of the documentation.
+```json
+"export": {
+    "target": "preview",
+    "rpName": "'my_rp'",
+    "bpName": "'my_bp'"
+}
+```
+
+# The `rpName` and `bpName` expressions
+
+The `rpName` and `bpName` are expressions evaulated using the [go-simple-eval](https://github.com/stirante/go-simple-eval/) library. They let you specify the names of the folders of the exported packs in some of the export targets.
+
+The go-simple-eval library allows you to use simple expressions to generate the names of the folders. The expressions can use the following variables:
+
+- `project.name` - The name of the project.
+- `project.author` - The author of the project.
+- `os` - The host operating system.
+- `arch` - The host architecture.
+- `debug` - whether regolith is running in debug mode or not.
+- `version` - The version of regolith.
+- `profile` - The name of the profile being run.
+
+Go-simple-eval can concatenate strings using the `+` operator. The strings must be enclosed in single quotes.
