@@ -12,83 +12,33 @@ import (
 // resource pack based on exportTarget (a structure with data related to
 // export settings) and the name of the project.
 func GetExportPaths(
-	exportTarget ExportTarget, name string,
+	exportTarget ExportTarget, ctx RunContext,
 ) (bpPath string, rpPath string, err error) {
+	bpName, rpName, err := GetExportNames(exportTarget, ctx)
 	if exportTarget.Target == "development" {
 		comMojang, err := FindMojangDir()
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, "Failed to find \"com.mojang\" directory.")
 		}
-
-		// TODO - I don't like the _rp and _bp suffixes. Can we get rid of that?
-		// I for example always name my packs "0".
-		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
-		rpPath = comMojang + "/development_resource_packs/" + name + "_rp"
+		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
 	} else if exportTarget.Target == "preview" {
 		comMojang, err := FindPreviewDir()
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, "Failed to find preview \"com.mojang\" directory.")
 		}
-
-		// TODO - I don't like the _rp and _bp suffixes. Can we get rid of that?
-		// I for example always name my packs "0".
-		bpPath = comMojang + "/development_behavior_packs/" + name + "_bp"
-		rpPath = comMojang + "/development_resource_packs/" + name + "_rp"
+		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
 	} else if exportTarget.Target == "exact" {
-		bpPath, err = ResolvePath(exportTarget.BpPath)
-		if err != nil {
-			return "", "", burrito.WrapError(
-				err, "Failed to resolve behavior pack path.")
-		}
-		rpPath, err = ResolvePath(exportTarget.RpPath)
-		if err != nil {
-			return "", "", burrito.WrapError(
-				err, "Failed to resolve resource pack path.")
-		}
+		return GetExactExportPaths(exportTarget)
 	} else if exportTarget.Target == "world" {
-		if exportTarget.WorldPath != "" {
-			if exportTarget.WorldName != "" {
-				return "", "", burrito.WrappedError(
-					"Using both \"worldName\" and \"worldPath\" is not" +
-						" allowed.")
-			}
-			wPath, err := ResolvePath(exportTarget.WorldPath)
-			if err != nil {
-				return "", "", burrito.WrapError(
-					err, "Failed to resolve world path.")
-			}
-			bpPath = filepath.Join(
-				wPath, "behavior_packs", name+"_bp")
-			rpPath = filepath.Join(
-				wPath, "resource_packs", name+"_rp")
-		} else if exportTarget.WorldName != "" {
-			dir, err := FindMojangDir()
-			if err != nil {
-				return "", "", burrito.WrapError(
-					err, "Failed to find \"com.mojang\" directory.")
-			}
-			worlds, err := ListWorlds(dir)
-			if err != nil {
-				return "", "", burrito.WrapError(err, "Failed to list worlds.")
-			}
-			for _, world := range worlds {
-				if world.Name == exportTarget.WorldName {
-					bpPath = filepath.Join(
-						world.Path, "behavior_packs", name+"_bp")
-					rpPath = filepath.Join(
-						world.Path, "resource_packs", name+"_rp")
-				}
-			}
-		} else {
-			err = burrito.WrappedError(
-				"The \"world\" export target requires either a " +
-					"\"worldName\" or \"worldPath\" property")
-		}
+		return GetWorldExportPaths(exportTarget, bpName, rpName)
 	} else if exportTarget.Target == "local" {
-		bpPath = "build/BP/"
-		rpPath = "build/RP/"
+		bpPath = "build/" + bpName + "/"
+		rpPath = "build/" + rpName + "/"
+	} else if exportTarget.Target == "none" {
+		bpPath = ""
+		rpPath = ""
 	} else {
 		err = burrito.WrappedErrorf(
 			"Export target %q is not valid", exportTarget.Target)
@@ -96,14 +46,114 @@ func GetExportPaths(
 	return
 }
 
+func GetDevelopmentExportPaths(bpName, rpName, comMojang string) (bpPath string, rpPath string, err error) {
+	if err != nil {
+		return "", "", burrito.WrapError(
+			err, "Failed to find \"com.mojang\" directory.")
+	}
+
+	bpPath = comMojang + "/development_behavior_packs/" + bpName
+	rpPath = comMojang + "/development_resource_packs/" + rpName
+	return
+}
+
+func GetExactExportPaths(exportTarget ExportTarget) (bpPath string, rpPath string, err error) {
+	bpPath, err = ResolvePath(exportTarget.BpPath)
+	if err != nil {
+		return "", "", burrito.WrapError(
+			err, "Failed to resolve behavior pack path.")
+	}
+	rpPath, err = ResolvePath(exportTarget.RpPath)
+	if err != nil {
+		return "", "", burrito.WrapError(
+			err, "Failed to resolve resource pack path.")
+	}
+	return
+}
+
+func GetWorldExportPaths(exportTarget ExportTarget, bpName, rpName string) (bpPath string, rpPath string, err error) {
+	if exportTarget.WorldPath != "" {
+		if exportTarget.WorldName != "" {
+			return "", "", burrito.WrappedError(
+				"Using both \"worldName\" and \"worldPath\" is not" +
+					" allowed.")
+		}
+		wPath, err := ResolvePath(exportTarget.WorldPath)
+		if err != nil {
+			return "", "", burrito.WrapError(
+				err, "Failed to resolve world path.")
+		}
+		bpPath = filepath.Join(
+			wPath, "behavior_packs", bpName)
+		rpPath = filepath.Join(
+			wPath, "resource_packs", rpName)
+	} else if exportTarget.WorldName != "" {
+		dir, err := FindMojangDir()
+		if err != nil {
+			return "", "", burrito.WrapError(
+				err, "Failed to find \"com.mojang\" directory.")
+		}
+		worlds, err := ListWorlds(dir)
+		if err != nil {
+			return "", "", burrito.WrapError(err, "Failed to list worlds.")
+		}
+		for _, world := range worlds {
+			if world.Name == exportTarget.WorldName {
+				bpPath = filepath.Join(
+					world.Path, "behavior_packs", bpName)
+				rpPath = filepath.Join(
+					world.Path, "resource_packs", rpName)
+			}
+		}
+	} else {
+		err = burrito.WrappedError(
+			"The \"world\" export target requires either a " +
+				"\"worldName\" or \"worldPath\" property")
+	}
+	return
+}
+
+// GetExportNames returns the names for the behavior pack and resource pack
+// based on the evaluated values of the "bpName" and "rpName" from the
+// exportTarget object.
+func GetExportNames(exportTarget ExportTarget, ctx RunContext) (bpName string, rpName string, err error) {
+	if exportTarget.BpName != "" {
+		bpName, err = EvalString(exportTarget.BpName, ctx)
+		if err != nil {
+			return "", "", burrito.WrapError(
+				err, "Failed to evaluate behavior pack name.")
+		}
+	} else {
+		bpName = ctx.Config.Name + "_bp"
+	}
+	if exportTarget.RpName != "" {
+		rpName, err = EvalString(exportTarget.RpName, ctx)
+		if err != nil {
+			return "", "", burrito.WrapError(
+				err, "Failed to evaluate resource pack name.")
+		}
+	} else {
+		rpName = ctx.Config.Name + "_rp"
+	}
+	return
+}
+
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export target. The paths are generated with GetExportPaths.
-func ExportProject(
-	profile Profile, name, dataPath, dotRegolithPath string,
-) error {
+func ExportProject(ctx RunContext) error {
+	profile, err := ctx.GetProfile()
+	if err != nil {
+		return burrito.WrapError(err, runContextGetProfileError)
+	}
+	if profile.ExportTarget.Target == "none" {
+		Logger.Debugf("Export target is set to \"none\". Skipping export.")
+		return nil
+	}
+	dataPath := ctx.Config.DataPath
+	dotRegolithPath := ctx.DotRegolithPath
 	// Get the export target paths
 	exportTarget := profile.ExportTarget
-	bpPath, rpPath, err := GetExportPaths(exportTarget, name)
+	bpPath, rpPath, err := GetExportPaths(exportTarget, ctx)
 	if err != nil {
 		return burrito.WrapError(
 			err, "Failed to get generate export paths.")

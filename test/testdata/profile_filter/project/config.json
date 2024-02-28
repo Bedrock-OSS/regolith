@@ -1,5 +1,5 @@
 {
-	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.json",
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.2.json",
 	"name": "nested_filter_test_project",
 	"author": "Bedrock-OSS",
 	"packs": {

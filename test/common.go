@@ -70,6 +70,12 @@ const (
 	// the execution.
 	conditionalFilterPath = "testdata/conditional_filter"
 
+	// customPackNamePath contains two subdirectories 'project' and
+	// 'expected_build_result'. The project is a Regolith project with custom
+	// rpName and bpName properties in the filter. The 'expected_build_result'
+	// contains the expected content of the build directory.
+	customPackNamePath = "testdata/custom_pack_name"
+
 	dataModifyRemoteFilter = "testdata/data_modify_remote_filter"
 )
 
