@@ -141,7 +141,7 @@ func GetExportNames(exportTarget ExportTarget, ctx RunContext) (bpName string, r
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export target. The paths are generated with GetExportPaths.
 func ExportProject(ctx RunContext) error {
-  MeasureStart("Export - GetExportPaths")
+	MeasureStart("Export - GetExportPaths")
 	profile, err := ctx.GetProfile()
 	if err != nil {
 		return burrito.WrapError(err, runContextGetProfileError)
@@ -292,13 +292,13 @@ func ExportProject(ctx RunContext) error {
 	if IsExperimentEnabled(SizeTimeCheck) {
 		// Export BP
 		Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-		err = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
+		err = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly)
 		if err != nil {
 			return burrito.WrapError(err, "Failed to export behavior pack.")
 		}
 		// Export RP
 		Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
-		err = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
+		err = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly)
 		if err != nil {
 			return burrito.WrapError(err, "Failed to export resource pack.")
 		}

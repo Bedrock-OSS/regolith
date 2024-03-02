@@ -878,7 +878,7 @@ func MoveOrCopy(
 // If the file in the destination is different than the one in the source, it's overwritten,
 // otherwise it's skipped (the destination file is not modified).
 func SyncDirectories(
-	source string, destination string, makeReadOnly bool, copyParentAcl bool,
+	source string, destination string, makeReadOnly bool,
 ) error {
 	// Make destination parent if not exists
 	destinationParent := filepath.Dir(destination)
@@ -950,8 +950,6 @@ func SyncDirectories(
 			return burrito.WrapErrorf(err, osRemoveError, path)
 		}
 	}
-
-	//TODO: copy ACL. To be honest, I have no clue why it was there in the first place
 
 	// Make files read only if this option is selected
 	if makeReadOnly {
