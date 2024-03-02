@@ -119,7 +119,7 @@ func TestProfileFilterRun(t *testing.T) {
 
 	// Load abs path of the expected result and switch to the working directory
 	expectedBuildResult := absOrFatal(
-		filepath.Join(exeFilterPath, "expected_build_result"), t)
+		filepath.Join(profileFilterPath, "expected_build_result"), t)
 	os.Chdir(tmpDir)
 
 	// THE TEST

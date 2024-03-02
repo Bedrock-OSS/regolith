@@ -113,11 +113,7 @@ func CheckProfileImpl(
 func RunProfile(context RunContext) error {
 start:
 	// Prepare tmp files
-	profile, err := context.GetProfile()
-	if err != nil {
-		return burrito.WrapErrorf(err, runContextGetProfileError)
-	}
-	err = SetupTmpFiles(*context.Config, context.DotRegolithPath)
+	err := SetupTmpFiles(*context.Config, context.DotRegolithPath)
 	if err != nil {
 		return burrito.WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
 	}
@@ -135,8 +131,7 @@ start:
 	// Export files
 	Logger.Info("Moving files to target directory.")
 	start := time.Now()
-	err = ExportProject(
-		profile, context.Config.Name, context.Config.DataPath, context.DotRegolithPath)
+	err = ExportProject(context)
 	if err != nil {
 		return burrito.WrapError(err, exportProjectError)
 	}
@@ -260,6 +255,8 @@ type FilterCollection struct {
 	Filters []FilterRunner `json:"filters"`
 }
 
+// Profile is a collection of filters and an export target
+// When editing, adjust ProfileFromObject function as well
 type Profile struct {
 	FilterCollection
 	ExportTarget ExportTarget `json:"export,omitempty"`
