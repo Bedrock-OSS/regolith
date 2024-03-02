@@ -904,6 +904,14 @@ func SyncDirectories(
 				return os.MkdirAll(destPath, info.Mode())
 			}
 			Logger.Debugf("SYNC: Copying file %s to %s", srcPath, destPath)
+			// If file exists, we need to remove it first to avoid permission issues when it's
+			// read-only
+			if destInfo != nil {
+				err = os.Remove(destPath)
+				if err != nil {
+					return burrito.WrapErrorf(err, osRemoveError, destPath)
+				}
+			}
 			return copyFile(srcPath, destPath, info)
 		} else {
 			Logger.Debugf("SYNC: Skipping file %s", srcPath)
