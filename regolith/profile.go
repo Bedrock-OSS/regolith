@@ -15,15 +15,18 @@ import (
 // SetupTmpFiles set up the workspace for the filters.
 func SetupTmpFiles(config Config, dotRegolithPath string) error {
 	start := time.Now()
+	useSizeTimeCheck := IsExperimentEnabled(SizeTimeCheck)
 	// Setup Directories
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
-	Logger.Debugf("Cleaning \"%s\"", tmpPath)
-	err := os.RemoveAll(tmpPath)
-	if err != nil {
-		return burrito.WrapErrorf(err, osRemoveError, tmpPath)
+	if !useSizeTimeCheck {
+		Logger.Debugf("Cleaning \"%s\"", tmpPath)
+		err := os.RemoveAll(tmpPath)
+		if err != nil {
+			return burrito.WrapErrorf(err, osRemoveError, tmpPath)
+		}
 	}
 
-	err = os.MkdirAll(tmpPath, 0755)
+	err := os.MkdirAll(tmpPath, 0755)
 	if err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, tmpPath)
 	}
@@ -36,6 +39,7 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 		path, shortName, descriptiveName string,
 	) error {
 		p := filepath.Join(tmpPath, shortName)
+		// A project don't have to have a RP or BP so path can be ""
 		if path != "" {
 			stats, err := os.Stat(path)
 			if err != nil {
@@ -48,12 +52,19 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 					}
 				}
 			} else if stats.IsDir() {
-				err = copy.Copy(
-					path,
-					p,
-					copy.Options{PreserveTimes: IsExperimentEnabled(SizeTimeCheck), Sync: false})
-				if err != nil {
-					return burrito.WrapErrorf(err, osCopyError, path, p)
+				if useSizeTimeCheck {
+					err = SyncDirectories(path, p, false)
+					if err != nil {
+						return burrito.WrapError(err, "Failed to export behavior pack.")
+					}
+				} else {
+					err = copy.Copy(
+						path,
+						p,
+						copy.Options{PreserveTimes: false, Sync: false})
+					if err != nil {
+						return burrito.WrapErrorf(err, osCopyError, path, p)
+					}
 				}
 			} else { // The folder paths leads to a file
 				return burrito.WrappedErrorf(isDirNotADirError, path)
