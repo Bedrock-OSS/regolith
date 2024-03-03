@@ -127,6 +127,10 @@ export default defineConfig({
               link: '/guide/profiles'
             },
             {
+              text: 'Experiments',
+              link: '/guide/experiments'
+            },
+            {
               text: 'Safety',
               link: '/guide/safety'
             }
