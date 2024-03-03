@@ -1,0 +1,33 @@
+{
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.2.json",
+	"author": "Your name",
+	"name": "Project name",
+	"packs": {
+		"behaviorPack": "./packs/BP",
+		"resourcePack": "./packs/RP"
+	},
+	"regolith": {
+		"dataPath": "./packs/data",
+		"filterDefinitions": {
+			"fill_with_data": {
+				"runWith": "python",
+				"script": "local_filters/fill_with_data.py"
+			}
+		},
+		"profiles": {
+			"default": {
+				"export": {
+					"readOnly": true,
+					"target": "local",
+					"bpName": "'BP'",
+					"rpName": "'RP'"
+				},
+				"filters": [
+					{
+						"filter": "fill_with_data"
+					}
+				]
+			}
+		}
+	}
+}

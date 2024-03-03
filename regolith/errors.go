@@ -11,6 +11,9 @@ const (
 	// Error message for filepath.Abs() function.
 	filepathAbsError = "Failed to get absolute path.\nBase path: %s"
 
+	// Error message for os.ReadDir() failure
+	osReadDirError = "Failed to list files in the directory.\nPath: %s"
+
 	// Error message for os.Stat failure
 	osStatErrorAny = "Failed to access file info.\nPath: %s"
 
@@ -40,7 +43,7 @@ const (
 	isDirEmptyError = "Failed to check if path is an empty directory.\nPath: %s"
 
 	// Error used when an empty directory is expected, but it's not
-	isDirEmptyNotEmptyError = "Path is an empty directory.\nPath: %s"
+	isDirEmptyNotEmptyError = "Path is not an empty directory.\nPath: %s"
 
 	// Error used when copyFileSecurityInfo fails
 	copyFileSecurityInfoError = "Failed to copy ACL.\nSource: %s\nTarget: %s"
@@ -139,6 +142,12 @@ const (
 
 	// Error used when certain function is not implemented on this system
 	notImplementedOnThisSystemError = "Not implemented for this system."
+
+	// Error used when env variable COM_MOJANG is not set on non Windows system
+	comMojangEnvUnsetError = "COM_MOJANG environment variable is not set."
+
+	// Error used when env variable COM_MOJANG_PREVIEW is not set on non Windows system
+	comMojangPreviewEnvUnsetError = "COM_MOJANG_PREVIEW environment variable is not set."
 
 	// Error used when SetupTmpFiles function fails
 	setupTmpFilesError = "Failed to setup temporary files.\n" +

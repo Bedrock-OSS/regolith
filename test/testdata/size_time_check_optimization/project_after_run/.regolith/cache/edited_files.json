@@ -1,0 +1,21 @@
+{
+	"rp": {
+		"build/RP/": [
+			".ignoreme"
+		]
+	},
+	"bp": {
+		"build/BP/": [
+			"bp_file_1.txt",
+			"bp_file_2.txt",
+			"bp_file_3.txt",
+			"bp_file_4.txt",
+			"bp_file_5.txt",
+			"filter_generated_data_1.txt",
+			"filter_generated_data_2.txt",
+			"filter_generated_data_3.txt",
+			"filter_generated_data_4.txt",
+			"filter_generated_data_5.txt"
+		]
+	}
+}
