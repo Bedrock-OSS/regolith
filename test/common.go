@@ -77,6 +77,13 @@ const (
 	customPackNamePath = "testdata/custom_pack_name"
 
 	dataModifyRemoteFilter = "testdata/data_modify_remote_filter"
+
+	// sizeTimeCheckOptimizationPath contains two subdirectories 'project' and
+	// 'project_after_run'. The project is a Regolith project with a simple
+	// Python filter that generates some additional files.The
+	// 'project_after_run' is the same project but after running Regolith with
+	// the size_time_check experiment enabled.
+	sizeTimeCheckOptimizationPath = "testdata/size_time_check_optimization"
 )
 
 // firstErr returns the first error in a list of errors. If the list is empty

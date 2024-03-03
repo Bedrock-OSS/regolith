@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 
@@ -869,6 +870,133 @@ func MoveOrCopy(
 					"\tPath: %s",
 				destination)
 		}
+	}
+	return nil
+}
+
+// SyncDirectories copies the source to destination while checking size and modification time.
+// If the file in the destination is different than the one in the source, it's overwritten,
+// otherwise it's skipped (the destination file is not modified).
+func SyncDirectories(
+	source string, destination string, makeReadOnly bool,
+) error {
+	// Make destination parent if not exists
+	destinationParent := filepath.Dir(destination)
+	if err := os.MkdirAll(destinationParent, 0755); err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, destinationParent)
+	}
+	err := filepath.Walk(source, func(srcPath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(source, srcPath)
+		if err != nil {
+			return burrito.WrapErrorf(err, filepathRelError, source, srcPath)
+		}
+		destPath := filepath.Join(destination, relPath)
+
+		destInfo, err := os.Stat(destPath)
+		if err != nil && !os.IsNotExist(err) {
+			return burrito.WrapErrorf(err, osStatErrorAny, destPath)
+		}
+		if (err != nil && os.IsNotExist(err)) || info.ModTime() != destInfo.ModTime() || info.Size() != destInfo.Size() {
+			if info.IsDir() {
+				return os.MkdirAll(destPath, info.Mode())
+			}
+			Logger.Debugf("SYNC: Copying file %s to %s", srcPath, destPath)
+			// If file exists, we need to remove it first to avoid permission issues when it's
+			// read-only
+			if destInfo != nil {
+				err = os.Remove(destPath)
+				if err != nil {
+					return burrito.WrapErrorf(err, osRemoveError, destPath)
+				}
+			}
+			return copyFile(srcPath, destPath, info)
+		} else {
+			Logger.Debugf("SYNC: Skipping file %s", srcPath)
+		}
+		return nil
+	})
+	if err != nil {
+		return burrito.WrapErrorf(err, osCopyError, source, destination)
+	}
+
+	// Remove files/folders in destination that are not in source
+	toRemoveList := make([]string, 0)
+	err = filepath.Walk(destination, func(destPath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(destination, destPath)
+		if err != nil {
+			return burrito.WrapErrorf(err, filepathRelError, destination, destPath)
+		}
+		srcPath := filepath.Join(source, relPath)
+		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+			// TODO: Not sure if this is the best way to do this
+			// The toRemoveList might get pretty big
+			if !SliceAny[string](toRemoveList, func(s string) bool {
+				return strings.HasPrefix(destPath, s)
+			}) {
+				Logger.Debugf("SYNC: Removing file %s", destPath)
+				// Add to list of files to remove, because otherwise walk function might fail
+				// when trying to walk a directory that doesn't exist anymore
+				toRemoveList = append(toRemoveList, destPath)
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return burrito.PassError(err)
+	}
+
+	for _, path := range toRemoveList {
+		err = os.RemoveAll(path)
+		if err != nil {
+			return burrito.WrapErrorf(err, osRemoveError, path)
+		}
+	}
+
+	// Make files read only if this option is selected
+	if makeReadOnly {
+		Logger.Infof("Changing the access for output path to "+
+			"read-only.\n\tPath: %s", destination)
+		err := filepath.WalkDir(destination,
+			func(s string, d fs.DirEntry, e error) error {
+
+				if e != nil {
+					// Error message isn't important as it's not passed further
+					// in the code
+					return e
+				}
+				if !d.IsDir() {
+					os.Chmod(s, 0444)
+				}
+				return nil
+			})
+		if err != nil {
+			Logger.Warnf(
+				"Failed to change access of the output path to read-only.\n"+
+					"\tPath: %s",
+				destination)
+		}
+	}
+	return nil
+}
+
+func copyFile(src, dest string, info os.FileInfo) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return burrito.WrapErrorf(err, fileReadError, src)
+	}
+	if err = os.WriteFile(dest, data, info.Mode()); err != nil {
+		return burrito.WrapErrorf(err, fileWriteError, dest)
+	}
+	err = os.Chtimes(dest, time.Now(), info.ModTime())
+	if err != nil {
+		return burrito.WrapErrorf(err, osChtimesError, dest)
 	}
 	return nil
 }
