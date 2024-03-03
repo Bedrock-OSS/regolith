@@ -430,3 +430,13 @@ func EscapePathPart(s string) string {
 	}
 	return sb.String()
 }
+
+// SliceAny returns true if any of the elements in the slice satisfy the predicate.
+func SliceAny[T interface{}](slice []T, predicate func(T) bool) bool {
+	for _, item := range slice {
+		if predicate(item) {
+			return true
+		}
+	}
+	return false
+}
