@@ -56,11 +56,6 @@ builds:
 archives:
   - builds:
       - binary
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      386: x86
-      amd64: x86_64
     format_overrides:
       - goos: windows
         format: zip
@@ -68,10 +63,6 @@ archives:
       - win_binary
     id: win_binary
     format: zip
-    replacements:
-      windows: Windows
-      386: x86
-      amd64: x86_64
     files:
         - src: scripts/regolith-update.ps1
           dst: ./
