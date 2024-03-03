@@ -1,0 +1,1 @@
+This is an example resource pack file to test if exporting works as exected.

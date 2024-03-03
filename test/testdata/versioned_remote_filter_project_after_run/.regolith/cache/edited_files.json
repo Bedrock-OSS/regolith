@@ -1,11 +1,11 @@
 {
 	"rp": {
-		"build/RP/": [
+		"build/regolith_test_project_rp/": [
 			"manifest.json"
 		]
 	},
 	"bp": {
-		"build/BP/": [
+		"build/regolith_test_project_bp/": [
 			"hello_version.txt",
 			"manifest.json"
 		]

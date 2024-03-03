@@ -241,7 +241,7 @@ func runOrWatch(profileName string, debug, watch bool) error {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
-	err = CreateDirectoryIfNotExists(dotRegolithPath)
+	err = os.MkdirAll(dotRegolithPath, 0755)
 	if err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
@@ -330,7 +330,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 		return burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
-	err = CreateDirectoryIfNotExists(dotRegolithPath)
+	err = os.MkdirAll(dotRegolithPath, 0755)
 	if err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
@@ -452,7 +452,7 @@ func Init(debug, force bool) error {
 	// Add the schema property, this is a little hacky
 	rawJsonData := make(map[string]interface{}, 0)
 	json.Unmarshal(jsonBytes, &rawJsonData)
-	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.1.json"
+	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.2.json"
 	jsonBytes, _ = json.MarshalIndent(rawJsonData, "", "\t")
 
 	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
