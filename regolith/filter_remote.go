@@ -342,8 +342,8 @@ func FilterDefinitionFromTheInternet(
 	if version == "" { // "" locks the version to the latest
 		version, err = GetRemoteFilterDownloadRef(url, name, version)
 		if err != nil {
-			return nil, burrito.WrappedErrorf(
-				getRemoteFilterDownloadRefError, url, name, version)
+			return nil, burrito.WrapErrorf(
+				err, getRemoteFilterDownloadRefError, url, name, version)
 		}
 		version = trimFilterPrefix(version, name)
 	}
