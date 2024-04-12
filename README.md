@@ -31,7 +31,7 @@
 
 **This setup is for developers. If you're a normal user, you can find simpler
 instructions
-[here](https://bedrock-oss.github.io/regolith/docs/installing).**
+[here](https://bedrock-oss.github.io/regolith/guide/installing).**
 
 ### 1. Install Golang
 
