@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -212,11 +214,9 @@ func InstallAll(force, debug, refreshFilters bool) error {
 	return sessionLockErr // Return the error from the defer function
 }
 
-// runOrWatch handles both 'regolith run' and 'regolith watch' commands based
-// on the 'watch' parameter. It runs/watches the profile named after
-// 'profileName' parameter. The 'debug' argument determines if the debug
-// messages should be printed or not.
-func runOrWatch(profileName string, debug, watch bool) error {
+// prepareRunContext prepares the context for the "regolith run" and
+// "regolith watch" commands.
+func prepareRunContext(profileName string, debug, watch bool) (*RunContext, error) {
 	InitLogging(debug)
 	if profileName == "" {
 		profileName = "default"
@@ -224,65 +224,59 @@ func runOrWatch(profileName string, debug, watch bool) error {
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
-		return burrito.WrapError(err, "Could not load \"config.json\".")
+		return nil, burrito.WrapError(err, "Could not load \"config.json\".")
 	}
 	config, err := ConfigFromObject(configJson)
 	if err != nil {
-		return burrito.WrapError(err, "Could not load \"config.json\".")
+		return nil, burrito.WrapError(err, "Could not load \"config.json\".")
 	}
 	profile, ok := config.Profiles[profileName]
 	if !ok {
-		return burrito.WrappedErrorf(
+		return nil, burrito.WrappedErrorf(
 			"Profile %q does not exist in the configuration.", profileName)
 	}
 	// Get dotRegolithPath
 	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
-		return burrito.WrapError(
+		return nil, burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
 	err = os.MkdirAll(dotRegolithPath, 0755)
 	if err != nil {
-		return burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
+		return nil, burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
-	// Lock the session
-	unlockSession, sessionLockErr := acquireSessionLock(dotRegolithPath)
-	if sessionLockErr != nil {
-		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
-	}
-	defer func() { sessionLockErr = unlockSession() }()
 	// Check the filters of the profile
 	err = CheckProfileImpl(profile, profileName, *config, nil, dotRegolithPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	path, _ := filepath.Abs(".")
-	context := RunContext{
+	return &RunContext{
 		AbsoluteLocation: path,
 		Config:           config,
 		Parent:           nil,
 		Profile:          profileName,
 		DotRegolithPath:  dotRegolithPath,
 		Settings:         map[string]interface{}{},
+	}, nil
+}
+
+// Run handles the "regolith run" command. It runs selected profile and exports
+// created resource pack and behavior pack to the target destination.
+func Run(profileName string, debug bool) error {
+	// Get the context
+	context, err := prepareRunContext(profileName, debug, false)
+	if err != nil {
+		return burrito.PassError(err)
 	}
-	if watch { // Loop until program termination (CTRL+C)
-		context.StartWatchingSourceFiles()
-		for {
-			err = RunProfile(context)
-			if err != nil {
-				Logger.Errorf(
-					"Failed to run profile %q: %s",
-					profileName, burrito.PassError(err).Error())
-			} else {
-				Logger.Infof("Successfully ran the %q profile.", profileName)
-			}
-			Logger.Info("Press Ctrl+C to stop watching.")
-			context.AwaitInterruption()
-			Logger.Warn("Restarting...")
-		}
-		// return nil // Unreachable code
+	// Lock the session
+	unlockSession, sessionLockErr := acquireSessionLock(context.DotRegolithPath)
+	if sessionLockErr != nil {
+		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
 	}
-	err = RunProfile(context)
+	defer func() { sessionLockErr = unlockSession() }()
+	// Run the profile
+	err = RunProfile(*context)
 	if err != nil {
 		return burrito.WrapErrorf(err, "Failed to run profile %q", profileName)
 	}
@@ -290,17 +284,46 @@ func runOrWatch(profileName string, debug, watch bool) error {
 	return sessionLockErr // Return the error from the defer function
 }
 
-// Run handles the "regolith run" command. It runs selected profile and exports
-// created resource pack and behavior pack to the target destination.
-func Run(profileName string, debug bool) error {
-	return runOrWatch(profileName, debug, false)
-}
-
 // Watch handles the "regolith watch" command. It watches the project
 // directories, and it runs selected profile and exports created resource pack
 // and behavior pack to the target destination when the project changes.
 func Watch(profileName string, debug bool) error {
-	return runOrWatch(profileName, debug, true)
+	// Get the context
+	context, err := prepareRunContext(profileName, debug, false)
+	if err != nil {
+		return burrito.PassError(err)
+	}
+	// Lock the session
+	unlockSession, sessionLockErr := acquireSessionLock(context.DotRegolithPath)
+	if sessionLockErr != nil {
+		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
+	}
+	defer func() { sessionLockErr = unlockSession() }()
+	// Setup the channel for stopping the watching
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	// Run the profile
+	context.StartWatchingSourceFiles()
+	for { // Loop until program termination (CTRL+C)
+		err = RunProfile(*context)
+		if err != nil {
+			Logger.Errorf(
+				"Failed to run profile %q: %s",
+				profileName, burrito.PassError(err).Error())
+		} else {
+			Logger.Infof("Successfully ran the %q profile.", profileName)
+		}
+		Logger.Info("Press Ctrl+C to stop watching.")
+		select {
+		case <-context.interruptionChannel:
+			// AwaitInterruption locks the goroutine with the interruption channel until
+			// the Config is interrupted and returns the interruption message.
+			Logger.Warn("Restarting...")
+		case <-sigChan:
+			return sessionLockErr // Return the error from the defer function
+		}
+	}
 }
 
 // ApplyFilter handles the "regolith apply-filter" command.
