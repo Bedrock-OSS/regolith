@@ -127,8 +127,7 @@ func TestInstall(t *testing.T) {
 			true,                                  // Force
 			false,                                 // Refresh resolvers
 			false,                                 // Refresh filters
-			false,                                 // Add to config
-			[]string{"default"},                   // Profiles
+			[]string{},                            // Profiles that should have the filter added
 			true,                                  // Debug
 		)
 		if err != nil {
