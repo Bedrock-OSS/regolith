@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -66,6 +67,52 @@ func installFilters(
 					name)
 			}
 		}
+	}
+	return nil
+}
+
+// addFiltersToConfig modifies the config by adding the specified filters
+// to the list of the filters in the project. If the profiles list is not
+// empty, it also adds the filters to the specified profiles. After modifying
+// the config, it saves it to the standard config file location.
+func addFiltersToConfig(
+	config map[string]interface{},
+	filterInstallers map[string]FilterInstaller,
+	profiles []string,
+) error {
+	filterDefinitions, err := filterDefinitionsFromConfigMap(config)
+	if err != nil {
+		return burrito.WrapError(
+			err,
+			"Failed to get the list of filter definitions from config file.")
+	}
+	// Add the filters to the config
+	for name, downloadedFilter := range filterInstallers {
+		// Add the filter to config file
+		filterDefinitions[name] = downloadedFilter
+		// Add the filter to the profile
+		for _, profile := range profiles {
+			profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
+			// This check here is not necessary, because we have identical one at the beginning, but better to be safe
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Profile %s does not exist or is invalid.", profile)
+			}
+			if profileMap["filters"] == nil {
+				profileMap["filters"] = make([]interface{}, 0)
+			}
+			// Add the filter to the profile
+			profileMap["filters"] = append(
+				profileMap["filters"].([]interface{}), map[string]interface{}{
+					"filter": name,
+				})
+		}
+	}
+	// Save the config file
+	jsonBytes, _ := json.MarshalIndent(config, "", "\t")
+	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
+	if err != nil {
+		return burrito.WrapErrorf(err, fileWriteError, ConfigFilePath)
 	}
 	return nil
 }

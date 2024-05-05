@@ -127,39 +127,17 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 	if err != nil {
 		return burrito.WrapError(err, "Failed to install filters.")
 	}
-	// Add the filters to the config
-	for name, downloadedFilter := range filterInstallers {
-		// Add the filter to config file
-		filterDefinitions[name] = downloadedFilter
-		// Add the filter to the profile
-		for _, profile := range profiles {
-			profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
-			// This check here is not necessary, because we have identical one at the beginning, but better to be safe
-			if err != nil {
-				return burrito.WrapErrorf(
-					err, "Profile %s does not exist or is invalid.", profile)
-			}
-			if profileMap["filters"] == nil {
-				profileMap["filters"] = make([]interface{}, 0)
-			}
-			// Add the filter to the profile
-			profileMap["filters"] = append(
-				profileMap["filters"].([]interface{}), map[string]interface{}{
-					"filter": name,
-				})
-		}
-	}
-	// Save the config file
-	jsonBytes, _ := json.MarshalIndent(config, "", "\t")
-	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
+
+	err = addFiltersToConfig(config, filterInstallers, profiles)
 	if err != nil {
 		return burrito.WrapErrorf(
 			err,
 			"Successfully downloaded %v filters"+
 				"but failed to update the config file.\n"+
 				"Run \"regolith clean\" to fix invalid cache state.",
-			len(parsedArgs))
+			len(filterInstallers))
 	}
+
 	Logger.Info("Successfully installed the filters.")
 	return sessionLockErr // Return the error from the defer function
 }
