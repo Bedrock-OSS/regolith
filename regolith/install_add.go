@@ -29,7 +29,7 @@ type parsedInstallFilterArg struct {
 // and copies their data to the data path. If the filter is already installed,
 // it returns an error unless the force flag is set.
 func installFilters(
-	filterDefinitions map[string]FilterInstaller, force bool,
+	filtersToInstall map[string]FilterInstaller, force bool,
 	dataPath, dotRegolithPath string, refreshFilters bool,
 ) error {
 	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
@@ -44,7 +44,7 @@ func installFilters(
 	}
 
 	// Download all the remote filters
-	for name, filterDefinition := range filterDefinitions {
+	for name, filterDefinition := range filtersToInstall {
 		Logger.Infof("Downloading %q filter...", name)
 		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
 			// Download the remote filter, and its dependencies
@@ -93,7 +93,6 @@ func addFiltersToConfig(
 		// Add the filter to the profile
 		for _, profile := range profiles {
 			profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
-			// This check here is not necessary, because we have identical one at the beginning, but better to be safe
 			if err != nil {
 				return burrito.WrapErrorf(
 					err, "Profile %s does not exist or is invalid.", profile)

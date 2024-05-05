@@ -106,13 +106,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 		remoteFilterDefinition, err := FilterDefinitionFromTheInternet(
 			parsedArg.url, parsedArg.name, parsedArg.version)
 		if err != nil {
-			return burrito.WrapErrorf(
-				err,
-				"Unable to download the filter definition from the internet.\n"+
-					"Filter repository Url: %s\n"+
-					"Filter name: %s\n"+
-					"Filter version: %s\n",
-				parsedArg.url, parsedArg.name, parsedArg.version)
+			return burrito.PassError(err)
 		}
 		if parsedArg.version == "HEAD" || parsedArg.version == "latest" {
 			// The "HEAD" and "latest" keywords should be the same in the
@@ -151,7 +145,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func InstallAll(force, debug, refreshFilters bool) error {
+func InstallAll(force, update, debug, refreshFilters bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -174,11 +168,40 @@ func InstallAll(force, debug, refreshFilters bool) error {
 		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
+
+	filtersToInstall := make(map[string]FilterInstaller, 0)
+	remoteFilters := make(map[string]FilterInstaller, 0) // Used for updating the config
+	if update {
+		for filterName, filterDefinition := range config.FilterDefinitions {
+
+			switch fd := filterDefinition.(type) {
+			case *RemoteFilterDefinition:
+				filterInstaller, err := FilterDefinitionFromTheInternet(
+					fd.Url, fd.Id, "")
+				if err != nil {
+					return burrito.PassError(err)
+				}
+				filtersToInstall[filterName] = filterInstaller
+				remoteFilters[filterName] = filterInstaller
+			default:
+				filtersToInstall[filterName] = fd
+			}
+		}
+	} else {
+		filtersToInstall = config.FilterDefinitions
+	}
 	// Install the filters
 	err = installFilters(
-		config.FilterDefinitions, force, config.DataPath, dotRegolithPath, refreshFilters)
+		filtersToInstall, force, config.DataPath, dotRegolithPath, refreshFilters)
 	if err != nil {
 		return burrito.WrapError(err, "Could not install filters.")
+	}
+	// Update the config
+	if update {
+		err = addFiltersToConfig(configMap, remoteFilters, nil)
+		if err != nil {
+			return burrito.WrapError(err, "Failed to update the config file.")
+		}
 	}
 	Logger.Info("Successfully installed the filters.")
 	return sessionLockErr // Return the error from the defer function
