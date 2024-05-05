@@ -66,7 +66,7 @@ func TestLocalRequirementsInstallAndRun(t *testing.T) {
 
 	// THE TEST
 	t.Log("Testing the 'regolith install-all' command...")
-	err := regolith.InstallAll(false, true, false)
+	err := regolith.InstallAll(false, false, true, false)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed", err.Error())
 	}

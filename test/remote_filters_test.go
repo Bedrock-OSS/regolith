@@ -31,7 +31,7 @@ func TestInstallAllAndRun(t *testing.T) {
 
 	// THE TEST
 	t.Log("Testing the 'regolith install-all' command...")
-	err := regolith.InstallAll(false, true, false)
+	err := regolith.InstallAll(false, false, true, false)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed:", err)
 	}
@@ -71,7 +71,7 @@ func TestDataModifyRemoteFilter(t *testing.T) {
 
 	// THE TEST
 	t.Log("Testing the 'regolith install-all' command...")
-	err := regolith.InstallAll(false, true, false)
+	err := regolith.InstallAll(false, false, true, false)
 	if err != nil {
 		t.Fatal("'regolith install-all' failed:", err)
 	}
@@ -186,7 +186,7 @@ func TestInstallAll(t *testing.T) {
 
 		// Run 'regolith update' / 'regolith update-all'
 		t.Log("Running 'regolith update'...")
-		err = regolith.InstallAll(false, true, false)
+		err = regolith.InstallAll(false, false, true, false)
 		if err != nil {
 			t.Fatal("'regolith update' failed:", err)
 		}
