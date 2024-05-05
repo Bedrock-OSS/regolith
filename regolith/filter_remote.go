@@ -547,10 +547,10 @@ func (f *RemoteFilterDefinition) InstalledVersion(dotRegolithPath string) (strin
 	return versionStr, nil
 }
 
-func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, isInstall, refreshFilters bool) error {
+func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, refreshFilters bool) error {
 	installedVersion, err := f.InstalledVersion(dotRegolithPath)
 	installedVersion = trimFilterPrefix(installedVersion, f.Id)
-	if err != nil && (!isInstall || force) {
+	if err != nil && force {
 		Logger.Warnf("Unable to get installed version of filter %q.", f.Id)
 	}
 	MeasureStart("Get remote filter download ref")
