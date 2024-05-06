@@ -221,7 +221,7 @@ func main() {
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
 	subcommands = append(subcommands, cmdInit)
 
-	profiles := []string{"default"}
+	profiles := []string{}
 	// regolith install
 	var update, resolverRefresh, filterRefresh bool
 	cmdInstall := &cobra.Command{
@@ -233,7 +233,10 @@ func main() {
 				cmd.Help()
 				return
 			}
-			err = regolith.Install(filters, force || update, resolverRefresh, filterRefresh, cmd.Flags().Lookup("profile").Changed, profiles, burrito.PrintStackTrace)
+			if cmd.Flags().Lookup("profile").Changed && len(profiles) == 0 {
+				profiles = append(profiles, "default")
+			}
+			err = regolith.Install(filters, force || update, resolverRefresh, filterRefresh, profiles, burrito.PrintStackTrace)
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
@@ -254,11 +257,13 @@ func main() {
 		Short: "Installs all nonexistent or outdated filters defined in filterDefinitions list",
 		Long:  regolithInstallAllDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.InstallAll(force, burrito.PrintStackTrace, filterRefresh)
+			err = regolith.InstallAll(force, update, burrito.PrintStackTrace, filterRefresh)
 		},
 	}
 	cmdInstallAll.Flags().BoolVarP(
 		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+	cmdInstallAll.Flags().BoolVarP(
+		&update, "update", "u", false, "Updates the remote filters to the latest stable version available.")
 	cmdInstallAll.Flags().BoolVar(
 		&filterRefresh, "force-filter-refresh", false, "Force filter cache refresh.")
 	subcommands = append(subcommands, cmdInstallAll)
