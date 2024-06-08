@@ -65,15 +65,17 @@ Regolith is intended to be used with git version control, and by default the `.r
 
 You may use the command `regolith install-all`, which will check `config.json`, and install every filter in the `filterDefinitions`.
 
-{: .notice--warning}
+:::: warning
 This is only intended to be used with existing projects. To install new filters, use `regolith install`.
+::::
 
 ## Filter Versioning
 
 Filters in Regolith are optionally versioned with a [semantic version](https://semver.org/). As filters get updated, new versions will be released, and you can optionally update.
 
-{: .notice--warning}
+:::: warning
 If you don't specify a version, the `install` command will pick a sensible default. First, it will search for the latest release. If that doesn't exist (such as a filter that has no versions), it will select the latest commit in the repository. In both cases, the installed version will be `pinned`.
+::::
 
 ### Installing a Specific Version
 
