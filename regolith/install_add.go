@@ -48,12 +48,10 @@ func installFilters(
 		Logger.Infof("Downloading %q filter...", name)
 		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
 			// Download the remote filter, and its dependencies
-			err := remoteFilter.Update(force, dotRegolithPath, refreshFilters)
+			err := remoteFilter.Update(force, dotRegolithPath, dataPath, refreshFilters)
 			if err != nil {
 				return burrito.WrapErrorf(err, remoteFilterDownloadError, name)
 			}
-			// Copy the data of the remote filter to the data path
-			remoteFilter.CopyFilterData(dataPath, dotRegolithPath)
 		} else {
 			// Non-remote filters must always update their dependencies.
 			// TODO - add option to track if the filter already installed
