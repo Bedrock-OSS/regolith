@@ -547,7 +547,7 @@ func (f *RemoteFilterDefinition) InstalledVersion(dotRegolithPath string) (strin
 	return versionStr, nil
 }
 
-func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, refreshFilters bool) error {
+func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath, dataPath string, refreshFilters bool) error {
 	installedVersion, err := f.InstalledVersion(dotRegolithPath)
 	installedVersion = trimFilterPrefix(installedVersion, f.Id)
 	if err != nil && force {
@@ -569,6 +569,8 @@ func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, refr
 		if err != nil {
 			return burrito.PassError(err)
 		}
+		// Copy the data of the remote filter to the data path
+		f.CopyFilterData(dataPath, dotRegolithPath)
 		err = f.InstallDependencies(f, dotRegolithPath)
 		if err != nil {
 			return burrito.PassError(err)
