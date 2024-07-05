@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -37,7 +39,7 @@ var disallowedFiles = []string{
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Install(filters []string, force, refreshResolvers, refreshFilters, add bool, profiles []string, debug bool) error {
+func Install(filters []string, force, refreshResolvers, refreshFilters bool, profiles []string, debug bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -48,17 +50,11 @@ func Install(filters []string, force, refreshResolvers, refreshFilters, add bool
 		return burrito.WrapError(err, "Unable to load config file.")
 	}
 	// Check if selected profiles exist
-	if add {
-		if len(profiles) == 0 {
-			profiles = []string{"default"}
-		}
-		// Get the profile
-		for _, profile := range profiles {
-			_, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
-			if err != nil {
-				return burrito.WrapErrorf(
-					err, "Profile %s does not exist or is invalid.", profile)
-			}
+	for _, profile := range profiles {
+		_, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
+		if err != nil {
+			return burrito.WrapErrorf(
+				err, "Profile %s does not exist or is invalid.", profile)
 		}
 	}
 	// Get parts of config file required for installation
@@ -110,13 +106,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters, add bool
 		remoteFilterDefinition, err := FilterDefinitionFromTheInternet(
 			parsedArg.url, parsedArg.name, parsedArg.version)
 		if err != nil {
-			return burrito.WrapErrorf(
-				err,
-				"Unable to download the filter definition from the internet.\n"+
-					"Filter repository Url: %s\n"+
-					"Filter name: %s\n"+
-					"Filter version: %s\n",
-				parsedArg.url, parsedArg.name, parsedArg.version)
+			return burrito.PassError(err)
 		}
 		if parsedArg.version == "HEAD" || parsedArg.version == "latest" {
 			// The "HEAD" and "latest" keywords should be the same in the
@@ -127,45 +117,21 @@ func Install(filters []string, force, refreshResolvers, refreshFilters, add bool
 	}
 	// Download the filter definitions
 	err = installFilters(
-		filterInstallers, force, dataPath, dotRegolithPath, true, refreshFilters)
+		filterInstallers, force, dataPath, dotRegolithPath, refreshFilters)
 	if err != nil {
 		return burrito.WrapError(err, "Failed to install filters.")
 	}
-	// Add the filters to the config
-	for name, downloadedFilter := range filterInstallers {
-		// Add the filter to config file
-		filterDefinitions[name] = downloadedFilter
-		if add {
-			// Add the filter to the profile
-			for _, profile := range profiles {
-				profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
-				// This check here is not necessary, because we have identical one at the beginning, but better to be safe
-				if err != nil {
-					return burrito.WrapErrorf(
-						err, "Profile %s does not exist or is invalid.", profile)
-				}
-				if profileMap["filters"] == nil {
-					profileMap["filters"] = make([]interface{}, 0)
-				}
-				// Add the filter to the profile
-				profileMap["filters"] = append(
-					profileMap["filters"].([]interface{}), map[string]interface{}{
-						"filter": name,
-					})
-			}
-		}
-	}
-	// Save the config file
-	jsonBytes, _ := json.MarshalIndent(config, "", "\t")
-	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
+
+	err = addFiltersToConfig(config, filterInstallers, profiles)
 	if err != nil {
 		return burrito.WrapErrorf(
 			err,
 			"Successfully downloaded %v filters"+
 				"but failed to update the config file.\n"+
 				"Run \"regolith clean\" to fix invalid cache state.",
-			len(parsedArgs))
+			len(filterInstallers))
 	}
+
 	Logger.Info("Successfully installed the filters.")
 	return sessionLockErr // Return the error from the defer function
 }
@@ -179,7 +145,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters, add bool
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func InstallAll(force, debug, refreshFilters bool) error {
+func InstallAll(force, update, debug, refreshFilters bool) error {
 	InitLogging(debug)
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -202,21 +168,48 @@ func InstallAll(force, debug, refreshFilters bool) error {
 		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
 	}
 	defer func() { sessionLockErr = unlockSession() }()
+
+	filtersToInstall := make(map[string]FilterInstaller, 0)
+	remoteFilters := make(map[string]FilterInstaller, 0) // Used for updating the config
+	if update {
+		for filterName, filterDefinition := range config.FilterDefinitions {
+
+			switch fd := filterDefinition.(type) {
+			case *RemoteFilterDefinition:
+				filterInstaller, err := FilterDefinitionFromTheInternet(
+					fd.Url, fd.Id, "")
+				if err != nil {
+					return burrito.PassError(err)
+				}
+				filtersToInstall[filterName] = filterInstaller
+				remoteFilters[filterName] = filterInstaller
+			default:
+				filtersToInstall[filterName] = fd
+			}
+		}
+	} else {
+		filtersToInstall = config.FilterDefinitions
+	}
 	// Install the filters
 	err = installFilters(
-		config.FilterDefinitions, force, config.DataPath, dotRegolithPath, false, refreshFilters)
+		filtersToInstall, force, config.DataPath, dotRegolithPath, refreshFilters)
 	if err != nil {
 		return burrito.WrapError(err, "Could not install filters.")
+	}
+	// Update the config
+	if update {
+		err = addFiltersToConfig(configMap, remoteFilters, nil)
+		if err != nil {
+			return burrito.WrapError(err, "Failed to update the config file.")
+		}
 	}
 	Logger.Info("Successfully installed the filters.")
 	return sessionLockErr // Return the error from the defer function
 }
 
-// runOrWatch handles both 'regolith run' and 'regolith watch' commands based
-// on the 'watch' parameter. It runs/watches the profile named after
-// 'profileName' parameter. The 'debug' argument determines if the debug
-// messages should be printed or not.
-func runOrWatch(profileName string, debug, watch bool) error {
+// prepareRunContext prepares the context for the "regolith run" and
+// "regolith watch" commands.
+func prepareRunContext(profileName string, debug, watch bool) (*RunContext, error) {
 	InitLogging(debug)
 	if profileName == "" {
 		profileName = "default"
@@ -224,65 +217,59 @@ func runOrWatch(profileName string, debug, watch bool) error {
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
-		return burrito.WrapError(err, "Could not load \"config.json\".")
+		return nil, burrito.WrapError(err, "Could not load \"config.json\".")
 	}
 	config, err := ConfigFromObject(configJson)
 	if err != nil {
-		return burrito.WrapError(err, "Could not load \"config.json\".")
+		return nil, burrito.WrapError(err, "Could not load \"config.json\".")
 	}
 	profile, ok := config.Profiles[profileName]
 	if !ok {
-		return burrito.WrappedErrorf(
+		return nil, burrito.WrappedErrorf(
 			"Profile %q does not exist in the configuration.", profileName)
 	}
 	// Get dotRegolithPath
 	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
-		return burrito.WrapError(
+		return nil, burrito.WrapError(
 			err, "Unable to get the path to regolith cache folder.")
 	}
 	err = os.MkdirAll(dotRegolithPath, 0755)
 	if err != nil {
-		return burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
+		return nil, burrito.WrapErrorf(err, osMkdirError, dotRegolithPath)
 	}
-	// Lock the session
-	unlockSession, sessionLockErr := acquireSessionLock(dotRegolithPath)
-	if sessionLockErr != nil {
-		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
-	}
-	defer func() { sessionLockErr = unlockSession() }()
 	// Check the filters of the profile
 	err = CheckProfileImpl(profile, profileName, *config, nil, dotRegolithPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	path, _ := filepath.Abs(".")
-	context := RunContext{
+	return &RunContext{
 		AbsoluteLocation: path,
 		Config:           config,
 		Parent:           nil,
 		Profile:          profileName,
 		DotRegolithPath:  dotRegolithPath,
 		Settings:         map[string]interface{}{},
+	}, nil
+}
+
+// Run handles the "regolith run" command. It runs selected profile and exports
+// created resource pack and behavior pack to the target destination.
+func Run(profileName string, debug bool) error {
+	// Get the context
+	context, err := prepareRunContext(profileName, debug, false)
+	if err != nil {
+		return burrito.PassError(err)
 	}
-	if watch { // Loop until program termination (CTRL+C)
-		context.StartWatchingSourceFiles()
-		for {
-			err = RunProfile(context)
-			if err != nil {
-				Logger.Errorf(
-					"Failed to run profile %q: %s",
-					profileName, burrito.PassError(err).Error())
-			} else {
-				Logger.Infof("Successfully ran the %q profile.", profileName)
-			}
-			Logger.Info("Press Ctrl+C to stop watching.")
-			context.AwaitInterruption()
-			Logger.Warn("Restarting...")
-		}
-		// return nil // Unreachable code
+	// Lock the session
+	unlockSession, sessionLockErr := acquireSessionLock(context.DotRegolithPath)
+	if sessionLockErr != nil {
+		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
 	}
-	err = RunProfile(context)
+	defer func() { sessionLockErr = unlockSession() }()
+	// Run the profile
+	err = RunProfile(*context)
 	if err != nil {
 		return burrito.WrapErrorf(err, "Failed to run profile %q", profileName)
 	}
@@ -290,17 +277,46 @@ func runOrWatch(profileName string, debug, watch bool) error {
 	return sessionLockErr // Return the error from the defer function
 }
 
-// Run handles the "regolith run" command. It runs selected profile and exports
-// created resource pack and behavior pack to the target destination.
-func Run(profileName string, debug bool) error {
-	return runOrWatch(profileName, debug, false)
-}
-
 // Watch handles the "regolith watch" command. It watches the project
 // directories, and it runs selected profile and exports created resource pack
 // and behavior pack to the target destination when the project changes.
 func Watch(profileName string, debug bool) error {
-	return runOrWatch(profileName, debug, true)
+	// Get the context
+	context, err := prepareRunContext(profileName, debug, false)
+	if err != nil {
+		return burrito.PassError(err)
+	}
+	// Lock the session
+	unlockSession, sessionLockErr := acquireSessionLock(context.DotRegolithPath)
+	if sessionLockErr != nil {
+		return burrito.WrapError(sessionLockErr, acquireSessionLockError)
+	}
+	defer func() { sessionLockErr = unlockSession() }()
+	// Setup the channel for stopping the watching
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	// Run the profile
+	context.StartWatchingSourceFiles()
+	for { // Loop until program termination (CTRL+C)
+		err = RunProfile(*context)
+		if err != nil {
+			Logger.Errorf(
+				"Failed to run profile %q: %s",
+				profileName, burrito.PassError(err).Error())
+		} else {
+			Logger.Infof("Successfully ran the %q profile.", profileName)
+		}
+		Logger.Info("Press Ctrl+C to stop watching.")
+		select {
+		case <-context.interruptionChannel:
+			// AwaitInterruption locks the goroutine with the interruption channel until
+			// the Config is interrupted and returns the interruption message.
+			Logger.Warn("Restarting...")
+		case <-sigChan:
+			return sessionLockErr // Return the error from the defer function
+		}
+	}
 }
 
 // ApplyFilter handles the "regolith apply-filter" command.

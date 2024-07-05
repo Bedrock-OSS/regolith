@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,8 +29,8 @@ type parsedInstallFilterArg struct {
 // and copies their data to the data path. If the filter is already installed,
 // it returns an error unless the force flag is set.
 func installFilters(
-	filterDefinitions map[string]FilterInstaller, force bool,
-	dataPath, dotRegolithPath string, isInstall, refreshFilters bool,
+	filtersToInstall map[string]FilterInstaller, force bool,
+	dataPath, dotRegolithPath string, refreshFilters bool,
 ) error {
 	joinedPath := filepath.Join(dotRegolithPath, "cache/filters")
 	err := os.MkdirAll(joinedPath, 0755)
@@ -43,16 +44,14 @@ func installFilters(
 	}
 
 	// Download all the remote filters
-	for name, filterDefinition := range filterDefinitions {
+	for name, filterDefinition := range filtersToInstall {
 		Logger.Infof("Downloading %q filter...", name)
 		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
 			// Download the remote filter, and its dependencies
-			err := remoteFilter.Update(force, dotRegolithPath, isInstall, refreshFilters)
+			err := remoteFilter.Update(force, dotRegolithPath, dataPath, refreshFilters)
 			if err != nil {
 				return burrito.WrapErrorf(err, remoteFilterDownloadError, name)
 			}
-			// Copy the data of the remote filter to the data path
-			remoteFilter.CopyFilterData(dataPath, dotRegolithPath)
 		} else {
 			// Non-remote filters must always update their dependencies.
 			// TODO - add option to track if the filter already installed
@@ -66,6 +65,51 @@ func installFilters(
 					name)
 			}
 		}
+	}
+	return nil
+}
+
+// addFiltersToConfig modifies the config by adding the specified filters
+// to the list of the filters in the project. If the profiles list is not
+// empty, it also adds the filters to the specified profiles. After modifying
+// the config, it saves it to the standard config file location.
+func addFiltersToConfig(
+	config map[string]interface{},
+	filterInstallers map[string]FilterInstaller,
+	profiles []string,
+) error {
+	filterDefinitions, err := filterDefinitionsFromConfigMap(config)
+	if err != nil {
+		return burrito.WrapError(
+			err,
+			"Failed to get the list of filter definitions from config file.")
+	}
+	// Add the filters to the config
+	for name, downloadedFilter := range filterInstallers {
+		// Add the filter to config file
+		filterDefinitions[name] = downloadedFilter
+		// Add the filter to the profile
+		for _, profile := range profiles {
+			profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Profile %s does not exist or is invalid.", profile)
+			}
+			if profileMap["filters"] == nil {
+				profileMap["filters"] = make([]interface{}, 0)
+			}
+			// Add the filter to the profile
+			profileMap["filters"] = append(
+				profileMap["filters"].([]interface{}), map[string]interface{}{
+					"filter": name,
+				})
+		}
+	}
+	// Save the config file
+	jsonBytes, _ := json.MarshalIndent(config, "", "\t")
+	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
+	if err != nil {
+		return burrito.WrapErrorf(err, fileWriteError, ConfigFilePath)
 	}
 	return nil
 }

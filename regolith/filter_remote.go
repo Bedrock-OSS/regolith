@@ -342,8 +342,8 @@ func FilterDefinitionFromTheInternet(
 	if version == "" { // "" locks the version to the latest
 		version, err = GetRemoteFilterDownloadRef(url, name, version)
 		if err != nil {
-			return nil, burrito.WrappedErrorf(
-				getRemoteFilterDownloadRefError, url, name, version)
+			return nil, burrito.WrapErrorf(
+				err, getRemoteFilterDownloadRefError, url, name, version)
 		}
 		version = trimFilterPrefix(version, name)
 	}
@@ -547,10 +547,10 @@ func (f *RemoteFilterDefinition) InstalledVersion(dotRegolithPath string) (strin
 	return versionStr, nil
 }
 
-func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, isInstall, refreshFilters bool) error {
+func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath, dataPath string, refreshFilters bool) error {
 	installedVersion, err := f.InstalledVersion(dotRegolithPath)
 	installedVersion = trimFilterPrefix(installedVersion, f.Id)
-	if err != nil && (!isInstall || force) {
+	if err != nil && force {
 		Logger.Warnf("Unable to get installed version of filter %q.", f.Id)
 	}
 	MeasureStart("Get remote filter download ref")
@@ -569,6 +569,8 @@ func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath string, isIn
 		if err != nil {
 			return burrito.PassError(err)
 		}
+		// Copy the data of the remote filter to the data path
+		f.CopyFilterData(dataPath, dotRegolithPath)
 		err = f.InstallDependencies(f, dotRegolithPath)
 		if err != nil {
 			return burrito.PassError(err)
