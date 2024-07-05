@@ -57,18 +57,7 @@ func (c *RunContext) StartWatchingSourceFiles() error {
 	if c.interruptionChannel != nil {
 		return burrito.WrappedError("Files are already being watched.")
 	}
-	rpWatcher, err := NewDirWatcher(c.Config.ResourceFolder)
-	if err != nil {
-		return burrito.WrapError(err, "Could not create resource pack watcher.")
-	}
-	bpWatcher, err := NewDirWatcher(c.Config.BehaviorFolder)
-	if err != nil {
-		return burrito.WrapError(err, "Could not create behavior pack watcher.")
-	}
-	dataWatcher, err := NewDirWatcher(c.Config.DataPath)
-	if err != nil {
-		return burrito.WrapError(err, "Could not create data watcher.")
-	}
+
 	c.interruptionChannel = make(chan string)
 	yieldChanges := func(
 		watcher *DirWatcher, sourceName string,
@@ -81,16 +70,36 @@ func (c *RunContext) StartWatchingSourceFiles() error {
 			}
 		}
 	}
-	go yieldChanges(rpWatcher, "rp")
-	go yieldChanges(bpWatcher, "bp")
-	go yieldChanges(dataWatcher, "data")
-	return nil
-}
 
-// AwaitInterruption locks the goroutine with the interruption channel until
-// the Config is interrupted and returns the interruption message.
-func (c *RunContext) AwaitInterruption() string {
-	return <-c.interruptionChannel
+	addWatcher := func(watchedPath, watcherString string) error {
+		watcher, err := NewDirWatcher(watchedPath)
+		if err != nil {
+			return burrito.PassError(err)
+		}
+		go yieldChanges(watcher, watcherString)
+		return nil
+	}
+
+	var err error
+	if c.Config.ResourceFolder != "" {
+		err = addWatcher(c.Config.ResourceFolder, "rp")
+		if err != nil {
+			return burrito.WrapError(err, "Could not create resource pack watcher.")
+		}
+	}
+	if c.Config.BehaviorFolder != "" {
+		err = addWatcher(c.Config.BehaviorFolder, "bp")
+		if err != nil {
+			return burrito.WrapError(err, "Could not create behavior pack watcher.")
+		}
+	}
+	if c.Config.DataPath != "" {
+		err = addWatcher(c.Config.DataPath, "data")
+		if err != nil {
+			return burrito.WrapError(err, "Could not create data watcher.")
+		}
+	}
+	return nil
 }
 
 // IsInterrupted returns true if there is a message on the interruptionChannel

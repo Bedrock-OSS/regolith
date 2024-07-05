@@ -131,11 +131,13 @@ Now, you can re-run `regolith run`.
 
 Check `com.mojang`, and open the new `texture_list.json` file in `RP/textures/texture_list.json`. Every time you run regolith, this file will be re-created, based on your current textures. No need to manually edit it ever again!
 
-{: .notice--warning}
+:::: warning
 `Warning:` If your resource pack already contains `texture_list.json`, you should delete it. You don't need to manually worry about it anymore - Regolith will handle it!
+::::
 
-{: .notice--warning}
+:::: warning
 `Warning:` If your project doesn't have any textures, than `texture_list.json` will simply create a blank file `[]`. Consider adding some textures to see the filter at work!
+::::
 
 ## Whats Next
 
