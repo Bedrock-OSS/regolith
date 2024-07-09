@@ -1,0 +1,1 @@
+go install -ldflags="-X main.commit=$(git rev-parse HEAD)" github.com/Bedrock-OSS/regolith
