@@ -67,7 +67,7 @@ func FindPreviewDir() (string, error) {
 	return comMojangPreview, nil
 }
 
-func FindEduDir() (string, error) {
+func FindEducationDir() (string, error) {
 	comMojangEdu := os.Getenv("COM_MOJANG_EDU")
 	if comMojangEdu == "" {
 		return "", burrito.WrappedError(comMojangEduEnvUnsetError)

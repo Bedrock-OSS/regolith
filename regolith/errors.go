@@ -232,8 +232,8 @@ const (
 	// findPreviewDirError is used when the FindPreviewDir function fails
 	findPreviewDirError = "Failed to find the preview \"com.mojang\" directory."
 
-	// findEduDirError is used when the FindEduDir function fails
-	findEduDirError = "Failed to find the \"com.mojang\" directory."
+	// findEducationDirError is used when the FindEducationDir function fails
+	findEducationDirError = "Failed to find the \"com.mojang\" directory."
 
 	invalidExportPathError = "The build property of the export is invalid:\n" +
 		"Current value: %q\n" +
