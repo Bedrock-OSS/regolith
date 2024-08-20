@@ -179,9 +179,9 @@ func FindPreviewDir() (string, error) {
 	return result, nil
 }
 
-// FindEduDir returns path to the com.mojang folder in the education
+// FindEducationDir returns path to the com.mojang folder in the education
 // edition Minecraft build.
-func FindEduDir() (string, error) {
+func FindEducationDir() (string, error) {
 	result := filepath.Join(
 		os.Getenv("APPDATA"), "Minecraft Education Edition", "games",
 		"com.mojang")

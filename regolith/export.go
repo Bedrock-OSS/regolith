@@ -35,8 +35,8 @@ func FindMojangDir(build string) (string, error) {
 		return FindStandardMojangDir()
 	} else if build == "preview" {
 		return FindPreviewDir()
-	} else if build == "edu" {
-		return FindEduDir()
+	} else if build == "education" {
+		return FindEducationDir()
 		// WARNING: If for some reason we will expand this in the future to
 		// match a new format version, we need to split this into versioned
 		// functions.
@@ -44,7 +44,7 @@ func FindMojangDir(build string) (string, error) {
 		return "", burrito.WrappedErrorf(
 			invalidExportPathError,
 			// current value; valid values
-			build, "standard, preview, edu")
+			build, "standard, preview, education")
 	}
 }
 
