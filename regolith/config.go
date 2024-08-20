@@ -116,8 +116,8 @@ func RegolithProjectFromObject(
 	}
 	// FormatVersion
 	if version, ok := obj["formatVersion"]; !ok {
-		Logger.Warn("Format version is missing. Defaulting to 1.0.0")
-		result.FormatVersion = "1.0.0"
+		Logger.Warn("Format version is missing. Defaulting to 1.2.0")
+		result.FormatVersion = "1.2.0"
 	} else {
 		formatVersion, ok := version.(string)
 		if !ok {
@@ -132,7 +132,7 @@ func RegolithProjectFromObject(
 					"be a semver version:\n"+
 					"Current value: %s", formatVersion)
 		}
-		const latestCompatibleVersion = "2.0.0"
+		const latestCompatibleVersion = "1.4.0"
 		if semver.Compare(vFormatVersion, "v"+latestCompatibleVersion) < 0 {
 			return result, burrito.WrappedErrorf(
 				"Incompatible formatVersion: \n"+
