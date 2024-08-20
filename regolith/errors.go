@@ -238,4 +238,10 @@ const (
 	invalidExportPathError = "The build property of the export is invalid:\n" +
 		"Current value: %q\n" +
 		"Valid values are: %s"
+
+	// Error used when the formatVersion of the config file is incompatible
+	// with the current version of Regolith.
+	incompatibleFormatVersionError = "Incompatible formatVersion: \n" +
+		"Version in config: %s\n" +
+		"Latest compatible version: %s"
 )

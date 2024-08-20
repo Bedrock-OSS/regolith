@@ -5,6 +5,8 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+const latestCompatibleVersion = "1.4.0"
+
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
 const ConfigFilePath = "config.json"
 const GitIgnore = "/build\n/.regolith"
@@ -126,18 +128,15 @@ func RegolithProjectFromObject(
 		}
 		result.FormatVersion = formatVersion
 		vFormatVersion := "v" + formatVersion
-		if semver.IsValid("v" + formatVersion) {
+		if !semver.IsValid("v" + formatVersion) {
 			return result, burrito.WrappedErrorf(
 				"Invalid value of formatVersion. The formatVersion must "+
 					"be a semver version:\n"+
 					"Current value: %s", formatVersion)
 		}
-		const latestCompatibleVersion = "1.4.0"
-		if semver.Compare(vFormatVersion, "v"+latestCompatibleVersion) < 0 {
+		if semver.Compare(vFormatVersion, "v"+latestCompatibleVersion) > 0 {
 			return result, burrito.WrappedErrorf(
-				"Incompatible formatVersion: \n"+
-					"Current version: %s\n"+
-					"Latest compatible version: %s\n",
+				incompatibleFormatVersionError,
 				formatVersion, latestCompatibleVersion)
 		}
 	}

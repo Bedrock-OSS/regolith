@@ -1,5 +1,5 @@
 {
-	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.2.json",
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.4.json",
 	"author": "Your name",
 	"name": "Project name",
 	"packs": {
@@ -14,6 +14,7 @@
 				"version": "1.0.1"
 			}
 		},
+		"formatVersion": "1.4.0",
 		"profiles": {
 			"default": {
 				"export": {

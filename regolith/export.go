@@ -20,12 +20,18 @@ func GetExportPaths(
 		return "", "", burrito.WrapError(
 			err, "Failed to get the export names.")
 	}
-	if semver.Compare(ctx.Config.FormatVersion, "v1.4.0") < 0 {
+	vFormatVersion := "v" + ctx.Config.FormatVersion
+
+	if semver.Compare(vFormatVersion, "v1.4.0") < 0 {
 		bpPath, rpPath, err = getExportPathsV1_2_0(
 			exportTarget, bpName, rpName)
-	} else {
+	} else if semver.Compare(vFormatVersion, "v1.4.0") == 0 {
 		bpPath, rpPath, err = getExportPathsV1_4_0(
 			exportTarget, bpName, rpName)
+	} else {
+		err = burrito.WrappedErrorf(
+			incompatibleFormatVersionError,
+			ctx.Config.FormatVersion, latestCompatibleVersion)
 	}
 	return
 }
