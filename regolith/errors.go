@@ -149,6 +149,9 @@ const (
 	// Error used when env variable COM_MOJANG_PREVIEW is not set on non Windows system
 	comMojangPreviewEnvUnsetError = "COM_MOJANG_PREVIEW environment variable is not set."
 
+	// Error used when env variable COM_MOJANG_EDU is not set on non Windows system
+	comMojangEduEnvUnsetError = "COM_MOJANG_EDU environment variable is not set."
+
 	// Error used when SetupTmpFiles function fails
 	setupTmpFilesError = "Failed to setup temporary files.\n" +
 		"Regolith files path: %s" // .regolith
@@ -222,4 +225,17 @@ const (
 
 	resolverResolveUrlError = "Failed to resolve the URL of the resolver file for the download.\n" +
 		"Short URL: %s"
+
+	// findMojangDirError is used when the FindMojangDir function fails
+	findMojangDirError = "Failed to find \"com.mojang\" directory."
+
+	// findPreviewDirError is used when the FindPreviewDir function fails
+	findPreviewDirError = "Failed to find the preview \"com.mojang\" directory."
+
+	// findEduDirError is used when the FindEduDir function fails
+	findEduDirError = "Failed to find the \"com.mojang\" directory."
+
+	invalidExportPathError = "The build property of the export is invalid:\n" +
+		"Current value: %q\n" +
+		"Valid values are: %s"
 )
