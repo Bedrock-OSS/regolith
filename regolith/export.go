@@ -20,11 +20,11 @@ func GetExportPaths(
 		return "", "", burrito.WrapError(
 			err, "Failed to get the export names.")
 	}
-	if semver.Compare(ctx.Config.FormatVersion, "v2.0.0") < 0 {
-		bpPath, rpPath, err = getExportPathsV1_0_0(
+	if semver.Compare(ctx.Config.FormatVersion, "v1.4.0") < 0 {
+		bpPath, rpPath, err = getExportPathsV1_2_0(
 			exportTarget, bpName, rpName)
 	} else {
-		bpPath, rpPath, err = getExportPathsV2_0_0(
+		bpPath, rpPath, err = getExportPathsV1_4_0(
 			exportTarget, bpName, rpName)
 	}
 	return
@@ -48,9 +48,9 @@ func FindMojangDir(build string) (string, error) {
 	}
 }
 
-// getExportPathsV1_0_0 handles GetExportPaths for Regolith format versions
-// below 2.0.0.
-func getExportPathsV1_0_0(
+// getExportPathsV1_2_0 handles GetExportPaths for Regolith format versions
+// below 1.4.0.
+func getExportPathsV1_2_0(
 	exportTarget ExportTarget, bpName string, rpName string,
 ) (bpPath string, rpPath string, err error) {
 	if exportTarget.Target == "development" {
@@ -88,9 +88,9 @@ func getExportPathsV1_0_0(
 	return
 }
 
-// getExportPathsV2_0_0 handles GetExportPaths for Regolith format version
-// 2.0.0.
-func getExportPathsV2_0_0(
+// getExportPathsV1_4_0 handles GetExportPaths for Regolith format version
+// 1.4.0.
+func getExportPathsV1_4_0(
 	exportTarget ExportTarget, bpName string, rpName string,
 ) (bpPath string, rpPath string, err error) {
 	if exportTarget.Target == "development" {
