@@ -40,6 +40,7 @@ Here is an example `config.json` with a second profile called `package`.
         ],
         "export": {
           "target": "development",
+          "build": "standard"
         }
       },
 
@@ -50,6 +51,7 @@ Here is an example `config.json` with a second profile called `package`.
         ],
         "export": {
           "target": "development",
+          "build": "standard"
         }
       }
     },
