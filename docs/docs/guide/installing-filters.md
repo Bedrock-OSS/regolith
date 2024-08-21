@@ -49,7 +49,8 @@ After installing, the filter will appear inside of `filter_definitions` of `conf
 "default": {
   "export": {
     "readOnly": false,
-    "target": "development"
+    "target": "development",
+    "build": "standard"
   },
   "filters": [
     {
