@@ -18,6 +18,7 @@
 		"profiles": {
 			"default": {
 				"export": {
+					"build": "standard",
 					"readOnly": false,
 					"target": "development"
 				},
