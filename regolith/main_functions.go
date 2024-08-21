@@ -459,6 +459,7 @@ func Init(debug, force bool) error {
 					},
 					ExportTarget: ExportTarget{
 						Target:   "development",
+						Build:    "standard",
 						ReadOnly: false,
 					},
 				},
