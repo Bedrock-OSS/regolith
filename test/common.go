@@ -23,6 +23,11 @@ const (
 	// in data path.
 	minimalProjectPath = "testdata/minimal_project"
 
+	// developmentExportTargets is a minimal project with 3 profiles -
+	// standard, education and preview. Each profile has different export
+	// targets.
+	developmentExportTargets = "testdata/development_export_targets"
+
 	// multitarget_project is a copy of minimal_project but with modified
 	// config.json, to add multiple profiles with different export targets.
 	multitargetProjectPath = "testdata/multitarget_project"
