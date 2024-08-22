@@ -51,6 +51,7 @@ Next, open up `config.json`. We will be configuring a few fields here, for your 
         "filters": [],
         "export": {
           "target": "development",
+          "build": "standard",
           "readOnly": false
         }
       }
@@ -115,7 +116,8 @@ You should adjust the default profile in `config.json` to look like this:
 "default": {
   "export": {
     "readOnly": false,
-    "target": "development"
+    "target": "development",
+    "build": "standard"
   },
   "filters": [
     {

@@ -1,6 +1,11 @@
 package regolith
 
-import "github.com/Bedrock-OSS/go-burrito/burrito"
+import (
+	"github.com/Bedrock-OSS/go-burrito/burrito"
+	"golang.org/x/mod/semver"
+)
+
+const latestCompatibleVersion = "1.4.0"
 
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
 const ConfigFilePath = "config.json"
@@ -26,7 +31,8 @@ type ExportTarget struct {
 	BpName    string `json:"bpName,omitempty"`
 	WorldName string `json:"worldName,omitempty"`
 	WorldPath string `json:"worldPath,omitempty"`
-	ReadOnly  bool   `json:"readOnly"` // Whether the exported files should be read-only
+	ReadOnly  bool   `json:"readOnly"`        // Whether the exported files should be read-only
+	Build     string `json:"build,omitempty"` // The type of Minecraft build for the 'develop'
 }
 
 // Packs is a part of "config.json" that points to the source behavior and
@@ -42,6 +48,7 @@ type RegolithProject struct {
 	Profiles          map[string]Profile         `json:"profiles,omitempty"`
 	FilterDefinitions map[string]FilterInstaller `json:"filterDefinitions"`
 	DataPath          string                     `json:"dataPath,omitempty"`
+	FormatVersion     string                     `json:"formatVersion,omitempty"`
 }
 
 // ConfigFromObject creates a "Config" object from map[string]interface{}
@@ -109,6 +116,31 @@ func RegolithProjectFromObject(
 		Profiles:          make(map[string]Profile),
 		FilterDefinitions: make(map[string]FilterInstaller),
 	}
+	// FormatVersion
+	if version, ok := obj["formatVersion"]; !ok {
+		Logger.Warn("Format version is missing. Defaulting to 1.2.0")
+		result.FormatVersion = "1.2.0"
+	} else {
+		formatVersion, ok := version.(string)
+		if !ok {
+			return result, burrito.WrappedErrorf(
+				jsonPropertyTypeError, "formatVersion", "string")
+		}
+		result.FormatVersion = formatVersion
+		vFormatVersion := "v" + formatVersion
+		if !semver.IsValid("v" + formatVersion) {
+			return result, burrito.WrappedErrorf(
+				"Invalid value of formatVersion. The formatVersion must "+
+					"be a semver version:\n"+
+					"Current value: %s", formatVersion)
+		}
+		if semver.Compare(vFormatVersion, "v"+latestCompatibleVersion) > 0 {
+			return result, burrito.WrappedErrorf(
+				incompatibleFormatVersionError,
+				formatVersion, latestCompatibleVersion)
+		}
+	}
+
 	// DataPath
 	if _, ok := obj["dataPath"]; !ok {
 		return result, burrito.WrappedErrorf(jsonPropertyMissingError, "dataPath")
@@ -197,5 +229,8 @@ func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
 	// ReadOnly - can be empty
 	readOnly, _ := obj["readOnly"].(bool)
 	result.ReadOnly = readOnly
+	// Build - can be empty
+	build, _ := obj["build"].(string)
+	result.Build = build
 	return result, nil
 }
