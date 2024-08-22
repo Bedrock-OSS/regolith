@@ -29,11 +29,12 @@ These are the export targets that Regolith offers.
 
 ## Development
 
-The development export target will place the compiled packs into your `com.mojang` `development_*_packs` folders.
+The development export target will place the compiled packs into your `com.mojang` `development_*_packs` folders of the specified Minecraft build (standard, preview or education endition).
 
 ```json
 "export": {
-    "target": "development"
+    "target": "development",
+    "build": "standard" // or "preview" or "education"
 }
 ```
 
@@ -42,6 +43,7 @@ Optionally, you can use `rpName` and `bpName` to specify the names of the folder
 ```json
 "export": {
     "target": "development",
+    "build": "standard",
     "rpName": "'my_rp'",
     "bpName": "'my_bp'"
 }
@@ -91,13 +93,14 @@ The exact export target doesn't support using `rpName` and `bpName`. The `rpPath
 
 The World export target will place the compiled files into a specific world. This is useful for teams that prefer working in-world, as opposed to in the development pack folders.
 
-You need to use *either* `worldName` or `worldPath` to select the world. `worldPath` supports environment variables by using the `%VARIABLE_NAME%` syntax.
+You need to use *either* `worldName` or `worldPath` to select the world. `worldPath` supports environment variables by using the `%VARIABLE_NAME%` syntax. If you use `worldName`, you have to specify the Minecraft build you're using - `standard`, `preview` or `education`.
 
 Example:
 
 ```json
 "export": {
     "target": "world",
+    "build": "standard",
     "worldName": "..."  // This
     // "worldPath": "..."   // OR this
 }
@@ -109,26 +112,6 @@ Optionally, you can use `rpName` and `bpName` to specify the names of the folder
 "export": {
     "target": "world",
     "worldPath": "...",
-    "rpName": "'my_rp'",
-    "bpName": "'my_bp'"
-}
-```
-
-
-## Preview
-
-The development export target will place the compiled packs into your **(minecraft preview)** `com.mojang` `development_*_packs` folder.
-
-```json
-"export": {
-    "target": "preview"
-}
-```
-
-Optionally, you can use `rpName` and `bpName` to specify the names of the folders that will be created in the `development_*_packs` folders. You can read more about these options at the end of this page of the documentation.
-```json
-"export": {
-    "target": "preview",
     "rpName": "'my_rp'",
     "bpName": "'my_bp'"
 }

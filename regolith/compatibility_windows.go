@@ -146,8 +146,9 @@ func (d *DirWatcher) Close() error {
 	return windows.CloseHandle(d.handle)
 }
 
-// FindMojangDir returns path to the com.mojang folder.
-func FindMojangDir() (string, error) {
+// FindStandardMojangDir returns path to the com.mojang folder in the standard
+// Minecraft build.
+func FindStandardMojangDir() (string, error) {
 	result := filepath.Join(
 		os.Getenv("LOCALAPPDATA"), "Packages",
 		"Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games",
@@ -161,10 +162,28 @@ func FindMojangDir() (string, error) {
 	return result, nil
 }
 
+// FindPreviewDir returns path to the com.mojang folder in the preview
+// Minecraft build.
 func FindPreviewDir() (string, error) {
 	result := filepath.Join(
 		os.Getenv("LOCALAPPDATA"), "Packages",
 		"Microsoft.MinecraftWindowsBeta_8wekyb3d8bbwe", "LocalState", "games",
+		"com.mojang")
+	if _, err := os.Stat(result); err != nil {
+		if os.IsNotExist(err) {
+			return "", burrito.WrapErrorf(err, osStatErrorIsNotExist, result)
+		}
+		return "", burrito.WrapErrorf(
+			err, osStatErrorAny, result)
+	}
+	return result, nil
+}
+
+// FindEducationDir returns path to the com.mojang folder in the education
+// edition Minecraft build.
+func FindEducationDir() (string, error) {
+	result := filepath.Join(
+		os.Getenv("APPDATA"), "Minecraft Education Edition", "games",
 		"com.mojang")
 	if _, err := os.Stat(result); err != nil {
 		if os.IsNotExist(err) {
@@ -182,7 +201,7 @@ func CheckSuspiciousLocation() error {
 		return burrito.WrapErrorf(err, osGetwdError)
 	}
 	// Check if project directory is within mojang dir
-	dir, err := FindMojangDir()
+	dir, err := FindStandardMojangDir()
 	if err == nil {
 		dir1 := filepath.Join(dir, "development_behavior_packs")
 		if isPathWithinDirectory(path, dir1) {
