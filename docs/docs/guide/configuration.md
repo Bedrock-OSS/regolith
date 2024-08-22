@@ -76,6 +76,7 @@ Example config, with many options explained:
         // Export target defines where your files will be exported
         "export": {
           "target": "development",
+          "build": "standard",
           "readOnly": false
         }
       }

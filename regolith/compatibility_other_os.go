@@ -5,6 +5,7 @@ package regolith
 
 import (
 	"os"
+
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
@@ -50,10 +51,10 @@ func (d *DirWatcher) Close() error {
 	return burrito.WrappedError(notImplementedOnThisSystemError)
 }
 
-func FindMojangDir() (string, error) {
+func FindStandardMojangDir() (string, error) {
 	comMojang := os.Getenv("COM_MOJANG")
 	if comMojang == "" {
-			return "", burrito.WrappedError(comMojangEnvUnsetError)
+		return "", burrito.WrappedError(comMojangEnvUnsetError)
 	}
 	return comMojang, nil
 }
@@ -61,9 +62,17 @@ func FindMojangDir() (string, error) {
 func FindPreviewDir() (string, error) {
 	comMojangPreview := os.Getenv("COM_MOJANG_PREVIEW")
 	if comMojangPreview == "" {
-			return "", burrito.WrappedError(comMojangPreviewEnvUnsetError)
+		return "", burrito.WrappedError(comMojangPreviewEnvUnsetError)
 	}
 	return comMojangPreview, nil
+}
+
+func FindEducationDir() (string, error) {
+	comMojangEdu := os.Getenv("COM_MOJANG_EDU")
+	if comMojangEdu == "" {
+		return "", burrito.WrappedError(comMojangEduEnvUnsetError)
+	}
+	return comMojangEdu, nil
 }
 
 func CheckSuspiciousLocation() error {
