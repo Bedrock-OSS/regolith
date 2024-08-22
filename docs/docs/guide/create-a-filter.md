@@ -48,6 +48,7 @@ At this point, you need to edit your `config.json` so that `giant_mobs` is regis
         ],
         "export": {
           "target": "development",
+          "build": "standard",
           "readOnly": true
         }
       }

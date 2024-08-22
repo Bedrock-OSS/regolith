@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
+	"golang.org/x/mod/semver"
 )
 
 // GetExportPaths returns file paths for exporting behavior pack and
@@ -15,24 +16,103 @@ func GetExportPaths(
 	exportTarget ExportTarget, ctx RunContext,
 ) (bpPath string, rpPath string, err error) {
 	bpName, rpName, err := GetExportNames(exportTarget, ctx)
+	if err != nil {
+		return "", "", burrito.WrapError(
+			err, "Failed to get the export names.")
+	}
+	vFormatVersion := "v" + ctx.Config.FormatVersion
+
+	if semver.Compare(vFormatVersion, "v1.4.0") < 0 {
+		bpPath, rpPath, err = getExportPathsV1_2_0(
+			exportTarget, bpName, rpName)
+	} else if semver.Compare(vFormatVersion, "v1.4.0") == 0 {
+		bpPath, rpPath, err = getExportPathsV1_4_0(
+			exportTarget, bpName, rpName)
+	} else {
+		err = burrito.WrappedErrorf(
+			incompatibleFormatVersionError,
+			ctx.Config.FormatVersion, latestCompatibleVersion)
+	}
+	return
+}
+
+func FindMojangDir(build string) (string, error) {
+	if build == "standard" {
+		return FindStandardMojangDir()
+	} else if build == "preview" {
+		return FindPreviewDir()
+	} else if build == "education" {
+		return FindEducationDir()
+		// WARNING: If for some reason we will expand this in the future to
+		// match a new format version, we need to split this into versioned
+		// functions.
+	} else {
+		return "", burrito.WrappedErrorf(
+			invalidExportPathError,
+			// current value; valid values
+			build, "standard, preview, education")
+	}
+}
+
+// getExportPathsV1_2_0 handles GetExportPaths for Regolith format versions
+// below 1.4.0.
+func getExportPathsV1_2_0(
+	exportTarget ExportTarget, bpName string, rpName string,
+) (bpPath string, rpPath string, err error) {
 	if exportTarget.Target == "development" {
-		comMojang, err := FindMojangDir()
+		comMojang, err := FindStandardMojangDir()
 		if err != nil {
 			return "", "", burrito.WrapError(
-				err, "Failed to find \"com.mojang\" directory.")
+				err, findMojangDirError)
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
 	} else if exportTarget.Target == "preview" {
 		comMojang, err := FindPreviewDir()
 		if err != nil {
 			return "", "", burrito.WrapError(
-				err, "Failed to find preview \"com.mojang\" directory.")
+				err, findPreviewDirError)
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
 	} else if exportTarget.Target == "exact" {
 		return GetExactExportPaths(exportTarget)
 	} else if exportTarget.Target == "world" {
-		return GetWorldExportPaths(exportTarget, bpName, rpName)
+		return GetWorldExportPaths(
+			exportTarget.WorldPath,
+			exportTarget.WorldName,
+			"standard",
+			bpName, rpName)
+	} else if exportTarget.Target == "local" {
+		bpPath = "build/" + bpName + "/"
+		rpPath = "build/" + rpName + "/"
+	} else if exportTarget.Target == "none" {
+		bpPath = ""
+		rpPath = ""
+	} else {
+		err = burrito.WrappedErrorf(
+			"Export target %q is not valid", exportTarget.Target)
+	}
+	return
+}
+
+// getExportPathsV1_4_0 handles GetExportPaths for Regolith format version
+// 1.4.0.
+func getExportPathsV1_4_0(
+	exportTarget ExportTarget, bpName string, rpName string,
+) (bpPath string, rpPath string, err error) {
+	if exportTarget.Target == "development" {
+		comMojang, err := FindMojangDir(exportTarget.Build)
+		if err != nil {
+			return "", "", burrito.PassError(err)
+		}
+		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
+	} else if exportTarget.Target == "world" {
+		return GetWorldExportPaths(
+			exportTarget.WorldPath,
+			exportTarget.WorldName,
+			exportTarget.Build,
+			bpName, rpName)
+	} else if exportTarget.Target == "exact" {
+		return GetExactExportPaths(exportTarget)
 	} else if exportTarget.Target == "local" {
 		bpPath = "build/" + bpName + "/"
 		rpPath = "build/" + rpName + "/"
@@ -47,11 +127,6 @@ func GetExportPaths(
 }
 
 func GetDevelopmentExportPaths(bpName, rpName, comMojang string) (bpPath string, rpPath string, err error) {
-	if err != nil {
-		return "", "", burrito.WrapError(
-			err, "Failed to find \"com.mojang\" directory.")
-	}
-
 	bpPath = comMojang + "/development_behavior_packs/" + bpName
 	rpPath = comMojang + "/development_resource_packs/" + rpName
 	return
@@ -71,14 +146,16 @@ func GetExactExportPaths(exportTarget ExportTarget) (bpPath string, rpPath strin
 	return
 }
 
-func GetWorldExportPaths(exportTarget ExportTarget, bpName, rpName string) (bpPath string, rpPath string, err error) {
-	if exportTarget.WorldPath != "" {
-		if exportTarget.WorldName != "" {
+func GetWorldExportPaths(
+	worldPath, worldName, build, bpName, rpName string,
+) (bpPath string, rpPath string, err error) {
+	if worldPath != "" {
+		if worldName != "" {
 			return "", "", burrito.WrappedError(
 				"Using both \"worldName\" and \"worldPath\" is not" +
 					" allowed.")
 		}
-		wPath, err := ResolvePath(exportTarget.WorldPath)
+		wPath, err := ResolvePath(worldPath)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, "Failed to resolve world path.")
@@ -87,8 +164,8 @@ func GetWorldExportPaths(exportTarget ExportTarget, bpName, rpName string) (bpPa
 			wPath, "behavior_packs", bpName)
 		rpPath = filepath.Join(
 			wPath, "resource_packs", rpName)
-	} else if exportTarget.WorldName != "" {
-		dir, err := FindMojangDir()
+	} else if worldName != "" {
+		dir, err := FindMojangDir(build)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, "Failed to find \"com.mojang\" directory.")
@@ -98,7 +175,7 @@ func GetWorldExportPaths(exportTarget ExportTarget, bpName, rpName string) (bpPa
 			return "", "", burrito.WrapError(err, "Failed to list worlds.")
 		}
 		for _, world := range worlds {
-			if world.Name == exportTarget.WorldName {
+			if world.Name == worldName {
 				bpPath = filepath.Join(
 					world.Path, "behavior_packs", bpName)
 				rpPath = filepath.Join(

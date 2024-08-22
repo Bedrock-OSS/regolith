@@ -23,6 +23,8 @@ func TestMoveFilesAcl(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping test on local machine")
 	}
+	regolith.InitLogging(true)
+
 	// Switch to current working directory at the end of the test
 	defer os.Chdir(getWdOrFatal(t))
 
@@ -33,7 +35,7 @@ func TestMoveFilesAcl(t *testing.T) {
 
 	// Find path to com.mojang
 	t.Log("Finding the path to com.mojang...")
-	mojangDir, err := regolith.FindMojangDir()
+	mojangDir, err := regolith.FindStandardMojangDir()
 	if err != nil {
 		t.Fatal(err.Error())
 	}
