@@ -308,7 +308,7 @@ func (f *RemoteFilter) GetCachedVersion(dotRegolithPath string) (*string, error)
 	return &version, nil
 }
 
-func (f *RemoteFilter) IsUsingDataExport(dotRegolithPath string) (bool, error) {
+func (f *RemoteFilter) IsUsingDataExport(dotRegolithPath string, _ RunContext) (bool, error) {
 	// Load the filter.json file
 	filterJsonPath := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
 	file, err := os.ReadFile(filterJsonPath)
