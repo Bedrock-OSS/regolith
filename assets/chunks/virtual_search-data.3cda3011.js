@@ -1,1 +1,0 @@
-const e={version:"2.3.9",fields:["b","a"],fieldVectors:[],invertedIndex:[],pipeline:["stemmer"]},t={},n={previewLength:62,buttonLabel:"Search",placeholder:"Search..."},o={INDEX_DATA:e,PREVIEW_LOOKUP:t,Options:n};export{o as default};
