@@ -40,3 +40,21 @@ func (f *ProfileFilter) Check(context RunContext) error {
 		profile, f.Profile, *context.Config, &context,
 		context.DotRegolithPath)
 }
+
+func (f *ProfileFilter) IsUsingDataExport(dotRegolithPath string, ctx RunContext) (bool, error) {
+	profile := ctx.Config.Profiles[f.Profile]
+	for filter := range profile.Filters {
+		filter := profile.Filters[filter]
+		usingDataPath, err := filter.IsUsingDataExport(dotRegolithPath, ctx)
+		if err != nil {
+			return false, burrito.WrapErrorf(
+				err,
+				"Failed to check if profile is using data export.\n"+
+					"Profile: %s", f.Profile)
+		}
+		if usingDataPath {
+			return true, nil
+		}
+	}
+	return false, nil
+}
