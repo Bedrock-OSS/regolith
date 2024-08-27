@@ -277,7 +277,7 @@ func ExportProject(ctx RunContext) error {
 	var exportedFilterNames []string
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
-		usingDataPath, err := filter.IsUsingDataExport(dotRegolithPath)
+		usingDataPath, err := filter.IsUsingDataExport(dotRegolithPath, ctx)
 		if err != nil {
 			return burrito.WrapErrorf(
 				err,

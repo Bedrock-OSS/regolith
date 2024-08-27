@@ -199,10 +199,23 @@ func main() {
 	eval.Init()
 
 	// Root command
+	versionTitle := "Regolith "
+	if buildSource != "DEV" {
+		versionTitle += version
+	} else {
+		versionTitle += "Dev Build"
+	}
+	if commit != "" {
+		versionTitle += " (#" + commit[0:7]
+		if date != "" {
+			versionTitle += " built at " + date
+		}
+		versionTitle += ")"
+	}
 	var rootCmd = &cobra.Command{
 		Use:     "regolith",
 		Short:   "Addon Compiler for the Bedrock Edition of Minecraft",
-		Long:    regolithDesc,
+		Long:    versionTitle + regolithDesc,
 		Version: version,
 	}
 	subcommands := make([]*cobra.Command, 0)
