@@ -297,7 +297,10 @@ func Watch(profileName string, debug bool) error {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	// Run the profile
-	context.StartWatchingSourceFiles()
+	err = context.StartWatchingSourceFiles()
+	if err != nil {
+		return burrito.PassError(err)
+	}
 	for { // Loop until program termination (CTRL+C)
 		err = RunProfile(*context)
 		if err != nil {
