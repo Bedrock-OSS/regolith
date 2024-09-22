@@ -46,9 +46,8 @@ type DirWatcher struct {
 	eventBuffer         [5440]byte
 }
 
-// NewDirWatcher creates a new inotify watcher.
-//
-// New inotify instances are created for each subdirectory recursively.
+// NewDirWatcher creates a new inotify instance and adds watchers for each
+// subdirectory recursively.
 func NewDirWatcher(path string) (*DirWatcher, error) {
 	fileDescriptor, err := unix.InotifyInit1(0)
 	if err != nil {
