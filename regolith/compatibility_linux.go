@@ -39,7 +39,6 @@ func copyFileSecurityInfo(source string, target string) error {
 //
 // Useful links:
 // https://www.man7.org/linux/man-pages/man7/inotify.7.html
-//
 // https://pkg.go.dev/golang.org/x/sys/unix
 type DirWatcher struct {
 	fileDescriptor      int
@@ -47,7 +46,9 @@ type DirWatcher struct {
 	eventBuffer         [5440]byte
 }
 
-// NewDirWatcher creats a new inotify watcher.
+// NewDirWatcher creates a new inotify watcher.
+//
+// New inotify instances are created for each subdirectory recursively.
 func NewDirWatcher(path string) (*DirWatcher, error) {
 	fileDescriptor, err := unix.InotifyInit1(0)
 	if err != nil {
@@ -60,7 +61,7 @@ func NewDirWatcher(path string) (*DirWatcher, error) {
 
 	err = filepath.WalkDir(path, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
-			return burrito.WrapErrorf(err, "Could not walk `%s` to initiate file watching", path)
+			return burrito.WrapErrorf(err, "Could not descent into `%s` to initiate file watching", path)
 		}
 
 		if !entry.IsDir() {
@@ -122,7 +123,7 @@ func (d *DirWatcher) WaitForChangeGroup(
 	}
 }
 
-// Close removes the inotify watcher.
+// Close removes all inotify watchers.
 func (d *DirWatcher) Close() error {
 	for watchDescriptor := range d.watchDescriptorList {
 		unix.InotifyRmWatch(d.fileDescriptor, uint32(watchDescriptor))
