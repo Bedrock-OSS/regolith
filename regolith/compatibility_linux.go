@@ -63,17 +63,14 @@ func NewDirWatcher(path string) (*DirWatcher, error) {
 		if err != nil {
 			return burrito.WrapErrorf(err, "Could not descent into `%s` to initiate file watching", path)
 		}
-
 		if !entry.IsDir() {
-			return fs.SkipDir
+			return nil
 		}
-
-		wd, err := unix.InotifyAddWatch(fileDescriptor, path, mask)
+		watchDescriptor, err := unix.InotifyAddWatch(fileDescriptor, path, mask)
 		if err != nil {
 			return burrito.WrapErrorf(err, "Could not add a new inotify watcher at `%s`", path)
 		}
-		watchDescriptorList = append(watchDescriptorList, wd)
-
+		watchDescriptorList = append(watchDescriptorList, watchDescriptor)
 		return nil
 	})
 	if err != nil {
