@@ -4,7 +4,9 @@
 package regolith
 
 import (
+	"io/fs"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -40,28 +42,49 @@ func copyFileSecurityInfo(source string, target string) error {
 //
 // https://pkg.go.dev/golang.org/x/sys/unix
 type DirWatcher struct {
-	fd  int
-	wd  int
-	buf [5440]byte
+	fileDescriptor      int
+	watchDescriptorList []int
+	eventBuffer         [5440]byte
 }
 
 // NewDirWatcher creats a new inotify watcher.
 func NewDirWatcher(path string) (*DirWatcher, error) {
-	fd, err := unix.InotifyInit1(0)
+	fileDescriptor, err := unix.InotifyInit1(0)
+	if err != nil {
+		return nil, burrito.WrapError(err, "Could not create an inotify instance")
+	}
+
+	mask := uint32(unix.IN_CREATE | unix.IN_MODIFY | unix.IN_DELETE | unix.IN_MOVED_TO | unix.FAN_MOVED_FROM | unix.IN_MOVE_SELF)
+	var eventBuffer [(unix.SizeofInotifyEvent + unix.NAME_MAX + 1) * 20]byte
+	var watchDescriptorList []int
+
+	err = filepath.WalkDir(path, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return burrito.WrapErrorf(err, "Could not walk `%s` to initiate file watching", path)
+		}
+
+		if !entry.IsDir() {
+			return fs.SkipDir
+		}
+
+		wd, err := unix.InotifyAddWatch(fileDescriptor, path, mask)
+		if err != nil {
+			return burrito.WrapErrorf(err, "Could not add a new inotify watcher at `%s`", path)
+		}
+		watchDescriptorList = append(watchDescriptorList, wd)
+
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	wd, err := unix.InotifyAddWatch(fd, path, unix.IN_CREATE|unix.IN_DELETE|unix.IN_MOVED_TO|unix.FAN_MOVED_FROM|unix.IN_MOVE_SELF)
-	if err != nil {
-		return nil, err
-	}
-	var buf [(unix.SizeofInotifyEvent + unix.NAME_MAX + 1) * 20]byte
-	return &DirWatcher{fd, wd, buf}, nil
+
+	return &DirWatcher{fileDescriptor, watchDescriptorList, eventBuffer}, nil
 }
 
 // WaitForChange locks the goroutine until an inotify event is received.
 func (d *DirWatcher) WaitForChange() error {
-	_, err := unix.Read(d.fd, d.buf[:])
+	_, err := unix.Read(d.fileDescriptor, d.eventBuffer[:])
 	if err != nil {
 		return burrito.WrapError(err, "Could not read inotify event")
 	}
@@ -101,7 +124,9 @@ func (d *DirWatcher) WaitForChangeGroup(
 
 // Close removes the inotify watcher.
 func (d *DirWatcher) Close() error {
-	unix.InotifyRmWatch(d.fd, uint32(d.wd))
+	for watchDescriptor := range d.watchDescriptorList {
+		unix.InotifyRmWatch(d.fileDescriptor, uint32(watchDescriptor))
+	}
 	return nil
 }
 
