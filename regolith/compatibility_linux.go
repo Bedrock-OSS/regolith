@@ -55,7 +55,7 @@ func NewDirWatcher(path string) (*DirWatcher, error) {
 		return nil, burrito.WrapError(err, "Could not create an inotify instance")
 	}
 
-	mask := uint32(unix.IN_CREATE | unix.IN_MODIFY | unix.IN_DELETE | unix.IN_MOVED_TO | unix.FAN_MOVED_FROM | unix.IN_MOVE_SELF)
+	mask := uint32(unix.IN_CREATE | unix.IN_MODIFY | unix.IN_DELETE | unix.IN_MOVED_TO | unix.IN_MOVED_FROM | unix.IN_MOVE_SELF)
 	var eventBuffer [(unix.SizeofInotifyEvent + unix.NAME_MAX + 1) * 20]byte
 	var watchDescriptorList []int
 
