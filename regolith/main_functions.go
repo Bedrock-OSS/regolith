@@ -316,6 +316,10 @@ func Watch(profileName string, debug bool) error {
 			// AwaitInterruption locks the goroutine with the interruption channel until
 			// the Config is interrupted and returns the interruption message.
 			Logger.Warn("Restarting...")
+		case err := <-context.fileWatchingErrorChannel:
+			if err != nil {
+				return burrito.WrapError(err, "Encountered an error during file watching")
+			}
 		case <-sigChan:
 			return sessionLockErr // Return the error from the defer function
 		}
