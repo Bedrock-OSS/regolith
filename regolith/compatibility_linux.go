@@ -109,7 +109,6 @@ func (d *DirWatcher) WaitForChangeGroup(
 	interruptionChannel <- interruptionMessage
 
 	timer := time.NewTimer(time.Duration(groupTimeout))
-	defer timer.Stop()
 
 	for {
 		select {
