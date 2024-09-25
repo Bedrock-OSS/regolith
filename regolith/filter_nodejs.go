@@ -57,6 +57,9 @@ func (f *NodeJSFilter) run(context RunContext) error {
 	if IsExperimentEnabled(ReplaceNodeWithDeno) {
 		nodeCommand = "deno"
 		nodeFlags = []string{"run", "--allow-read", "--allow-write", "--allow-env", "--allow-run"}
+	} else if IsExperimentEnabled(ReplaceNodeWithBun) {
+		nodeCommand = "bun"
+		nodeFlags = []string{"run"}
 	}
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
@@ -145,6 +148,13 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 					err, "Failed to run Deno to install dependencies."+
 						"\nFilter name: %s", f.Id)
 			}
+		} else if IsExperimentEnabled(ReplaceNodeWithBun) {
+			err = RunSubProcess("bun", []string{"install"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Failed to run bun to install dependencies."+
+						"\nFilter name: %s", f.Id)
+			}
 		} else {
 			err = RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
 			if err != nil {
@@ -179,6 +189,19 @@ func (f *NodeJSFilterDefinition) Check(context RunContext) error {
 		}
 		v := vSplit[1]
 		Logger.Debugf("Found Deno version %s", v)
+	} else if IsExperimentEnabled(ReplaceNodeWithBun) {
+		_, err = exec.LookPath("bun")
+		if err != nil {
+			return burrito.WrapError(
+				err, "Bun not found, download and install it from"+
+					" https://bun.sh/.",
+			)
+		}
+		v, err := exec.Command("bun", "--version").Output()
+		if err != nil {
+			return burrito.WrapError(err, "Failed to check Bun version")
+		}
+		Logger.Debugf("Found Bun version %s", string(v))
 	} else {
 		_, err = exec.LookPath("node")
 		if err != nil {

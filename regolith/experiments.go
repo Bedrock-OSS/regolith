@@ -7,6 +7,8 @@ const (
 	SizeTimeCheck Experiment = iota
 	// ReplaceNodeWithDeno is an experiment that makes the NodeJS filters run using Deno
 	ReplaceNodeWithDeno
+	// ReplaceNodeWithBun is an experiment that makes the NodeJS filters run using Bun
+	ReplaceNodeWithBun
 )
 
 // The descriptions shouldn't be too wide, the text with their description is
@@ -22,6 +24,10 @@ Runs the NodeJS filters using Deno. For this to work, you need to have
 Deno version 2.0.0 or higher installed.
 `
 
+const replaceNodeWithBunDesc = `
+Runs the NodeJS filters using Bun.
+`
+
 type ExperimentInfo struct {
 	Name        string
 	Description string
@@ -30,6 +36,7 @@ type ExperimentInfo struct {
 var AvailableExperiments = map[Experiment]ExperimentInfo{
 	SizeTimeCheck:       {"size_time_check", sizeTimeCheckDesc},
 	ReplaceNodeWithDeno: {"replace_node_with_deno", replaceNodeWithDenoDesc},
+	ReplaceNodeWithBun:  {"replace_node_with_bun", replaceNodeWithBunDesc},
 }
 
 var EnabledExperiments []string
