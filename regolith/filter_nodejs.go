@@ -52,14 +52,20 @@ func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*N
 
 func (f *NodeJSFilter) run(context RunContext) error {
 	// Run filter
+	nodeCommand := "node"
+	nodeFlags := []string{}
+	if IsExperimentEnabled(ReplaceNodeWithDeno) {
+		nodeCommand = "deno"
+		nodeFlags = []string{"run", "--allow-read", "--allow-write", "--allow-env", "--allow-run"}
+	}
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
-			"node",
-			append([]string{
+			nodeCommand,
+			append(nodeFlags, append([]string{
 				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script},
 				f.Arguments...,
-			),
+			)...),
 			context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
@@ -70,11 +76,11 @@ func (f *NodeJSFilter) run(context RunContext) error {
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
 		err := RunSubProcess(
-			"node",
-			append([]string{
+			nodeCommand,
+			append(nodeFlags, append([]string{
 				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
-				string(jsonSettings)}, f.Arguments...),
+				string(jsonSettings)}, f.Arguments...)...),
 			context.AbsoluteLocation,
 			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
 			ShortFilterName(f.Id),
@@ -131,11 +137,21 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	}
 	if hasPackageJson(requirementsPath) {
 		Logger.Info("Installing npm dependencies...")
-		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
-		if err != nil {
-			return burrito.WrapErrorf(
-				err, "Failed to run npm and install dependencies."+
-					"\nFilter name: %s", f.Id)
+		var err error
+		if IsExperimentEnabled(ReplaceNodeWithDeno) {
+			err = RunSubProcess("deno", []string{"i"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Failed to run Deno to install dependencies."+
+						"\nFilter name: %s", f.Id)
+			}
+		} else {
+			err = RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Failed to run npm and install dependencies."+
+						"\nFilter name: %s", f.Id)
+			}
 		}
 	}
 	Logger.Infof("Dependencies for %s installed successfully", f.Id)
@@ -143,18 +159,40 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 }
 
 func (f *NodeJSFilterDefinition) Check(context RunContext) error {
-	_, err := exec.LookPath("node")
-	if err != nil {
-		return burrito.WrapError(
-			err, "NodeJS not found, download and install it from"+
-				" https://nodejs.org/en/")
+	var err error
+	if IsExperimentEnabled(ReplaceNodeWithDeno) {
+		_, err = exec.LookPath("deno")
+		if err != nil {
+			return burrito.WrapError(
+				err, "Deno not found, download and install it from"+
+					" https://deno.land/. Using Deno for NodeJS filters requires"+
+					" Deno version 2.0.0 or higher.")
+		}
+		cmd, err := exec.Command("deno", "--version").Output()
+		if err != nil {
+			return burrito.WrapError(err, "Failed to check Deno version")
+		}
+		vSplit := strings.Split(string(cmd), " ")
+		if len(vSplit) < 2 {
+			return burrito.WrapErrorf(
+				err, "Failed to parse Deno version from %s", string(cmd))
+		}
+		v := vSplit[1]
+		Logger.Debugf("Found Deno version %s", v)
+	} else {
+		_, err = exec.LookPath("node")
+		if err != nil {
+			return burrito.WrapError(
+				err, "NodeJS not found, download and install it from"+
+					" https://nodejs.org/en/")
+		}
+		cmd, err := exec.Command("node", "--version").Output()
+		if err != nil {
+			return burrito.WrapError(err, "Failed to check NodeJS version")
+		}
+		v := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
+		Logger.Debugf("Found NodeJS version %s", v)
 	}
-	cmd, err := exec.Command("node", "--version").Output()
-	if err != nil {
-		return burrito.WrapError(err, "Failed to check NodeJS version")
-	}
-	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
-	Logger.Debugf("Found NodeJS version %s", a)
 	return nil
 }
 
