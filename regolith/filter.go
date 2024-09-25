@@ -29,6 +29,10 @@ type RunContext struct {
 	// of the change ("rp", "bp" or "data"), which may be used to handle
 	// some interruptions differently.
 	interruptionChannel chan string
+
+	// fileWatchingErrorChannel is used to pass any errors that may occur during
+	// file watching.
+	fileWatchingErrorChannel chan error
 }
 
 // GetProfile returns the Profile structure from the context.
@@ -59,14 +63,14 @@ func (c *RunContext) StartWatchingSourceFiles() error {
 	}
 
 	c.interruptionChannel = make(chan string)
+	c.fileWatchingErrorChannel = make(chan error)
 	yieldChanges := func(
 		watcher *DirWatcher, sourceName string,
 	) {
 		for {
-			err := watcher.WaitForChangeGroup(
-				100, c.interruptionChannel, sourceName)
+			err := watcher.WaitForChangeGroup(100, c.interruptionChannel, sourceName)
 			if err != nil {
-				return
+				c.fileWatchingErrorChannel <- err
 			}
 		}
 	}
@@ -99,6 +103,7 @@ func (c *RunContext) StartWatchingSourceFiles() error {
 			return burrito.WrapError(err, "Could not create data watcher.")
 		}
 	}
+
 	return nil
 }
 
