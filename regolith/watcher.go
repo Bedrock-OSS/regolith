@@ -9,10 +9,11 @@ import (
 
 // DirWatcher handles watching for changes in a single directory (e.g. RP).
 //
-// fsnotify doesn't *officially* support recursive file watching. Windows and
-// and Linux are supported, but not macOS. For now, this implementation uses a
-// custom fork with patches to manually enable it. See
-// https://github.com/arexon/fsnotify/blob/main/fsnotify.go#L481
+// fsnotify doesn't *officially* support recursive file watching yet. Windows
+// and and Linux are supported, but not macOS. For now, this implementation uses
+// a custom fork with patches to manually enable it.
+//
+// Fork patch: https://github.com/arexon/fsnotify/blob/main/fsnotify.go#L481
 type DirWatcher struct {
 	watcher      *fsnotify.Watcher
 	root         string
