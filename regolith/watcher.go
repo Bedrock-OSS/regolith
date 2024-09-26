@@ -49,7 +49,7 @@ func NewDirWatcher(
 }
 
 // Start starts the file watching loop and blocks the goroutine until it
-// receives an event. Once it does, it sends a message to interruptionChannel
+// receives an event. Once it does, it sends a message to interruption channel
 // then resumes blocking the goroutine.
 func (d *DirWatcher) start() {
 	for {
@@ -60,9 +60,12 @@ func (d *DirWatcher) start() {
 			}
 			d.errors <- err
 			return
-		case _, ok := <-d.watcher.Events:
+		case event, ok := <-d.watcher.Events:
 			if !ok {
 				return
+			}
+			if event.Op&fsnotify.Chmod == fsnotify.Chmod {
+				continue
 			}
 			d.interruption <- d.kind
 		}
