@@ -7,7 +7,7 @@ import (
 	"github.com/arexon/fsnotify"
 )
 
-// DirWatcher handles watching for changes in a single directory (e.g. RP).
+// DirWatcher handles watching for changes in a specific directory (e.g. RP).
 //
 // fsnotify doesn't *officially* support recursive file watching yet. Windows
 // and and Linux are supported, but not macOS. For now, this implementation uses
@@ -18,11 +18,11 @@ type DirWatcher struct {
 	watcher      *fsnotify.Watcher
 	root         string
 	kind         string      // Whether the watched directory is "RP", "BP", or "data".
-	interruption chan string // see RunContext
-	errors       chan error  // see RunContext
+	interruption chan string // See RunContext.
+	errors       chan error  // See RunContext.
 }
 
-// NewDirWatcher creates a new pack watcher for the given pack kind.
+// NewDirWatcher creates a new directory watcher.
 func NewDirWatcher(
 	root string,
 	kind string,
@@ -40,8 +40,10 @@ func NewDirWatcher(
 		interruption,
 		errors,
 	}
-	path := filepath.Join(root, "...")
-	if err := d.watcher.Add(path); err != nil {
+	// We have to manually signal to fsnotify that it should recursively watch this
+	// path by using "/..." or "\...".
+	recursiveRoot := filepath.Join(root, "...")
+	if err := d.watcher.Add(recursiveRoot); err != nil {
 		return burrito.WrapErrorf(err, "Could not start watching `%f`", root)
 	}
 	go d.start()
