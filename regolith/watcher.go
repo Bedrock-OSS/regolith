@@ -1,7 +1,10 @@
 package regolith
 
 import (
+	"math"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"github.com/arexon/fsnotify"
@@ -17,9 +20,11 @@ import (
 type DirWatcher struct {
 	watcher      *fsnotify.Watcher
 	root         string
-	kind         string      // Whether the watched directory is "RP", "BP", or "data".
-	interruption chan string // See RunContext.
-	errors       chan error  // See RunContext.
+	kind         string                 // Whether the watched directory is "RP", "BP", or "data".
+	mu           sync.Mutex             // Used for locking during deboucning.
+	timers       map[string]*time.Timer // Stores event path -> debounce timer.
+	interruption chan string            // See RunContext.
+	errors       chan error             // See RunContext.
 }
 
 // NewDirWatcher creates a new directory watcher.
@@ -33,13 +38,16 @@ func NewDirWatcher(
 	if err != nil {
 		return burrito.WrapError(err, "Could not initialize directory watching")
 	}
+
 	d := &DirWatcher{
-		watcher,
-		root,
-		kind,
-		interruption,
-		errors,
+		watcher:      watcher,
+		root:         root,
+		kind:         kind,
+		timers:       make(map[string]*time.Timer),
+		interruption: interruption,
+		errors:       errors,
 	}
+
 	// We have to manually signal to fsnotify that it should recursively watch this
 	// path by using "/..." or "\...".
 	recursiveRoot := filepath.Join(root, "...")
@@ -69,7 +77,21 @@ func (d *DirWatcher) start() {
 			if event.Op.Has(fsnotify.Chmod) {
 				continue
 			}
-			d.interruption <- d.kind
+
+			d.mu.Lock()
+			timer, exists := d.timers[event.Name]
+			d.mu.Unlock()
+
+			if !exists {
+				timer = time.AfterFunc(math.MaxInt64, func() { d.interruption <- d.kind })
+				timer.Stop()
+
+				d.mu.Lock()
+				d.timers[event.Name] = timer
+				d.mu.Unlock()
+			}
+
+			timer.Reset(100 * time.Millisecond)
 		}
 	}
 }
