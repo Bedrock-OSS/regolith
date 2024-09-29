@@ -67,8 +67,8 @@ github.com/alessio/shellescape v1.4.1/go.mod h1:PZAiSCk0LJaZkiCSkPv8qIobYglO3FPp
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20221202181307-76fa05c21b12 h1:npHgfD4Tl2WJS3AJaMUi5ynGDPUBfkg3U3fCzDyXZ+4=
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20221202181307-76fa05c21b12/go.mod h1:pSwJ0fSY5KhvocuWSx4fz3BA8OrA1bQn+K1Eli3BRwM=
-github.com/arexon/fsnotify v0.0.0-20240925210538-c862c914df35 h1:LcWID+cU05U8/rovFXL+bB6eBhm4waCvzKCvaBHlJoo=
-github.com/arexon/fsnotify v0.0.0-20240925210538-c862c914df35/go.mod h1:fMK1EJDCm6IfeqTBptyizpl356fZy33nWqFKELbFouQ=
+github.com/arexon/fsnotify v0.0.0-20240929211932-1ebdc44d4bc2 h1:Y4fOHCKaIWeRXZ9+qqaB7UI0tjK/eMN6CZ9OCbY3FBY=
+github.com/arexon/fsnotify v0.0.0-20240929211932-1ebdc44d4bc2/go.mod h1:fMK1EJDCm6IfeqTBptyizpl356fZy33nWqFKELbFouQ=
 github.com/arikkfir/go-getter v1.6.3-0.20220803164326-281b7670b734 h1:csFUhbcumnsC5d0SMF8CvtR6Z/i4UeNgOZ6xUaQUYas=
 github.com/arikkfir/go-getter v1.6.3-0.20220803164326-281b7670b734/go.mod h1:IZCrswsZPeWv9IkVnLElzRU/gz/QPi6pZHn4tv6vbwA=
 github.com/aws/aws-sdk-go v1.15.78/go.mod h1:E3/ieXAlvM0XWO57iftYVDLLvQ824smPP3ATZkfNZeM=
