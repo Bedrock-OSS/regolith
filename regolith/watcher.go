@@ -1,9 +1,7 @@
 package regolith
 
 import (
-	"math"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -20,11 +18,10 @@ import (
 type DirWatcher struct {
 	watcher      *fsnotify.Watcher
 	root         string
-	kind         string                 // Whether the watched directory is "RP", "BP", or "data".
-	mu           sync.Mutex             // Used for locking during deboucning.
-	timers       map[string]*time.Timer // Stores event path -> debounce timer.
-	interruption chan string            // See RunContext.
-	errors       chan error             // See RunContext.
+	kind         string           // Whether the watched directory is "RP", "BP", or "data".
+	debounce     <-chan time.Time // Debounce timer
+	interruption chan string      // See RunContext.
+	errors       chan error       // See RunContext.
 }
 
 // NewDirWatcher creates a new directory watcher.
@@ -43,7 +40,6 @@ func NewDirWatcher(
 		watcher:      watcher,
 		root:         root,
 		kind:         kind,
-		timers:       make(map[string]*time.Timer),
 		interruption: interruption,
 		errors:       errors,
 	}
@@ -60,7 +56,8 @@ func NewDirWatcher(
 
 // Start starts the file watching loop and blocks the goroutine until it
 // receives an event. Once it does, it sends a message to interruption channel
-// then resumes blocking the goroutine.
+// then creates a debounce timer of 100ms. In this duration, all events are
+// silently ignored.
 func (d *DirWatcher) start() {
 	for {
 		select {
@@ -74,24 +71,13 @@ func (d *DirWatcher) start() {
 			if !ok {
 				return
 			}
-			if event.Op.Has(fsnotify.Chmod) {
+			if d.debounce != nil || event.Op.Has(fsnotify.Chmod) {
 				continue
 			}
-
-			d.mu.Lock()
-			timer, exists := d.timers[event.Name]
-			d.mu.Unlock()
-
-			if !exists {
-				timer = time.AfterFunc(math.MaxInt64, func() { d.interruption <- d.kind })
-				timer.Stop()
-
-				d.mu.Lock()
-				d.timers[event.Name] = timer
-				d.mu.Unlock()
-			}
-
-			timer.Reset(100 * time.Millisecond)
+			d.interruption <- d.kind
+			d.debounce = time.After(100 * time.Millisecond)
+		case <-d.debounce:
+			d.debounce = nil
 		}
 	}
 }
