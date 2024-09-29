@@ -2,7 +2,7 @@ github.com/Bedrock-OSS/go-burrito/burrito,https://github.com/Bedrock-OSS/go-burr
 github.com/Bedrock-OSS/regolith,https://github.com/Bedrock-OSS/regolith/blob/HEAD/LICENSE,MIT
 github.com/alessio/shellescape,https://github.com/alessio/shellescape/blob/v1.4.1/LICENSE,MIT
 github.com/antlr/antlr4/runtime/Go/antlr/v4,https://github.com/antlr/antlr4/blob/76fa05c21b12/runtime/Go/antlr/v4/LICENSE,BSD-3-Clause
-github.com/arexon/fsnotify,https://github.com/arexon/fsnotify/blob/c862c914df35/LICENSE,BSD-3-Clause
+github.com/arexon/fsnotify,https://github.com/arexon/fsnotify/blob/1ebdc44d4bc2/LICENSE,BSD-3-Clause
 github.com/fatih/color,https://github.com/fatih/color/blob/v1.14.1/LICENSE.md,MIT
 github.com/gammazero/deque,https://github.com/gammazero/deque/blob/v0.2.1/LICENSE,MIT
 github.com/google/go-github/v39/github,https://github.com/google/go-github/blob/v39.2.0/LICENSE,BSD-3-Clause
