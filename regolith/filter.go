@@ -64,41 +64,21 @@ func (c *RunContext) StartWatchingSourceFiles() error {
 
 	c.interruptionChannel = make(chan string)
 	c.fileWatchingErrorChannel = make(chan error)
-	yieldChanges := func(
-		watcher *DirWatcher, sourceName string,
-	) {
-		for {
-			err := watcher.WaitForChangeGroup(100, c.interruptionChannel, sourceName)
-			if err != nil {
-				c.fileWatchingErrorChannel <- err
-			}
-		}
-	}
 
-	addWatcher := func(watchedPath, watcherString string) error {
-		watcher, err := NewDirWatcher(watchedPath)
-		if err != nil {
-			return burrito.PassError(err)
-		}
-		go yieldChanges(watcher, watcherString)
-		return nil
-	}
-
-	var err error
 	if c.Config.ResourceFolder != "" {
-		err = addWatcher(c.Config.ResourceFolder, "rp")
+		err := NewDirWatcher(c.Config.ResourceFolder, "rp", c.interruptionChannel, c.fileWatchingErrorChannel)
 		if err != nil {
 			return burrito.WrapError(err, "Could not create resource pack watcher.")
 		}
 	}
 	if c.Config.BehaviorFolder != "" {
-		err = addWatcher(c.Config.BehaviorFolder, "bp")
+		err := NewDirWatcher(c.Config.BehaviorFolder, "bp", c.interruptionChannel, c.fileWatchingErrorChannel)
 		if err != nil {
 			return burrito.WrapError(err, "Could not create behavior pack watcher.")
 		}
 	}
 	if c.Config.DataPath != "" {
-		err = addWatcher(c.Config.DataPath, "data")
+		err := NewDirWatcher(c.Config.DataPath, "data", c.interruptionChannel, c.fileWatchingErrorChannel)
 		if err != nil {
 			return burrito.WrapError(err, "Could not create data watcher.")
 		}
