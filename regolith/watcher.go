@@ -58,11 +58,11 @@ func NewDirWatcher(
 
 // Start starts the file watching loop and blocks the goroutine until it
 // receives either:
-//   - an event, in which it sends a message to interruption channel then
-//     creates a debounce timer of 100ms. In this duration, all events are
+//   - an event, in which it will send a message to interruption channel then
+//     create a debounce timer of 100ms. In this duration, all events are
 //     silently ignored.
-//   - an restart channel signal, and if the watcher is for the "data"
-//     folder, it will restart watching the folder again.
+//   - a restart channel signal, and if the watcher is for the "data" folder, it
+//     will restart watching the folder again.
 func (d *DirWatcher) start() {
 	for {
 		select {
