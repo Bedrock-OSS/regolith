@@ -312,11 +312,11 @@ func Watch(profileName string, debug bool) error {
 		}
 		Logger.Info("Press Ctrl+C to stop watching.")
 		select {
-		case <-context.interruptionChannel:
+		case <-context.interruption:
 			// AwaitInterruption locks the goroutine with the interruption channel until
 			// the Config is interrupted and returns the interruption message.
 			Logger.Warn("Restarting...")
-		case err := <-context.fileWatchingErrorChannel:
+		case err := <-context.fileWatchingError:
 			if err != nil {
 				return burrito.WrapError(err, "Encountered an error during file watching")
 			}
@@ -380,13 +380,13 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 	// Create run context
 	path, _ := filepath.Abs(".")
 	runContext := RunContext{
-		Config:              config,
-		Parent:              nil,
-		Profile:             "[dynamic profile]",
-		DotRegolithPath:     dotRegolithPath,
-		interruptionChannel: nil,
-		AbsoluteLocation:    path,
-		Settings:            filterRunner.GetSettings(),
+		Config:           config,
+		Parent:           nil,
+		Profile:          "[dynamic profile]",
+		DotRegolithPath:  dotRegolithPath,
+		interruption:     nil,
+		AbsoluteLocation: path,
+		Settings:         filterRunner.GetSettings(),
 	}
 	// Check the filter
 	err = filterRunner.Check(runContext)

@@ -275,6 +275,7 @@ func ExportProject(ctx RunContext) error {
 	MeasureEnd()
 	// List the names of the filters that opt-in to the data export process
 	var exportedFilterNames []string
+	shouldRestartWatchingData := false
 	for filter := range profile.Filters {
 		filter := profile.Filters[filter]
 		usingDataPath, err := filter.IsUsingDataExport(dotRegolithPath, ctx)
@@ -298,6 +299,7 @@ func ExportProject(ctx RunContext) error {
 			}
 			// Add the filter name to the list of paths to export
 			exportedFilterNames = append(exportedFilterNames, filter.GetId())
+			shouldRestartWatchingData = true
 		}
 	}
 	// The root of the data path cannot be deleted because the
@@ -363,6 +365,9 @@ func ExportProject(ctx RunContext) error {
 				return burrito.GroupErrors(mainError, handlerError)
 			}
 			return mainError
+		}
+		if shouldRestartWatchingData {
+			ctx.shouldRestartWatchingData <- struct{}{}
 		}
 	}
 	MeasureStart("Export - MoveOrCopy")
