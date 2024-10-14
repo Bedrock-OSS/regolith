@@ -146,11 +146,13 @@ start:
 		context.fileWatchingStage <- "pause"
 	}
 	err = ExportProject(context)
+	if context.IsInWatchMode() {
+		// We need to restart the watcher before error handling. See:
+		// https://github.com/Bedrock-OSS/regolith/pull/297#issuecomment-2411981894
+		context.fileWatchingStage <- "restart"
+	}
 	if err != nil {
 		return burrito.WrapError(err, exportProjectError)
-	}
-	if context.IsInWatchMode() {
-		context.fileWatchingStage <- "restart"
 	}
 	if context.IsInterrupted("data") {
 		goto start
