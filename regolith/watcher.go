@@ -9,7 +9,7 @@ import (
 	"github.com/arexon/fsnotify"
 )
 
-// DirWatcher handles watching for changes in a specific directory (e.g. RP).
+// DirWatcher handles watching for changes in a multiple root directories.
 //
 // fsnotify doesn't *officially* support recursive file watching yet. Windows
 // and and Linux are supported, but not macOS. For now, this implementation uses
