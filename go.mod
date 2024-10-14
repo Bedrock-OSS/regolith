@@ -16,7 +16,7 @@ require (
 	github.com/stirante/go-simple-eval v0.0.0-20230131075324-9ed520afbec1
 	go.uber.org/zap v1.23.0
 	golang.org/x/mod v0.6.0
-	golang.org/x/sys v0.4.0
+	golang.org/x/sys v0.13.0
 )
 
 replace github.com/hashicorp/go-getter => github.com/arikkfir/go-getter v1.6.3-0.20220803164326-281b7670b734
@@ -27,6 +27,7 @@ require (
 	cloud.google.com/go/iam v0.3.0 // indirect
 	cloud.google.com/go/storage v1.21.0 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20221202181307-76fa05c21b12 // indirect
+	github.com/arexon/fsnotify v0.0.0-20240929211932-1ebdc44d4bc2 // indirect
 	github.com/aws/aws-sdk-go v1.43.25 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
