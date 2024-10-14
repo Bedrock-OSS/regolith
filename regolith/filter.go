@@ -61,18 +61,7 @@ func (c *RunContext) StartWatchingSourceFiles() error {
 	c.interruption = make(chan string)
 	c.fileWatchingError = make(chan error)
 	c.fileWatchingStage = make(chan string)
-
-	var roots []string
-	if c.Config.ResourceFolder != "" {
-		roots = append(roots, c.Config.ResourceFolder)
-	}
-	if c.Config.BehaviorFolder != "" {
-		roots = append(roots, c.Config.BehaviorFolder)
-	}
-	if c.Config.DataPath != "" {
-		roots = append(roots, c.Config.DataPath)
-	}
-	err := NewDirWatcher(roots, c.Config, c.interruption, c.fileWatchingError, c.fileWatchingStage)
+	err := NewDirWatcher(c.Config, c.interruption, c.fileWatchingError, c.fileWatchingStage)
 	if err != nil {
 		return err
 	}
