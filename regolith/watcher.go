@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -16,89 +17,102 @@ import (
 //
 // Fork patch: https://github.com/arexon/fsnotify/blob/main/fsnotify.go#L481
 type DirWatcher struct {
-	watcher           *fsnotify.Watcher
-	recursiveRoot     string
-	kind              string           // Whether the watched directory is "RP", "BP", or "data".
-	debounce          <-chan time.Time // Debounce timer
-	interruption      chan string      // See RunContext.
-	errors            chan error       // See RunContext.
-	shouldRestartData chan struct{}
+	watcher      *fsnotify.Watcher
+	roots        []string
+	config       *Config
+	debounce     <-chan time.Time
+	interruption chan string
+	errors       chan error
+	stage        <-chan string
 }
 
-// NewDirWatcher creates a new directory watcher.
 func NewDirWatcher(
-	root string,
-	kind string,
+	roots []string,
+	config *Config,
 	interruption chan string,
 	errors chan error,
-	shouldRestartData chan struct{},
+	stage <-chan string,
 ) error {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return burrito.WrapError(err, "Could not initialize directory watching")
-	}
-
 	d := &DirWatcher{
-		watcher: watcher,
-		// We have to manually signal to fsnotify that it should recursively watch this
-		// path by using "/..." or "\...".
-		recursiveRoot:     filepath.Join(root, "..."),
-		kind:              kind,
-		interruption:      interruption,
-		errors:            errors,
-		shouldRestartData: shouldRestartData,
+		roots:        roots,
+		config:       config,
+		interruption: interruption,
+		errors:       errors,
+		stage:        stage,
 	}
-
-	if err := d.watcher.Add(d.recursiveRoot); err != nil {
-		return burrito.WrapErrorf(err, "Could not start watching `%s`", root)
+	err := d.watch()
+	if err != nil {
+		return err
 	}
 	go d.start()
 	return nil
 }
 
-// Start starts the file watching loop and blocks the goroutine until it
-// receives either:
-//   - an event, in which it will send a message to interruption channel then
-//     create a debounce timer of 100ms. In this duration, all events are
-//     silently ignored.
-//   - a restart channel signal, and if the watcher is for the "data" folder, it
-//     will restart watching the folder again.
+func (d *DirWatcher) watch() error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return burrito.WrapError(err, "Could not initialize directory watching")
+	}
+	d.watcher = watcher
+	for _, root := range d.roots {
+		// We have to manually signal to fsnotify that it should recursively watch this
+		// path by using "/..." or "\...".
+		recursiveRoot := filepath.Join(root, "...")
+		if err := d.watcher.Add(recursiveRoot); err != nil {
+			return burrito.WrapErrorf(err, "Could not start watching `%s`", root)
+		}
+	}
+	return nil
+}
+
 func (d *DirWatcher) start() {
+	paused := false
 	for {
 		select {
 		case err, ok := <-d.watcher.Errors:
 			if !ok {
+				if paused {
+					continue
+				}
 				return
 			}
 			d.errors <- err
 			return
 		case event, ok := <-d.watcher.Events:
 			if !ok {
+				if paused {
+					continue
+				}
 				return
 			}
 			if d.debounce != nil || event.Op.Has(fsnotify.Chmod) {
 				continue
 			}
-			d.interruption <- d.kind
+			if isInDir(event.Name, d.config.ResourceFolder) {
+				d.interruption <- "rp"
+			} else if isInDir(event.Name, d.config.BehaviorFolder) {
+				d.interruption <- "bp"
+			} else if isInDir(event.Name, d.config.DataPath) {
+				d.interruption <- "data"
+			}
 			d.debounce = time.After(100 * time.Millisecond)
 		case <-d.debounce:
 			d.debounce = nil
-		case <-d.shouldRestartData:
-			if d.kind == "rp" || d.kind == "bp" {
-				// Basically "forward" the signal to another listener until it reaches the
-				// one for "data".
-				d.shouldRestartData <- struct{}{}
-				continue
-			}
-			d.watcher.Close()
-			watcher, err := fsnotify.NewWatcher()
-			if err != nil {
-				d.errors <- burrito.WrapError(err, "Could not begin restarting file watching for data folder")
-			}
-			d.watcher = watcher
-			if err := d.watcher.Add(d.recursiveRoot); err != nil {
-				d.errors <- burrito.WrapErrorf(err, "Could not start watching the data folder")
+		case stage := <-d.stage:
+			switch stage {
+			case "pause":
+				d.watcher.Close()
+				paused = true
+			case "restart":
+				if err := d.watch(); err != nil {
+					d.errors <- err
+				}
+				paused = false
 			}
 		}
 	}
+}
+
+func isInDir(path string, root string) bool {
+	return strings.HasPrefix(path, filepath.Clean(root))
 }

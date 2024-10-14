@@ -1,6 +1,8 @@
 package regolith
 
-import "github.com/Bedrock-OSS/go-burrito/burrito"
+import (
+	"github.com/Bedrock-OSS/go-burrito/burrito"
+)
 
 type FilterDefinition struct {
 	Id string `json:"-"`
@@ -34,7 +36,7 @@ type RunContext struct {
 	// file watching.
 	fileWatchingError chan error
 
-	shouldRestartWatchingData chan struct{}
+	fileWatchingStage chan string
 }
 
 // GetProfile returns the Profile structure from the context.
@@ -50,7 +52,7 @@ func (c *RunContext) GetProfile() (Profile, error) {
 // IsInWatchMode returns a value that shows whether the context is in the
 // watch mode.
 func (c *RunContext) IsInWatchMode() bool {
-	return c.interruption == nil
+	return c.interruption != nil
 }
 
 // StartWatchingSourceFiles causes the Context to start goroutines that watch
@@ -66,27 +68,22 @@ func (c *RunContext) StartWatchingSourceFiles() error {
 
 	c.interruption = make(chan string)
 	c.fileWatchingError = make(chan error)
-	c.shouldRestartWatchingData = make(chan struct{})
+	c.fileWatchingStage = make(chan string)
 
+	var roots []string
 	if c.Config.ResourceFolder != "" {
-		err := NewDirWatcher(c.Config.ResourceFolder, "rp", c.interruption, c.fileWatchingError, c.shouldRestartWatchingData)
-		if err != nil {
-			return burrito.WrapError(err, "Could not create resource pack watcher.")
-		}
+		roots = append(roots, c.Config.ResourceFolder)
 	}
 	if c.Config.BehaviorFolder != "" {
-		err := NewDirWatcher(c.Config.BehaviorFolder, "bp", c.interruption, c.fileWatchingError, c.shouldRestartWatchingData)
-		if err != nil {
-			return burrito.WrapError(err, "Could not create behavior pack watcher.")
-		}
+		roots = append(roots, c.Config.BehaviorFolder)
 	}
 	if c.Config.DataPath != "" {
-		err := NewDirWatcher(c.Config.DataPath, "data", c.interruption, c.fileWatchingError, c.shouldRestartWatchingData)
-		if err != nil {
-			return burrito.WrapError(err, "Could not create data watcher.")
-		}
+		roots = append(roots, c.Config.DataPath)
 	}
-
+	err := NewDirWatcher(roots, c.Config, c.interruption, c.fileWatchingError, c.fileWatchingStage)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
