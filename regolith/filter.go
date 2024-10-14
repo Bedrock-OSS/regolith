@@ -58,14 +58,6 @@ func (c *RunContext) IsInWatchMode() bool {
 // StartWatchingSourceFiles causes the Context to start goroutines that watch
 // for changes in the source files and report that to the
 func (c *RunContext) StartWatchingSourceFiles() error {
-	// TODO - if you want to be able to restart the watcher, you need to handle
-	// closing the channels somewhere. Currently the watching goroutines yield
-	// their messages until the end of the program. Sending to a closed channel
-	// would cause panic.
-	if c.interruption != nil {
-		return burrito.WrappedError("Files are already being watched.")
-	}
-
 	c.interruption = make(chan string)
 	c.fileWatchingError = make(chan error)
 	c.fileWatchingStage = make(chan string)
