@@ -27,12 +27,21 @@ type DirWatcher struct {
 }
 
 func NewDirWatcher(
-	roots []string,
 	config *Config,
 	interruption chan string,
 	errors chan error,
 	stage <-chan string,
 ) error {
+	var roots []string
+	if config.ResourceFolder != "" {
+		roots = append(roots, config.ResourceFolder)
+	}
+	if config.BehaviorFolder != "" {
+		roots = append(roots, config.BehaviorFolder)
+	}
+	if config.DataPath != "" {
+		roots = append(roots, config.DataPath)
+	}
 	d := &DirWatcher{
 		roots:        roots,
 		config:       config,
