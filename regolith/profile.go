@@ -142,9 +142,15 @@ start:
 	// Export files
 	Logger.Info("Moving files to target directory.")
 	start := time.Now()
+	if context.IsInWatchMode() {
+		context.fileWatchingStage <- "pause"
+	}
 	err = ExportProject(context)
 	if err != nil {
 		return burrito.WrapError(err, exportProjectError)
+	}
+	if context.IsInWatchMode() {
+		context.fileWatchingStage <- "restart"
 	}
 	if context.IsInterrupted("data") {
 		goto start
