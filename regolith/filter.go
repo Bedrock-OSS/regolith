@@ -1,6 +1,8 @@
 package regolith
 
-import "github.com/Bedrock-OSS/go-burrito/burrito"
+import (
+	"github.com/Bedrock-OSS/go-burrito/burrito"
+)
 
 type FilterDefinition struct {
 	Id string `json:"-"`
@@ -23,12 +25,18 @@ type RunContext struct {
 	DotRegolithPath  string
 	Settings         map[string]interface{}
 
-	// interruptionChannel is a channel that is used to notify about changes
+	// interruption is a channel that is used to notify about changes
 	// in the source files, in order to trigger a restart of the program in
 	// the watch mode. The string send to the channel is the name of the source
 	// of the change ("rp", "bp" or "data"), which may be used to handle
 	// some interruptions differently.
-	interruptionChannel chan string
+	interruption chan string
+
+	// fileWatchingError is used to pass any errors that may occur during
+	// file watching.
+	fileWatchingError chan error
+
+	fileWatchingStage chan string
 }
 
 // GetProfile returns the Profile structure from the context.
@@ -44,60 +52,18 @@ func (c *RunContext) GetProfile() (Profile, error) {
 // IsInWatchMode returns a value that shows whether the context is in the
 // watch mode.
 func (c *RunContext) IsInWatchMode() bool {
-	return c.interruptionChannel == nil
+	return c.interruption != nil
 }
 
 // StartWatchingSourceFiles causes the Context to start goroutines that watch
 // for changes in the source files and report that to the
 func (c *RunContext) StartWatchingSourceFiles() error {
-	// TODO - if you want to be able to restart the watcher, you need to handle
-	// closing the channels somewhere. Currently the watching goroutines yield
-	// their messages until the end of the program. Sending to a closed channel
-	// would cause panic.
-	if c.interruptionChannel != nil {
-		return burrito.WrappedError("Files are already being watched.")
-	}
-
-	c.interruptionChannel = make(chan string)
-	yieldChanges := func(
-		watcher *DirWatcher, sourceName string,
-	) {
-		for {
-			err := watcher.WaitForChangeGroup(
-				100, c.interruptionChannel, sourceName)
-			if err != nil {
-				return
-			}
-		}
-	}
-
-	addWatcher := func(watchedPath, watcherString string) error {
-		watcher, err := NewDirWatcher(watchedPath)
-		if err != nil {
-			return burrito.PassError(err)
-		}
-		go yieldChanges(watcher, watcherString)
-		return nil
-	}
-
-	var err error
-	if c.Config.ResourceFolder != "" {
-		err = addWatcher(c.Config.ResourceFolder, "rp")
-		if err != nil {
-			return burrito.WrapError(err, "Could not create resource pack watcher.")
-		}
-	}
-	if c.Config.BehaviorFolder != "" {
-		err = addWatcher(c.Config.BehaviorFolder, "bp")
-		if err != nil {
-			return burrito.WrapError(err, "Could not create behavior pack watcher.")
-		}
-	}
-	if c.Config.DataPath != "" {
-		err = addWatcher(c.Config.DataPath, "data")
-		if err != nil {
-			return burrito.WrapError(err, "Could not create data watcher.")
-		}
+	c.interruption = make(chan string)
+	c.fileWatchingError = make(chan error)
+	c.fileWatchingStage = make(chan string)
+	err := NewDirWatcher(c.Config, c.interruption, c.fileWatchingError, c.fileWatchingStage)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -106,11 +72,11 @@ func (c *RunContext) StartWatchingSourceFiles() error {
 // unless the source of the interruption is on the list of ignored sources.
 // This function does not block.
 func (c *RunContext) IsInterrupted(ignoredSource ...string) bool {
-	if c.interruptionChannel == nil {
+	if c.interruption == nil {
 		return false
 	}
 	select {
-	case source := <-c.interruptionChannel:
+	case source := <-c.interruption:
 		for _, ignored := range ignoredSource {
 			if ignored == source {
 				return false

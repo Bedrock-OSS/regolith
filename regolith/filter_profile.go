@@ -10,13 +10,13 @@ type ProfileFilter struct {
 func (f *ProfileFilter) Run(context RunContext) (bool, error) {
 	Logger.Infof("Running %q nested profile...", f.Profile)
 	return RunProfileImpl(RunContext{
-		Profile:             f.Profile,
-		AbsoluteLocation:    context.AbsoluteLocation,
-		Config:              context.Config,
-		Parent:              &context,
-		interruptionChannel: context.interruptionChannel,
-		DotRegolithPath:     context.DotRegolithPath,
-		Settings:            f.Settings,
+		Profile:          f.Profile,
+		AbsoluteLocation: context.AbsoluteLocation,
+		Config:           context.Config,
+		Parent:           &context,
+		interruption:     context.interruption,
+		DotRegolithPath:  context.DotRegolithPath,
+		Settings:         f.Settings,
 	})
 }
 
