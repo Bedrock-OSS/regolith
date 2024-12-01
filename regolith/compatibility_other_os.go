@@ -30,27 +30,6 @@ func copyFileSecurityInfo(source string, target string) error {
 	return nil
 }
 
-type DirWatcher struct{}
-
-func NewDirWatcher(path string) (*DirWatcher, error) {
-	return nil, burrito.WrappedError(notImplementedOnThisSystemError)
-}
-
-func (d *DirWatcher) WaitForChange() error {
-	return burrito.WrappedError(notImplementedOnThisSystemError)
-}
-
-func (d *DirWatcher) WaitForChangeGroup(
-	groupTimeout uint32, interruptionChannel chan string,
-	interruptionMessage string,
-) error {
-	return burrito.WrappedError(notImplementedOnThisSystemError)
-}
-
-func (d *DirWatcher) Close() error {
-	return burrito.WrappedError(notImplementedOnThisSystemError)
-}
-
 func FindStandardMojangDir() (string, error) {
 	comMojang := os.Getenv("COM_MOJANG")
 	if comMojang == "" {
