@@ -322,3 +322,51 @@ func ProfileFromObject(
 	result.ExportTarget = exportTarget
 	return result, nil
 }
+
+// ForeachFilter iterates over the filters of the profile and applies the
+// given function to each filter. If unpackNestedProfiles is true, it will
+// unpack the nested profiles and apply the function to their filters as well.
+func (p *Profile) ForeachFilter(
+	context RunContext,
+	fn func(FilterRunner) error,
+	unpackNestedProfiles bool,
+) error {
+	for i := range p.Filters {
+		filter := p.Filters[i]
+		profileFilter, ok := filter.(*ProfileFilter)
+		if unpackNestedProfiles && ok {
+			subProfile, ok := context.Config.Profiles[profileFilter.Profile]
+			if !ok {
+				return burrito.WrappedErrorf(
+					"Failed to find profile of the profile-filter.\n"+
+						"Parent profile: %s\n"+
+						"Profile filter index: %d\n"+
+						"Referenced profile: %s\n",
+					context.Profile, i, profileFilter.Profile,
+				)
+			}
+			err := subProfile.ForeachFilter(context, fn, unpackNestedProfiles)
+			if err != nil {
+				return burrito.WrappedErrorf(
+					"Failed to iterate over filters of the profile-filter.\n"+
+						"Parent profile: %s\n"+
+						"Profile filter index: %d\n"+
+						"Referenced profile: %s\n",
+					context.Profile, i, profileFilter.Profile,
+				)
+			}
+		} else {
+			err := fn(filter)
+			if err != nil {
+				return burrito.WrapErrorf(
+					err,
+					"Failed to iterate apply function to the filter.\n"+
+						"Profile: %s\n"+
+						"Filter index: %d\n",
+					context.Profile, i,
+				)
+			}
+		}
+	}
+	return nil
+}
