@@ -275,8 +275,7 @@ func ExportProject(ctx RunContext) error {
 	MeasureEnd()
 	// List the names of the filters that opt-in to the data export process
 	var exportedFilterNames []string
-	for filter := range profile.Filters {
-		filter := profile.Filters[filter]
+	err = profile.ForeachFilter(ctx, func(filter FilterRunner) error {
 		usingDataPath, err := filter.IsUsingDataExport(dotRegolithPath, ctx)
 		if err != nil {
 			return burrito.WrapErrorf(
@@ -299,6 +298,10 @@ func ExportProject(ctx RunContext) error {
 			// Add the filter name to the list of paths to export
 			exportedFilterNames = append(exportedFilterNames, filter.GetId())
 		}
+		return nil
+	}, true)
+	if err != nil {
+		return burrito.WrapError(err, "Failed to walk the list of the filters.")
 	}
 	// The root of the data path cannot be deleted because the
 	// "regolith watch" function would stop watching the file changes
