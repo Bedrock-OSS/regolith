@@ -9,7 +9,7 @@
 </p>
   
 <p align="center">
-<b>⭐ <a href="https://bedrock-oss.github.io/regolith/">Visit the Website! ⇗</a> ⭐</b>
+<b>⭐ <a href="https://regolith-docs.readthedocs.io/en/latest/">Go to the Documentation ⇗</a> ⭐</b>
 </p>
 
 - Much like `bridge. v2`, Regolith introduces the concept of a "project folder", where your addons are written, including the RP, the BP, and any models, textures or configuration files. This single-folder-structure is great for version control, and allows you to keep  your "source-of-truth" outside of `com.mojang`.
@@ -19,30 +19,24 @@
 ## 🎫 Value Preposition 
 
 - Fundamentally, Regolith is nothing new. Many tools like this exist, such as the `bridge v2` plugin system, or even something like Gulp or SASS. 
-
 - The value preposition for Regolith is that it allows many tools, in many languages and pay-structures to work together in a single, unified compilation flow. 
-
 - Hobbiests can use the [Standard Library ⇗](https://github.com/Bedrock-OSS/regolith-filters), or write their own filters. Marketplace teams can write proprietary filters, or internal filters.
 
 
 # 💻 Regolith Development
 
 ## 🎚 Setup:
-
 **This setup is for developers. If you're a normal user, you can find simpler
 instructions
-[here](https://bedrock-oss.github.io/regolith/guide/installing).**
+[here](https://regolith-docs.readthedocs.io/en/latest/introduction/installation/).**
 
 ### 1. Install Golang
-
 - **[Installation and beginners guide ⇗.](https://golang.org/doc/tutorial/getting-started)**
 
 ### 2. Install Dependencies
-
 - `go get -u ./...` to recursively install all dependencies.
 
 ### 3. Test / Run
-
 Since Regolith is a console application which requires very specific
 project setup and arguments, `go run .\main.go` doesn't really do anything.
 
@@ -59,17 +53,16 @@ of useful test commands:
 - `dlv test ./test -- "-test.run" TestInstallAllAndRun` - debug the "TestInstallAllAndRun"
   test using [delve](https://github.com/go-delve/delve)
 
-## 🏗 Building as a `.exe`:
+You can also use [VSCode plugin](https://marketplace.visualstudio.com/items?itemName=golang.Go) to run tests.
 
+## 🏗 Building as a `.exe`:
 - You can build either with *GoReleaser*, or natively
 
-### 1. Install GoReleaser
-
-- `go install github.com/goreleaser/goreleaser@latest`
-
-### 2. Build
-
+### 1. Native
 There are a few ways to build:
- - `go install` (installs to gopath)
-  - `go build` (creates a `.exe` file)
- - `./scripts/build-local.sh` (¯\_(ツ)_/¯) 
+- `go install` (installs to gopath)
+- `go build` (creates a `.exe` file)
+
+### 2. GoReleaser
+- `go install github.com/goreleaser/goreleaser@latest`
+ - `./scripts/build-local.sh` - use this script to build the project with GoReleaser.
