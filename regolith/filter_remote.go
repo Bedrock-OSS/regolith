@@ -12,6 +12,7 @@ import (
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 
+	"github.com/hashicorp/go-getter"
 	"github.com/otiai10/copy"
 )
 
@@ -50,6 +51,15 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	result.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
 
 	return result, nil
+}
+
+func (f *RemoteFilterDefinition) UrlBased() bool {
+	if f.RepoManifest == nil {
+		return false
+	} else {
+		val, _ := f.RepoManifest.IsUrlBased(f.Id)
+		return *val
+	}
 }
 
 func (f *RemoteFilterDefinition) CreateResolver() (PathResolver, error) {
@@ -408,6 +418,42 @@ func (f *RemoteFilterDefinition) Download(
 
 	Logger.Infof("Downloading filter %s...", f.Id)
 
+	if f.RepoManifest == nil {
+		return f.downloadRemoteFromGit(dotRegolithPath, refreshFilters)
+	} else if based, err := f.RepoManifest.IsUrlBased(f.Id); err == nil && !*based {
+		return f.downloadRemoteFromGit(dotRegolithPath, refreshFilters)
+	} else if err != nil {
+		return err
+	} else {
+		var err error
+		url, err := f.RepoManifest.ResolveUrlForFilter(f.Id, f.Version)
+
+		if err != nil {
+			return err
+		}
+
+		if url == nil {
+			return burrito.WrappedErrorf("No version for %s matching the current host was found! Version: %s", f.Id, f.Version)
+		}
+
+		err = os.MkdirAll(f.GetDownloadPath(dotRegolithPath), 0775)
+
+		if err != nil {
+			return err
+		}
+
+		err = getter.GetAny(f.GetDownloadPath(dotRegolithPath), *url)
+
+		if err != nil {
+			return burrito.WrapErrorf(err, "Failed to download %s from the url %s!", f.Id, *url)
+		}
+
+		f.SaveVersionInfo(f.Version, dotRegolithPath)
+		return nil
+	}
+}
+
+func (f *RemoteFilterDefinition) downloadRemoteFromGit(dotRegolithPath string, refreshFilters bool) error {
 	// Download the filter using Git Getter
 	MeasureStart("Check git")
 	if !hasGit() {
@@ -601,11 +647,21 @@ func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath, dataPath st
 		Logger.Warnf("Unable to get installed version of filter %q.", f.Id)
 	}
 	MeasureStart("Get remote filter download ref")
-	version, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, getRemoteFilterDownloadRefError, f.Url, f.Id, f.Version)
+
+	var version string
+
+	if f.UrlBased() {
+		version = f.Version
+
+	} else {
+		version, err = GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
+
+		if err != nil {
+			return burrito.WrapErrorf(
+				err, getRemoteFilterDownloadRefError, f.Url, f.Id, f.Version)
+		}
 	}
+
 	MeasureEnd()
 	version = trimFilterPrefix(version, f.Id)
 	if installedVersion != version || force {

@@ -115,6 +115,17 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 			// config file don't lock them to the actual versions
 			remoteFilterDefinition.Version = parsedArg.version
 		}
+
+		if remoteFilterDefinition.RepoManifest != nil {
+			if cal, _ := remoteFilterDefinition.RepoManifest.IsUrlBased(remoteFilterDefinition.Id); *cal {
+				if parsedArg.version == "" {
+					remoteFilterDefinition.Version = "latest"
+				} else {
+					remoteFilterDefinition.Version = parsedArg.version
+				}
+			}
+		}
+
 		filterInstallers[parsedArg.name] = remoteFilterDefinition
 	}
 	// Download the filter definitions
