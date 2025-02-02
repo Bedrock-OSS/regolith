@@ -44,7 +44,7 @@ Requested Name: %s`, filterId)
 	out := filter.Path
 
 	if out == nil {
-		return nil, burrito.WrappedErrorf("Requsted path on a filter which does not have a path specified:\nFilter name: %s", filterId)
+		return nil, burrito.WrappedErrorf("Requested path on a filter which does not have a path specified:\nFilter name: %s", filterId)
 	}
 
 	return out, nil
