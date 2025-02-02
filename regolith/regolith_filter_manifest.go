@@ -167,7 +167,6 @@ func ManifestForRepo(url string) (*RepositoryManifest, error) {
 	// https://raw.githubusercontent.com/<user-name>/<project-name>/HEAD/regolith_filter_manifest.json is the end result ideally
 	// The url passed in should be in the format github.com/<user-name>/<project-name> so its a trivial transformation
 
-	// Ideally gives us an array which looks like project-name, user-name, Other Stuff We Don't Care About
 	chunks := strings.Split(url, "/")
 
 	if len(chunks) < 2 {
