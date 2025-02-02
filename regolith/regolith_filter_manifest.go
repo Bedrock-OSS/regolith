@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"runtime"
+	"sort"
 	"strings"
 
 	"net/http"
@@ -33,8 +35,8 @@ type RepositoryManifest struct {
 	Filters       map[string]ManisfestDeclaredFilter `json:"filters,omitempty"`
 }
 
-func (self *RepositoryManifest) FindPath(filterId string) (*string, error) {
-	filter, ok := self.Filters[filterId]
+func (manifest *RepositoryManifest) FindPath(filterId string) (*string, error) {
+	filter, ok := manifest.Filters[filterId]
 
 	if !ok {
 		return nil, burrito.WrappedErrorf(`Invalid filter name requested from repository:
@@ -48,6 +50,111 @@ Requested Name: %s`, filterId)
 	}
 
 	return out, nil
+}
+
+func (manifest *RepositoryManifest) IsUrlBased(filterId string) (*bool, error) {
+	filter, ok := manifest.Filters[filterId]
+
+	if !ok {
+		return nil, burrito.WrappedErrorf("Invalid filter name tested: %s", filterId)
+	}
+
+	if filter.Path == nil {
+		v := true
+		return &v, nil
+	} else {
+		v := false
+		return &v, nil
+	}
+}
+
+func (manifest *RepositoryManifest) ResolveUrlForFilter(filterId, version string) (*string, error) {
+	if value, err := manifest.IsUrlBased(filterId); err == nil {
+		if !*value {
+			return nil, burrito.WrappedErrorf("Filter %s is not URL based", filterId)
+		}
+	} else {
+		return nil, err
+	}
+
+	if version != "HEAD" && version != "latest" && !semver.IsValid("v"+version) {
+		return nil, burrito.WrappedErrorf("Version for the filter %s is not in one of the valid formats! It must be \"HEAD\", \"latest\", or a valid semver!")
+	}
+
+	// We can ignore the ok check since this same check is performed in `IsUrlBased`
+	filter := manifest.Filters[filterId]
+
+	// Handles the simple case
+	if version != "HEAD" && version != "latest" {
+		inners, ok := filter.Versions[version]
+
+		if !ok {
+			return nil, burrito.WrappedErrorf("Version %s not found in the manifest for %s", version, filterId)
+		}
+
+		return compatableUrl(&inners), nil
+	}
+
+	versionList := make([]string, 0)
+
+	for v := range filter.Versions {
+		versionList = append(versionList, "v"+v)
+	}
+
+	semver.Sort(versionList)
+	sort.Sort(sort.Reverse(sort.StringSlice(versionList)))
+
+	for _, v := range versionList {
+		versionList := filter.Versions[v[1:]]
+
+		if url := compatableUrl(&versionList); url != nil {
+			return url, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func compatableUrl(urls *[]DeclaredFilterInner) *string {
+	var ret *string
+
+	for _, f := range *urls {
+		if f.When == nil {
+			ret = &f.Url
+		}
+	}
+
+	for _, f := range *urls {
+		if f.When == nil {
+			continue
+		}
+
+		matches := f.When.MatchesCurrentHost()
+
+		if matches {
+			ret = &f.Url
+			return ret
+		}
+
+	}
+
+	return ret
+}
+
+func (matcher *OsMatcher) MatchesCurrentHost() bool {
+	if matcher.ExpectedArch != nil {
+		if *matcher.ExpectedArch != runtime.GOARCH {
+			return false
+		}
+	}
+
+	if matcher.ExpectedOs != nil {
+		if *matcher.ExpectedOs != runtime.GOOS {
+			return false
+		}
+	}
+
+	return true
 }
 
 func decodeSingleFilter(obj map[string]interface{}) (*ManisfestDeclaredFilter, error) {
@@ -65,7 +172,6 @@ func decodeSingleFilter(obj map[string]interface{}) (*ManisfestDeclaredFilter, e
 	result.Versions = make(map[string][]DeclaredFilterInner, len(versions))
 
 	if ok {
-
 		for version, versionObj := range versions {
 			versionInformation, ok := versionObj.(map[string]interface{})
 
@@ -77,7 +183,7 @@ func decodeSingleFilter(obj map[string]interface{}) (*ManisfestDeclaredFilter, e
 				return nil, burrito.WrappedErrorf("Malformed semver. The semver for a filter must be a valid semver. Current: %s", version)
 			}
 
-			urls, ok := versionInformation["urls"].([]map[string]interface{})
+			urls, ok := versionInformation["urls"].([]interface{})
 
 			if !ok {
 				return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "urls")
@@ -85,6 +191,8 @@ func decodeSingleFilter(obj map[string]interface{}) (*ManisfestDeclaredFilter, e
 
 			for _, inner := range urls {
 				var matcher *OsMatcher = nil
+
+				inner := inner.(map[string]interface{})
 
 				url, ok := inner["url"].(string)
 
