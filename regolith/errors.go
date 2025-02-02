@@ -121,6 +121,12 @@ const (
 		"Filter name: %s\n" +
 		"Filter version: %s"
 
+	// Error used when GetRemoteFilterDownloadRef function fails
+	getRemoteManifestError = "Failed to get the manifest for the filter.\n" +
+		"Filter repository Url: %s\n" +
+		"Filter name: %s\n" +
+		"Filter version: %s"
+
 	// Error used when CreateFilterRunner method of FilterInstaller fails
 	createFilterRunnerError = "Failed to create filter runner.\nFilter: %s"
 
