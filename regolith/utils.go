@@ -162,7 +162,7 @@ func getResolverCache(resolver string) (string, error) {
 func getFilterCache(url string) (string, error) {
 	path, err := getAppDataCachePath(appDataFilterCachePath, url)
 	if err == nil {
-		Logger.Debugf("Regolith filter cache for %s is in:\n\t%s", url, path)
+		Logger.Debugf("Regolith filter cache for %s is in:\n\t%s", url, "REDACTED")
 	}
 	return path, err
 }
