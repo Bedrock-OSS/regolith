@@ -186,11 +186,17 @@ func ManifestForRepo(url string) (*RepositoryManifest, error) {
 	result, err := http.Get(manifestURL)
 
 	if err != nil {
-		// In this case its fine to fail because the repo might not have a manifest
-		return nil, nil
+		return nil, err
 	}
 
 	defer result.Body.Close()
+
+	if result.StatusCode >= 400 {
+		// This handles the case when the repository doesnt have a manifest
+		return nil, nil
+	}
+
+	Logger.Debugf("Found manifest at %s", manifestURL)
 
 	var bytes bytes.Buffer
 
