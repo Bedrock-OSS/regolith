@@ -89,6 +89,8 @@ const (
 	// 'project_after_run' is the same project but after running Regolith with
 	// the size_time_check experiment enabled.
 	sizeTimeCheckOptimizationPath = "testdata/size_time_check_optimization"
+
+	remoteManifestPath = "testdata/remote_manifest"
 )
 
 // firstErr returns the first error in a list of errors. If the list is empty

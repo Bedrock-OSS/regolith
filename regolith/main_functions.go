@@ -85,6 +85,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 	if err != nil {
 		return burrito.WrapError(err, "Failed to parse arguments.")
 	}
+
 	// Check if the filters are already installed if force mode is disabled
 	if !force {
 		for _, parsedArg := range parsedArgs {
@@ -99,6 +100,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 			}
 		}
 	}
+
 	// Convert to filter definitions for download
 	filterInstallers := make(map[string]FilterInstaller, 0)
 	for _, parsedArg := range parsedArgs {
