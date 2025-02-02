@@ -27,4 +27,6 @@ func TestManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal("failed to install filter: ", err)
 	}
+
+	regolith.Run("default", false)
 }
