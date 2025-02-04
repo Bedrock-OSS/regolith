@@ -56,6 +56,10 @@ func copyFileSecurityInfo(source string, target string) error {
 // FindStandardMojangDir returns path to the com.mojang folder in the standard
 // Minecraft build.
 func FindStandardMojangDir() (string, error) {
+	comMojang := os.Getenv("COM_MOJANG")
+	if comMojang != "" {
+		return comMojang, nil
+	}
 	result := filepath.Join(
 		os.Getenv("LOCALAPPDATA"), "Packages",
 		"Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games",
@@ -72,6 +76,10 @@ func FindStandardMojangDir() (string, error) {
 // FindPreviewDir returns path to the com.mojang folder in the preview
 // Minecraft build.
 func FindPreviewDir() (string, error) {
+	comMojang := os.Getenv("COM_MOJANG_PREVIEW")
+	if comMojang != "" {
+		return comMojang, nil
+	}
 	result := filepath.Join(
 		os.Getenv("LOCALAPPDATA"), "Packages",
 		"Microsoft.MinecraftWindowsBeta_8wekyb3d8bbwe", "LocalState", "games",
@@ -89,6 +97,10 @@ func FindPreviewDir() (string, error) {
 // FindEducationDir returns path to the com.mojang folder in the education
 // edition Minecraft build.
 func FindEducationDir() (string, error) {
+	comMojang := os.Getenv("COM_MOJANG_EDU")
+	if comMojang != "" {
+		return comMojang, nil
+	}
 	result := filepath.Join(
 		os.Getenv("APPDATA"), "Minecraft Education Edition", "games",
 		"com.mojang")
