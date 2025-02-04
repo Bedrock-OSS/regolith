@@ -6,10 +6,14 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
+
+const nodeJSRuntimeUrl = "https://nodejs.org/dist/"
+const nodeJSRuntimeVersion = "v22.12.0"
 
 type NodeJSFilterDefinition struct {
 	FilterDefinition
@@ -142,9 +146,37 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 	return nil
 }
 
+func (f *NodeJSFilterDefinition) InstallRuntime() error {
+	osType := runtime.GOOS
+	if osType != "windows" && osType != "darwin" && osType != "linux" {
+		return burrito.WrappedErrorf(
+			"Unsupported operating system: %s", osType)
+	}
+	osArch := runtime.GOARCH
+	if osArch != "amd64" && osArch != "arm64" && osArch != "386" {
+		return burrito.WrappedErrorf(
+			"Unsupported architecture: %s", osArch)
+	}
+	if osArch == "amd64" {
+		osArch = "x64"
+	} else if osArch == "386" {
+		osArch = "x86"
+	}
+	fileType := "tar.gz"
+	if osType == "windows" {
+		fileType = "zip"
+	}
+	// https://nodejs.org/dist/v22.12.0/node-v22.12.0-darwin-arm64.tar.gz
+	url := nodeJSRuntimeUrl + nodeJSRuntimeVersion + "/node-" +
+		nodeJSRuntimeVersion + "-" + osType + "-" + osArch + "." + fileType
+	return burrito.WrappedErrorf(
+		"NodeJS filter type does not support installing runtimes.")
+}
+
 func (f *NodeJSFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("node")
 	if err != nil {
+		// TODO: Check if we have a local runtime in AppData
 		return burrito.WrapError(
 			err, "NodeJS not found, download and install it from"+
 				" https://nodejs.org/en/")

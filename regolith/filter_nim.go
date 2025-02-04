@@ -150,6 +150,11 @@ func (f *NimFilterDefinition) InstallDependencies(
 	return nil
 }
 
+func (f *NimFilterDefinition) InstallRuntime() error {
+	return burrito.WrappedErrorf(
+		"Nim filter type does not support installing runtimes.")
+}
+
 func (f *NimFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("nim")
 	if err != nil {

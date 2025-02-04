@@ -61,6 +61,10 @@ func (f *ShellFilterDefinition) InstallDependencies(*RemoteFilterDefinition, str
 	return nil
 }
 
+func (f *ShellFilterDefinition) InstallRuntime() error {
+	return nil
+}
+
 func (f *ShellFilterDefinition) Check(context RunContext) error {
 	shell, _, err := findShell()
 	if err != nil {

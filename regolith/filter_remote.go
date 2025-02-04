@@ -193,6 +193,10 @@ func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, 
 	return nil
 }
 
+func (f *RemoteFilterDefinition) InstallRuntime() error {
+	return nil
+}
+
 func (f *RemoteFilterDefinition) Check(context RunContext) error {
 	dummyFilterRunner, err := f.CreateFilterRunner(
 		map[string]interface{}{"filter": f.Id})

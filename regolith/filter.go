@@ -150,6 +150,7 @@ func filterFromObject(obj map[string]interface{}) (*Filter, error) {
 }
 
 type FilterInstaller interface {
+	InstallRuntime() error
 	InstallDependencies(parent *RemoteFilterDefinition, dotRegolithPath string) error
 	Check(context RunContext) error
 	CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error)

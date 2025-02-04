@@ -192,6 +192,11 @@ func (f *PythonFilterDefinition) InstallDependencies(
 	return nil
 }
 
+func (f *PythonFilterDefinition) InstallRuntime() error {
+	return burrito.WrappedErrorf(
+		"Python filter type does not support installing runtimes.")
+}
+
 func (f *PythonFilterDefinition) Check(context RunContext) error {
 	pythonCommand, err := findPython()
 	if err != nil {

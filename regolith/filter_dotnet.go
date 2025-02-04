@@ -115,6 +115,11 @@ func (f *DotNetFilterDefinition) Check(context RunContext) error {
 	return nil
 }
 
+func (f *DotNetFilter) InstallRuntime() error {
+	return burrito.WrappedErrorf(
+		".NET filter type does not support installing runtimes.")
+}
+
 func (f *DotNetFilter) Check(context RunContext) error {
 	return f.Definition.Check(context)
 }

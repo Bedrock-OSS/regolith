@@ -107,6 +107,11 @@ func (f *DenoFilterDefinition) Check(context RunContext) error {
 	return nil
 }
 
+func (f *DenoFilterDefinition) InstallRuntime() error {
+	return burrito.WrappedErrorf(
+		"Deno filter type does not support installing runtimes.")
+}
+
 func (f *DenoFilterDefinition) InstallDependencies(
 	parent *RemoteFilterDefinition, dotRegolithPath string,
 ) error {

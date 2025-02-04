@@ -106,6 +106,11 @@ func (f *JavaFilterDefinition) InstallDependencies(*RemoteFilterDefinition, stri
 	return nil
 }
 
+func (f *JavaFilterDefinition) InstallRuntime() error {
+	return burrito.WrappedErrorf(
+		"Java filter type does not support installing runtimes.")
+}
+
 func (f *JavaFilterDefinition) Check(context RunContext) error {
 	_, err := exec.LookPath("java")
 	if err != nil {

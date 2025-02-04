@@ -63,6 +63,10 @@ func (f *ExeFilterDefinition) InstallDependencies(
 	return nil
 }
 
+func (f *ExeFilterDefinition) InstallRuntime() error {
+	return nil
+}
+
 func (f *ExeFilterDefinition) Check(context RunContext) error {
 	return nil
 }

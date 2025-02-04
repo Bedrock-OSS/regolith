@@ -1,7 +1,11 @@
 package regolith
 
 import (
+	"archive/tar"
+	"archive/zip"
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
@@ -439,4 +443,76 @@ func SliceAny[T interface{}](slice []T, predicate func(T) bool) bool {
 		}
 	}
 	return false
+}
+
+// Unpack unpacks an archive into a map of file names to file contents.
+func Unpack(archive []byte) (map[string][]byte, error) {
+	// ZIP files start with PK\x03\x04
+	if bytes.HasPrefix(archive, []byte{0x50, 0x4B, 0x03, 0x04}) {
+		return UnpackZip(archive)
+	}
+
+	// GZIP files start with \x1F\x8B\x08
+	if bytes.HasPrefix(archive, []byte{0x1F, 0x8B, 0x08}) {
+		return UnpackTarGz(archive)
+	}
+	return nil, burrito.WrappedErrorf("Unsupported archive format")
+}
+
+// UnpackZip unpacks a zip archive into a map of file names to file contents.
+func UnpackZip(archive []byte) (map[string][]byte, error) {
+	r, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
+	if err != nil {
+		return nil, burrito.WrapErrorf(err, "Failed to open zip archive")
+	}
+	result := make(map[string][]byte)
+	for _, f := range r.File {
+		rc, err := f.Open()
+		if err != nil {
+			return nil, burrito.WrapErrorf(err, "Failed to open file in zip archive")
+		}
+		defer rc.Close()
+		data, err := io.ReadAll(rc)
+		if err != nil {
+			return nil, burrito.WrapErrorf(err, "Failed to read file from zip archive")
+		}
+		result[f.Name] = data
+	}
+	return result, nil
+}
+
+// UnpackTarGz unpacks a tar.gz archive into a map of file names to file contents.
+func UnpackTarGz(archive []byte) (map[string][]byte, error) {
+	r := bytes.NewReader(archive)
+	gr, err := gzip.NewReader(r)
+	if err != nil {
+		return nil, burrito.WrapErrorf(err, "Failed to open gzip archive")
+	}
+	defer gr.Close()
+	readAll, err := io.ReadAll(gr)
+	if err != nil {
+		return nil, burrito.WrapErrorf(err, "Failed to read gzip archive")
+	}
+	return UnpackTar(readAll)
+}
+
+func UnpackTar(archive []byte) (map[string][]byte, error) {
+	r := bytes.NewReader(archive)
+	tr := tar.NewReader(r)
+	result := make(map[string][]byte)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, burrito.WrapErrorf(err, "Failed to read tar archive")
+		}
+		data, err := io.ReadAll(tr)
+		if err != nil {
+			return nil, burrito.WrapErrorf(err, "Failed to read file from tar archive")
+		}
+		result[header.Name] = data
+	}
+	return result, nil
 }
