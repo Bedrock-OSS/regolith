@@ -8,6 +8,7 @@ require (
 	github.com/arexon/fsnotify v0.0.0-20240929211932-1ebdc44d4bc2
 	github.com/fatih/color v1.14.1
 	github.com/google/go-github/v39 v39.2.0
+	github.com/hashicorp/go-getter v1.7.8
 	github.com/muhammadmuzzammil1998/jsonc v1.0.0
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/otiai10/copy v1.7.0
@@ -18,8 +19,6 @@ require (
 	golang.org/x/mod v0.6.0
 	golang.org/x/sys v0.13.0
 )
-
-replace github.com/Bedrock-OSS/regolith => ./regolith
 
 replace github.com/hashicorp/go-getter => github.com/arikkfir/go-getter v1.6.3-0.20220803164326-281b7670b734
 
@@ -33,7 +32,6 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-getter v1.7.8 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/go-version v1.1.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
