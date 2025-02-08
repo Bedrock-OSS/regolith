@@ -26,12 +26,12 @@ func TestManifest(t *testing.T) {
 
 	err = regolith.Install(testUrls, true, false, false, []string{"default"}, false)
 	if err != nil {
-		t.Fatal("Failed to install filter: ", err)
+		t.Fatal("failed to install filter: ", err)
 	}
 
 	err = regolith.Run("default", false)
 
 	if err != nil {
-		t.Fatal("Failed to run filter: ", err)
+		t.Fatal("failed to run filter: ", err)
 	}
 }

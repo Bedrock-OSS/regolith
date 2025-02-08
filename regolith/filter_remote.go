@@ -426,7 +426,7 @@ func (f *RemoteFilterDefinition) Download(
 		return err
 	} else {
 		var err error
-		url, err := f.RepoManifest.ResolveUrlForFilter(f.Id, f.Version)
+		url, version, err := f.RepoManifest.ResolveUrlForFilter(f.Id, f.Version)
 
 		if err != nil {
 			return err
@@ -447,6 +447,9 @@ func (f *RemoteFilterDefinition) Download(
 		if err != nil {
 			return burrito.WrapErrorf(err, "Failed to download %s from the url %s!", f.Id, *url)
 		}
+
+		// We can deref version without a nil check because any time URL is populated so is version
+		f.Version = *version
 
 		f.SaveVersionInfo(f.Version, dotRegolithPath)
 		return nil

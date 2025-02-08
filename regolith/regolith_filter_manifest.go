@@ -68,17 +68,17 @@ func (manifest *RepositoryManifest) IsUrlBased(filterId string) (*bool, error) {
 	}
 }
 
-func (manifest *RepositoryManifest) ResolveUrlForFilter(filterId, version string) (*string, error) {
+func (manifest *RepositoryManifest) ResolveUrlForFilter(filterId, version string) (*string, *string, error) {
 	if value, err := manifest.IsUrlBased(filterId); err == nil {
 		if !*value {
-			return nil, burrito.WrappedErrorf("Filter %s is not URL based", filterId)
+			return nil, nil, burrito.WrappedErrorf("Filter %s is not URL based", filterId)
 		}
 	} else {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if version != "HEAD" && version != "latest" && !semver.IsValid("v"+version) {
-		return nil, burrito.WrappedErrorf("Version for the filter %s is not in one of the valid formats! It must be \"HEAD\", \"latest\", or a valid semver!")
+		return nil, nil, burrito.WrappedErrorf("Version for the filter %s is not in one of the valid formats! It must be \"HEAD\", \"latest\", or a valid semver!")
 	}
 
 	// We can ignore the ok check since this same check is performed in `IsUrlBased`
@@ -89,10 +89,10 @@ func (manifest *RepositoryManifest) ResolveUrlForFilter(filterId, version string
 		inners, ok := filter.Versions[version]
 
 		if !ok {
-			return nil, burrito.WrappedErrorf("Version %s not found in the manifest for %s", version, filterId)
+			return nil, nil, burrito.WrappedErrorf("Version %s not found in the manifest for %s", version, filterId)
 		}
 
-		return compatableUrl(&inners), nil
+		return compatableUrl(&inners), &version, nil
 	}
 
 	versionList := make([]string, 0)
@@ -105,14 +105,15 @@ func (manifest *RepositoryManifest) ResolveUrlForFilter(filterId, version string
 	sort.Sort(sort.Reverse(sort.StringSlice(versionList)))
 
 	for _, v := range versionList {
-		versionList := filter.Versions[v[1:]]
+		version := v[1:]
+		versionList := filter.Versions[version]
 
 		if url := compatableUrl(&versionList); url != nil {
-			return url, nil
+			return url, &version, nil
 		}
 	}
 
-	return nil, nil
+	return nil, nil, nil
 }
 
 func compatableUrl(urls *[]DeclaredFilterInner) *string {
