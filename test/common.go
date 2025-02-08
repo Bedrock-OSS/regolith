@@ -90,8 +90,15 @@ const (
 	// the size_time_check experiment enabled.
 	sizeTimeCheckOptimizationPath = "testdata/size_time_check_optimization"
 
-	remoteManifestPath       = "testdata/remote_manifest"
-	remoteManifestInstallAll = "testdata/remote_manifest_install_all"
+	// remoteManifestPath contains subdirectories with different states of a
+	// Regolith project performing various operations using the regolith
+	// filters from a respository with regolith_filter_manifest.json file.
+	remoteManifestPath = "testdata/remote_manifest"
+
+	// remoteManifestInstallAllPath contains two projects folders, one before
+	// and one after running 'regolith install-all' command. On a project that
+	// uses filters from a repository with regolith_filter_manifest.json file.
+	remoteManifestInstallAllPath = "testdata/remote_manifest_install_all"
 )
 
 // firstErr returns the first error in a list of errors. If the list is empty
@@ -110,8 +117,12 @@ func firstErr(errors ...error) error {
 // empty strings instead of MD5.
 // The function ignores ".ignoreme" and "lockfile.txt" files.
 // All paths are relative to the 'root' directory.
-func getPathHashes(root string) (map[string]string, error) {
+func getPathHashes(root string, excludedPaths ...string) (map[string]string, error) {
 	result := map[string]string{}
+	cleanExcludedPaths := []string{}
+	for _, path := range excludedPaths {
+		cleanExcludedPaths = append(cleanExcludedPaths, filepath.Clean(path))
+	}
 	err := filepath.WalkDir(
 		root,
 		func(path string, data fs.DirEntry, err error) error {
@@ -125,6 +136,13 @@ func getPathHashes(root string) (map[string]string, error) {
 			if err != nil {
 				return err
 			}
+			// Check if the path is in the excluded list
+			for _, excluded := range cleanExcludedPaths {
+				if strings.HasPrefix(relPath, excluded) {
+					return nil
+				}
+			}
+
 			if data.IsDir() {
 				result[relPath] = ""
 			} else {
@@ -196,9 +214,9 @@ func comparePathMaps(
 
 // comparePaths compares the paths created by the test with the expected paths
 // and runs t.Fatal in case of finding a difference.
-func comparePaths(expectedPath, createdPath string, t *testing.T) {
+func comparePaths(expectedPath, createdPath string, t *testing.T, excludedPaths ...string) {
 	t.Log("Loading the expected results...")
-	expectedPaths, err := getPathHashes(expectedPath)
+	expectedPaths, err := getPathHashes(expectedPath, excludedPaths...)
 	if err != nil {
 		t.Fatalf(
 			"Failed to load expected results for test result evaluation.\n"+
@@ -206,7 +224,7 @@ func comparePaths(expectedPath, createdPath string, t *testing.T) {
 			expectedPath, err)
 	}
 	t.Log("Loading the created paths...")
-	createdPaths, err := getPathHashes(createdPath)
+	createdPaths, err := getPathHashes(createdPath, excludedPaths...)
 	if err != nil {
 		t.Fatalf("Failed to load created paths for test result evaluation.\n"+
 			"Created path: %v\nError: %v",
