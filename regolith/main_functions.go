@@ -117,11 +117,13 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 		}
 
 		if remoteFilterDefinition.RepoManifest != nil {
-			if cal, err := remoteFilterDefinition.RepoManifest.IsUrlBased(remoteFilterDefinition.Id); err == nil && *cal {
-				if parsedArg.version == "" {
-					remoteFilterDefinition.Version = "latest"
-				} else {
-					remoteFilterDefinition.Version = parsedArg.version
+			if urlBased, err := remoteFilterDefinition.RepoManifest.IsUrlBased(remoteFilterDefinition.Id); err == nil {
+				if *urlBased {
+					if parsedArg.version == "" {
+						remoteFilterDefinition.Version = "latest"
+					} else {
+						remoteFilterDefinition.Version = parsedArg.version
+					}
 				}
 			} else {
 				return burrito.WrappedErrorf(filterNotInManifestError, parsedArg.url, parsedArg.name)
