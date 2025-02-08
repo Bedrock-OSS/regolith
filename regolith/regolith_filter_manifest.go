@@ -272,6 +272,8 @@ func RepositoryManifestFromObject(obj map[string]interface{}) (*RepositoryManife
 	return &result, nil
 }
 
+var repoCache map[string]*RepositoryManifest = make(map[string]*RepositoryManifest)
+
 func ManifestForRepo(url string) (*RepositoryManifest, error) {
 	// https://raw.githubusercontent.com/<user-name>/<project-name>/HEAD/regolith_filter_manifest.json is the end result ideally
 	// The url passed in should be in the format github.com/<user-name>/<project-name> so its a trivial transformation
@@ -289,6 +291,10 @@ func ManifestForRepo(url string) (*RepositoryManifest, error) {
 
 	Logger.Debugf("Testing URL %s for a manifest", manifestURL)
 
+	if manifest, ok := repoCache[manifestURL]; ok {
+		return manifest, nil
+	}
+
 	var err error
 
 	result, err := http.Get(manifestURL)
@@ -301,6 +307,7 @@ func ManifestForRepo(url string) (*RepositoryManifest, error) {
 
 	if result.StatusCode >= 400 {
 		// This handles the case when the repository doesnt have a manifest
+		repoCache[manifestURL] = nil
 		return nil, nil
 	}
 
@@ -327,6 +334,8 @@ func ManifestForRepo(url string) (*RepositoryManifest, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	repoCache[manifestURL] = manifest
 
 	return manifest, nil
 }
