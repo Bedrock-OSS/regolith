@@ -121,11 +121,15 @@ const (
 		"Filter name: %s\n" +
 		"Filter version: %s"
 
-	// Error used when GetRemoteFilterDownloadRef function fails
+	// Error used when FilterDefinitionFromTheInternet function fails to handle the manifest
 	getRemoteManifestError = "Failed to get the manifest for the filter.\n" +
 		"Filter repository Url: %s\n" +
 		"Filter name: %s\n" +
 		"Filter version: %s"
+
+	filterNotInManifestError = "Failed to install filter from a repository using regolith_filter_manifest.json:\n" +
+		"Repository URL: %s\n" +
+		"Filter name: %s"
 
 	// Error used when CreateFilterRunner method of FilterInstaller fails
 	createFilterRunnerError = "Failed to create filter runner.\nFilter: %s"
