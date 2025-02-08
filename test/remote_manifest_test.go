@@ -23,14 +23,15 @@ func TestManifest(t *testing.T) {
 
 	testUrls := []string{"github.com/akashic-records-of-the-abyss/basic_regolith/nested_filter", "github.com/akashic-records-of-the-abyss/basic_regolith/my_release_filter"}
 	var err error
+
 	err = regolith.Install(testUrls, true, false, false, []string{"default"}, false)
 	if err != nil {
-		t.Fatal("failed to install filter: ", err)
+		t.Fatal("Failed to install filter: ", err)
 	}
 
 	err = regolith.Run("default", false)
 
 	if err != nil {
-		t.Fatal("failed to run filter: ", err)
+		t.Fatal("Failed to run filter: ", err)
 	}
 }
