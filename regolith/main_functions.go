@@ -117,12 +117,14 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 		}
 
 		if remoteFilterDefinition.RepoManifest != nil {
-			if cal, _ := remoteFilterDefinition.RepoManifest.IsUrlBased(remoteFilterDefinition.Id); *cal {
+			if cal, err := remoteFilterDefinition.RepoManifest.IsUrlBased(remoteFilterDefinition.Id); err == nil && *cal {
 				if parsedArg.version == "" {
 					remoteFilterDefinition.Version = "latest"
 				} else {
 					remoteFilterDefinition.Version = parsedArg.version
 				}
+			} else {
+				return burrito.WrappedErrorf("The filter %s does not exist in the manifest for the repo %s.\nIf this filter exists but is not in the manifest please add it!", parsedArg.name, parsedArg.url)
 			}
 		}
 
