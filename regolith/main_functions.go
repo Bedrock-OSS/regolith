@@ -124,7 +124,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 					remoteFilterDefinition.Version = parsedArg.version
 				}
 			} else {
-				return burrito.WrappedErrorf("The filter %s does not exist in the manifest for the repo %s.\nIf this filter exists but is not in the manifest please add it!", parsedArg.name, parsedArg.url)
+				return burrito.WrappedErrorf(filterNotInManifestError, parsedArg.url, parsedArg.name)
 			}
 		}
 
