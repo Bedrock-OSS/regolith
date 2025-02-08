@@ -35,3 +35,31 @@ func TestManifest(t *testing.T) {
 		t.Fatal("failed to run filter: ", err)
 	}
 }
+
+func TestManifestInstallAll(t *testing.T) {
+	regolith.InitLogging(true)
+	defer os.Chdir(getWdOrFatal(t))
+
+	t.Log("Clearing the test directory...")
+	tmpDir := prepareTestDirectory("TestRemoteManifestInstallAll", t)
+	t.Log("Copying the project files into the testing directory...")
+	workingDir := filepath.Join(tmpDir, "working-dir")
+	copyFilesOrFatal(remoteManifestInstallAll, workingDir, t)
+	os.Chdir(workingDir)
+
+	t.Log(tmpDir)
+
+	var err error
+
+	err = regolith.InstallAll(true, false, true, false)
+
+	if err != nil {
+		t.Fatal("Failed to install filters: ", err)
+	}
+
+	err = regolith.Run("default", false)
+
+	if err != nil {
+		t.Fatal("failed to run filter: ", err)
+	}
+}

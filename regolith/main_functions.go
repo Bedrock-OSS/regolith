@@ -206,6 +206,25 @@ func InstallAll(force, update, debug, refreshFilters bool) error {
 		}
 	} else {
 		filtersToInstall = config.FilterDefinitions
+
+		// Since this bypasses the code which reads the manifest normally we need to read it here
+
+		for _, installer := range filtersToInstall {
+			switch installer := installer.(type) {
+			case *RemoteFilterDefinition:
+				manifest, err := ManifestForRepo(installer.Url)
+
+				if err != nil {
+					return burrito.WrapErrorf(err, getRemoteManifestError, installer.Url, installer.Id, installer.Version)
+				}
+
+				installer.RepoManifest = manifest
+
+			default:
+			}
+
+		}
+
 	}
 	// Install the filters
 	err = installFilters(
