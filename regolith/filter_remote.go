@@ -56,10 +56,9 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 func (f *RemoteFilterDefinition) UrlBased() bool {
 	if f.RepoManifest == nil {
 		return false
-	} else {
-		val, _ := f.RepoManifest.IsUrlBased(f.Id)
-		return *val
 	}
+	val, _ := f.RepoManifest.IsUrlBased(f.Id)
+	return val
 }
 
 func (f *RemoteFilterDefinition) CreateResolver() (PathResolver, error) {
@@ -420,7 +419,7 @@ func (f *RemoteFilterDefinition) Download(
 
 	if f.RepoManifest == nil {
 		return f.downloadRemoteFromGit(dotRegolithPath, refreshFilters)
-	} else if based, err := f.RepoManifest.IsUrlBased(f.Id); err == nil && !*based {
+	} else if urlBased, err := f.RepoManifest.IsUrlBased(f.Id); err == nil && !urlBased {
 		return f.downloadRemoteFromGit(dotRegolithPath, refreshFilters)
 	} else if err != nil {
 		return err

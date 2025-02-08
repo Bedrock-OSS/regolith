@@ -52,25 +52,25 @@ Requested Name: %s`, filterId)
 	return out, nil
 }
 
-func (manifest *RepositoryManifest) IsUrlBased(filterId string) (*bool, error) {
+// IfUrlBased checks if the filter from the repository manifest is URL based.
+// A filter is URL based if it is not based on a path in the repository, and
+// uses "versions" with urls to determine where to download the filter from.
+func (manifest *RepositoryManifest) IsUrlBased(filterId string) (bool, error) {
 	filter, ok := manifest.Filters[filterId]
 
 	if !ok {
-		return nil, burrito.WrappedErrorf("Invalid filter name tested: %s", filterId)
+		return false, burrito.WrappedErrorf("Invalid filter name tested: %s", filterId)
 	}
 
 	if filter.Path == nil {
-		v := true
-		return &v, nil
-	} else {
-		v := false
-		return &v, nil
+		return true, nil
 	}
+	return false, nil
 }
 
 func (manifest *RepositoryManifest) ResolveUrlForFilter(filterId, version string) (*string, *string, error) {
 	if value, err := manifest.IsUrlBased(filterId); err == nil {
-		if !*value {
+		if !value {
 			return nil, nil, burrito.WrappedErrorf("Filter %s is not URL based", filterId)
 		}
 	} else {
