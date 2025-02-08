@@ -1,0 +1,2 @@
+Version: 1.0.1
+Message: Hello from hello-nested-path-filter!
