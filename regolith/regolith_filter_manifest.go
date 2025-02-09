@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 
@@ -260,6 +261,15 @@ func RepositoryManifestFromObject(obj map[string]interface{}) (*RepositoryManife
 	}
 
 	result.FormatVersion = formatVersion
+	supportedVersions := []string{"1.6.0"}
+	if !slices.Contains(supportedVersions, formatVersion) {
+		return nil, burrito.WrappedErrorf(
+			"The manifest uses a formatVersion that is not supported by your Regolith version.\n"+
+				"Supported versions: %s.\n"+
+				"Found version: %s",
+			strings.Join(supportedVersions, ", "), formatVersion)
+	}
+
 	result.Filters = make(map[string]ManisfestDeclaredFilter, len(filters))
 
 	for n, raw := range filters {
