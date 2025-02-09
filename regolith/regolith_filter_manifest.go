@@ -35,18 +35,23 @@ type RepositoryManifest struct {
 	Filters       map[string]ManisfestDeclaredFilter `json:"filters,omitempty"`
 }
 
+// FindPath returns the path to the filter relative to the root of its repository
+// or an error if the filter is URL based or isn't found in the
+// regolith_filter_manifest.json file.
 func (manifest *RepositoryManifest) FindPath(filterId string) (*string, error) {
 	filter, ok := manifest.Filters[filterId]
 
 	if !ok {
-		return nil, burrito.WrappedErrorf(`Invalid filter name requested from repository:
-Requested Name: %s`, filterId)
+		return nil, burrito.WrappedErrorf(
+			"The requested filter is not specified in the manifest.\nRequested Name: %s", filterId)
 	}
 
 	out := filter.Path
 
 	if out == nil {
-		return nil, burrito.WrappedErrorf("Requested path on a filter which does not have a path specified:\nFilter name: %s", filterId)
+		return nil, burrito.WrappedErrorf(
+			"Requested path on a filter which does not have a path specified.\n"+
+				"Filter name: %s", filterId)
 	}
 
 	return out, nil
@@ -59,7 +64,9 @@ func (manifest *RepositoryManifest) IsUrlBased(filterId string) (bool, error) {
 	filter, ok := manifest.Filters[filterId]
 
 	if !ok {
-		return false, burrito.WrappedErrorf("Invalid filter name tested: %s", filterId)
+		return false, burrito.WrappedError(
+			"The repository uses regolith_filter_manifest.json file, but the requested" +
+				" filter is not specified in it.")
 	}
 
 	if filter.Path == nil {
@@ -74,11 +81,13 @@ func (manifest *RepositoryManifest) ResolveUrlForFilter(filterId, version string
 			return nil, nil, burrito.WrappedErrorf("Filter %s is not URL based", filterId)
 		}
 	} else {
-		return nil, nil, err
+		return nil, nil, burrito.WrapErrorf(err, isUrlBasedRemoteFitlerError, filterId)
 	}
 
 	if version != "HEAD" && version != "latest" && !semver.IsValid("v"+version) {
-		return nil, nil, burrito.WrappedErrorf("Version for the filter %s is not in one of the valid formats! It must be \"HEAD\", \"latest\", or a valid semver!")
+		return nil, nil, burrito.WrappedErrorf(
+			"Version for the filter is invalid. It must be \"HEAD\", \"latest\", or a valid semver.\n",
+			"Requested Version: %s", version)
 	}
 
 	// We can ignore the ok check since this same check is performed in `IsUrlBased`
@@ -281,7 +290,10 @@ func ManifestForRepo(url string) (*RepositoryManifest, error) {
 	chunks := strings.Split(url, "/")
 
 	if len(chunks) < 2 {
-		return nil, burrito.WrappedErrorf("Manifest url has an invalid format! It should be \"github.com/<user-name>/<project-name>\" it was: %s", url)
+		return nil, burrito.WrappedErrorf(
+			"Manifest url has an invalid format.\n"+
+				"Expected format: \"github.com/<user-name>/<project-name>\"\n"+
+				"Got: %s", url)
 	}
 
 	projectName := chunks[len(chunks)-1]
@@ -295,12 +307,11 @@ func ManifestForRepo(url string) (*RepositoryManifest, error) {
 		return manifest, nil
 	}
 
-	var err error
-
 	result, err := http.Get(manifestURL)
-
 	if err != nil {
-		return nil, err
+		return nil, burrito.WrapErrorf(
+			err, "Failed to fetch manifest from the repository.\n"+
+				"Manifest URL: %s", manifestURL)
 	}
 
 	defer result.Body.Close()
@@ -316,9 +327,11 @@ func ManifestForRepo(url string) (*RepositoryManifest, error) {
 	var bytes bytes.Buffer
 
 	_, err = io.Copy(&bytes, result.Body)
-
 	if err != nil {
-		return nil, burrito.WrapErrorf(err, "Failed to clone body of %s manifest", url)
+		return nil, burrito.WrapErrorf(
+			err,
+			"Failed to read the response body while downloading the manifest.\n"+
+				"Manifest URL: %s", manifestURL)
 	}
 
 	object := make(map[string]interface{})
@@ -326,13 +339,16 @@ func ManifestForRepo(url string) (*RepositoryManifest, error) {
 	err = json.Unmarshal(bytes.Bytes(), &object)
 
 	if err != nil {
-		return nil, burrito.WrapErrorf(err, "Failed to decode manifest into json. From the repo: %s", url)
+		return nil, burrito.WrapErrorf(
+			err, "Failed to decode manifest into JSON.\n"+
+				"Manifest URL: %s", manifestURL)
 	}
 
 	manifest, err := RepositoryManifestFromObject(object)
-
 	if err != nil {
-		return nil, err
+		return nil, burrito.WrapErrorf(
+			err, "Failed to load regolith_filter_manifest.json.\n"+
+				"Manifest URL: %s", manifestURL)
 	}
 
 	repoCache[manifestURL] = manifest

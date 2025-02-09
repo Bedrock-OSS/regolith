@@ -50,7 +50,8 @@ func installFilters(
 			// Download the remote filter, and its dependencies
 			err := remoteFilter.Update(force, dotRegolithPath, dataPath, refreshFilters)
 			if err != nil {
-				return burrito.WrapErrorf(err, remoteFilterDownloadError, name)
+				return burrito.WrapErrorf(
+					err, "Failed to download and install filter.")
 			}
 		} else {
 			// Non-remote filters must always update their dependencies.

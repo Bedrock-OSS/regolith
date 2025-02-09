@@ -53,6 +53,9 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	return result, nil
 }
 
+// UrlBased checks if the filter is URL based. A filter is assumed to be URL
+// based if it can't be found in the repository manifest, or is in the manifest
+// but uses the "versions" property with list of URLs to its releases.
 func (f *RemoteFilterDefinition) UrlBased() bool {
 	if f.RepoManifest == nil {
 		return false
@@ -61,20 +64,26 @@ func (f *RemoteFilterDefinition) UrlBased() bool {
 	return val
 }
 
+// CreateResolver creates a PathResolver for the filter.
 func (f *RemoteFilterDefinition) CreateResolver() (PathResolver, error) {
 	if f.RepoManifest == nil {
 		return SimpleResolver{}, nil
 	}
 
 	path, err := f.RepoManifest.FindPath(f.Id)
-
 	if err != nil {
-		return nil, err
+		return nil, burrito.WrapErrorf(
+			err, "Failed to find the path to the filter on the repository.")
 	}
 	return &ComplexResolver{path: path}, nil
 }
 
+// SimpleResolver always returns the name of the filter as the path to its files.
 type SimpleResolver struct{}
+
+// ComplexResolver returns the path to the filter's files based on the information
+// specified in the repository manifest (always returns the same value, the
+// path is cached during its creation).
 type ComplexResolver struct {
 	path *string
 }
@@ -378,16 +387,18 @@ func FilterDefinitionFromTheInternet(
 	if version == "" { // "" locks the version to the latest
 		version, err = GetRemoteFilterDownloadRef(url, name, version)
 		if err != nil {
-			return nil, burrito.WrapErrorf(
-				err, getRemoteFilterDownloadRefError, url, name, version)
+			return nil, burrito.WrapError(
+				err, "Failed to get download link for the filter.")
 		}
 		version = trimFilterPrefix(version, name)
 	}
 
 	manifest, err := ManifestForRepo(url)
-
 	if err != nil {
-		return nil, burrito.WrapErrorf(err, getRemoteManifestError, url, name, version)
+		// Not reporting the details, because the handling of the
+		// FilterDefinitionFromTheInternet should do that.
+		return nil, burrito.WrapError(
+			err, "Failed to get manifest for the filter")
 	}
 
 	return &RemoteFilterDefinition{
@@ -417,39 +428,51 @@ func (f *RemoteFilterDefinition) Download(
 
 	Logger.Infof("Downloading filter %s...", f.Id)
 
+	var err error
 	if f.RepoManifest == nil {
-		return f.downloadRemoteFromGit(dotRegolithPath, refreshFilters)
+		err = f.downloadRemoteFromGit(dotRegolithPath, refreshFilters)
+		if err != nil {
+			return burrito.PassError(err)
+		}
+		return nil
 	} else if urlBased, err := f.RepoManifest.IsUrlBased(f.Id); err == nil && !urlBased {
-		return f.downloadRemoteFromGit(dotRegolithPath, refreshFilters)
+		err = f.downloadRemoteFromGit(dotRegolithPath, refreshFilters)
+		if err != nil {
+			return burrito.PassError(err)
+		}
+		return nil
 	} else if err != nil {
-		return err
+		// We don't need to report the f.Id because this is handled outside
+		// of Download function.
+		return burrito.WrapError(
+			err, "Failed to determine if the filter is URL-based.")
 	} else {
-		var err error
 		url, version, err := f.RepoManifest.ResolveUrlForFilter(f.Id, f.Version)
-
 		if err != nil {
 			return err
 		}
 
 		if url == nil {
-			return burrito.WrappedErrorf("No version for %s matching the current host was found! Version: %s", f.Id, f.Version)
+			return burrito.WrappedErrorf(
+				"Unable to find a matching version of the filter for the current host.\n"+
+					"Version: %q", f.Version)
 		}
 
-		err = os.MkdirAll(f.GetDownloadPath(dotRegolithPath), 0775)
-
+		downloadPath := f.GetDownloadPath(dotRegolithPath)
+		err = os.MkdirAll(downloadPath, 0775)
 		if err != nil {
-			return err
+			return burrito.WrapErrorf(err, osMkdirError, downloadPath)
 		}
 
 		err = getter.GetAny(f.GetDownloadPath(dotRegolithPath), *url)
-
 		if err != nil {
-			return burrito.WrapErrorf(err, "Failed to download %s from the url %s!", f.Id, *url)
+			return burrito.WrapErrorf(
+				err, "Failed to download the filter from the reoslved URL:\n"+
+					"URL: %s", *url)
 		}
 
 		// We can deref version without a nil check because any time URL is populated so is version
 		f.Version = *version
-
 		f.SaveVersionInfo(f.Version, dotRegolithPath)
 		return nil
 	}
@@ -505,7 +528,10 @@ func (f *RemoteFilterDefinition) downloadRemoteFromGit(dotRegolithPath string, r
 	return nil
 }
 
+// PathResolver is an interface that returns the path to the filter's file
+// relative to the root of the repository based on the filter's name.
 type PathResolver interface {
+	// FetchPathsForFilter returns the path to the filter's files.
 	FetchPathsForFilter(filter string) string
 }
 
@@ -515,6 +541,9 @@ func downloadFilterRepository(downloadPath, url, ref, filter string, resolver Pa
 		return burrito.WrapErrorf(err, getUserConfigError)
 	}
 	cooldown, err := time.ParseDuration(*config.ResolverCacheUpdateCooldown)
+	if err != nil {
+		return burrito.WrapErrorf(err, resolverParseDurationError, *config.ResolverCacheUpdateCooldown)
+	}
 
 	cache, err := getFilterCache(url)
 	if err != nil {
@@ -672,13 +701,14 @@ func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath, dataPath st
 			f.Id, installedVersion, version)
 		err = f.Download(true, dotRegolithPath, refreshFilters)
 		if err != nil {
-			return burrito.PassError(err)
+			return burrito.WrapErrorf(err, remoteFilterDownloadError, f.Id)
 		}
 		// Copy the data of the remote filter to the data path
 		f.CopyFilterData(dataPath, dotRegolithPath)
 		err = f.InstallDependencies(f, dotRegolithPath)
 		if err != nil {
-			return burrito.PassError(err)
+			return burrito.WrapErrorf(
+				err, "Failed to install filter dependencies.\nFilter: %s", f.Id)
 		}
 		Logger.Infof("Filter %q updated successfully.", f.Id)
 	} else {
