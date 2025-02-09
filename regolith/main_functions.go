@@ -108,7 +108,9 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 		remoteFilterDefinition, err := FilterDefinitionFromTheInternet(
 			parsedArg.url, parsedArg.name, parsedArg.version)
 		if err != nil {
-			return burrito.PassError(err)
+			return burrito.WrapErrorf(
+				err, filterDefinitionFromTheInternetError,
+				parsedArg.url, parsedArg.name, parsedArg.version)
 		}
 		if parsedArg.version == "HEAD" || parsedArg.version == "latest" {
 			// The "HEAD" and "latest" keywords should be the same in the
@@ -126,7 +128,8 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 					}
 				}
 			} else {
-				return burrito.WrappedErrorf(filterNotInManifestError, parsedArg.url, parsedArg.name)
+				return burrito.WrapErrorf(
+					err, isUrlBasedRemoteFitlerError, remoteFilterDefinition.Id)
 			}
 		}
 
@@ -196,7 +199,9 @@ func InstallAll(force, update, debug, refreshFilters bool) error {
 				filterInstaller, err := FilterDefinitionFromTheInternet(
 					fd.Url, fd.Id, "")
 				if err != nil {
-					return burrito.PassError(err)
+					return burrito.WrapErrorf(
+						err, filterDefinitionFromTheInternetError,
+						fd.Url, fd.Id, "")
 				}
 				filtersToInstall[filterName] = filterInstaller
 				remoteFilters[filterName] = filterInstaller
@@ -213,9 +218,10 @@ func InstallAll(force, update, debug, refreshFilters bool) error {
 			switch installer := installer.(type) {
 			case *RemoteFilterDefinition:
 				manifest, err := ManifestForRepo(installer.Url)
-
 				if err != nil {
-					return burrito.WrapErrorf(err, getRemoteManifestError, installer.Url, installer.Id, installer.Version)
+					return burrito.WrapErrorf(
+						err, getRemoteManifestError, installer.Url, installer.Id,
+						installer.Version)
 				}
 
 				installer.RepoManifest = manifest
