@@ -104,6 +104,9 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 	// Convert to filter definitions for download
 	filterInstallers := make(map[string]FilterInstaller, 0)
 	for _, parsedArg := range parsedArgs {
+
+		preResolvedVersion := parsedArg.version
+
 		// Get the filter definition from the Internet
 		remoteFilterDefinition, err := FilterDefinitionFromTheInternet(
 			parsedArg.url, parsedArg.name, parsedArg.version)
@@ -117,6 +120,8 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 			// config file don't lock them to the actual versions
 			remoteFilterDefinition.Version = parsedArg.version
 		}
+
+		remoteFilterDefinition.PreResolveVersion = preResolvedVersion
 
 		if remoteFilterDefinition.RepoManifest != nil {
 			if urlBased, err := remoteFilterDefinition.RepoManifest.IsUrlBased(remoteFilterDefinition.Id); err == nil {

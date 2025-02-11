@@ -58,6 +58,12 @@ func (manifest *RepositoryManifest) FindPath(filterId string) (*string, error) {
 	return out, nil
 }
 
+func (manifest *RepositoryManifest) Exists(id string) bool {
+	_, ok := manifest.Filters[id]
+
+	return ok
+}
+
 // IfUrlBased checks if the filter from the repository manifest is URL based.
 // A filter is URL based if it is not based on a path in the repository, and
 // uses "versions" with urls to determine where to download the filter from.
