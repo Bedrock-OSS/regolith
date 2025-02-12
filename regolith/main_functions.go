@@ -68,6 +68,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 			err,
 			"Failed to get the list of filter definitions from config file.")
 	}
+
 	// Get dotRegolithPath
 	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
