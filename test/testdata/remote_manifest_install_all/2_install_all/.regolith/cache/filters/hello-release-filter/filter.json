@@ -1,0 +1,9 @@
+{
+	"filters": [
+		{
+			"runWith": "python",
+			"script": "./main.py"
+		}
+	],
+	"version": "1.0.0"
+}

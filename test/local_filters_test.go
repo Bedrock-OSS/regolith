@@ -8,8 +8,7 @@ import (
 	"github.com/Bedrock-OSS/regolith/regolith"
 )
 
-// TestRegolithInit tests the results of InitializeRegolithProject against
-// the values from test/testdata/fresh_project.
+// TestRegolithInit tests the results of running the 'regolith init' command.
 func TestRegolithInit(t *testing.T) {
 	// Switch to current working directory at the end of the test
 	defer os.Chdir(getWdOrFatal(t))

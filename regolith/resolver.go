@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
-	"github.com/paul-mannino/go-fuzzywuzzy"
+	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
 )
 
 const (
@@ -57,7 +57,7 @@ func DownloadResolverMaps(forceUpdate bool) ([]string, []string, error) {
 	}
 	cooldown, err := time.ParseDuration(*config.ResolverCacheUpdateCooldown)
 	if err != nil {
-		return nil, nil, burrito.WrapErrorf(err, "Failed to parse resolver cache update cooldown.\nCooldown: %s", *config.ResolverCacheUpdateCooldown)
+		return nil, nil, burrito.WrapErrorf(err, resolverParseDurationError, *config.ResolverCacheUpdateCooldown)
 	}
 	MeasureStart("Prepare for resolvers download")
 	targetPath, err := getResolverCache(globalUserConfig.Resolvers[0])
