@@ -121,6 +121,21 @@ const (
 		"Filter name: %s\n" +
 		"Filter version: %s"
 
+	// Error used when FilterDefinitionFromTheInternet function fails to handle the manifest
+	filterDefinitionFromTheInternetError = "Failed to get the filter definition from the internet.\n" +
+		"Filter repository Url: %s\n" +
+		"Filter name: %s\n" +
+		"Filter version: %s"
+
+	// Error used when ManifestForRepo function fails to handle the manifest
+	getRemoteManifestError = "Failed to get the manifest for the filter.\n" +
+		"Filter repository Url: %s\n" +
+		"Filter name: %s\n" +
+		"Filter version: %s"
+
+	isUrlBasedRemoteFitlerError = "Failed to determine if the filter is URL-based.\n" +
+		"Filter name: %s"
+
 	// Error used when CreateFilterRunner method of FilterInstaller fails
 	createFilterRunnerError = "Failed to create filter runner.\nFilter: %s"
 
@@ -225,6 +240,9 @@ const (
 
 	resolverResolveUrlError = "Failed to resolve the URL of the resolver file for the download.\n" +
 		"Short URL: %s"
+
+	resolverParseDurationError = "Failed to parse resolver cache update cooldown.\n" +
+		"Cooldown specified in user settings: %s"
 
 	// findMojangDirError is used when the FindMojangDir function fails
 	findMojangDirError = "Failed to find \"com.mojang\" directory."
