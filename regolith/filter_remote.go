@@ -500,6 +500,10 @@ func manfiestForLocation(location string) (*RepositoryManifest, error) {
 	// The called is expected to add more information since this is a very generic function
 	// Meaning we wont add any kind of context to errors
 
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+
 	if err != nil {
 		return nil, burrito.PassError(err)
 	}
