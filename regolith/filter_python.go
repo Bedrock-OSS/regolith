@@ -38,7 +38,8 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
-	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+	venvSlot64, _ := obj["venvSlot"].(float64) // default venvSlot is 0.0
+	filter.VenvSlot = int(venvSlot64)
 
 	requirementsObj, ok := obj["requirements"]
 	if ok {

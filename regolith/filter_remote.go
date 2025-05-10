@@ -46,7 +46,8 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "version", "string")
 	}
 	result.Version = version
-	result.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+	venvSlot64, _ := obj["venvSlot"].(float64) // default venvSlot is 0.0
+	result.VenvSlot = int(venvSlot64)
 
 	return result, nil
 }
