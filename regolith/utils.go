@@ -440,3 +440,7 @@ func SliceAny[T interface{}](slice []T, predicate func(T) bool) bool {
 	}
 	return false
 }
+
+func VersionIsLatest(version string) bool {
+	return version == "latest" || version == "HEAD"
+}
