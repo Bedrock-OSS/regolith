@@ -1,6 +1,8 @@
 package regolith
 
 import (
+	"fmt"
+
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"golang.org/x/mod/semver"
 )
@@ -48,6 +50,7 @@ type RegolithProject struct {
 	Profiles          map[string]Profile         `json:"profiles,omitempty"`
 	FilterDefinitions map[string]FilterInstaller `json:"filterDefinitions"`
 	DataPath          string                     `json:"dataPath,omitempty"`
+	WatchPaths        []string                   `json:"watchPaths,omitempty"`
 	FormatVersion     string                     `json:"formatVersion,omitempty"`
 }
 
@@ -151,6 +154,17 @@ func RegolithProjectFromObject(
 			jsonPropertyTypeError, "dataPath", "string")
 	}
 	result.DataPath = dataPath
+	// WatchPaths
+	if watchPaths, ok := obj["watchPaths"].([]any); ok {
+		for i, path := range watchPaths {
+			if path, ok := path.(string); ok {
+				result.WatchPaths = append(result.WatchPaths, path)
+			} else {
+				return result, burrito.WrappedErrorf(
+					jsonPathTypeError, fmt.Sprintf("watchPaths->%d", i), "string")
+			}
+		}
+	}
 	// Filter definitions
 	filterDefinitions, ok := obj["filterDefinitions"].(map[string]interface{})
 	if ok { // filter definitions are optional
