@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"golang.org/x/mod/semver"
@@ -369,31 +370,49 @@ func ExportProject(ctx RunContext) error {
 		}
 	}
 	MeasureStart("Export - MoveOrCopy")
-	if IsExperimentEnabled(SizeTimeCheck) {
-		// Export BP
+	var wg sync.WaitGroup
+	errChan := make(chan error, 2)
+	// Export BP
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-		err = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly)
-		if err != nil {
-			return burrito.WrapError(err, "Failed to export behavior pack.")
+		var e error
+		if IsExperimentEnabled(SizeTimeCheck) {
+			e = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly)
+		} else {
+			e = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
 		}
-		// Export RP
+		if e != nil {
+			errChan <- burrito.WrapError(e, "Failed to export behavior pack.")
+			return
+		}
+		errChan <- nil
+	}()
+
+	// Export RP
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
-		err = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly)
-		if err != nil {
-			return burrito.WrapError(err, "Failed to export resource pack.")
+		var e error
+		if IsExperimentEnabled(SizeTimeCheck) {
+			e = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly)
+		} else {
+			e = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
 		}
-	} else {
-		// Export BP
-		Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-		err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
-		if err != nil {
-			return burrito.WrapError(err, "Failed to export behavior pack.")
+		if e != nil {
+			errChan <- burrito.WrapError(e, "Failed to export resource pack.")
+			return
 		}
-		// Export RP
-		Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
-		err = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
-		if err != nil {
-			return burrito.WrapError(err, "Failed to export resource pack.")
+		errChan <- nil
+	}()
+
+	wg.Wait()
+	close(errChan)
+	for e := range errChan {
+		if e != nil {
+			return e
 		}
 	}
 	MeasureStart("Export - UpdateFromPaths")
