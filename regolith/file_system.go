@@ -885,7 +885,7 @@ func SyncDirectories(
 	if err := os.MkdirAll(destinationParent, 0755); err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, destinationParent)
 	}
-	err := filepath.Walk(source, func(srcPath string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(source, func(srcPath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -899,8 +899,12 @@ func SyncDirectories(
 		if err != nil && !os.IsNotExist(err) {
 			return burrito.WrapErrorf(err, osStatErrorAny, destPath)
 		}
+		info, ierr := d.Info()
+		if ierr != nil {
+			return ierr
+		}
 		if (err != nil && os.IsNotExist(err)) || info.ModTime() != destInfo.ModTime() || info.Size() != destInfo.Size() {
-			if info.IsDir() {
+			if d.IsDir() {
 				return os.MkdirAll(destPath, info.Mode())
 			}
 			Logger.Debugf("SYNC: Copying file %s to %s", srcPath, destPath)
@@ -924,7 +928,7 @@ func SyncDirectories(
 
 	// Remove files/folders in destination that are not in source
 	toRemoveList := make([]string, 0)
-	err = filepath.Walk(destination, func(destPath string, info os.FileInfo, err error) error {
+	err = filepath.WalkDir(destination, func(destPath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

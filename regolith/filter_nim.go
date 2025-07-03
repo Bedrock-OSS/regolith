@@ -2,6 +2,7 @@ package regolith
 
 import (
 	"encoding/json"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -173,8 +174,8 @@ func (f *NimFilter) Check(context RunContext) error {
 
 func hasNimble(filterPath string) bool {
 	nimble := false
-	filepath.Walk(filterPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+	filepath.WalkDir(filterPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
 			return nil
 		}
 		if filepath.Ext(path) == ".nimble" {
