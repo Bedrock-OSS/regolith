@@ -20,7 +20,7 @@ type DirWatcher struct {
 	watcher      *fsnotify.Watcher
 	roots        []string
 	config       *Config
-	debounce     <-chan time.Time
+	debounce     *time.Timer
 	interruption chan string
 	errors       chan error
 	stage        <-chan string
@@ -77,6 +77,10 @@ func (d *DirWatcher) watch() error {
 func (d *DirWatcher) start() {
 	paused := false
 	for {
+		var debounce <-chan time.Time
+		if d.debounce != nil {
+			debounce = d.debounce.C
+		}
 		select {
 		case err, ok := <-d.watcher.Errors:
 			if !ok {
@@ -104,9 +108,16 @@ func (d *DirWatcher) start() {
 			} else if isInDir(event.Name, d.config.DataPath) {
 				d.interruption <- "data"
 			}
-			d.debounce = time.After(100 * time.Millisecond)
-		case <-d.debounce:
-			d.debounce = nil
+			if d.debounce == nil {
+				d.debounce = time.NewTimer(100 * time.Millisecond)
+			} else {
+				d.debounce.Reset(100 * time.Millisecond)
+			}
+		case <-debounce:
+			if d.debounce != nil {
+				d.debounce.Stop()
+				d.debounce = nil
+			}
 		case stage := <-d.stage:
 			switch stage {
 			case "pause":
