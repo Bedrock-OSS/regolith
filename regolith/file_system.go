@@ -989,13 +989,26 @@ func SyncDirectories(
 }
 
 func copyFile(src, dest string, info os.FileInfo) error {
-	data, err := os.ReadFile(src)
+	srcF, err := os.Open(src)
 	if err != nil {
-		return burrito.WrapErrorf(err, fileReadError, src)
+		return burrito.WrapErrorf(err, osOpenError, src)
 	}
-	if err = os.WriteFile(dest, data, info.Mode()); err != nil {
+	defer srcF.Close()
+
+	destF, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
+	if err != nil {
+		return burrito.WrapErrorf(err, osCreateError, dest)
+	}
+	defer destF.Close()
+
+	if _, err = io.Copy(destF, srcF); err != nil {
 		return burrito.WrapErrorf(err, fileWriteError, dest)
 	}
+
+	if err = destF.Sync(); err != nil {
+		return burrito.WrapErrorf(err, fileWriteError, dest)
+	}
+
 	err = os.Chtimes(dest, time.Now(), info.ModTime())
 	if err != nil {
 		return burrito.WrapErrorf(err, osChtimesError, dest)
