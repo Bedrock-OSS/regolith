@@ -927,10 +927,14 @@ func SyncDirectories(
 	}
 
 	// Remove files/folders in destination that are not in source
-	toRemoveList := make([]string, 0)
+	toRemoveMap := make(map[string]struct{})
 	err = filepath.WalkDir(destination, func(destPath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if d.IsDir() {
+			// Skip directories
+			return nil
 		}
 		relPath, err := filepath.Rel(destination, destPath)
 		if err != nil {
@@ -938,15 +942,9 @@ func SyncDirectories(
 		}
 		srcPath := filepath.Join(source, relPath)
 		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-			// TODO: Not sure if this is the best way to do this
-			// The toRemoveList might get pretty big
-			if !SliceAny[string](toRemoveList, func(s string) bool {
-				return strings.HasPrefix(destPath, s)
-			}) {
+			if _, ok := toRemoveMap[destPath]; !ok {
 				Logger.Debugf("SYNC: Removing file %s", destPath)
-				// Add to list of files to remove, because otherwise walk function might fail
-				// when trying to walk a directory that doesn't exist anymore
-				toRemoveList = append(toRemoveList, destPath)
+				toRemoveMap[destPath] = struct{}{}
 			}
 		}
 		return nil
@@ -956,7 +954,7 @@ func SyncDirectories(
 		return burrito.PassError(err)
 	}
 
-	for _, path := range toRemoveList {
+	for path := range toRemoveMap {
 		err = os.RemoveAll(path)
 		if err != nil {
 			return burrito.WrapErrorf(err, osRemoveError, path)
