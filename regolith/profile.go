@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -78,20 +79,40 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 		return nil
 	}
 
-	err = setupTmpDirectory(config.ResourceFolder, "RP", "resource folder")
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, "Failed to setup RP folder in the temporary directory.")
-	}
-	err = setupTmpDirectory(config.BehaviorFolder, "BP", "behavior folder")
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, "Failed to setup BP folder in the temporary directory.")
-	}
-	err = setupTmpDirectory(config.DataPath, "data", "data folder")
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, "Failed to setup data folder in the temporary directory.")
+	// Setup RP, BP and data folders concurrently
+	wg := sync.WaitGroup{}
+	errCh := make(chan error, 3)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := setupTmpDirectory(config.ResourceFolder, "RP", "resource folder"); err != nil {
+			errCh <- burrito.WrapErrorf(err, "Failed to setup RP folder in the temporary directory.")
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := setupTmpDirectory(config.BehaviorFolder, "BP", "behavior folder"); err != nil {
+			errCh <- burrito.WrapErrorf(err, "Failed to setup BP folder in the temporary directory.")
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := setupTmpDirectory(config.DataPath, "data", "data folder"); err != nil {
+			errCh <- burrito.WrapErrorf(err, "Failed to setup data folder in the temporary directory.")
+		}
+	}()
+
+	wg.Wait()
+	close(errCh)
+	for e := range errCh {
+		if e != nil {
+			return e
+		}
 	}
 
 	Logger.Debug("Setup done in ", time.Since(start))
