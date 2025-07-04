@@ -16,8 +16,8 @@ import (
 	"github.com/otiai10/copy"
 )
 
-// According to the internet, the buffer size should be around 4kB.
-const copyFileBufferSize = 4096
+// According to the internet, the buffer size should be around 128kB.
+const copyFileBufferSize = 128 * 1024 // 128kB
 
 // revertibleFsOperations is a struct that performs file system operations,
 // keeps track of them, and can undo them if something goes wrong.
