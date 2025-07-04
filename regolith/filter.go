@@ -226,82 +226,77 @@ func (f *Filter) IsUsingDataExport(_ string, _ RunContext) (bool, error) {
 	return false, nil
 }
 
+type filterInstallerFactory struct {
+	constructor func(string, map[string]interface{}) (FilterInstaller, error)
+	name        string
+}
+
+var filterInstallerFactories = map[string]filterInstallerFactory{
+	"java": {
+		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+			return JavaFilterDefinitionFromObject(id, obj)
+		},
+		name: "Java",
+	},
+	"dotnet": {
+		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+			return DotNetFilterDefinitionFromObject(id, obj)
+		},
+		name: ".Net",
+	},
+	"nim": {
+		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+			return NimFilterDefinitionFromObject(id, obj)
+		},
+		name: "Nim",
+	},
+	"deno": {
+		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+			return DenoFilterDefinitionFromObject(id, obj)
+		},
+		name: "Deno",
+	},
+	"nodejs": {
+		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+			return NodeJSFilterDefinitionFromObject(id, obj)
+		},
+		name: "NodeJs",
+	},
+	"python": {
+		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+			return PythonFilterDefinitionFromObject(id, obj)
+		},
+		name: "Python",
+	},
+	"shell": {
+		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+			return ShellFilterDefinitionFromObject(id, obj)
+		},
+		name: "shell",
+	},
+	"exe": {
+		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+			return ExeFilterDefinitionFromObject(id, obj)
+		},
+		name: "exe",
+	},
+	"": {
+		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+			return RemoteFilterDefinitionFromObject(id, obj)
+		},
+		name: "remote",
+	},
+}
+
 func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterInstaller, error) {
 	runWith, _ := obj["runWith"].(string)
-	switch runWith {
-	case "java":
-		filter, err := JavaFilterDefinitionFromObject(id, obj)
+	if factory, ok := filterInstallerFactories[runWith]; ok {
+		filter, err := factory.constructor(id, obj)
 		if err != nil {
 			return nil, burrito.WrapErrorf(
 				err,
-				"Unable to create Java filter from %q filter definition.", id)
-		}
-		return filter, nil
-	case "dotnet":
-		filter, err := DotNetFilterDefinitionFromObject(id, obj)
-		if err != nil {
-			return nil, burrito.WrapErrorf(
-				err,
-				"Unable to create .Net filter from %q filter definition.", id)
-		}
-		return filter, nil
-	case "nim":
-		filter, err := NimFilterDefinitionFromObject(id, obj)
-		if err != nil {
-			return nil, burrito.WrapErrorf(
-				err,
-				"Unable to create Nim filter from %q filter definition.", id)
-		}
-		return filter, nil
-	case "deno":
-		filter, err := DenoFilterDefinitionFromObject(id, obj)
-		if err != nil {
-			return nil, burrito.WrapErrorf(
-				err,
-				"Unable to create Deno filter from %q filter definition.", id)
-		}
-		return filter, nil
-	case "nodejs":
-		filter, err := NodeJSFilterDefinitionFromObject(id, obj)
-		if err != nil {
-			return nil, burrito.WrapErrorf(
-				err,
-				"Unable to create NodeJs filter from %q filter definition.",
-				id)
-		}
-		return filter, nil
-	case "python":
-		filter, err := PythonFilterDefinitionFromObject(id, obj)
-		if err != nil {
-			return nil, burrito.WrapErrorf(
-				err,
-				"Unable to create Python filter from %q filter definition.",
-				id)
-		}
-		return filter, nil
-	case "shell":
-		filter, err := ShellFilterDefinitionFromObject(id, obj)
-		if err != nil {
-			return nil, burrito.WrapErrorf(
-				err,
-				"Unable to create shell filter from %q filter definition.", id)
-		}
-		return filter, nil
-	case "exe":
-		filter, err := ExeFilterDefinitionFromObject(id, obj)
-		if err != nil {
-			return nil, burrito.WrapErrorf(
-				err,
-				"Unable to create exe filter from %q filter definition.", id)
-		}
-		return filter, nil
-	case "":
-		filter, err := RemoteFilterDefinitionFromObject(id, obj)
-		if err != nil {
-			return nil, burrito.WrapErrorf(
-				err,
-				"Unable to create remote filter from %q filter definition.",
-				id)
+				"Unable to create %s filter from %q filter definition.",
+				factory.name, id)
 		}
 		return filter, nil
 	}
