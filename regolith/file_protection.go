@@ -138,7 +138,11 @@ func listFiles(path string) ([]string, error) {
 // alphabetically. It returns nil value when it's safe to delete the files or
 // an error in opposite case.
 func checkDeletionSafety(path string, removableFiles []string) error {
-	i := 0 // current index on the removableFiles list to check
+	removableSet := make(map[string]struct{}, len(removableFiles))
+	for _, f := range removableFiles {
+		normalized := strings.ReplaceAll(f, "\\", "/")
+		removableSet[normalized] = struct{}{}
+	}
 	stats, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -163,18 +167,9 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 			s = relpath // remove path from the file path
 			const notRegolithFileError = "File is not on the list of files" +
 				" created by Regolith.\nPath: %s"
-			for {
-				if i >= len(removableFiles) {
-					return burrito.WrappedErrorf(notRegolithFileError, s)
-				}
-				currPath := removableFiles[i]
-				i++
-				cmpVal := compareFilePaths(s, currPath)
-				if cmpVal == 0 { // found path on the list
-					break
-				} else if cmpVal < 0 { // this path won't be on the list
-					return burrito.WrappedErrorf(notRegolithFileError, s)
-				}
+			normalizedS := strings.ReplaceAll(s, "\\", "/")
+			if _, ok := removableSet[normalizedS]; !ok {
+				return burrito.WrappedErrorf(notRegolithFileError, s)
 			}
 			return nil
 		})
@@ -187,7 +182,9 @@ func checkDeletionSafety(path string, removableFiles []string) error {
 // compareFilePaths compares two filepaths to oder them lexicographically.
 // This is not the same as comparing the file paths as strings because
 // "." < "/" and "." < "\\" but the "text.txt" should be greater than
-//  "text/text.txt" ("text.txt" > "text/text.txt"). This is the same order
+//
+//	"text/text.txt" ("text.txt" > "text/text.txt"). This is the same order
+//
 // that you would get when you use filepath.Walk.
 // The function returns -1 when "a" < "b", 0 when "a" == "b" and 1 when
 // "a" > "b".
