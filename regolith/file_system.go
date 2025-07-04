@@ -90,72 +90,61 @@ func (r *revertibleFsOperations) Undo() error {
 	return nil
 }
 
-// Delete removes a file or directory.
-// For deleting entire directories, check out the DeleteDir.
+// Delete removes a file or a directory. The operation can be reverted using
+// the Undo method until the Close method is called.
 func (r *revertibleFsOperations) Delete(path string) error {
-	if _, err := os.Stat(path); err != nil {
+	info, err := os.Stat(path)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return burrito.WrapErrorf(err, osStatErrorAny, path)
 	}
-	tmpPath := r.getTempFilePath(path)
-	err := ForceMoveFile(path, tmpPath)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err,
-			"Failed to move the file to the backup location.\n"+
-				"Path: %s\n"+
-				"Backup path: %s",
-			path, tmpPath)
+
+	deleteSingle := func(p string) error {
+		tmpPath := r.getTempFilePath(p)
+		if err := ForceMoveFile(p, tmpPath); err != nil {
+			return burrito.WrapErrorf(
+				err,
+				"Failed to move the file to the backup location.\n"+
+					"Path: %s\n"+
+					"Backup path: %s",
+				p, tmpPath)
+		}
+		r.undoOperations = append(r.undoOperations, func() error {
+			if err := ForceMoveFile(tmpPath, p); err != nil {
+				return burrito.WrapErrorf(err, "Failed to forcefully move file."+
+					"\nSource: %s\nTarget: %s", tmpPath, p)
+			}
+			return nil
+		})
+		return nil
 	}
-	r.undoOperations = append(r.undoOperations, func() error {
-		err := ForceMoveFile(tmpPath, path)
-		if err != nil {
-			return burrito.WrapErrorf(err, "Failed to forcefully move file."+
-				"\nSource: %s\nTarget: %s", tmpPath, path)
+
+	if info.IsDir() {
+		deleteFunc := func(currPath string, _ fs.FileInfo, _ error) error {
+			if err := deleteSingle(currPath); err != nil {
+				return burrito.WrapErrorf(err, revertibleFsOperationsDeleteError, currPath)
+			}
+			return nil
+		}
+		if err := PostorderWalkDir(path, deleteFunc); err != nil {
+			return burrito.PassError(err)
+		}
+		// delete the root directory itself
+		if err := deleteSingle(path); err != nil {
+			return burrito.PassError(err)
 		}
 		return nil
-	})
-	return nil
+	}
+
+	return deleteSingle(path)
 }
 
-// DeleteDir deletes a directory.
-// This method is better for deleting directories than Delete method because
-// it moves the files of the directory one by one to the backup directory,
-// and it's able to undo the operation even if an error occurs in the middle
-// of its execution.
-func (r *revertibleFsOperations) DeleteDir(path string) error {
-	// TODO - maybe Delete should be able to delete both directories and files and DeleteDir should be private
-	stat, err := os.Stat(path)
-	if err == nil && !stat.IsDir() {
-		err = r.Delete(path)
-		if err != nil {
-			return burrito.WrapErrorf(err, revertibleFsOperationsDeleteError, path)
-		}
-		return nil
-	}
-	deleteFunc := func(currPath string, info fs.FileInfo, err error) error {
-		err = r.Delete(currPath)
-		if err != nil {
-			return burrito.WrapErrorf(err, revertibleFsOperationsDeleteError, currPath)
-		}
-		return nil
-	}
-	// Loop source, move files from source to target and create directories
-	err = PostorderWalkDir(path, deleteFunc)
-	if err != nil {
-		return burrito.PassError(err)
-	}
-	stat, err = os.Stat(path)
-	if err != nil {
-		return burrito.WrapErrorf(err, osStatErrorAny, path)
-	}
-	err = deleteFunc(path, stat, nil)
-	if err != nil {
-		return burrito.PassError(err)
-	}
-	return nil
+// deleteDir was previously exported as DeleteDir and is kept for backwards
+// compatibility with potential external callers. It now simply calls Delete.
+func (r *revertibleFsOperations) deleteDir(path string) error {
+	return r.Delete(path)
 }
 
 // Move moves a file or a directory from source to target.

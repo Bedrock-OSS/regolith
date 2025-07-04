@@ -334,7 +334,7 @@ func ExportProject(ctx RunContext) error {
 		// Clear export target
 		targetPath := filepath.Join(dataPath, exportedFilterName)
 		if _, err := os.Stat(targetPath); err == nil {
-			err = revertibleOps.DeleteDir(targetPath)
+			err = revertibleOps.Delete(targetPath)
 			if err != nil {
 				handlerError := revertibleOps.Undo()
 				mainError := burrito.WrapErrorf(err, updateSourceFilesError, targetPath)
@@ -477,7 +477,7 @@ func InplaceExportProject(
 		config.ResourceFolder, config.BehaviorFolder, config.DataPath}
 	for _, deleteDir := range deleteDirs {
 		if deleteDir != "" {
-			err = revertibleOps.DeleteDir(deleteDir)
+			err = revertibleOps.Delete(deleteDir)
 			if err != nil {
 				err = burrito.WrapErrorf(
 					err, updateSourceFilesError, deleteDir)
