@@ -140,20 +140,11 @@ func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]
 	return filter, nil
 }
 
-// TODO - this code is almost a duplicate of the code in the
-// (f *RemoteFilter) SubfilterCollection()
 func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, dotRegolithPath string) error {
 	path := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
-	file, err := os.ReadFile(path)
-
+	filterCollection, err := loadFilterConfig(path)
 	if err != nil {
-		return burrito.WrapErrorf(err, fileReadError, path)
-	}
-
-	var filterCollection map[string]interface{}
-	err = json.Unmarshal(file, &filterCollection)
-	if err != nil {
-		return burrito.WrapErrorf(err, jsonUnmarshalError, path)
+		return burrito.PassError(err)
 	}
 
 	// Filters
@@ -601,19 +592,30 @@ func (f *RemoteFilterDefinition) Uninstall(dotRegolithPath string) {
 }
 
 // hasGit returns whether git is installed or not.
+
 func hasGit() bool {
 	_, err := exec.LookPath("git")
 	return err == nil
+}
+
+// loadFilterConfig loads the remote filter configuration from the given path.
+func loadFilterConfig(path string) (map[string]interface{}, error) {
+	file, err := os.ReadFile(path)
+	if err != nil {
+		return nil, burrito.WrapErrorf(err, fileReadError, path)
+	}
+	var filterCollection map[string]interface{}
+	err = json.Unmarshal(file, &filterCollection)
+	if err != nil {
+		return nil, burrito.WrapErrorf(err, jsonUnmarshalError, path)
+	}
+	return filterCollection, nil
 }
 
 // extraFilterJsonErrorInfo is used to wrap errors related to parsing the
 // filter.json file. It's common for other functions to handle loading and
 // parsing of this file, so using this is necessary to provide both the
 // information about the file path and reuse the errors from errors.go
-//
-// TODO - this is an ugly solution, perhaps we should have a separate
-// function for loading the filter.json file. Currently it's always build into
-// other functions.
 func extraFilterJsonErrorInfo(filterJsonFilePath string, err error) error {
 	return burrito.WrapErrorf(
 		err, "Failed to load the filter configuration.\n"+
