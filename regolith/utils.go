@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -135,14 +136,40 @@ func RunGitProcess(args []string, workingDir string) ([]string, error) {
 	cmd.Dir = workingDir
 	out, _ := cmd.StdoutPipe()
 	err, _ := cmd.StderrPipe()
-	completeOutput := make([]string, 0)
-	logFunc := func(template string, args ...interface{}) {
-		completeOutput = append(completeOutput, fmt.Sprintf(template, args...))
-	}
-	go LogStd(out, logFunc, "git")
-	go LogStd(err, logFunc, "git")
 
-	return completeOutput, cmd.Run()
+	lines := make(chan string, 10)
+	var wg sync.WaitGroup
+
+	logFunc := func(template string, args ...interface{}) {
+		lines <- fmt.Sprintf(template, args...)
+	}
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		LogStd(out, logFunc, "git")
+	}()
+	go func() {
+		defer wg.Done()
+		LogStd(err, logFunc, "git")
+	}()
+
+	if err := cmd.Start(); err != nil {
+		close(lines)
+		wg.Wait()
+		return nil, err
+	}
+
+	cmdErr := cmd.Wait()
+	wg.Wait()
+	close(lines)
+
+	completeOutput := make([]string, 0)
+	for line := range lines {
+		completeOutput = append(completeOutput, line)
+	}
+
+	return completeOutput, cmdErr
 }
 
 // LogStd logs the output of a sub-process
@@ -250,43 +277,36 @@ func acquireSessionLock(dotRegolithPath string) (func() error, error) {
 	return unlockFunc, nil
 }
 
-func splitPath(path string) []string {
-	parts := make([]string, 0)
-	for true {
-		part := ""
-		path, part = filepath.Split(path)
-		if strings.HasSuffix(path, "/") || strings.HasSuffix(path, "\\") {
-			path = path[0 : len(path)-1]
-		}
-		if path == "" && part != "" {
-			parts = append([]string{part}, parts...)
-			break
-		}
-		if part == "" || path == "" {
-			break
-		}
-		parts = append([]string{part}, parts...)
-	}
-	return parts
-}
-
 func ResolvePath(path string) (string, error) {
-	// Resolve the path
-	parts := splitPath(path)
-	for i, part := range parts {
-		if strings.HasPrefix(part, "%") && strings.HasSuffix(part, "%") {
-			envVar := part[1 : len(part)-1]
-			envVarValue, exists := os.LookupEnv(envVar)
-			if !exists {
-				return "", burrito.WrapErrorf(
-					os.ErrNotExist,
-					"Environment variable %s does not exist.",
-					envVar)
-			}
-			parts[i] = envVarValue
+	// Expand %VAR% style markers
+	for {
+		start := strings.Index(path, "%")
+		if start == -1 {
+			break
 		}
+		end := strings.Index(path[start+1:], "%")
+		if end == -1 {
+			break
+		}
+		end += start + 1
+		envVar := path[start+1 : end]
+		envVarValue, exists := os.LookupEnv(envVar)
+		if !exists {
+			return "", burrito.WrapErrorf(
+				os.ErrNotExist,
+				"Environment variable %s does not exist.",
+				envVar)
+		}
+		path = strings.ReplaceAll(path, "%"+envVar+"%", envVarValue)
 	}
-	return filepath.Clean(filepath.Join(parts...)), nil
+
+	// Expand $VAR and ${VAR} markers
+	path = os.Expand(path, func(v string) string {
+		val, _ := os.LookupEnv(v)
+		return val
+	})
+
+	return filepath.Clean(path), nil
 }
 
 type measure struct {
@@ -439,4 +459,42 @@ func SliceAny[T interface{}](slice []T, predicate func(T) bool) bool {
 		}
 	}
 	return false
+}
+
+func isSymlinkTo(path, target string) bool {
+	info, err := os.Lstat(path)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		return false
+	}
+	dest, err := os.Readlink(path)
+	if err != nil {
+		return false
+	}
+	if !filepath.IsAbs(dest) {
+		dest = filepath.Join(filepath.Dir(path), dest)
+	}
+	absDest, _ := filepath.Abs(dest)
+	absTarget, _ := filepath.Abs(target)
+	return absDest == absTarget
+}
+
+func createDirLink(link, target string) error {
+	if err := os.RemoveAll(link); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(link), 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(target, 0755); err != nil {
+		return err
+	}
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		return err
+	}
+	absLink, err := filepath.Abs(link)
+	if err != nil {
+		return err
+	}
+	return os.Symlink(absTarget, absLink)
 }
