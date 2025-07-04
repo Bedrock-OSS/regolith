@@ -14,22 +14,61 @@ import (
 )
 
 // SetupTmpFiles set up the workspace for the filters.
-func SetupTmpFiles(config Config, dotRegolithPath string) error {
+func SetupTmpFiles(context RunContext) error {
+	config := *context.Config
+	dotRegolithPath := context.DotRegolithPath
 	start := time.Now()
 	useSizeTimeCheck := IsExperimentEnabled(SizeTimeCheck)
+	useSymlinkExport := IsExperimentEnabled(SymlinkExport)
 	// Setup Directories
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
-	if !useSizeTimeCheck {
+
+	var bpExportPath, rpExportPath string
+	if useSymlinkExport {
+		profile, err := context.GetProfile()
+		if err == nil {
+			bpExportPath, rpExportPath, err = GetExportPaths(profile.ExportTarget, context)
+			if err != nil || profile.ExportTarget.Target == "none" {
+				useSymlinkExport = false
+			}
+		} else {
+			useSymlinkExport = false
+		}
+	}
+
+	linksExist := false
+	if useSymlinkExport {
+		bpLink := isSymlinkTo(filepath.Join(tmpPath, "BP"), bpExportPath)
+		rpLink := isSymlinkTo(filepath.Join(tmpPath, "RP"), rpExportPath)
+		linksExist = bpLink && rpLink
+	}
+
+	if (!useSizeTimeCheck && !useSymlinkExport) || (useSymlinkExport && !linksExist) {
 		Logger.Debugf("Cleaning \"%s\"", tmpPath)
 		err := os.RemoveAll(tmpPath)
 		if err != nil {
 			return burrito.WrapErrorf(err, osRemoveError, tmpPath)
+		}
+		if useSymlinkExport && !linksExist {
+			os.RemoveAll(bpExportPath)
+			os.RemoveAll(rpExportPath)
 		}
 	}
 
 	err := os.MkdirAll(tmpPath, 0755)
 	if err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, tmpPath)
+	}
+
+	if useSymlinkExport && !linksExist {
+		if err := createDirLink(filepath.Join(tmpPath, "BP"), bpExportPath); err != nil {
+			Logger.Warnf("Failed to create link %s -> %s: %v", filepath.Join(tmpPath, "BP"), bpExportPath, err)
+			useSymlinkExport = false
+		}
+		if err := createDirLink(filepath.Join(tmpPath, "RP"), rpExportPath); err != nil {
+			Logger.Warnf("Failed to create link %s -> %s: %v", filepath.Join(tmpPath, "RP"), rpExportPath, err)
+			useSymlinkExport = false
+		}
 	}
 
 	// Copy the contents of the 'regolith' folder to '[dotRegolithPath]/tmp'
@@ -40,7 +79,6 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 		path, shortName, descriptiveName string,
 	) error {
 		p := filepath.Join(tmpPath, shortName)
-		// A project don't have to have a RP or BP so path can be ""
 		if path != "" {
 			stats, err := os.Stat(path)
 			if err != nil {
@@ -53,7 +91,7 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 					}
 				}
 			} else if stats.IsDir() {
-				if useSizeTimeCheck {
+				if useSizeTimeCheck || useSymlinkExport {
 					err = SyncDirectories(path, p, false)
 					if err != nil {
 						return burrito.WrapError(err, "Failed to export behavior pack.")
@@ -67,11 +105,11 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 						return burrito.WrapErrorf(err, osCopyError, path, p)
 					}
 				}
-			} else { // The folder paths leads to a file
+			} else { // The folder path leads to a file
 				return burrito.WrappedErrorf(isDirNotADirError, path)
 			}
 		} else {
-			err = os.MkdirAll(p, 0755)
+			err := os.MkdirAll(p, 0755)
 			if err != nil {
 				return burrito.WrapErrorf(err, osMkdirError, p)
 			}
@@ -145,7 +183,7 @@ func CheckProfileImpl(
 func RunProfile(context RunContext) error {
 start:
 	// Prepare tmp files
-	err := SetupTmpFiles(*context.Config, context.DotRegolithPath)
+	err := SetupTmpFiles(context)
 	if err != nil {
 		return burrito.WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
 	}

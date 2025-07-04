@@ -394,7 +394,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 		return burrito.WrapErrorf(err, filterRunnerCheckError, filterName)
 	}
 	// Setup tmp directory
-	err = SetupTmpFiles(*config, dotRegolithPath)
+	err = SetupTmpFiles(runContext)
 	if err != nil {
 		return burrito.WrapErrorf(err, setupTmpFilesError, dotRegolithPath)
 	}

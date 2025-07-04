@@ -440,3 +440,41 @@ func SliceAny[T interface{}](slice []T, predicate func(T) bool) bool {
 	}
 	return false
 }
+
+func isSymlinkTo(path, target string) bool {
+	info, err := os.Lstat(path)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		return false
+	}
+	dest, err := os.Readlink(path)
+	if err != nil {
+		return false
+	}
+	if !filepath.IsAbs(dest) {
+		dest = filepath.Join(filepath.Dir(path), dest)
+	}
+	absDest, _ := filepath.Abs(dest)
+	absTarget, _ := filepath.Abs(target)
+	return absDest == absTarget
+}
+
+func createDirLink(link, target string) error {
+	if err := os.RemoveAll(link); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(link), 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(target, 0755); err != nil {
+		return err
+	}
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		return err
+	}
+	absLink, err := filepath.Abs(link)
+	if err != nil {
+		return err
+	}
+	return os.Symlink(absTarget, absLink)
+}

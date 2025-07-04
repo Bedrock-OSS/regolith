@@ -228,6 +228,10 @@ func ExportProject(ctx RunContext) error {
 		Logger.Debugf("Export target is set to \"none\". Skipping export.")
 		return nil
 	}
+	if IsExperimentEnabled(SymlinkExport) {
+		Logger.Debugf("SymlinkExport experiment is enabled. Skipping export.")
+		return nil
+	}
 	dataPath := ctx.Config.DataPath
 	dotRegolithPath := ctx.DotRegolithPath
 	// Get the export target paths
@@ -254,12 +258,12 @@ func ExportProject(ctx RunContext) error {
 			rpPath, bpPath)
 	}
 
+	symlinkExport := IsExperimentEnabled(SymlinkExport)
 	MeasureStart("Export - Clean")
 	// When comparing the size and modification time of the files, we need to
 	// keep the files in target paths.
-	if !IsExperimentEnabled(SizeTimeCheck) {
+	if !symlinkExport && !IsExperimentEnabled(SizeTimeCheck) {
 		// Clearing output locations
-		// Spooky, I hope file protection works, and it won't do any damage
 		err = os.RemoveAll(bpPath)
 		if err != nil {
 			return burrito.WrapErrorf(
@@ -369,50 +373,50 @@ func ExportProject(ctx RunContext) error {
 			return mainError
 		}
 	}
-	MeasureStart("Export - MoveOrCopy")
-	var wg sync.WaitGroup
-	errChan := make(chan error, 2)
-	// Export BP
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-		var e error
-		if IsExperimentEnabled(SizeTimeCheck) {
-			e = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly)
-		} else {
-			e = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
-		}
-		if e != nil {
-			errChan <- burrito.WrapError(e, "Failed to export behavior pack.")
-			return
-		}
-		errChan <- nil
-	}()
+	if !symlinkExport {
+		MeasureStart("Export - MoveOrCopy")
+		var wg sync.WaitGroup
+		errChan := make(chan error, 2)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
+			var e error
+			if IsExperimentEnabled(SizeTimeCheck) {
+				e = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly)
+			} else {
+				e = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
+			}
+			if e != nil {
+				errChan <- burrito.WrapError(e, "Failed to export behavior pack.")
+				return
+			}
+			errChan <- nil
+		}()
 
-	// Export RP
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
-		var e error
-		if IsExperimentEnabled(SizeTimeCheck) {
-			e = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly)
-		} else {
-			e = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
-		}
-		if e != nil {
-			errChan <- burrito.WrapError(e, "Failed to export resource pack.")
-			return
-		}
-		errChan <- nil
-	}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
+			var e error
+			if IsExperimentEnabled(SizeTimeCheck) {
+				e = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly)
+			} else {
+				e = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
+			}
+			if e != nil {
+				errChan <- burrito.WrapError(e, "Failed to export resource pack.")
+				return
+			}
+			errChan <- nil
+		}()
 
-	wg.Wait()
-	close(errChan)
-	for e := range errChan {
-		if e != nil {
-			return e
+		wg.Wait()
+		close(errChan)
+		for e := range errChan {
+			if e != nil {
+				return e
+			}
 		}
 	}
 	MeasureStart("Export - UpdateFromPaths")
