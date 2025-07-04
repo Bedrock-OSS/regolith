@@ -713,6 +713,75 @@ func postorderWalkDir(path string, info os.FileInfo, fn filepath.WalkFunc) error
 	return nil
 }
 
+// moveDirContents moves the contents of one directory into another.
+// The destination directory must exist and be empty. If any file move fails,
+// the already moved files are rolled back. Logging is performed on failure and
+// the error is wrapped before returning.
+func moveDirContents(src, dst string) error {
+	// Target must be empty
+	if empty, err := IsDirEmpty(dst); err != nil {
+		return burrito.WrapErrorf(err, isDirEmptyError, dst)
+	} else if !empty {
+		return burrito.WrapErrorf(err, isDirEmptyNotEmptyError, dst)
+	}
+	// Move all files in source to destination
+	files, err := os.ReadDir(src)
+	if err != nil {
+		return burrito.WrapErrorf(err, osReadDirError, src)
+	}
+	movedFiles := make([][2]string, 0, 100)
+	movingFailed := false
+	var errMoving error
+	for _, file := range files {
+		srcPath := filepath.Join(src, file.Name())
+		dstPath := filepath.Join(dst, file.Name())
+		errMoving = os.Rename(srcPath, dstPath)
+		if errMoving != nil {
+			errMoving = burrito.WrapErrorf(errMoving, osRenameError, srcPath, dstPath)
+			Logger.Warnf(
+				"Failed to move content of directory.\n"+
+					"\tSource: %s\n"+
+					"\tTarget: %s\n\n"+
+					"\tOperation failed while moving a file:\n"+
+					"\tSource: %s\n"+
+					"\tTarget: %s\n\n"+
+					"\tTrying to recover from error...",
+				src, dst, srcPath, dstPath)
+			movingFailed = true
+			break
+		}
+		movedFiles = append(movedFiles, [2]string{srcPath, dstPath})
+	}
+	if movingFailed {
+		for _, movePair := range movedFiles {
+			err = os.Rename(movePair[1], movePair[0])
+			if err != nil {
+				Logger.Fatalf(
+					"Regolith failed to recover from error which occured "+
+						"while moving files from directory.\n"+
+						"\tSource: %s\n"+
+						"\tTarget: %s\n\n"+
+						"\tRecovery failed while moving file.\n"+
+						"\tSource: %s\n"+
+						"\tTarget: %s\n"+
+						"\tError: %s\n\n"+
+						"\tThis is a critical error that leaves your "+
+						"files in unorganized manner.\n\n"+
+						"\tYou can try to recover the files manually "+
+						"from:\n"+
+						"\tPath: %s\n",
+					src, dst, movePair[1], movePair[0], err,
+					src)
+			}
+		}
+		return burrito.WrapErrorf(
+			errMoving,
+			"Successfully recovered the original state of the directory "+
+				"before crash.\nPath: %s", src)
+	}
+	return nil
+}
+
 // move moves files from source to destination. If both source and destination
 // are directories, and the destination is empty, it will move the files from
 // source to destination directly (without deleting the destination first).
@@ -725,76 +794,8 @@ func move(source, destination string) error {
 	sourceInfo, err1 := os.Stat(source)
 	destinationInfo, err2 := os.Stat(destination)
 
-	// TODO - this part of code could be moved to another function. It's too much.
 	if err1 == nil && err2 == nil && sourceInfo.IsDir() && destinationInfo.IsDir() {
-		// Target must be empty
-		if empty, err := IsDirEmpty(destination); err != nil {
-			return burrito.WrapErrorf(err, isDirEmptyError, destination)
-		} else if !empty {
-			return burrito.WrapErrorf(err, isDirEmptyNotEmptyError, destination)
-		}
-		// Move all files in source to destination
-		files, err := os.ReadDir(source)
-		if err != nil {
-			return burrito.WrapErrorf(err, osReadDirError, source)
-		}
-		movedFiles := make([][2]string, 0, 100)
-		movingFailed := false
-		var errMoving error
-		for _, file := range files {
-			src := filepath.Join(source, file.Name())
-			dst := filepath.Join(destination, file.Name())
-			errMoving = os.Rename(src, dst)
-			if errMoving != nil {
-				errMoving = burrito.WrapErrorf(
-					errMoving, osRenameError, src, dst)
-				Logger.Warnf(
-					"Failed to move content of directory.\n"+
-						"\tSource: %s\n"+
-						"\tTarget: %s\n\n"+
-						"\tOperation failed while moving a file:\n"+
-						"\tSource: %s\n"+
-						"\tTarget: %s\n\n"+
-						"\tTrying to recover from error...",
-					source, destination, src, dst)
-				movingFailed = true
-				break
-			}
-			movedFiles = append(movedFiles, [2]string{src, dst})
-		}
-		// If moving failed, rollback the moves
-		if movingFailed {
-			for _, movePair := range movedFiles {
-				err = os.Rename(movePair[1], movePair[0])
-				if err != nil {
-					// This is a critical error that leaves the file system in
-					// an invalid state. It shouldn't happen because it's from
-					// moving files, that we had access to just a moment ago.
-					Logger.Fatalf(
-						"Regolith failed to recover from error which occured "+
-							"while moving files from directory.\n"+
-							"\tSource: %s\n"+
-							"\tTarget: %s\n\n"+
-							"\tRecovery failed while moving file.\n"+
-							"\tSource: %s\n"+
-							"\tTarget: %s\n"+
-							"\tError: %s\n\n"+
-							"\tThis is a critical error that leaves your "+
-							"files in unorganized manner.\n\n"+
-							"\tYou can try to recover the files manually "+
-							"from:\n"+
-							"\tPath: %s\n",
-						source, destination, movePair[1], movePair[0], err,
-						source)
-				}
-			}
-			return burrito.WrapErrorf(
-				errMoving,
-				"Successfully recovered the original state of the directory "+
-					"before crash.\nPath: %s", source)
-		} else {
-			return nil
-		}
+		return moveDirContents(source, destination)
 	}
 	// Either source or destination is not a directory,
 	// use normal os.Rename
