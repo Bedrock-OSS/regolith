@@ -596,41 +596,40 @@ func AreFilesEqual(a, b string) (bool, error) {
 // the target directory.
 func CopyFile(source, target string) error {
 	// Make parent directory of target
-	err := os.MkdirAll(filepath.Dir(target), 0755)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, osMkdirError, target)
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, target)
 	}
-	buf := make([]byte, copyFileBufferSize)
-	// Open source for reading
-	sourceF, err := os.Open(source)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, osOpenError, source)
-	}
-	defer sourceF.Close()
-	// Open target for writing
-	targetF, err := os.Create(target)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, osCreateError, target)
-	}
-	defer targetF.Close()
-	// Copy the file
-	for {
-		n, err := sourceF.Read(buf)
-		if err != nil && err != io.EOF {
-			return burrito.WrapErrorf(err, fileReadError, source)
-		}
-		if n == 0 {
-			break
-		}
 
-		if _, err := targetF.Write(buf[:n]); err != nil {
-			return burrito.WrapErrorf(err, fileWriteError, target)
-		}
+	info, err := os.Stat(source)
+	if err != nil {
+		return burrito.WrapErrorf(err, osStatErrorAny, source)
 	}
-	targetF.Sync()
+
+	srcF, err := os.Open(source)
+	if err != nil {
+		return burrito.WrapErrorf(err, osOpenError, source)
+	}
+	defer srcF.Close()
+
+	dstF, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
+	if err != nil {
+		return burrito.WrapErrorf(err, osCreateError, target)
+	}
+	defer dstF.Close()
+
+	buf := make([]byte, copyFileBufferSize)
+	if _, err = io.CopyBuffer(dstF, srcF, buf); err != nil {
+		return burrito.WrapErrorf(err, fileWriteError, target)
+	}
+
+	if err = dstF.Sync(); err != nil {
+		return burrito.WrapErrorf(err, fileWriteError, target)
+	}
+
+	if err = os.Chtimes(target, time.Now(), info.ModTime()); err != nil {
+		return burrito.WrapErrorf(err, osChtimesError, target)
+	}
+
 	return nil
 }
 
@@ -916,7 +915,7 @@ func SyncDirectories(
 					return burrito.WrapErrorf(err, osRemoveError, destPath)
 				}
 			}
-			return copyFile(srcPath, destPath, info)
+			return CopyFile(srcPath, destPath)
 		} else {
 			Logger.Debugf("SYNC: Skipping file %s", srcPath)
 		}
@@ -984,34 +983,6 @@ func SyncDirectories(
 					"\tPath: %s",
 				destination)
 		}
-	}
-	return nil
-}
-
-func copyFile(src, dest string, info os.FileInfo) error {
-	srcF, err := os.Open(src)
-	if err != nil {
-		return burrito.WrapErrorf(err, osOpenError, src)
-	}
-	defer srcF.Close()
-
-	destF, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
-	if err != nil {
-		return burrito.WrapErrorf(err, osCreateError, dest)
-	}
-	defer destF.Close()
-
-	if _, err = io.Copy(destF, srcF); err != nil {
-		return burrito.WrapErrorf(err, fileWriteError, dest)
-	}
-
-	if err = destF.Sync(); err != nil {
-		return burrito.WrapErrorf(err, fileWriteError, dest)
-	}
-
-	err = os.Chtimes(dest, time.Now(), info.ModTime())
-	if err != nil {
-		return burrito.WrapErrorf(err, osChtimesError, dest)
 	}
 	return nil
 }
