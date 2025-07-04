@@ -831,19 +831,9 @@ func MoveOrCopy(
 			return burrito.WrapErrorf(err, osCopyError, source, destination)
 		}
 	} else if copyParentAcl { // No errors with moving files but needs ACL copy
-		// TODO - this entire code block should be moved into the. copyFileSecurityInfo
-		// printing this Info message below on Linux makes no sense.
 		parent := filepath.Dir(destination)
-		Logger.Infof(
-			"Copying ACL from parent directory.\n\tSource: %s\n\tTarget: %s",
-			parent, destination)
-		if _, err := os.Stat(parent); os.IsNotExist(err) {
-			return burrito.WrapErrorf(err, osStatErrorIsNotExist, parent)
-		}
-		err = copyFileSecurityInfo(parent, destination)
-		if err != nil {
-			return burrito.WrapErrorf(
-				err, copyFileSecurityInfoError, source, destination)
+		if err := copyParentACL(parent, destination); err != nil {
+			return err
 		}
 	}
 	// Make files read only if this option is selected
@@ -983,6 +973,22 @@ func SyncDirectories(
 					"\tPath: %s",
 				destination)
 		}
+	}
+	return nil
+}
+
+// copyParentACL copies the ACL from the parent directory to the target path.
+// On non-Windows systems it effectively does nothing. The function assumes that
+// the parent path exists.
+func copyParentACL(parent, target string) error {
+	Logger.Infof(
+		"Copying ACL from parent directory.\n\tSource: %s\n\tTarget: %s",
+		parent, target)
+	if _, err := os.Stat(parent); os.IsNotExist(err) {
+		return burrito.WrapErrorf(err, osStatErrorIsNotExist, parent)
+	}
+	if err := copyFileSecurityInfo(parent, target); err != nil {
+		return burrito.WrapErrorf(err, copyFileSecurityInfoError, parent, target)
 	}
 	return nil
 }
