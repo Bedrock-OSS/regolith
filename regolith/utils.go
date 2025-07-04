@@ -277,43 +277,36 @@ func acquireSessionLock(dotRegolithPath string) (func() error, error) {
 	return unlockFunc, nil
 }
 
-func splitPath(path string) []string {
-	parts := make([]string, 0)
-	for true {
-		part := ""
-		path, part = filepath.Split(path)
-		if strings.HasSuffix(path, "/") || strings.HasSuffix(path, "\\") {
-			path = path[0 : len(path)-1]
-		}
-		if path == "" && part != "" {
-			parts = append([]string{part}, parts...)
-			break
-		}
-		if part == "" || path == "" {
-			break
-		}
-		parts = append([]string{part}, parts...)
-	}
-	return parts
-}
-
 func ResolvePath(path string) (string, error) {
-	// Resolve the path
-	parts := splitPath(path)
-	for i, part := range parts {
-		if strings.HasPrefix(part, "%") && strings.HasSuffix(part, "%") {
-			envVar := part[1 : len(part)-1]
-			envVarValue, exists := os.LookupEnv(envVar)
-			if !exists {
-				return "", burrito.WrapErrorf(
-					os.ErrNotExist,
-					"Environment variable %s does not exist.",
-					envVar)
-			}
-			parts[i] = envVarValue
+	// Expand %VAR% style markers
+	for {
+		start := strings.Index(path, "%")
+		if start == -1 {
+			break
 		}
+		end := strings.Index(path[start+1:], "%")
+		if end == -1 {
+			break
+		}
+		end += start + 1
+		envVar := path[start+1 : end]
+		envVarValue, exists := os.LookupEnv(envVar)
+		if !exists {
+			return "", burrito.WrapErrorf(
+				os.ErrNotExist,
+				"Environment variable %s does not exist.",
+				envVar)
+		}
+		path = strings.ReplaceAll(path, "%"+envVar+"%", envVarValue)
 	}
-	return filepath.Clean(filepath.Join(parts...)), nil
+
+	// Expand $VAR and ${VAR} markers
+	path = os.Expand(path, func(v string) string {
+		val, _ := os.LookupEnv(v)
+		return val
+	})
+
+	return filepath.Clean(path), nil
 }
 
 type measure struct {
