@@ -377,10 +377,9 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 
 	// Create the filter
 	runConfiguration := map[string]interface{}{
-		"filter":    filterName,
 		"arguments": filterArgs,
 	}
-	filterRunner, err := filterDefinition.CreateFilterRunner(runConfiguration)
+	filterRunner, err := filterDefinition.CreateFilterRunner(runConfiguration, filterName)
 	if err != nil {
 		return burrito.WrapErrorf(err, createFilterRunnerError, filterName)
 	}

@@ -92,7 +92,7 @@ func FilterDefinitionFromObject(id string) *FilterDefinition {
 	return &FilterDefinition{Id: id}
 }
 
-func filterFromObject(obj map[string]interface{}) (*Filter, error) {
+func filterFromObject(obj map[string]interface{}, id string) (*Filter, error) {
 	filter := &Filter{}
 	// Name
 	description, _ := obj["description"].(string)
@@ -137,13 +137,16 @@ func filterFromObject(obj map[string]interface{}) (*Filter, error) {
 	filter.When = when.(string)
 
 	// Id
-	idObj, ok := obj["filter"]
-	if !ok {
-		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "filter")
-	}
-	id, ok := idObj.(string)
-	if !ok {
-		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "filter", "string")
+	if id == "" {
+		idObj, ok := obj["filter"]
+		if !ok {
+			return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "filter")
+		}
+		parsedId, ok := idObj.(string)
+		if !ok {
+			return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "filter", "string")
+		}
+		id = parsedId
 	}
 	filter.Id = id
 	return filter, nil
@@ -152,7 +155,7 @@ func filterFromObject(obj map[string]interface{}) (*Filter, error) {
 type FilterInstaller interface {
 	InstallDependencies(parent *RemoteFilterDefinition, dotRegolithPath string) error
 	Check(context RunContext) error
-	CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error)
+	CreateFilterRunner(runConfiguration map[string]interface{}, id string) (FilterRunner, error)
 }
 
 type FilterRunner interface {
@@ -324,7 +327,7 @@ func FilterRunnerFromObjectAndDefinitions(
 		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "filter", "string")
 	}
 	if filterDefinition, ok := filterDefinitions[filter]; ok {
-		filterRunner, err := filterDefinition.CreateFilterRunner(obj)
+		filterRunner, err := filterDefinition.CreateFilterRunner(obj, filter)
 		if err != nil {
 			return nil, burrito.WrapErrorf(err, createFilterRunnerError, filter)
 		}

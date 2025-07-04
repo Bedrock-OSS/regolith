@@ -291,12 +291,7 @@ func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterColle
 			return nil, extraFilterJsonErrorInfo(
 				path, burrito.WrapErrorf(err, jsonPathParseError, jsonPath))
 		}
-		// Remote filters don't have the "filter" key but this would break the
-		// code as it's required by local filters. Adding it here to make the
-		// code work.
-		// TODO - this is a hack, fix it!
-		filter["filter"] = filterId
-		filterRunner, err := filterInstaller.CreateFilterRunner(filter)
+		filterRunner, err := filterInstaller.CreateFilterRunner(filter, filterId)
 		if err != nil {
 			// TODO - better filterName?
 			filterName := fmt.Sprintf("%v filter from %s.", nth(i), path)
