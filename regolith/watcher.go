@@ -133,6 +133,7 @@ func (d *DirWatcher) start() {
 	}
 }
 
-func isInDir(path string, root string) bool {
-	return strings.HasPrefix(path, filepath.Clean(root))
+func isInDir(path, root string) bool {
+	rel, err := filepath.Rel(root, path)
+	return err == nil && !strings.HasPrefix(rel, "..")
 }
