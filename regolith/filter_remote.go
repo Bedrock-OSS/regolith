@@ -52,10 +52,12 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	return result, nil
 }
 
-func (f *RemoteFilter) run(context RunContext) error {
+// run executes all subfilters of the remote filter. It returns true if the
+// execution was interrupted via the RunContext.
+func (f *RemoteFilter) run(context RunContext) (bool, error) {
 	Logger.Debugf("RunRemoteFilter \"%s\"", f.Definition.Url)
 	if !f.IsCached(context.DotRegolithPath) {
-		return burrito.WrappedErrorf(
+		return false, burrito.WrappedErrorf(
 			"Filter is not downloaded. "+
 				"You can download filter files using command:\n"+
 				"regolith install %s", f.Id)
@@ -63,14 +65,14 @@ func (f *RemoteFilter) run(context RunContext) error {
 
 	version, err := f.GetCachedVersion(context.DotRegolithPath)
 	if err != nil {
-		return burrito.WrapErrorf(
+		return false, burrito.WrapErrorf(
 			err, "Failed check the version of the filter in cache."+
 				"\nFilter: %s\n"+
 				"You can try to force reinstallation fo the filter using command:"+
 				"regolith install --force %s", f.Id, f.Id)
 	}
 	if f.Definition.Version != "HEAD" && f.Definition.Version != "latest" && f.Definition.Version != *version {
-		return burrito.WrappedErrorf(
+		return false, burrito.WrappedErrorf(
 			"Filter version saved in cache doesn't match the version declared"+
 				" in the config file.\n"+
 				"Filter: %s\n"+
@@ -86,7 +88,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 	absolutePath, _ := filepath.Abs(path)
 	filterCollection, err := f.subfilterCollection(context.DotRegolithPath)
 	if err != nil {
-		return burrito.WrapErrorf(err, remoteFilterSubfilterCollectionError)
+		return false, burrito.WrapErrorf(err, remoteFilterSubfilterCollectionError)
 	}
 	for i, filter := range filterCollection.Filters {
 		runContext := RunContext{
@@ -100,7 +102,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 		// Disabled filters are skipped
 		disabled, err := filter.IsDisabled(runContext)
 		if err != nil {
-			return burrito.WrapErrorf(err, "Failed to check if filter is disabled")
+			return false, burrito.WrapErrorf(err, "Failed to check if filter is disabled")
 		}
 		if disabled {
 			Logger.Debugf(
@@ -113,17 +115,24 @@ func (f *RemoteFilter) run(context RunContext) error {
 		// check should be performed after every subfilter
 		_, err = filter.Run(runContext)
 		if err != nil {
-			return burrito.WrapErrorf(
+			return false, burrito.WrapErrorf(
 				err, filterRunnerRunError,
 				NiceSubfilterName(f.Id, i))
 		}
+		if context.IsInterrupted() {
+			return true, nil
+		}
 	}
-	return nil
+	return false, nil
 }
 
 func (f *RemoteFilter) Run(context RunContext) (bool, error) {
-	if err := f.run(context); err != nil {
+	interrupted, err := f.run(context)
+	if err != nil {
 		return false, burrito.PassError(err)
+	}
+	if interrupted {
+		return true, nil
 	}
 	return context.IsInterrupted(), nil
 }
