@@ -176,8 +176,8 @@ func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, 
 		}
 		if runWith, ok := filter["runWith"]; !ok || runWith == "" {
 			return burrito.WrappedErrorf(
-				"Nested remote filters are not supported.",
-				"Filter: %s", f.Id)
+				"Nested remote filters are not supported.\n"+
+					"Filter: %s", f.Id)
 		}
 		filterInstaller, err := FilterInstallerFromObject(
 			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
