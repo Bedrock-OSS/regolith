@@ -375,39 +375,32 @@ func ExportProject(ctx RunContext) error {
 	MeasureStart("Export - MoveOrCopy")
 	var wg sync.WaitGroup
 	errChan := make(chan error, 2)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		Logger.Infof("Exporting behavior pack to \"%s\".", bpPath)
-		var e error
-		if IsExperimentEnabled(SizeTimeCheck) {
-			e = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly)
-		} else {
-			e = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/BP"), bpPath, exportTarget.ReadOnly, true)
-		}
-		if e != nil {
-			errChan <- burrito.WrapError(e, "Failed to export behavior pack.")
-			return
-		}
-		errChan <- nil
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		Logger.Infof("Exporting project to \"%s\".", filepath.Clean(rpPath))
-		var e error
-		if IsExperimentEnabled(SizeTimeCheck) {
-			e = SyncDirectories(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly)
-		} else {
-			e = MoveOrCopy(filepath.Join(dotRegolithPath, "tmp/RP"), rpPath, exportTarget.ReadOnly, true)
-		}
-		if e != nil {
-			errChan <- burrito.WrapError(e, "Failed to export resource pack.")
-			return
-		}
-		errChan <- nil
-	}()
+	for _, packData := range []struct {
+		packPath string
+		tmpPath  string
+		packType string
+	}{
+		{bpPath, "tmp/BP", "behavior"},
+		{rpPath, "tmp/RP", "resource"},
+	} {
+		packPath, tmpPath, packType := packData.packPath, packData.tmpPath, packData.packType
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			Logger.Infof("Exporting %s pack to \"%s\".", packType, packPath)
+			var e error
+			if IsExperimentEnabled(SizeTimeCheck) {
+				e = SyncDirectories(filepath.Join(dotRegolithPath, tmpPath), packPath, exportTarget.ReadOnly)
+			} else {
+				e = MoveOrCopy(filepath.Join(dotRegolithPath, tmpPath), packPath, exportTarget.ReadOnly, true)
+			}
+			if e != nil {
+				errChan <- burrito.WrapErrorf(e, "Failed to export %s pack.", packType)
+				return
+			}
+			errChan <- nil
+		}()
+	}
 
 	wg.Wait()
 	close(errChan)
