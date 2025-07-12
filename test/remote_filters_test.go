@@ -213,7 +213,7 @@ func TestNestedRemoteFilter(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected 'regolith install-all' to fail, but it succeeded")
 	}
-	if !strings.Contains(err.Error(), "version") {
+	if !strings.Contains(err.Error(), "Nested remote filters are not supported") {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 }
