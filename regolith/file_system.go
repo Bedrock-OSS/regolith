@@ -142,12 +142,6 @@ func (r *revertibleFsOperations) Delete(path string) error {
 	return deleteSingle(path)
 }
 
-// deleteDir was previously exported as DeleteDir and is kept for backwards
-// compatibility with potential external callers. It now simply calls Delete.
-func (r *revertibleFsOperations) deleteDir(path string) error {
-	return r.Delete(path)
-}
-
 // Move moves a file or a directory from source to target.
 // For moving or copying entire directories, check out the MoveOrCopyDir.
 func (r *revertibleFsOperations) Move(source, target string) error {
