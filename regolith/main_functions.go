@@ -261,11 +261,10 @@ func prepareRunContext(profileName string, debug, watch bool) (*RunContext, erro
 func Run(profileName string, debug bool) error {
 	// Get the context
 	context, err := prepareRunContext(profileName, debug, false)
+	defer ShutdownLogging()
 	if err != nil {
-		ShutdownLogging()
 		return burrito.PassError(err)
 	}
-	defer ShutdownLogging()
 	// Lock the session
 	unlockSession, sessionLockErr := acquireSessionLock(context.DotRegolithPath)
 	if sessionLockErr != nil {
@@ -287,11 +286,10 @@ func Run(profileName string, debug bool) error {
 func Watch(profileName string, debug bool) error {
 	// Get the context
 	context, err := prepareRunContext(profileName, debug, false)
+	defer ShutdownLogging()
 	if err != nil {
-		ShutdownLogging()
 		return burrito.PassError(err)
 	}
-	defer ShutdownLogging()
 	// Lock the session
 	unlockSession, sessionLockErr := acquireSessionLock(context.DotRegolithPath)
 	if sessionLockErr != nil {
