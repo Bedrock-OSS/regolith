@@ -49,8 +49,12 @@ func SetupTmpFiles(context RunContext) error {
 			return burrito.WrapErrorf(err, osRemoveError, tmpPath)
 		}
 		if useSymlinkExport && !linksExist {
-			os.RemoveAll(bpExportPath)
-			os.RemoveAll(rpExportPath)
+			if err := os.RemoveAll(bpExportPath); err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, bpExportPath)
+			}
+			if err := os.RemoveAll(rpExportPath); err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, rpExportPath)
+			}
 		}
 	}
 

@@ -479,8 +479,13 @@ func isSymlinkTo(path, target string) bool {
 }
 
 func createDirLink(link, target string) error {
-	if err := os.RemoveAll(link); err != nil && !os.IsNotExist(err) {
-		return err
+	if _, err := os.Lstat(link); err == nil {
+		return burrito.WrapErrorf(
+			err,
+			"Failed to create symlink, path already exists.\n"+
+				"Link: %s\n"+
+				"Target: %s",
+			link, target)
 	}
 	if err := os.MkdirAll(filepath.Dir(link), 0755); err != nil {
 		return err
