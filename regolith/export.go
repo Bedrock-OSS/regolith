@@ -374,15 +374,16 @@ func ExportProject(ctx RunContext) error {
 	}
 	MeasureStart("Export - MoveOrCopy")
 	var wg sync.WaitGroup
-	errChan := make(chan error, 2)
-	for _, packData := range []struct {
+	packsData := []struct {
 		packPath string
 		tmpPath  string
 		packType string
 	}{
 		{bpPath, "tmp/BP", "behavior"},
 		{rpPath, "tmp/RP", "resource"},
-	} {
+	}
+	errChan := make(chan error, len(packsData))
+	for _, packData := range packsData {
 		packPath, tmpPath, packType := packData.packPath, packData.tmpPath, packData.packType
 		wg.Add(1)
 		go func() {
