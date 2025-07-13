@@ -25,9 +25,9 @@ type RunContext struct {
 	DotRegolithPath  string
 	Settings         map[string]interface{}
 
-	// interruption is a channel that is used to notify about changes
+	// interruption is a channel used to receive notifications about changes
 	// in the source files, in order to trigger a restart of the program in
-	// the watch mode. The string send to the channel is the name of the source
+	// the watch mode. The string sent to the channel is the name of the source
 	// of the change ("rp", "bp" or "data"), which may be used to handle
 	// some interruptions differently.
 	interruption chan string

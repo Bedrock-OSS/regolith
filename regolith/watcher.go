@@ -17,13 +17,31 @@ import (
 //
 // Fork patch: https://github.com/arexon/fsnotify/blob/main/fsnotify.go#L481
 type DirWatcher struct {
-	watcher      *fsnotify.Watcher
-	roots        []string
-	config       *Config
-	debounce     *time.Timer
+	// watcher is the underlying fsnotify watcher that notifies about the
+	// changes in the files.
+	watcher *fsnotify.Watcher
+
+	// roots is a list of directories to watch.
+	// TODO: Currently, all of the information needed to determine the roots
+	// is already stored in the config. Having this as separate field is
+	// redundant and should be removed to have a single source of truth.
+	roots []string
+
+	// config is a reference to the configuration of the project.
+	config *Config
+
+	debounce *time.Timer
+	// interruption channel is used to notify the main thread about the kind of
+	// interruption that was detected by 'watcher', it can be 'rp', 'bp' or 'data'.
 	interruption chan string
-	errors       chan error
-	stage        <-chan string
+
+	// errors is a channel used by DirWatcher to inform the main thread about
+	// errors related to watching files.
+	errors chan error
+
+	// stage is a channel used for receiving commands from the main thread, to
+	// pause or restart the watcher.
+	stage <-chan string
 }
 
 func NewDirWatcher(
