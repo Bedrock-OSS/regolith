@@ -43,10 +43,12 @@ func prepareScope(ctx RunContext) map[string]interface{} {
 	if err != nil {
 		semverString = utils.Semver{}
 	}
+	ctx.IsInWatchMode()
 	projectData := map[string]interface{}{
 		"name":   ctx.Config.Name,
 		"author": ctx.Config.Author,
 	}
+	ctx.IsInWatchMode()
 	mode := "build"
 	if ctx.IsInWatchMode() {
 		mode = "watch"
@@ -61,5 +63,6 @@ func prepareScope(ctx RunContext) map[string]interface{} {
 		"settings":       ctx.Settings,
 		"project":        projectData,
 		"mode":           mode,
+		"initial":        ctx.initial,
 	}
 }
