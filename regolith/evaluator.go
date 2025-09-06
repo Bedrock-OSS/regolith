@@ -47,6 +47,10 @@ func prepareScope(ctx RunContext) map[string]interface{} {
 		"name":   ctx.Config.Name,
 		"author": ctx.Config.Author,
 	}
+	mode := "run"
+	if ctx.IsInWatchMode() {
+		mode = "watch"
+	}
 	return map[string]interface{}{
 		"os":             runtime.GOOS,
 		"arch":           runtime.GOARCH,
@@ -56,5 +60,7 @@ func prepareScope(ctx RunContext) map[string]interface{} {
 		"filterLocation": ctx.AbsoluteLocation,
 		"settings":       ctx.Settings,
 		"project":        projectData,
+		"mode":           mode,
+		"initial":        ctx.Initial,
 	}
 }

@@ -18,6 +18,7 @@ type Filter struct {
 }
 
 type RunContext struct {
+	Initial          bool
 	AbsoluteLocation string
 	Config           *Config
 	Profile          string

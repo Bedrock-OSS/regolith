@@ -42,6 +42,9 @@ func NewDirWatcher(
 	if config.DataPath != "" {
 		roots = append(roots, config.DataPath)
 	}
+	if config.WatchPaths != nil {
+		roots = append(roots, config.WatchPaths...)
+	}
 	d := &DirWatcher{
 		roots:        roots,
 		config:       config,
@@ -103,6 +106,12 @@ func (d *DirWatcher) start() {
 				d.interruption <- "bp"
 			} else if isInDir(event.Name, d.config.DataPath) {
 				d.interruption <- "data"
+			} else {
+				for _, path := range d.config.WatchPaths {
+					if isInDir(event.Name, path) {
+						d.interruption <- "extras"
+					}
+				}
 			}
 			d.debounce = time.After(100 * time.Millisecond)
 		case <-d.debounce:
