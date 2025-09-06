@@ -245,7 +245,7 @@ func prepareRunContext(profileName string, debug, watch bool) (*RunContext, erro
 	}
 	path, _ := filepath.Abs(".")
 	return &RunContext{
-		initial:          true,
+		Initial:          true,
 		AbsoluteLocation: path,
 		Config:           config,
 		Parent:           nil,
@@ -311,7 +311,7 @@ func Watch(profileName string, debug bool) error {
 		} else {
 			Logger.Infof("Successfully ran the %q profile.", profileName)
 		}
-		context.initial = false
+		context.Initial = false
 		Logger.Info("Press Ctrl+C to stop watching.")
 		select {
 		case <-context.interruption:
