@@ -47,7 +47,7 @@ func prepareScope(ctx RunContext) map[string]interface{} {
 		"name":   ctx.Config.Name,
 		"author": ctx.Config.Author,
 	}
-	mode := "build"
+	mode := "run"
 	if ctx.IsInWatchMode() {
 		mode = "watch"
 	}
