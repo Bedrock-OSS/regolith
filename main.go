@@ -335,6 +335,7 @@ func main() {
 		Long:  regolithConfigDesc,
 		Run: func(cmd *cobra.Command, args []string) {
 			regolith.InitLogging(burrito.PrintStackTrace)
+			defer regolith.ShutdownLogging()
 			full, _ := cmd.Flags().GetBool("full")
 			delete, _ := cmd.Flags().GetBool("delete")
 			append, _ := cmd.Flags().GetBool("append")

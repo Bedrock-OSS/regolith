@@ -52,10 +52,12 @@ func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*R
 	return result, nil
 }
 
-func (f *RemoteFilter) run(context RunContext) error {
+// run executes all subfilters of the remote filter. It returns true if the
+// execution was interrupted via the RunContext.
+func (f *RemoteFilter) run(context RunContext) (bool, error) {
 	Logger.Debugf("RunRemoteFilter \"%s\"", f.Definition.Url)
 	if !f.IsCached(context.DotRegolithPath) {
-		return burrito.WrappedErrorf(
+		return false, burrito.WrappedErrorf(
 			"Filter is not downloaded. "+
 				"You can download filter files using command:\n"+
 				"regolith install %s", f.Id)
@@ -63,14 +65,14 @@ func (f *RemoteFilter) run(context RunContext) error {
 
 	version, err := f.GetCachedVersion(context.DotRegolithPath)
 	if err != nil {
-		return burrito.WrapErrorf(
+		return false, burrito.WrapErrorf(
 			err, "Failed check the version of the filter in cache."+
 				"\nFilter: %s\n"+
 				"You can try to force reinstallation fo the filter using command:"+
 				"regolith install --force %s", f.Id, f.Id)
 	}
 	if f.Definition.Version != "HEAD" && f.Definition.Version != "latest" && f.Definition.Version != *version {
-		return burrito.WrappedErrorf(
+		return false, burrito.WrappedErrorf(
 			"Filter version saved in cache doesn't match the version declared"+
 				" in the config file.\n"+
 				"Filter: %s\n"+
@@ -86,7 +88,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 	absolutePath, _ := filepath.Abs(path)
 	filterCollection, err := f.subfilterCollection(context.DotRegolithPath)
 	if err != nil {
-		return burrito.WrapErrorf(err, remoteFilterSubfilterCollectionError)
+		return false, burrito.WrapErrorf(err, remoteFilterSubfilterCollectionError)
 	}
 	for i, filter := range filterCollection.Filters {
 		runContext := RunContext{
@@ -100,7 +102,7 @@ func (f *RemoteFilter) run(context RunContext) error {
 		// Disabled filters are skipped
 		disabled, err := filter.IsDisabled(runContext)
 		if err != nil {
-			return burrito.WrapErrorf(err, "Failed to check if filter is disabled")
+			return false, burrito.WrapErrorf(err, "Failed to check if filter is disabled")
 		}
 		if disabled {
 			Logger.Debugf(
@@ -113,23 +115,30 @@ func (f *RemoteFilter) run(context RunContext) error {
 		// check should be performed after every subfilter
 		_, err = filter.Run(runContext)
 		if err != nil {
-			return burrito.WrapErrorf(
+			return false, burrito.WrapErrorf(
 				err, filterRunnerRunError,
 				NiceSubfilterName(f.Id, i))
 		}
+		if context.IsInterrupted() {
+			return true, nil
+		}
 	}
-	return nil
+	return false, nil
 }
 
 func (f *RemoteFilter) Run(context RunContext) (bool, error) {
-	if err := f.run(context); err != nil {
+	interrupted, err := f.run(context)
+	if err != nil {
 		return false, burrito.PassError(err)
+	}
+	if interrupted {
+		return true, nil
 	}
 	return context.IsInterrupted(), nil
 }
 
-func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := filterFromObject(runConfiguration)
+func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}, id string) (FilterRunner, error) {
+	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
@@ -140,20 +149,11 @@ func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]
 	return filter, nil
 }
 
-// TODO - this code is almost a duplicate of the code in the
-// (f *RemoteFilter) SubfilterCollection()
 func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, dotRegolithPath string) error {
 	path := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
-	file, err := os.ReadFile(path)
-
+	filterCollection, err := loadFilterConfig(path)
 	if err != nil {
-		return burrito.WrapErrorf(err, fileReadError, path)
-	}
-
-	var filterCollection map[string]interface{}
-	err = json.Unmarshal(file, &filterCollection)
-	if err != nil {
-		return burrito.WrapErrorf(err, jsonUnmarshalError, path)
+		return burrito.PassError(err)
 	}
 
 	// Filters
@@ -173,6 +173,11 @@ func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, 
 		if !ok {
 			return extraFilterJsonErrorInfo(
 				path, burrito.WrappedErrorf(jsonPathTypeError, jsonPath, "object"))
+		}
+		if runWith, ok := filter["runWith"]; !ok || runWith == "" {
+			return burrito.WrappedErrorf(
+				"Nested remote filters are not supported.\n"+
+					"Filter: %s", f.Id)
 		}
 		filterInstaller, err := FilterInstallerFromObject(
 			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
@@ -196,7 +201,7 @@ func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, 
 
 func (f *RemoteFilterDefinition) Check(context RunContext) error {
 	dummyFilterRunner, err := f.CreateFilterRunner(
-		map[string]interface{}{"filter": f.Id})
+		map[string]interface{}{}, f.Id)
 	const shouldntHappenError = "Filter name: %s\n" +
 		"This is a bug, please submit a bug report to the Regolith " +
 		"project repository:\n" +
@@ -601,19 +606,30 @@ func (f *RemoteFilterDefinition) Uninstall(dotRegolithPath string) {
 }
 
 // hasGit returns whether git is installed or not.
+
 func hasGit() bool {
 	_, err := exec.LookPath("git")
 	return err == nil
+}
+
+// loadFilterConfig loads the remote filter configuration from the given path.
+func loadFilterConfig(path string) (map[string]interface{}, error) {
+	file, err := os.ReadFile(path)
+	if err != nil {
+		return nil, burrito.WrapErrorf(err, fileReadError, path)
+	}
+	var filterCollection map[string]interface{}
+	err = json.Unmarshal(file, &filterCollection)
+	if err != nil {
+		return nil, burrito.WrapErrorf(err, jsonUnmarshalError, path)
+	}
+	return filterCollection, nil
 }
 
 // extraFilterJsonErrorInfo is used to wrap errors related to parsing the
 // filter.json file. It's common for other functions to handle loading and
 // parsing of this file, so using this is necessary to provide both the
 // information about the file path and reuse the errors from errors.go
-//
-// TODO - this is an ugly solution, perhaps we should have a separate
-// function for loading the filter.json file. Currently it's always build into
-// other functions.
 func extraFilterJsonErrorInfo(filterJsonFilePath string, err error) error {
 	return burrito.WrapErrorf(
 		err, "Failed to load the filter configuration.\n"+

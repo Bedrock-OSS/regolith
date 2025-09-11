@@ -95,6 +95,13 @@ func InitLogging(dev bool) {
 			},
 		},
 	}.Build()
-	defer logger.Sync() // flushes buffer, if any
 	Logger = logger.Sugar()
+}
+
+// ShutdownLogging flushes any buffered log entries. It should be called
+// before the program exits.
+func ShutdownLogging() {
+	if Logger != nil {
+		_ = Logger.Sync()
+	}
 }

@@ -1,10 +1,10 @@
 package regolith
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -13,22 +13,65 @@ import (
 )
 
 // SetupTmpFiles set up the workspace for the filters.
-func SetupTmpFiles(config Config, dotRegolithPath string) error {
+func SetupTmpFiles(context RunContext) error {
+	config := *context.Config
+	dotRegolithPath := context.DotRegolithPath
 	start := time.Now()
 	useSizeTimeCheck := IsExperimentEnabled(SizeTimeCheck)
+	useSymlinkExport := IsExperimentEnabled(SymlinkExport)
 	// Setup Directories
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
-	if !useSizeTimeCheck {
+
+	var bpExportPath, rpExportPath string
+	if useSymlinkExport {
+		profile, err := context.GetProfile()
+		if err == nil {
+			bpExportPath, rpExportPath, err = GetExportPaths(profile.ExportTarget, context)
+			if err != nil || profile.ExportTarget.Target == "none" {
+				useSymlinkExport = false
+			}
+		} else {
+			useSymlinkExport = false
+		}
+	}
+
+	linksExist := false
+	if useSymlinkExport {
+		bpLink := isSymlinkTo(filepath.Join(tmpPath, "BP"), bpExportPath)
+		rpLink := isSymlinkTo(filepath.Join(tmpPath, "RP"), rpExportPath)
+		linksExist = bpLink && rpLink
+	}
+
+	if (!useSizeTimeCheck && !useSymlinkExport) || (useSymlinkExport && !linksExist) {
 		Logger.Debugf("Cleaning \"%s\"", tmpPath)
 		err := os.RemoveAll(tmpPath)
 		if err != nil {
 			return burrito.WrapErrorf(err, osRemoveError, tmpPath)
+		}
+		if useSymlinkExport && !linksExist {
+			if err := os.RemoveAll(bpExportPath); err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, bpExportPath)
+			}
+			if err := os.RemoveAll(rpExportPath); err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, rpExportPath)
+			}
 		}
 	}
 
 	err := os.MkdirAll(tmpPath, 0755)
 	if err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, tmpPath)
+	}
+
+	if useSymlinkExport && !linksExist {
+		if err := createDirLink(filepath.Join(tmpPath, "BP"), bpExportPath); err != nil {
+			Logger.Warnf("Failed to create link %s -> %s: %v", filepath.Join(tmpPath, "BP"), bpExportPath, err)
+			useSymlinkExport = false
+		}
+		if err := createDirLink(filepath.Join(tmpPath, "RP"), rpExportPath); err != nil {
+			Logger.Warnf("Failed to create link %s -> %s: %v", filepath.Join(tmpPath, "RP"), rpExportPath, err)
+			useSymlinkExport = false
+		}
 	}
 
 	// Copy the contents of the 'regolith' folder to '[dotRegolithPath]/tmp'
@@ -39,7 +82,6 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 		path, shortName, descriptiveName string,
 	) error {
 		p := filepath.Join(tmpPath, shortName)
-		// A project don't have to have a RP or BP so path can be ""
 		if path != "" {
 			stats, err := os.Stat(path)
 			if err != nil {
@@ -52,7 +94,7 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 					}
 				}
 			} else if stats.IsDir() {
-				if useSizeTimeCheck {
+				if useSizeTimeCheck || useSymlinkExport {
 					err = SyncDirectories(path, p, false)
 					if err != nil {
 						return burrito.WrapError(err, "Failed to export behavior pack.")
@@ -66,11 +108,11 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 						return burrito.WrapErrorf(err, osCopyError, path, p)
 					}
 				}
-			} else { // The folder paths leads to a file
+			} else { // The folder path leads to a file
 				return burrito.WrappedErrorf(isDirNotADirError, path)
 			}
 		} else {
-			err = os.MkdirAll(p, 0755)
+			err := os.MkdirAll(p, 0755)
 			if err != nil {
 				return burrito.WrapErrorf(err, osMkdirError, p)
 			}
@@ -78,20 +120,40 @@ func SetupTmpFiles(config Config, dotRegolithPath string) error {
 		return nil
 	}
 
-	err = setupTmpDirectory(config.ResourceFolder, "RP", "resource folder")
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, "Failed to setup RP folder in the temporary directory.")
-	}
-	err = setupTmpDirectory(config.BehaviorFolder, "BP", "behavior folder")
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, "Failed to setup BP folder in the temporary directory.")
-	}
-	err = setupTmpDirectory(config.DataPath, "data", "data folder")
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, "Failed to setup data folder in the temporary directory.")
+	// Setup RP, BP and data folders concurrently
+	wg := sync.WaitGroup{}
+	errCh := make(chan error, 3)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := setupTmpDirectory(config.ResourceFolder, "RP", "resource folder"); err != nil {
+			errCh <- burrito.WrapErrorf(err, "Failed to setup RP folder in the temporary directory.")
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := setupTmpDirectory(config.BehaviorFolder, "BP", "behavior folder"); err != nil {
+			errCh <- burrito.WrapErrorf(err, "Failed to setup BP folder in the temporary directory.")
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := setupTmpDirectory(config.DataPath, "data", "data folder"); err != nil {
+			errCh <- burrito.WrapErrorf(err, "Failed to setup data folder in the temporary directory.")
+		}
+	}()
+
+	wg.Wait()
+	close(errCh)
+	for e := range errCh {
+		if e != nil {
+			return e
+		}
 	}
 
 	Logger.Debug("Setup done in ", time.Since(start))
@@ -124,7 +186,7 @@ func CheckProfileImpl(
 func RunProfile(context RunContext) error {
 start:
 	// Prepare tmp files
-	err := SetupTmpFiles(*context.Config, context.DotRegolithPath)
+	err := SetupTmpFiles(context)
 	if err != nil {
 		return burrito.WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
 	}
@@ -203,16 +265,9 @@ func RunProfileImpl(context RunContext) (bool, error) {
 func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterCollection, error) {
 	path := filepath.Join(f.GetDownloadPath(dotRegolithPath), "filter.json")
 	result := &FilterCollection{Filters: []FilterRunner{}}
-	file, err := os.ReadFile(path)
-
+	filterCollection, err := loadFilterConfig(path)
 	if err != nil {
-		return nil, burrito.WrappedErrorf(readFilterJsonError, path)
-	}
-
-	var filterCollection map[string]interface{}
-	err = json.Unmarshal(file, &filterCollection)
-	if err != nil {
-		return nil, burrito.WrapErrorf(err, jsonUnmarshalError, path)
+		return nil, burrito.WrapErrorf(err, readFilterJsonError, path)
 	}
 	// Filters
 	filtersObj, ok := filterCollection["filters"]
@@ -240,12 +295,7 @@ func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterColle
 			return nil, extraFilterJsonErrorInfo(
 				path, burrito.WrapErrorf(err, jsonPathParseError, jsonPath))
 		}
-		// Remote filters don't have the "filter" key but this would break the
-		// code as it's required by local filters. Adding it here to make the
-		// code work.
-		// TODO - this is a hack, fix it!
-		filter["filter"] = filterId
-		filterRunner, err := filterInstaller.CreateFilterRunner(filter)
+		filterRunner, err := filterInstaller.CreateFilterRunner(filter, filterId)
 		if err != nil {
 			// TODO - better filterName?
 			filterName := fmt.Sprintf("%v filter from %s.", nth(i), path)
