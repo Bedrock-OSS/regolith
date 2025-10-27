@@ -239,7 +239,7 @@ func ExportProject(ctx RunContext) error {
 	bpPath, rpPath, err := GetExportPaths(exportTarget, ctx)
 	if err != nil {
 		return burrito.WrapError(
-			err, "Failed to get generate export paths.")
+			err, getExportPathsError)
 	}
 
 	MeasureStart("Export - LoadEditedFiles")

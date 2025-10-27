@@ -25,12 +25,14 @@ func SetupTmpFiles(context RunContext) error {
 	var bpExportPath, rpExportPath string
 	if useSymlinkExport {
 		profile, err := context.GetProfile()
-		if err == nil {
-			bpExportPath, rpExportPath, err = GetExportPaths(profile.ExportTarget, context)
-			if err != nil || profile.ExportTarget.Target == "none" {
-				useSymlinkExport = false
-			}
-		} else {
+		if err != nil {
+			return burrito.WrapErrorf(err, runContextGetProfileError)
+		}
+		bpExportPath, rpExportPath, err = GetExportPaths(profile.ExportTarget, context)
+		if err != nil {
+			return burrito.WrapError(err, getExportPathsError)
+		}
+		if profile.ExportTarget.Target == "none" {
 			useSymlinkExport = false
 		}
 	}

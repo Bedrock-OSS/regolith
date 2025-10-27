@@ -239,6 +239,9 @@ const (
 		"Current value: %q\n" +
 		"Valid values are: %s"
 
+	// getExportPathsError is used when the GetExportPaths function fails.
+	getExportPathsError = "Failed to get generate export paths."
+
 	// Error used when the formatVersion of the config file is incompatible
 	// with the current version of Regolith.
 	incompatibleFormatVersionError = "Incompatible formatVersion: \n" +
