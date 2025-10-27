@@ -67,12 +67,10 @@ func SetupTmpFiles(context RunContext) error {
 
 	if useSymlinkExport && !linksExist {
 		if err := createDirLink(filepath.Join(tmpPath, "BP"), bpExportPath); err != nil {
-			Logger.Warnf("Failed to create link %s -> %s: %v", filepath.Join(tmpPath, "BP"), bpExportPath, err)
-			useSymlinkExport = false
+			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(tmpPath, "BP"), bpExportPath)
 		}
 		if err := createDirLink(filepath.Join(tmpPath, "RP"), rpExportPath); err != nil {
-			Logger.Warnf("Failed to create link %s -> %s: %v", filepath.Join(tmpPath, "RP"), rpExportPath, err)
-			useSymlinkExport = false
+			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(tmpPath, "RP"), rpExportPath)
 		}
 	}
 

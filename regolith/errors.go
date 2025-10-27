@@ -247,4 +247,7 @@ const (
 	incompatibleFormatVersionError = "Incompatible formatVersion: \n" +
 		"Version in config: %s\n" +
 		"Latest compatible version: %s"
+
+	// Error used when createDirLink fails
+	createDirLinkError = "Failed to create directory link.\nSource: %s\nTarget: %s"
 )
