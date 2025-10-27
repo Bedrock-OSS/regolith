@@ -487,19 +487,24 @@ func createDirLink(link, target string) error {
 				"Target: %s",
 			link, target)
 	}
-	if err := os.MkdirAll(filepath.Dir(link), 0755); err != nil {
-		return err
+	linkDir := filepath.Dir(link)
+	if err := os.MkdirAll(linkDir, 0755); err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, linkDir)
 	}
 	if err := os.MkdirAll(target, 0755); err != nil {
-		return err
+		return burrito.WrapErrorf(err, osMkdirError, target)
 	}
 	absTarget, err := filepath.Abs(target)
 	if err != nil {
-		return err
+		return burrito.WrapErrorf(err, filepathAbsError, target)
 	}
 	absLink, err := filepath.Abs(link)
 	if err != nil {
-		return err
+		return burrito.WrapErrorf(err, filepathAbsError, link)
 	}
-	return os.Symlink(absTarget, absLink)
+	err = os.Symlink(absTarget, absLink)
+	if err != nil {
+		return burrito.PassError(err)
+	}
+	return nil
 }
