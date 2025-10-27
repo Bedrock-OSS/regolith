@@ -133,10 +133,8 @@ func listFiles(path string) ([]string, error) {
 }
 
 // checkDeletionSafety checks whether it's safe to delete files from given path
-// based on the list of removable files. The removableFiles list must be
-// sorted. The function relies on filepath.WalkDir walking files
-// alphabetically. It returns nil value when it's safe to delete the files or
-// an error in opposite case.
+// based on the list of removable files. It returns nil value when it's safe to
+// delete the files or an error in opposite case.
 func checkDeletionSafety(path string, removableFiles []string) error {
 	removableSet := make(map[string]struct{}, len(removableFiles))
 	for _, f := range removableFiles {
