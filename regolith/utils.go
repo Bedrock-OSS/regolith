@@ -480,8 +480,7 @@ func isSymlinkTo(path, target string) bool {
 
 func createDirLink(link, target string) error {
 	if _, err := os.Lstat(link); err == nil {
-		return burrito.WrapErrorf(
-			err,
+		return burrito.WrappedErrorf(
 			"Failed to create symlink, path already exists.\n"+
 				"Link: %s\n"+
 				"Target: %s",
