@@ -1,11 +1,13 @@
 '''
 Fills the BP with data for testing.
 '''
+import os
 
 def main():
+    os.mkdir("BP/generated")
     for i in range(1, 6):
         with open(
-                f'BP/filter_generated_data_{i}.txt',
+                f'BP/generated/filter_generated_data_{i}.txt',
                 'w',
                 encoding='utf8'
         ) as f:

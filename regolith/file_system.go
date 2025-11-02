@@ -900,15 +900,19 @@ func SyncDirectories(
 		return burrito.WrapErrorf(err, osCopyError, source, destination)
 	}
 
+	// A simple linked list implementation
+	type Node struct {
+		next  *Node
+		value string
+	}
 	// Remove files/folders in destination that are not in source
-	toRemoveMap := make(map[string]struct{})
+	var root = &Node{
+		next:  nil,
+		value: "",
+	}
 	err = filepath.WalkDir(destination, func(destPath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
-		}
-		if d.IsDir() {
-			// Skip directories
-			return nil
 		}
 		relPath, err := filepath.Rel(destination, destPath)
 		if err != nil {
@@ -916,10 +920,12 @@ func SyncDirectories(
 		}
 		srcPath := filepath.Join(source, relPath)
 		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-			if _, ok := toRemoveMap[destPath]; !ok {
-				Logger.Debugf("SYNC: Removing file %s", destPath)
-				toRemoveMap[destPath] = struct{}{}
+			Logger.Debugf("SYNC: Removing file %s", destPath)
+			next := &Node{
+				next:  root,
+				value: destPath,
 			}
+			root = next
 		}
 		return nil
 	})
@@ -928,11 +934,12 @@ func SyncDirectories(
 		return burrito.PassError(err)
 	}
 
-	for path := range toRemoveMap {
-		err = os.RemoveAll(path)
+	for root.next != nil {
+		err = os.RemoveAll(root.value)
 		if err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, path)
+			return burrito.WrapErrorf(err, osRemoveError, root.value)
 		}
+		root = root.next
 	}
 
 	// Make files read only if this option is selected
