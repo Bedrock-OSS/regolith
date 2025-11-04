@@ -279,17 +279,39 @@ func acquireSessionLock(dotRegolithPath string) (func() error, error) {
 
 func ResolvePath(path string) (string, error) {
 	// Expand %VAR% style markers
+	parts := make([]string, 0)
+	parsed := 0
 	for {
-		start := strings.Index(path, "%")
-		if start == -1 {
+		split := strings.Index(path[parsed:], "%")
+		if split == -1 {
+			// End - Append the remaining path
+			parts = append(parts, path[parsed:])
 			break
 		}
-		end := strings.Index(path[start+1:], "%")
-		if end == -1 {
+		// Found split location
+		parts = append(parts, path[parsed:parsed+split])
+		parsed += split + 1
+
+		// Bounds check
+		if parsed >= len(path) {
+			parts = append(parts, "")
 			break
 		}
-		end += start + 1
-		envVar := path[start+1 : end]
+	}
+
+	iterations := len(parts)
+	if iterations%2 == 0 {
+		// If number of iterations is even, that means that the number of %
+		// markers is odd, therefore the last part is not a variable name
+		// because it lacks the trailing % marker
+		iterations -= 1
+		// Readd the % that we just removed from the last part
+		lastPart := parts[len(parts)-1]
+		parts[len(parts)-1] = "%" + lastPart
+	}
+	// Every even part is a variable name that we can skip
+	for i := 1; i < iterations; i += 2 {
+		envVar := parts[i]
 		envVarValue, exists := os.LookupEnv(envVar)
 		if !exists {
 			return "", burrito.WrapErrorf(
@@ -297,8 +319,9 @@ func ResolvePath(path string) (string, error) {
 				"Environment variable %s does not exist.",
 				envVar)
 		}
-		path = strings.ReplaceAll(path, "%"+envVar+"%", envVarValue)
+		parts[i] = envVarValue
 	}
+	path = filepath.Join(parts...)
 
 	// Expand $VAR and ${VAR} markers
 	path = os.Expand(path, func(v string) string {
