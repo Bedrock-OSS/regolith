@@ -122,7 +122,8 @@ func listFiles(path string) ([]string, error) {
 				if err != nil {
 					return burrito.WrapErrorf(err, osRelError, path, s)
 				}
-				result = append(result, relpath)
+				normalizedRelPath := strings.ReplaceAll(relpath, "\\", "/")
+				result = append(result, normalizedRelPath)
 			}
 			return nil
 		})
