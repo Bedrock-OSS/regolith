@@ -474,6 +474,14 @@ func isSymlinkTo(path, target string) bool {
 	return absDest == absTarget
 }
 
+func isSymlink(path string) bool {
+	info, err := os.Lstat(path)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		return false
+	}
+	return true
+}
+
 func createDirLink(link, target string) error {
 	if _, err := os.Lstat(link); err == nil {
 		return burrito.WrappedErrorf(

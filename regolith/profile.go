@@ -20,6 +20,8 @@ func SetupTmpFiles(context RunContext) error {
 	useSizeTimeCheck := IsExperimentEnabled(SizeTimeCheck)
 	useSymlinkExport := IsExperimentEnabled(SymlinkExport)
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
+	bpTmpPath := filepath.Join(tmpPath, "BP")
+	rpTmpPath := filepath.Join(tmpPath, "RP")
 
 	// Check if should create symlinks, if yes load bp and rp paths
 	var bpExportPath, rpExportPath string
@@ -36,15 +38,31 @@ func SetupTmpFiles(context RunContext) error {
 		if profile.ExportTarget.Target == "none" {
 			useSymlinkExport = false
 		} else {
-			bpLink := isSymlinkTo(filepath.Join(tmpPath, "BP"), bpExportPath)
-			rpLink := isSymlinkTo(filepath.Join(tmpPath, "RP"), rpExportPath)
+			bpLink := isSymlinkTo(bpTmpPath, bpExportPath)
+			rpLink := isSymlinkTo(rpTmpPath, rpExportPath)
 			// If either symlink doesn't exist, create them
 			shouldCreateSymlinks = !bpLink || !rpLink
 		}
 	}
+	// If we're not using symlink export make sure there is no symlinks
+	if !useSymlinkExport {
+		if isSymlink(bpTmpPath) {
+			err := os.Remove(bpTmpPath)
+			if err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, bpTmpPath)
+			}
+		}
+		if isSymlink(rpTmpPath) {
+			err := os.Remove(rpTmpPath)
+			if err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, rpTmpPath)
+			}
+		}
+	}
 
 	// Clean the temporary directory
-	if (!useSizeTimeCheck && !useSymlinkExport) || shouldCreateSymlinks {
+	isRegularRun := !useSizeTimeCheck && !useSymlinkExport
+	if isRegularRun || shouldCreateSymlinks {
 		Logger.Debugf("Cleaning \"%s\"", tmpPath)
 		err := os.RemoveAll(tmpPath)
 		if err != nil {
