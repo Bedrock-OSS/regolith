@@ -229,57 +229,123 @@ func ExportProject(ctx RunContext) error {
 		return nil
 	}
 	if IsExperimentEnabled(SymlinkExport) {
-		Logger.Debugf("SymlinkExport experiment is enabled. Skipping export.")
-		return nil
-	}
-	dataPath := ctx.Config.DataPath
-	dotRegolithPath := ctx.DotRegolithPath
-	// Get the export target paths
-	exportTarget := profile.ExportTarget
-	bpPath, rpPath, err := GetExportPaths(exportTarget, ctx)
-	if err != nil {
-		return burrito.WrapError(
-			err, getExportPathsError)
-	}
+		Logger.Debugf("SymlinkExport experiment is enabled. Skipping RP and BP export.")
+	} else {
+		dotRegolithPath := ctx.DotRegolithPath
+		// Get the export target paths
+		exportTarget := profile.ExportTarget
+		bpPath, rpPath, err := GetExportPaths(exportTarget, ctx)
+		if err != nil {
+			return burrito.WrapError(
+				err, getExportPathsError)
+		}
 
-	MeasureStart("Export - LoadEditedFiles")
-	// Loading edited_files.json or creating empty object
-	editedFiles := LoadEditedFiles(dotRegolithPath)
-	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err,
-			"Safety mechanism stopped Regolith to protect unexpected files "+
-				"from your export targets.\n"+
-				"Did you edit the exported files manually?\n"+
-				"Please clear your export paths and try again.\n"+
-				"Resource pack export path: %s\n"+
-				"Behavior pack export path: %s",
-			rpPath, bpPath)
-	}
-
-	MeasureStart("Export - Clean")
-	// When comparing the size and modification time of the files, we need to
-	// keep the files in target paths.
-	if !IsExperimentEnabled(SizeTimeCheck) {
-		// Clearing output locations
-		err = os.RemoveAll(bpPath)
+		MeasureStart("Export - LoadEditedFiles")
+		// Loading edited_files.json or creating empty object
+		editedFiles := LoadEditedFiles(dotRegolithPath)
+		err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
 		if err != nil {
 			return burrito.WrapErrorf(
-				err, "Failed to clear behavior pack from build path %q.\n"+
-					"Are user permissions correct?", bpPath)
+				err,
+				"Safety mechanism stopped Regolith to protect unexpected files "+
+					"from your export targets.\n"+
+					"Did you edit the exported files manually?\n"+
+					"Please clear your export paths and try again.\n"+
+					"Resource pack export path: %s\n"+
+					"Behavior pack export path: %s",
+				rpPath, bpPath)
 		}
-		err = os.RemoveAll(rpPath)
+
+		MeasureStart("Export - Clean")
+		// When comparing the size and modification time of the files, we need to
+		// keep the files in target paths.
+		if !IsExperimentEnabled(SizeTimeCheck) {
+			// Clearing output locations
+			err = os.RemoveAll(bpPath)
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Failed to clear behavior pack from build path %q.\n"+
+						"Are user permissions correct?", bpPath)
+			}
+			err = os.RemoveAll(rpPath)
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, "Failed to clear resource pack from build path %q.\n"+
+						"Are user permissions correct?", rpPath)
+			}
+		}
+		MeasureStart("Export - MoveOrCopy")
+		var wg sync.WaitGroup
+		packsData := []struct {
+			packPath string
+			tmpPath  string
+			packType string
+		}{
+			{bpPath, "tmp/BP", "behavior"},
+			{rpPath, "tmp/RP", "resource"},
+		}
+		errChan := make(chan error, len(packsData))
+		for _, packData := range packsData {
+			packPath, tmpPath, packType := packData.packPath, packData.tmpPath, packData.packType
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				Logger.Infof("Exporting %s pack to \"%s\".", packType, packPath)
+				var e error
+				if IsExperimentEnabled(SizeTimeCheck) {
+					e = SyncDirectories(filepath.Join(dotRegolithPath, tmpPath), packPath, exportTarget.ReadOnly)
+				} else {
+					e = MoveOrCopy(filepath.Join(dotRegolithPath, tmpPath), packPath, exportTarget.ReadOnly, true)
+				}
+				if e != nil {
+					errChan <- burrito.WrapErrorf(e, "Failed to export %s pack.", packType)
+					return
+				}
+				errChan <- nil
+			}()
+		}
+
+		wg.Wait()
+		close(errChan)
+		for e := range errChan {
+			if e != nil {
+				return e
+			}
+		}
+		MeasureStart("Export - UpdateFromPaths")
+		// Update or create edited_files.json
+		err = editedFiles.UpdateFromPaths(rpPath, bpPath)
 		if err != nil {
-			return burrito.WrapErrorf(
-				err, "Failed to clear resource pack from build path %q.\n"+
-					"Are user permissions correct?", rpPath)
+			return burrito.WrapError(
+				err,
+				"Failed to create a list of files edited by this 'regolith run'")
 		}
+		err = editedFiles.Dump(dotRegolithPath)
+		if err != nil {
+			return burrito.WrapError(
+				err, "Failed to update the list of the files edited by Regolith."+
+					"This may cause the next run to fail.")
+		}
+		// Export data for exportData filters
+		MeasureStart("Export - ExportData")
+	}
+	err = exportData(profile, ctx)
+	if err != nil {
+		return burrito.PassError(err)
 	}
 	MeasureEnd()
+	return nil
+}
+
+// exportData is a helper function for ExportProject. It exports the 'data'
+// folder back to the project's source files for the filters that opted-in for
+// that with exportData option.
+func exportData(profile Profile, ctx RunContext) error {
+	dataPath := ctx.Config.DataPath
+	dotRegolithPath := ctx.DotRegolithPath
 	// List the names of the filters that opt-in to the data export process
 	var exportedFilterNames []string
-	err = profile.ForeachFilter(ctx, func(filter FilterRunner) error {
+	err := profile.ForeachFilter(ctx, func(filter FilterRunner) error {
 		usingDataPath, err := filter.IsUsingDataExport(dotRegolithPath, ctx)
 		if err != nil {
 			return burrito.WrapErrorf(
@@ -320,7 +386,6 @@ func ExportProject(ctx RunContext) error {
 			return burrito.WrapErrorf(err, osReadDirError, dataPath)
 		}
 	}
-	MeasureStart("Export - RevertibleOps")
 	// Create revertible operations object
 	backupPath := filepath.Join(dotRegolithPath, ".dataBackup")
 	revertibleOps, err := NewRevertibleFsOperations(backupPath)
@@ -328,7 +393,6 @@ func ExportProject(ctx RunContext) error {
 		return burrito.WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
 	// Export data
-	MeasureStart("Export - ExportData")
 	for _, exportedFilterName := range exportedFilterNames {
 		// Clear export target
 		targetPath := filepath.Join(dataPath, exportedFilterName)
@@ -372,62 +436,9 @@ func ExportProject(ctx RunContext) error {
 			return mainError
 		}
 	}
-	MeasureStart("Export - MoveOrCopy")
-	var wg sync.WaitGroup
-	packsData := []struct {
-		packPath string
-		tmpPath  string
-		packType string
-	}{
-		{bpPath, "tmp/BP", "behavior"},
-		{rpPath, "tmp/RP", "resource"},
-	}
-	errChan := make(chan error, len(packsData))
-	for _, packData := range packsData {
-		packPath, tmpPath, packType := packData.packPath, packData.tmpPath, packData.packType
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			Logger.Infof("Exporting %s pack to \"%s\".", packType, packPath)
-			var e error
-			if IsExperimentEnabled(SizeTimeCheck) {
-				e = SyncDirectories(filepath.Join(dotRegolithPath, tmpPath), packPath, exportTarget.ReadOnly)
-			} else {
-				e = MoveOrCopy(filepath.Join(dotRegolithPath, tmpPath), packPath, exportTarget.ReadOnly, true)
-			}
-			if e != nil {
-				errChan <- burrito.WrapErrorf(e, "Failed to export %s pack.", packType)
-				return
-			}
-			errChan <- nil
-		}()
-	}
-
-	wg.Wait()
-	close(errChan)
-	for e := range errChan {
-		if e != nil {
-			return e
-		}
-	}
-	MeasureStart("Export - UpdateFromPaths")
-	// Update or create edited_files.json
-	err = editedFiles.UpdateFromPaths(rpPath, bpPath)
-	if err != nil {
-		return burrito.WrapError(
-			err,
-			"Failed to create a list of files edited by this 'regolith run'")
-	}
-	err = editedFiles.Dump(dotRegolithPath)
-	if err != nil {
-		return burrito.WrapError(
-			err, "Failed to update the list of the files edited by Regolith."+
-				"This may cause the next run to fail.")
-	}
 	if err := revertibleOps.Close(); err != nil {
 		return burrito.PassError(err)
 	}
-	MeasureEnd()
 	return nil
 }
 
