@@ -1,5 +1,7 @@
 package regolith
 
+import "github.com/Bedrock-OSS/go-burrito/burrito"
+
 type Experiment int
 
 const (
@@ -45,4 +47,13 @@ func IsExperimentEnabled(exp Experiment) bool {
 		}
 	}
 	return false
+}
+
+func ValidateExperiments() error {
+	sizeTimeCheckEnabled := IsExperimentEnabled(SizeTimeCheck)
+	symlinkExportEnabled := IsExperimentEnabled(SymlinkExport)
+	if sizeTimeCheckEnabled && symlinkExportEnabled {
+		return burrito.WrappedError("size_time_check and symlink_export cannot be enabled at the same time")
+	}
+	return nil
 }

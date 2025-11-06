@@ -42,6 +42,10 @@ var disallowedFiles = []string{
 func Install(filters []string, force, refreshResolvers, refreshFilters bool, profiles []string, debug bool) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	err := ValidateExperiments()
+	if err != nil {
+		return burrito.PassError(err)
+	}
 	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalledWarning)
@@ -149,6 +153,10 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 func InstallAll(force, update, debug, refreshFilters bool) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	err := ValidateExperiments()
+	if err != nil {
+		return burrito.PassError(err)
+	}
 	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalledWarning)
@@ -213,6 +221,10 @@ func InstallAll(force, update, debug, refreshFilters bool) error {
 // "regolith watch" commands.
 func prepareRunContext(profileName string, debug, watch bool) (*RunContext, error) {
 	InitLogging(debug)
+	err := ValidateExperiments()
+	if err != nil {
+		return nil, burrito.PassError(err)
+	}
 	if profileName == "" {
 		profileName = "default"
 	}
@@ -336,6 +348,10 @@ func Watch(profileName string, debug bool) error {
 func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	err := ValidateExperiments()
+	if err != nil {
+		return burrito.PassError(err)
+	}
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
@@ -427,6 +443,10 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 func Init(debug, force bool) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	err := ValidateExperiments()
+	if err != nil {
+		return burrito.PassError(err)
+	}
 	Logger.Info("Initializing Regolith project...")
 
 	wd, err := os.Getwd()
@@ -589,6 +609,10 @@ func CleanFilterCache() error {
 func Clean(debug, userCache, filterCache bool) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	err := ValidateExperiments()
+	if err != nil {
+		return burrito.PassError(err)
+	}
 	if userCache {
 		return CleanUserCache()
 	} else if filterCache {
@@ -605,7 +629,11 @@ func Clean(debug, userCache, filterCache bool) error {
 func UpdateResolvers(debug bool) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
-	_, _, err := DownloadResolverMaps(true)
+	err := ValidateExperiments()
+	if err != nil {
+		return burrito.PassError(err)
+	}
+	_, _, err = DownloadResolverMaps(true)
 	return err
 }
 
@@ -801,7 +829,10 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 	InitLogging(debug)
 	defer ShutdownLogging()
 
-	var err error
+	err := ValidateExperiments()
+	if err != nil {
+		return burrito.PassError(err)
+	}
 	// Based on number of arguments, determine what to do
 	if len(args) == 0 {
 		// 0 ARGUMENTS - Print all
