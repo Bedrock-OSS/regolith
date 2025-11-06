@@ -19,10 +19,11 @@ func SetupTmpFiles(context RunContext) error {
 	start := time.Now()
 	useSizeTimeCheck := IsExperimentEnabled(SizeTimeCheck)
 	useSymlinkExport := IsExperimentEnabled(SymlinkExport)
-	// Setup Directories
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
 
+	// Check if should create symlinks, if yes load bp and rp paths
 	var bpExportPath, rpExportPath string
+	shouldCreateSymlinks := false
 	if useSymlinkExport {
 		profile, err := context.GetProfile()
 		if err != nil {
@@ -34,38 +35,50 @@ func SetupTmpFiles(context RunContext) error {
 		}
 		if profile.ExportTarget.Target == "none" {
 			useSymlinkExport = false
+		} else {
+			bpLink := isSymlinkTo(filepath.Join(tmpPath, "BP"), bpExportPath)
+			rpLink := isSymlinkTo(filepath.Join(tmpPath, "RP"), rpExportPath)
+			// If either symlink doesn't exist, create them
+			shouldCreateSymlinks = !bpLink || !rpLink
 		}
 	}
 
-	linksExist := false
-	if useSymlinkExport {
-		bpLink := isSymlinkTo(filepath.Join(tmpPath, "BP"), bpExportPath)
-		rpLink := isSymlinkTo(filepath.Join(tmpPath, "RP"), rpExportPath)
-		linksExist = bpLink && rpLink
-	}
-
-	if (!useSizeTimeCheck && !useSymlinkExport) || (useSymlinkExport && !linksExist) {
+	// Clean the temporary directory
+	if (!useSizeTimeCheck && !useSymlinkExport) || shouldCreateSymlinks {
 		Logger.Debugf("Cleaning \"%s\"", tmpPath)
 		err := os.RemoveAll(tmpPath)
 		if err != nil {
 			return burrito.WrapErrorf(err, osRemoveError, tmpPath)
 		}
-		if useSymlinkExport && !linksExist {
-			if err := os.RemoveAll(bpExportPath); err != nil {
-				return burrito.WrapErrorf(err, osRemoveError, bpExportPath)
-			}
-			if err := os.RemoveAll(rpExportPath); err != nil {
-				return burrito.WrapErrorf(err, osRemoveError, rpExportPath)
-			}
-		}
 	}
 
+	// Prepare temp path root
 	err := os.MkdirAll(tmpPath, 0755)
 	if err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, tmpPath)
 	}
 
-	if useSymlinkExport && !linksExist {
+	// Create symlinks
+	if shouldCreateSymlinks {
+		// Check deletion safety
+		editedFiles := LoadEditedFiles(dotRegolithPath)
+		err := editedFiles.CheckDeletionSafety(rpExportPath, bpExportPath)
+		if err != nil {
+			return burrito.WrapErrorf(
+				err,
+				checkDeletionSafetyError,
+				rpExportPath, bpExportPath)
+		}
+
+		// Remove existing exported paths
+		if err := os.RemoveAll(bpExportPath); err != nil {
+			return burrito.WrapErrorf(err, osRemoveError, bpExportPath)
+		}
+		if err := os.RemoveAll(rpExportPath); err != nil {
+			return burrito.WrapErrorf(err, osRemoveError, rpExportPath)
+		}
+
+		// Create symlinks
 		if err := createDirLink(filepath.Join(tmpPath, "BP"), bpExportPath); err != nil {
 			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(tmpPath, "BP"), bpExportPath)
 		}
@@ -153,6 +166,22 @@ func SetupTmpFiles(context RunContext) error {
 	for e := range errCh {
 		if e != nil {
 			return e
+		}
+	}
+
+	// Update the edited files list if new symlinks were created. The new
+	// content is safe to edit.
+	if shouldCreateSymlinks {
+		editedFiles := NewEditedFiles()
+		err = editedFiles.UpdateFromPaths(rpExportPath, bpExportPath)
+		if err != nil {
+			return burrito.WrapError(
+				err,
+				"Failed to create a list of files safe to edit")
+		}
+		err = editedFiles.Dump(dotRegolithPath)
+		if err != nil {
+			return burrito.WrapError(err, updatedFilesDumpError)
 		}
 	}
 

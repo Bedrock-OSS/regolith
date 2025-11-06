@@ -250,4 +250,15 @@ const (
 
 	// Error used when createDirLink fails
 	createDirLinkError = "Failed to create directory link.\nSource: %s\nTarget: %s"
+
+	// Error used when CheckDeletionSafety fails
+	checkDeletionSafetyError = "Safety mechanism stopped Regolith to protect unexpected files " +
+		"from your export targets.\n" +
+		"Did you edit the exported files manually?\n" +
+		"Please clear your export paths and try again.\n" +
+		"Resource pack export path: %s\n" +
+		"Behavior pack export path: %s"
+
+	updatedFilesDumpError = "Failed to update the list of the files edited by Regolith." +
+		"This may cause the next run to fail."
 )
