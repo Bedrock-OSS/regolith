@@ -3,6 +3,7 @@ package test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Bedrock-OSS/regolith/regolith"
@@ -193,5 +194,26 @@ func TestInstallAll(t *testing.T) {
 		// TEST EVALUATION
 		t.Log("Evaluating the test results...")
 		comparePaths(expectedResultPath, ".", t)
+	}
+}
+
+// TestNestedRemoteFilter verifies that running a project with a remote filter
+// referencing another remote filter fails as expected.
+func TestNestedRemoteFilter(t *testing.T) {
+	defer os.Chdir(getWdOrFatal(t))
+	t.Log("Clearing the testing directory...")
+	tmpDir := prepareTestDirectory("TestNestedRemoteFilter", t)
+
+	t.Log("Copying the project files into the testing directory...")
+	copyFilesOrFatal(doubleRemoteProjectPath, tmpDir, t)
+	os.Chdir(tmpDir)
+
+	t.Log("Testing the 'regolith install-all' command (should fail)...")
+	err := regolith.InstallAll(false, false, true, false)
+	if err == nil {
+		t.Fatal("Expected 'regolith install-all' to fail, but it succeeded")
+	}
+	if !strings.Contains(err.Error(), "Nested remote filters are not supported") {
+		t.Fatalf("Unexpected error: %v", err)
 	}
 }

@@ -41,6 +41,7 @@ var disallowedFiles = []string{
 // should be printed.
 func Install(filters []string, force, refreshResolvers, refreshFilters bool, profiles []string, debug bool) error {
 	InitLogging(debug)
+	defer ShutdownLogging()
 	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalledWarning)
@@ -147,6 +148,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 // should be printed.
 func InstallAll(force, update, debug, refreshFilters bool) error {
 	InitLogging(debug)
+	defer ShutdownLogging()
 	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalledWarning)
@@ -260,6 +262,7 @@ func prepareRunContext(profileName string, debug, watch bool) (*RunContext, erro
 func Run(profileName string, debug bool) error {
 	// Get the context
 	context, err := prepareRunContext(profileName, debug, false)
+	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
 	}
@@ -284,6 +287,7 @@ func Run(profileName string, debug bool) error {
 func Watch(profileName string, debug bool) error {
 	// Get the context
 	context, err := prepareRunContext(profileName, debug, false)
+	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
 	}
@@ -333,6 +337,7 @@ func Watch(profileName string, debug bool) error {
 // properties of the filter are passed via commandline.
 func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 	InitLogging(debug)
+	defer ShutdownLogging()
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
@@ -372,10 +377,9 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 
 	// Create the filter
 	runConfiguration := map[string]interface{}{
-		"filter":    filterName,
 		"arguments": filterArgs,
 	}
-	filterRunner, err := filterDefinition.CreateFilterRunner(runConfiguration)
+	filterRunner, err := filterDefinition.CreateFilterRunner(runConfiguration, filterName)
 	if err != nil {
 		return burrito.WrapErrorf(err, createFilterRunnerError, filterName)
 	}
@@ -396,7 +400,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 		return burrito.WrapErrorf(err, filterRunnerCheckError, filterName)
 	}
 	// Setup tmp directory
-	err = SetupTmpFiles(*config, dotRegolithPath)
+	err = SetupTmpFiles(runContext)
 	if err != nil {
 		return burrito.WrapErrorf(err, setupTmpFilesError, dotRegolithPath)
 	}
@@ -424,6 +428,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 // should be printed.
 func Init(debug, force bool) error {
 	InitLogging(debug)
+	defer ShutdownLogging()
 	Logger.Info("Initializing Regolith project...")
 
 	wd, err := os.Getwd()
@@ -585,6 +590,7 @@ func CleanFilterCache() error {
 // should be printed.
 func Clean(debug, userCache, filterCache bool) error {
 	InitLogging(debug)
+	defer ShutdownLogging()
 	if userCache {
 		return CleanUserCache()
 	} else if filterCache {
@@ -600,6 +606,7 @@ func Clean(debug, userCache, filterCache bool) error {
 // should be printed.
 func UpdateResolvers(debug bool) error {
 	InitLogging(debug)
+	defer ShutdownLogging()
 	_, _, err := DownloadResolverMaps(true)
 	return err
 }
@@ -794,8 +801,9 @@ func manageUserConfigDelete(debug bool, index int, key string) error {
 //     or 2. The length determines the action of the command.
 func ManageConfig(debug, full, delete, append bool, index int, args []string) error {
 	InitLogging(debug)
-
+	defer ShutdownLogging()
 	var err error
+
 	// Based on number of arguments, determine what to do
 	if len(args) == 0 {
 		// 0 ARGUMENTS - Print all

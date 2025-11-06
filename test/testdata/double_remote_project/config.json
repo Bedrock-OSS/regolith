@@ -10,7 +10,8 @@
 		"dataPath": "./packs/data",
 		"filterDefinitions": {
 			"nested-remote-filter": {
-				"url": "github.com/Bedrock-OSS/regolith-test-filters"
+				"url": "github.com/Bedrock-OSS/regolith-test-filters",
+				"version": "6230216184232e5bc7439caaf20cdd4c0dc17ca2"
 			}
 		},
 		"profiles": {
