@@ -17,13 +17,31 @@ import (
 //
 // Fork patch: https://github.com/arexon/fsnotify/blob/main/fsnotify.go#L481
 type DirWatcher struct {
-	watcher      *fsnotify.Watcher
-	roots        []string
-	config       *Config
-	debounce     <-chan time.Time
+	// watcher is the underlying fsnotify watcher that notifies about the
+	// changes in the files.
+	watcher *fsnotify.Watcher
+
+	// roots is a list of directories to watch.
+	// TODO: Currently, all of the information needed to determine the roots
+	// is already stored in the config. Having this as separate field is
+	// redundant and should be removed to have a single source of truth.
+	roots []string
+
+	// config is a reference to the configuration of the project.
+	config *Config
+
+	debounce *time.Timer
+	// interruption channel is used to notify the main thread about the kind of
+	// interruption that was detected by 'watcher', it can be 'rp', 'bp' or 'data'.
 	interruption chan string
-	errors       chan error
-	stage        <-chan string
+
+	// errors is a channel used by DirWatcher to inform the main thread about
+	// errors related to watching files.
+	errors chan error
+
+	// stage is a channel used for receiving commands from the main thread, to
+	// pause or restart the watcher.
+	stage <-chan string
 }
 
 func NewDirWatcher(
@@ -41,6 +59,9 @@ func NewDirWatcher(
 	}
 	if config.DataPath != "" {
 		roots = append(roots, config.DataPath)
+	}
+	if config.WatchPaths != nil {
+		roots = append(roots, config.WatchPaths...)
 	}
 	d := &DirWatcher{
 		roots:        roots,
@@ -77,6 +98,10 @@ func (d *DirWatcher) watch() error {
 func (d *DirWatcher) start() {
 	paused := false
 	for {
+		var debounce <-chan time.Time
+		if d.debounce != nil {
+			debounce = d.debounce.C
+		}
 		select {
 		case err, ok := <-d.watcher.Errors:
 			if !ok {
@@ -103,10 +128,23 @@ func (d *DirWatcher) start() {
 				d.interruption <- "bp"
 			} else if isInDir(event.Name, d.config.DataPath) {
 				d.interruption <- "data"
+			} else {
+				for _, path := range d.config.WatchPaths {
+					if isInDir(event.Name, path) {
+						d.interruption <- "extras"
+					}
+				}
 			}
-			d.debounce = time.After(100 * time.Millisecond)
-		case <-d.debounce:
-			d.debounce = nil
+			if d.debounce == nil {
+				d.debounce = time.NewTimer(100 * time.Millisecond)
+			} else {
+				d.debounce.Reset(100 * time.Millisecond)
+			}
+		case <-debounce:
+			if d.debounce != nil {
+				d.debounce.Stop()
+				d.debounce = nil
+			}
 		case stage := <-d.stage:
 			switch stage {
 			case "pause":
@@ -122,6 +160,7 @@ func (d *DirWatcher) start() {
 	}
 }
 
-func isInDir(path string, root string) bool {
-	return strings.HasPrefix(path, filepath.Clean(root))
+func isInDir(path, root string) bool {
+	rel, err := filepath.Rel(root, path)
+	return err == nil && !strings.HasPrefix(rel, "..")
 }

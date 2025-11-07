@@ -16,7 +16,8 @@ import (
 	"github.com/otiai10/copy"
 )
 
-const copyFileBufferSize = 1_000_000 // 1 MB
+// According to the internet, the buffer size should be around 128kB.
+const copyFileBufferSize = 128 * 1024 // 128kB
 
 // revertibleFsOperations is a struct that performs file system operations,
 // keeps track of them, and can undo them if something goes wrong.
@@ -90,72 +91,55 @@ func (r *revertibleFsOperations) Undo() error {
 	return nil
 }
 
-// Delete removes a file or directory.
-// For deleting entire directories, check out the DeleteDir.
+// Delete removes a file or a directory. The operation can be reverted using
+// the Undo method until the Close method is called.
 func (r *revertibleFsOperations) Delete(path string) error {
-	if _, err := os.Stat(path); err != nil {
+	info, err := os.Stat(path)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return burrito.WrapErrorf(err, osStatErrorAny, path)
 	}
-	tmpPath := r.getTempFilePath(path)
-	err := ForceMoveFile(path, tmpPath)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err,
-			"Failed to move the file to the backup location.\n"+
-				"Path: %s\n"+
-				"Backup path: %s",
-			path, tmpPath)
-	}
-	r.undoOperations = append(r.undoOperations, func() error {
-		err := ForceMoveFile(tmpPath, path)
-		if err != nil {
-			return burrito.WrapErrorf(err, "Failed to forcefully move file."+
-				"\nSource: %s\nTarget: %s", tmpPath, path)
-		}
-		return nil
-	})
-	return nil
-}
 
-// DeleteDir deletes a directory.
-// This method is better for deleting directories than Delete method because
-// it moves the files of the directory one by one to the backup directory,
-// and it's able to undo the operation even if an error occurs in the middle
-// of its execution.
-func (r *revertibleFsOperations) DeleteDir(path string) error {
-	// TODO - maybe Delete should be able to delete both directories and files and DeleteDir should be private
-	stat, err := os.Stat(path)
-	if err == nil && !stat.IsDir() {
-		err = r.Delete(path)
-		if err != nil {
-			return burrito.WrapErrorf(err, revertibleFsOperationsDeleteError, path)
+	deleteSingle := func(p string) error {
+		tmpPath := r.getTempFilePath(p)
+		if err := ForceMoveFile(p, tmpPath); err != nil {
+			return burrito.WrapErrorf(
+				err,
+				"Failed to move the file to the backup location.\n"+
+					"Path: %s\n"+
+					"Backup path: %s",
+				p, tmpPath)
+		}
+		r.undoOperations = append(r.undoOperations, func() error {
+			if err := ForceMoveFile(tmpPath, p); err != nil {
+				return burrito.WrapErrorf(err, "Failed to forcefully move file."+
+					"\nSource: %s\nTarget: %s", tmpPath, p)
+			}
+			return nil
+		})
+		return nil
+	}
+
+	if info.IsDir() {
+		deleteFunc := func(currPath string, _ fs.FileInfo, _ error) error {
+			if err := deleteSingle(currPath); err != nil {
+				return burrito.WrapErrorf(err, revertibleFsOperationsDeleteError, currPath)
+			}
+			return nil
+		}
+		if err := PostorderWalkDir(path, deleteFunc); err != nil {
+			return burrito.PassError(err)
+		}
+		// delete the root directory itself
+		if err := deleteSingle(path); err != nil {
+			return burrito.PassError(err)
 		}
 		return nil
 	}
-	deleteFunc := func(currPath string, info fs.FileInfo, err error) error {
-		err = r.Delete(currPath)
-		if err != nil {
-			return burrito.WrapErrorf(err, revertibleFsOperationsDeleteError, currPath)
-		}
-		return nil
-	}
-	// Loop source, move files from source to target and create directories
-	err = PostorderWalkDir(path, deleteFunc)
-	if err != nil {
-		return burrito.PassError(err)
-	}
-	stat, err = os.Stat(path)
-	if err != nil {
-		return burrito.WrapErrorf(err, osStatErrorAny, path)
-	}
-	err = deleteFunc(path, stat, nil)
-	if err != nil {
-		return burrito.PassError(err)
-	}
-	return nil
+
+	return deleteSingle(path)
 }
 
 // Move moves a file or a directory from source to target.
@@ -596,41 +580,40 @@ func AreFilesEqual(a, b string) (bool, error) {
 // the target directory.
 func CopyFile(source, target string) error {
 	// Make parent directory of target
-	err := os.MkdirAll(filepath.Dir(target), 0755)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, osMkdirError, target)
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, target)
 	}
-	buf := make([]byte, copyFileBufferSize)
-	// Open source for reading
-	sourceF, err := os.Open(source)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, osOpenError, source)
-	}
-	defer sourceF.Close()
-	// Open target for writing
-	targetF, err := os.Create(target)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err, osCreateError, target)
-	}
-	defer targetF.Close()
-	// Copy the file
-	for {
-		n, err := sourceF.Read(buf)
-		if err != nil && err != io.EOF {
-			return burrito.WrapErrorf(err, fileReadError, source)
-		}
-		if n == 0 {
-			break
-		}
 
-		if _, err := targetF.Write(buf[:n]); err != nil {
-			return burrito.WrapErrorf(err, fileWriteError, target)
-		}
+	info, err := os.Stat(source)
+	if err != nil {
+		return burrito.WrapErrorf(err, osStatErrorAny, source)
 	}
-	targetF.Sync()
+
+	srcF, err := os.Open(source)
+	if err != nil {
+		return burrito.WrapErrorf(err, osOpenError, source)
+	}
+	defer srcF.Close()
+
+	dstF, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
+	if err != nil {
+		return burrito.WrapErrorf(err, osCreateError, target)
+	}
+	defer dstF.Close()
+
+	buf := make([]byte, copyFileBufferSize)
+	if _, err = io.CopyBuffer(dstF, srcF, buf); err != nil {
+		return burrito.WrapErrorf(err, fileWriteError, target)
+	}
+
+	if err = dstF.Sync(); err != nil {
+		return burrito.WrapErrorf(err, fileWriteError, target)
+	}
+
+	if err = os.Chtimes(target, time.Now(), info.ModTime()); err != nil {
+		return burrito.WrapErrorf(err, osChtimesError, target)
+	}
+
 	return nil
 }
 
@@ -714,6 +697,75 @@ func postorderWalkDir(path string, info os.FileInfo, fn filepath.WalkFunc) error
 	return nil
 }
 
+// moveDirContents moves the contents of one directory into another.
+// The destination directory must exist and be empty. If any file move fails,
+// the already moved files are rolled back. Logging is performed on failure and
+// the error is wrapped before returning.
+func moveDirContents(src, dst string) error {
+	// Target must be empty
+	if empty, err := IsDirEmpty(dst); err != nil {
+		return burrito.WrapErrorf(err, isDirEmptyError, dst)
+	} else if !empty {
+		return burrito.WrapErrorf(err, isDirEmptyNotEmptyError, dst)
+	}
+	// Move all files in source to destination
+	files, err := os.ReadDir(src)
+	if err != nil {
+		return burrito.WrapErrorf(err, osReadDirError, src)
+	}
+	movedFiles := make([][2]string, 0, 100)
+	movingFailed := false
+	var errMoving error
+	for _, file := range files {
+		srcPath := filepath.Join(src, file.Name())
+		dstPath := filepath.Join(dst, file.Name())
+		errMoving = os.Rename(srcPath, dstPath)
+		if errMoving != nil {
+			errMoving = burrito.WrapErrorf(errMoving, osRenameError, srcPath, dstPath)
+			Logger.Warnf(
+				"Failed to move content of directory.\n"+
+					"\tSource: %s\n"+
+					"\tTarget: %s\n\n"+
+					"\tOperation failed while moving a file:\n"+
+					"\tSource: %s\n"+
+					"\tTarget: %s\n\n"+
+					"\tTrying to recover from error...",
+				src, dst, srcPath, dstPath)
+			movingFailed = true
+			break
+		}
+		movedFiles = append(movedFiles, [2]string{srcPath, dstPath})
+	}
+	if movingFailed {
+		for _, movePair := range movedFiles {
+			err = os.Rename(movePair[1], movePair[0])
+			if err != nil {
+				Logger.Fatalf(
+					"Regolith failed to recover from error which occured "+
+						"while moving files from directory.\n"+
+						"\tSource: %s\n"+
+						"\tTarget: %s\n\n"+
+						"\tRecovery failed while moving file.\n"+
+						"\tSource: %s\n"+
+						"\tTarget: %s\n"+
+						"\tError: %s\n\n"+
+						"\tThis is a critical error that leaves your "+
+						"files in unorganized manner.\n\n"+
+						"\tYou can try to recover the files manually "+
+						"from:\n"+
+						"\tPath: %s\n",
+					src, dst, movePair[1], movePair[0], err,
+					src)
+			}
+		}
+		return burrito.WrapErrorf(
+			errMoving,
+			"Successfully recovered the original state of the directory "+
+				"before crash.\nPath: %s", src)
+	}
+	return nil
+}
+
 // move moves files from source to destination. If both source and destination
 // are directories, and the destination is empty, it will move the files from
 // source to destination directly (without deleting the destination first).
@@ -726,76 +778,8 @@ func move(source, destination string) error {
 	sourceInfo, err1 := os.Stat(source)
 	destinationInfo, err2 := os.Stat(destination)
 
-	// TODO - this part of code could be moved to another function. It's too much.
 	if err1 == nil && err2 == nil && sourceInfo.IsDir() && destinationInfo.IsDir() {
-		// Target must be empty
-		if empty, err := IsDirEmpty(destination); err != nil {
-			return burrito.WrapErrorf(err, isDirEmptyError, destination)
-		} else if !empty {
-			return burrito.WrapErrorf(err, isDirEmptyNotEmptyError, destination)
-		}
-		// Move all files in source to destination
-		files, err := os.ReadDir(source)
-		if err != nil {
-			return burrito.WrapErrorf(err, osReadDirError, source)
-		}
-		movedFiles := make([][2]string, 0, 100)
-		movingFailed := false
-		var errMoving error
-		for _, file := range files {
-			src := filepath.Join(source, file.Name())
-			dst := filepath.Join(destination, file.Name())
-			errMoving = os.Rename(src, dst)
-			if errMoving != nil {
-				errMoving = burrito.WrapErrorf(
-					errMoving, osRenameError, src, dst)
-				Logger.Warnf(
-					"Failed to move content of directory.\n"+
-						"\tSource: %s\n"+
-						"\tTarget: %s\n\n"+
-						"\tOperation failed while moving a file:\n"+
-						"\tSource: %s\n"+
-						"\tTarget: %s\n\n"+
-						"\tTrying to recover from error...",
-					source, destination, src, dst)
-				movingFailed = true
-				break
-			}
-			movedFiles = append(movedFiles, [2]string{src, dst})
-		}
-		// If moving failed, rollback the moves
-		if movingFailed {
-			for _, movePair := range movedFiles {
-				err = os.Rename(movePair[1], movePair[0])
-				if err != nil {
-					// This is a critical error that leaves the file system in
-					// an invalid state. It shouldn't happen because it's from
-					// moving files, that we had access to just a moment ago.
-					Logger.Fatalf(
-						"Regolith failed to recover from error which occured "+
-							"while moving files from directory.\n"+
-							"\tSource: %s\n"+
-							"\tTarget: %s\n\n"+
-							"\tRecovery failed while moving file.\n"+
-							"\tSource: %s\n"+
-							"\tTarget: %s\n"+
-							"\tError: %s\n\n"+
-							"\tThis is a critical error that leaves your "+
-							"files in unorganized manner.\n\n"+
-							"\tYou can try to recover the files manually "+
-							"from:\n"+
-							"\tPath: %s\n",
-						source, destination, movePair[1], movePair[0], err,
-						source)
-				}
-			}
-			return burrito.WrapErrorf(
-				errMoving,
-				"Successfully recovered the original state of the directory "+
-					"before crash.\nPath: %s", source)
-		} else {
-			return nil
-		}
+		return moveDirContents(source, destination)
 	}
 	// Either source or destination is not a directory,
 	// use normal os.Rename
@@ -832,19 +816,9 @@ func MoveOrCopy(
 			return burrito.WrapErrorf(err, osCopyError, source, destination)
 		}
 	} else if copyParentAcl { // No errors with moving files but needs ACL copy
-		// TODO - this entire code block should be moved into the. copyFileSecurityInfo
-		// printing this Info message below on Linux makes no sense.
 		parent := filepath.Dir(destination)
-		Logger.Infof(
-			"Copying ACL from parent directory.\n\tSource: %s\n\tTarget: %s",
-			parent, destination)
-		if _, err := os.Stat(parent); os.IsNotExist(err) {
-			return burrito.WrapErrorf(err, osStatErrorIsNotExist, parent)
-		}
-		err = copyFileSecurityInfo(parent, destination)
-		if err != nil {
-			return burrito.WrapErrorf(
-				err, copyFileSecurityInfoError, source, destination)
+		if err := copyParentACL(parent, destination); err != nil {
+			return err
 		}
 	}
 	// Make files read only if this option is selected
@@ -885,7 +859,7 @@ func SyncDirectories(
 	if err := os.MkdirAll(destinationParent, 0755); err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, destinationParent)
 	}
-	err := filepath.Walk(source, func(srcPath string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(source, func(srcPath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -899,8 +873,12 @@ func SyncDirectories(
 		if err != nil && !os.IsNotExist(err) {
 			return burrito.WrapErrorf(err, osStatErrorAny, destPath)
 		}
+		info, ierr := d.Info()
+		if ierr != nil {
+			return ierr
+		}
 		if (err != nil && os.IsNotExist(err)) || info.ModTime() != destInfo.ModTime() || info.Size() != destInfo.Size() {
-			if info.IsDir() {
+			if d.IsDir() {
 				return os.MkdirAll(destPath, info.Mode())
 			}
 			Logger.Debugf("SYNC: Copying file %s to %s", srcPath, destPath)
@@ -912,7 +890,7 @@ func SyncDirectories(
 					return burrito.WrapErrorf(err, osRemoveError, destPath)
 				}
 			}
-			return copyFile(srcPath, destPath, info)
+			return CopyFile(srcPath, destPath)
 		} else {
 			Logger.Debugf("SYNC: Skipping file %s", srcPath)
 		}
@@ -922,9 +900,17 @@ func SyncDirectories(
 		return burrito.WrapErrorf(err, osCopyError, source, destination)
 	}
 
+	// A simple linked list implementation
+	type Node struct {
+		next  *Node
+		value string
+	}
 	// Remove files/folders in destination that are not in source
-	toRemoveList := make([]string, 0)
-	err = filepath.Walk(destination, func(destPath string, info os.FileInfo, err error) error {
+	var root = &Node{
+		next:  nil,
+		value: "",
+	}
+	err = filepath.WalkDir(destination, func(destPath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -934,16 +920,12 @@ func SyncDirectories(
 		}
 		srcPath := filepath.Join(source, relPath)
 		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-			// TODO: Not sure if this is the best way to do this
-			// The toRemoveList might get pretty big
-			if !SliceAny[string](toRemoveList, func(s string) bool {
-				return strings.HasPrefix(destPath, s)
-			}) {
-				Logger.Debugf("SYNC: Removing file %s", destPath)
-				// Add to list of files to remove, because otherwise walk function might fail
-				// when trying to walk a directory that doesn't exist anymore
-				toRemoveList = append(toRemoveList, destPath)
+			Logger.Debugf("SYNC: Removing file %s", destPath)
+			next := &Node{
+				next:  root,
+				value: destPath,
 			}
+			root = next
 		}
 		return nil
 	})
@@ -952,11 +934,12 @@ func SyncDirectories(
 		return burrito.PassError(err)
 	}
 
-	for _, path := range toRemoveList {
-		err = os.RemoveAll(path)
+	for root.next != nil {
+		err = os.RemoveAll(root.value)
 		if err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, path)
+			return burrito.WrapErrorf(err, osRemoveError, root.value)
 		}
+		root = root.next
 	}
 
 	// Make files read only if this option is selected
@@ -986,17 +969,18 @@ func SyncDirectories(
 	return nil
 }
 
-func copyFile(src, dest string, info os.FileInfo) error {
-	data, err := os.ReadFile(src)
-	if err != nil {
-		return burrito.WrapErrorf(err, fileReadError, src)
+// copyParentACL copies the ACL from the parent directory to the target path.
+// On non-Windows systems it effectively does nothing. The function assumes that
+// the parent path exists.
+func copyParentACL(parent, target string) error {
+	Logger.Infof(
+		"Copying ACL from parent directory.\n\tSource: %s\n\tTarget: %s",
+		parent, target)
+	if _, err := os.Stat(parent); os.IsNotExist(err) {
+		return burrito.WrapErrorf(err, osStatErrorIsNotExist, parent)
 	}
-	if err = os.WriteFile(dest, data, info.Mode()); err != nil {
-		return burrito.WrapErrorf(err, fileWriteError, dest)
-	}
-	err = os.Chtimes(dest, time.Now(), info.ModTime())
-	if err != nil {
-		return burrito.WrapErrorf(err, osChtimesError, dest)
+	if err := copyFileSecurityInfo(parent, target); err != nil {
+		return burrito.WrapErrorf(err, copyFileSecurityInfoError, parent, target)
 	}
 	return nil
 }

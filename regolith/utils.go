@@ -250,43 +250,59 @@ func acquireSessionLock(dotRegolithPath string) (func() error, error) {
 	return unlockFunc, nil
 }
 
-func splitPath(path string) []string {
-	parts := make([]string, 0)
-	for true {
-		part := ""
-		path, part = filepath.Split(path)
-		if strings.HasSuffix(path, "/") || strings.HasSuffix(path, "\\") {
-			path = path[0 : len(path)-1]
-		}
-		if path == "" && part != "" {
-			parts = append([]string{part}, parts...)
-			break
-		}
-		if part == "" || path == "" {
-			break
-		}
-		parts = append([]string{part}, parts...)
-	}
-	return parts
-}
-
 func ResolvePath(path string) (string, error) {
-	// Resolve the path
-	parts := splitPath(path)
-	for i, part := range parts {
-		if strings.HasPrefix(part, "%") && strings.HasSuffix(part, "%") {
-			envVar := part[1 : len(part)-1]
-			envVarValue, exists := os.LookupEnv(envVar)
-			if !exists {
-				return "", burrito.WrapErrorf(
-					os.ErrNotExist,
-					"Environment variable %s does not exist.",
-					envVar)
-			}
-			parts[i] = envVarValue
+	// Expand %VAR% style markers
+	parts := make([]string, 0)
+	parsed := 0
+	for {
+		split := strings.Index(path[parsed:], "%")
+		if split == -1 {
+			// End - Append the remaining path
+			parts = append(parts, path[parsed:])
+			break
+		}
+		// Found split location
+		parts = append(parts, path[parsed:parsed+split])
+		parsed += split + 1
+
+		// Bounds check
+		if parsed >= len(path) {
+			parts = append(parts, "")
+			break
 		}
 	}
-	return filepath.Clean(filepath.Join(parts...)), nil
+
+	iterations := len(parts)
+	if iterations%2 == 0 {
+		// If number of iterations is even, that means that the number of %
+		// markers is odd, therefore the last part is not a variable name
+		// because it lacks the trailing % marker
+		iterations -= 1
+		// Readd the % that we just removed from the last part
+		lastPart := parts[len(parts)-1]
+		parts[len(parts)-1] = "%" + lastPart
+	}
+	// Every even part is a variable name that we can skip
+	for i := 1; i < iterations; i += 2 {
+		envVar := parts[i]
+		envVarValue, exists := os.LookupEnv(envVar)
+		if !exists {
+			return "", burrito.WrapErrorf(
+				os.ErrNotExist,
+				"Environment variable %s does not exist.",
+				envVar)
+		}
+		parts[i] = envVarValue
+	}
+	path = filepath.Join(parts...)
+
+	// Expand $VAR and ${VAR} markers
+	path = os.Expand(path, func(v string) string {
+		val, _ := os.LookupEnv(v)
+		return val
+	})
+
+	return filepath.Clean(path), nil
 }
 
 type measure struct {
@@ -443,4 +459,59 @@ func SliceAny[T interface{}](slice []T, predicate func(T) bool) bool {
 
 func VersionIsLatest(version string) bool {
 	return version == "latest" || version == "HEAD"
+}
+
+func isSymlinkTo(path, target string) bool {
+	info, err := os.Lstat(path)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		return false
+	}
+	dest, err := os.Readlink(path)
+	if err != nil {
+		return false
+	}
+	if !filepath.IsAbs(dest) {
+		dest = filepath.Join(filepath.Dir(path), dest)
+	}
+	absDest, _ := filepath.Abs(dest)
+	absTarget, _ := filepath.Abs(target)
+	return absDest == absTarget
+}
+
+func isSymlink(path string) bool {
+	info, err := os.Lstat(path)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		return false
+	}
+	return true
+}
+
+func createDirLink(link, target string) error {
+	if _, err := os.Lstat(link); err == nil {
+		return burrito.WrappedErrorf(
+			"Failed to create symlink, path already exists.\n"+
+				"Link: %s\n"+
+				"Target: %s",
+			link, target)
+	}
+	linkDir := filepath.Dir(link)
+	if err := os.MkdirAll(linkDir, 0755); err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, linkDir)
+	}
+	if err := os.MkdirAll(target, 0755); err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, target)
+	}
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		return burrito.WrapErrorf(err, filepathAbsError, target)
+	}
+	absLink, err := filepath.Abs(link)
+	if err != nil {
+		return burrito.WrapErrorf(err, filepathAbsError, link)
+	}
+	err = os.Symlink(absTarget, absLink)
+	if err != nil {
+		return burrito.PassError(err)
+	}
+	return nil
 }

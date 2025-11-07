@@ -38,7 +38,8 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*P
 		return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "script", "string")
 	}
 	filter.Script = script
-	filter.VenvSlot, _ = obj["venvSlot"].(int) // default venvSlot is 0
+	venvSlot64, _ := obj["venvSlot"].(float64) // default venvSlot is 0.0
+	filter.VenvSlot = int(venvSlot64)
 
 	requirementsObj, ok := obj["requirements"]
 	if ok {
@@ -108,8 +109,8 @@ func (f *PythonFilter) Run(context RunContext) (bool, error) {
 	return context.IsInterrupted(), nil
 }
 
-func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := filterFromObject(runConfiguration)
+func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}, id string) (FilterRunner, error) {
+	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
 	}

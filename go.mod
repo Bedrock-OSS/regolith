@@ -1,6 +1,6 @@
 module github.com/Bedrock-OSS/regolith
 
-go 1.18
+go 1.25.3
 
 require (
 	github.com/Bedrock-OSS/go-burrito v1.0.3

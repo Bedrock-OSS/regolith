@@ -257,9 +257,26 @@ const (
 		"Current value: %q\n" +
 		"Valid values are: %s"
 
+	// getExportPathsError is used when the GetExportPaths function fails.
+	getExportPathsError = "Failed to get generate export paths."
+
 	// Error used when the formatVersion of the config file is incompatible
 	// with the current version of Regolith.
 	incompatibleFormatVersionError = "Incompatible formatVersion: \n" +
 		"Version in config: %s\n" +
 		"Latest compatible version: %s"
+
+	// Error used when createDirLink fails
+	createDirLinkError = "Failed to create directory link.\nSource: %s\nTarget: %s"
+
+	// Error used when CheckDeletionSafety fails
+	checkDeletionSafetyError = "Safety mechanism stopped Regolith to protect unexpected files " +
+		"from your export targets.\n" +
+		"Did you edit the exported files manually?\n" +
+		"Please clear your export paths and try again.\n" +
+		"Resource pack export path: %s\n" +
+		"Behavior pack export path: %s"
+
+	updatedFilesDumpError = "Failed to update the list of the files edited by Regolith." +
+		"This may cause the next run to fail."
 )
