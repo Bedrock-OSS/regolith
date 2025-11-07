@@ -34,6 +34,17 @@ const appDataFilterCachePath = "regolith/filter-cache"
 
 var Version = "unversioned"
 
+// ComMojangPathType is used to specify the type of the com.mojang path you
+// need in some functions. Since Minecraft 1.21.120, there are two separate,
+// paths: shared (recommended for keeping packs) and user path (used for
+// storing Minecraft worlds).
+type ComMojangPathType int
+
+const (
+	WorldPath ComMojangPathType = iota
+	PacksPath
+)
+
 // nth returns the ordinal numeral of the index of a table. For example:
 // nth(0) returns "1st", nth(1) returns "2nd", etc.
 func nth(i int) string {
