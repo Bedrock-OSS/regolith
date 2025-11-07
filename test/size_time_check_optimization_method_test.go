@@ -88,7 +88,7 @@ func TestSizeTimeCheckOptimizationSpeed(t *testing.T) {
 
 	// Run the project twice, the second run should be faster
 	runtimes := make([]time.Duration, 0)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		// Run the project
 		t.Logf("Running Regolith for the %d. time...", i+1)
 

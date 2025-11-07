@@ -29,7 +29,7 @@ type RemoteFilter struct {
 	Definition RemoteFilterDefinition `json:"-"`
 }
 
-func RemoteFilterDefinitionFromObject(id string, obj map[string]interface{}) (*RemoteFilterDefinition, error) {
+func RemoteFilterDefinitionFromObject(id string, obj map[string]any) (*RemoteFilterDefinition, error) {
 	result := &RemoteFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	url, ok := obj["url"].(string)
 	if !ok {
@@ -137,7 +137,7 @@ func (f *RemoteFilter) Run(context RunContext) (bool, error) {
 	return context.IsInterrupted(), nil
 }
 
-func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}, id string) (FilterRunner, error) {
+func (f *RemoteFilterDefinition) CreateFilterRunner(runConfiguration map[string]any, id string) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
@@ -162,13 +162,13 @@ func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, 
 		return extraFilterJsonErrorInfo(
 			path, burrito.WrappedErrorf(jsonPathMissingError, "filters"))
 	}
-	filters, ok := filtersObj.([]interface{})
+	filters, ok := filtersObj.([]any)
 	if !ok {
 		return extraFilterJsonErrorInfo(
 			path, burrito.WrappedErrorf(jsonPathTypeError, "filters", "array"))
 	}
 	for i, filter := range filters {
-		filter, ok := filter.(map[string]interface{})
+		filter, ok := filter.(map[string]any)
 		jsonPath := fmt.Sprintf("filters->%d", i) // Used for error messages
 		if !ok {
 			return extraFilterJsonErrorInfo(
@@ -201,7 +201,7 @@ func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, 
 
 func (f *RemoteFilterDefinition) Check(context RunContext) error {
 	dummyFilterRunner, err := f.CreateFilterRunner(
-		map[string]interface{}{}, f.Id)
+		map[string]any{}, f.Id)
 	const shouldntHappenError = "Filter name: %s\n" +
 		"This is a bug, please submit a bug report to the Regolith " +
 		"project repository:\n" +
@@ -296,7 +296,7 @@ func (f *RemoteFilter) GetCachedVersion(dotRegolithPath string) (*string, error)
 		return nil, burrito.WrapErrorf(err, fileReadError, path)
 	}
 
-	var filterCollection map[string]interface{}
+	var filterCollection map[string]any
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
 		return nil, burrito.WrapErrorf(err, jsonUnmarshalError, file)
@@ -321,7 +321,7 @@ func (f *RemoteFilter) IsUsingDataExport(dotRegolithPath string, _ RunContext) (
 	if err != nil {
 		return false, burrito.WrappedErrorf(readFilterJsonError, filterJsonPath)
 	}
-	var filterJsonObj map[string]interface{}
+	var filterJsonObj map[string]any
 	err = json.Unmarshal(file, &filterJsonObj)
 	if err != nil {
 		return false, burrito.WrapErrorf(err, jsonUnmarshalError, filterJsonPath)
@@ -524,11 +524,11 @@ func (f *RemoteFilterDefinition) SaveVersionInfo(version, dotRegolithPath string
 }
 
 // LoadFilterJson loads the filter.json file of the remote filter to a map.
-func (f *RemoteFilterDefinition) LoadFilterJson(dotRegolithPath string) (map[string]interface{}, error) {
+func (f *RemoteFilterDefinition) LoadFilterJson(dotRegolithPath string) (map[string]any, error) {
 	downloadPath := f.GetDownloadPath(dotRegolithPath)
 	filterJsonPath := path.Join(downloadPath, "filter.json")
 	filterJson, err1 := os.ReadFile(filterJsonPath)
-	var filterJsonMap map[string]interface{}
+	var filterJsonMap map[string]any
 	err2 := json.Unmarshal(filterJson, &filterJsonMap)
 	if err := firstErr(err1, err2); err != nil {
 		return nil, burrito.PassError(err)
@@ -613,12 +613,12 @@ func hasGit() bool {
 }
 
 // loadFilterConfig loads the remote filter configuration from the given path.
-func loadFilterConfig(path string) (map[string]interface{}, error) {
+func loadFilterConfig(path string) (map[string]any, error) {
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return nil, burrito.WrapErrorf(err, fileReadError, path)
 	}
-	var filterCollection map[string]interface{}
+	var filterCollection map[string]any
 	err = json.Unmarshal(file, &filterCollection)
 	if err != nil {
 		return nil, burrito.WrapErrorf(err, jsonUnmarshalError, path)

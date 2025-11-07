@@ -172,14 +172,14 @@ func getResolversMap(refreshResolvers bool) (*map[string]ResolverMapItem, error)
 	// Load all resolver files into a map, where the ke is the URL of the resolver
 	// file and the value is the content of the file. Based on this map and
 	// the combined user config, the final resolver map is created.
-	resolvers := make(map[string]interface{})
+	resolvers := make(map[string]any)
 	loadResolversFromPath := func(urls, paths []string) error {
 		for i, path := range paths {
 			f, err := os.ReadFile(path)
 			if err != nil {
 				return burrito.WrapErrorf(err, fileReadError, path)
 			}
-			resolverData := make(map[string]interface{})
+			resolverData := make(map[string]any)
 			err = json.Unmarshal(f, &resolverData)
 			if err != nil {
 				return burrito.WrapErrorf(err, jsonUnmarshalError, path)
@@ -194,19 +194,19 @@ func getResolversMap(refreshResolvers bool) (*map[string]ResolverMapItem, error)
 	}
 	// Create the final resolver map
 	for _, resolverUrl := range urls {
-		resolverData, ok := resolvers[resolverUrl].(map[string]interface{})
+		resolverData, ok := resolvers[resolverUrl].(map[string]any)
 		if !ok {
 			return nil, burrito.WrapErrorf(
 				err, "Failed to get the resolver data.\nURL: %s", resolverUrl)
 		}
-		resolverResolversData, ok := resolverData["filters"].(map[string]interface{})
+		resolverResolversData, ok := resolverData["filters"].(map[string]any)
 		if !ok {
 			return nil, burrito.WrapErrorf(
 				err, "Failed load resolvers from the resolver file.\nURL: %s",
 				resolverUrl)
 		}
 		for key, value := range resolverResolversData {
-			castValue, ok := value.(map[string]interface{})
+			castValue, ok := value.(map[string]any)
 			if !ok {
 				return nil, burrito.WrapErrorf(
 					err, "Invalid resolver data.\nURL: %s",
@@ -224,7 +224,7 @@ func getResolversMap(refreshResolvers bool) (*map[string]ResolverMapItem, error)
 	return resolverMap, nil
 }
 
-func ResolverMapFromObject(obj map[string]interface{}) (ResolverMapItem, error) {
+func ResolverMapFromObject(obj map[string]any) (ResolverMapItem, error) {
 	result := ResolverMapItem{}
 	// Url
 	urlObj, ok := obj["url"]

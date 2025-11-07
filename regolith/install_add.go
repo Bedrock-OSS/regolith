@@ -74,7 +74,7 @@ func installFilters(
 // empty, it also adds the filters to the specified profiles. After modifying
 // the config, it saves it to the standard config file location.
 func addFiltersToConfig(
-	config map[string]interface{},
+	config map[string]any,
 	filterInstallers map[string]FilterInstaller,
 	profiles []string,
 ) error {
@@ -90,17 +90,17 @@ func addFiltersToConfig(
 		filterDefinitions[name] = downloadedFilter
 		// Add the filter to the profile
 		for _, profile := range profiles {
-			profileMap, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
+			profileMap, err := FindByJSONPath[map[string]any](config, "regolith/profiles/"+EscapePathPart(profile))
 			if err != nil {
 				return burrito.WrapErrorf(
 					err, "Profile %s does not exist or is invalid.", profile)
 			}
 			if profileMap["filters"] == nil {
-				profileMap["filters"] = make([]interface{}, 0)
+				profileMap["filters"] = make([]any, 0)
 			}
 			// Add the filter to the profile
 			profileMap["filters"] = append(
-				profileMap["filters"].([]interface{}), map[string]interface{}{
+				profileMap["filters"].([]any), map[string]any{
 					"filter": name,
 				})
 		}
@@ -247,7 +247,7 @@ func ListRemoteFilterTags(url, name string) ([]string, error) {
 	}
 	// Go line by line though the output
 	var tags []string
-	for _, line := range strings.Split(string(output), "\n") {
+	for line := range strings.SplitSeq(string(output), "\n") {
 		// The command returns SHA and the tag name. We only want the tag name.
 		if strings.Contains(line, "refs/tags/") {
 			tag := strings.Split(line, "refs/tags/")[1]

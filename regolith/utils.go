@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -136,7 +137,7 @@ func RunGitProcess(args []string, workingDir string) ([]string, error) {
 	out, _ := cmd.StdoutPipe()
 	err, _ := cmd.StderrPipe()
 	completeOutput := make([]string, 0)
-	logFunc := func(template string, args ...interface{}) {
+	logFunc := func(template string, args ...any) {
 		completeOutput = append(completeOutput, fmt.Sprintf(template, args...))
 	}
 	go LogStd(out, logFunc, "git")
@@ -146,7 +147,7 @@ func RunGitProcess(args []string, workingDir string) ([]string, error) {
 }
 
 // LogStd logs the output of a sub-process
-func LogStd(in io.ReadCloser, logFunc func(template string, args ...interface{}), outputLabel string) {
+func LogStd(in io.ReadCloser, logFunc func(template string, args ...any), outputLabel string) {
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
 		logFunc("[%s] %s", outputLabel, scanner.Text())
@@ -317,7 +318,7 @@ type measure struct {
 var lastMeasure *measure
 var EnableTimings = false
 
-func MeasureStart(name string, args ...interface{}) {
+func MeasureStart(name string, args ...any) {
 	if !EnableTimings {
 		return
 	}
@@ -345,16 +346,11 @@ func MeasureEnd() {
 }
 
 func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, a)
 }
 
 // FindByJSONPath finds a value in a JSON element by a simple path. Returns nil and an error if the path is not found or invalid.
-func FindByJSONPath[T any](obj interface{}, path string) (T, error) {
+func FindByJSONPath[T any](obj any, path string) (T, error) {
 	var empty T
 	if obj == nil {
 		return empty, burrito.WrappedErrorf("Object is empty")
@@ -372,14 +368,14 @@ func FindByJSONPath[T any](obj interface{}, path string) (T, error) {
 			continue
 		}
 		currentPath += part + "->"
-		if m, ok := value.(map[string]interface{}); ok {
+		if m, ok := value.(map[string]any); ok {
 			value = m[part]
 			if value == nil {
 				return empty, burrito.WrappedErrorf(jsonPathMissingError, currentPath[:len(currentPath)-2])
 			}
 			continue
 		}
-		if a, ok := value.([]interface{}); ok {
+		if a, ok := value.([]any); ok {
 			index, err := strconv.Atoi(part)
 			if err != nil {
 				return empty, burrito.WrapErrorf(err, "Invalid index %s at %s", part, currentPath[:len(currentPath)-2])
@@ -448,13 +444,8 @@ func EscapePathPart(s string) string {
 }
 
 // SliceAny returns true if any of the elements in the slice satisfy the predicate.
-func SliceAny[T interface{}](slice []T, predicate func(T) bool) bool {
-	for _, item := range slice {
-		if predicate(item) {
-			return true
-		}
-	}
-	return false
+func SliceAny[T any](slice []T, predicate func(T) bool) bool {
+	return slices.ContainsFunc(slice, predicate)
 }
 
 func isSymlinkTo(path, target string) bool {

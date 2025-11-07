@@ -52,7 +52,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 	}
 	// Check if selected profiles exist
 	for _, profile := range profiles {
-		_, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
+		_, err := FindByJSONPath[map[string]any](config, "regolith/profiles/"+EscapePathPart(profile))
 		if err != nil {
 			return burrito.WrapErrorf(
 				err, "Profile %s does not exist or is invalid.", profile)
@@ -253,7 +253,7 @@ func prepareRunContext(profileName string, debug, watch bool) (*RunContext, erro
 		Parent:           nil,
 		Profile:          profileName,
 		DotRegolithPath:  dotRegolithPath,
-		Settings:         map[string]interface{}{},
+		Settings:         map[string]any{},
 	}, nil
 }
 
@@ -376,7 +376,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 	}()
 
 	// Create the filter
-	runConfiguration := map[string]interface{}{
+	runConfiguration := map[string]any{
 		"arguments": filterArgs,
 	}
 	filterRunner, err := filterDefinition.CreateFilterRunner(runConfiguration, filterName)
@@ -482,7 +482,7 @@ func Init(debug, force bool) error {
 	}
 	jsonBytes, _ := json.MarshalIndent(jsonData, "", "")
 	// Add the schema property, this is a little hacky
-	rawJsonData := make(map[string]interface{}, 0)
+	rawJsonData := make(map[string]any, 0)
 	json.Unmarshal(jsonBytes, &rawJsonData)
 	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.4.json"
 	jsonBytes, _ = json.MarshalIndent(rawJsonData, "", "\t")

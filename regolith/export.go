@@ -316,9 +316,7 @@ func exportProjectRpAndBp(profile Profile, rpPath, bpPath string, ctx RunContext
 	errChan := make(chan error, len(packsData))
 	for _, packData := range packsData {
 		packPath, tmpPath, packType := packData.packPath, packData.tmpPath, packData.packType
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			Logger.Infof("Exporting %s pack to \"%s\".", packType, packPath)
 			var e error
 			if IsExperimentEnabled(SizeTimeCheck) {
@@ -331,7 +329,7 @@ func exportProjectRpAndBp(profile Profile, rpPath, bpPath string, ctx RunContext
 				return
 			}
 			errChan <- nil
-		}()
+		})
 	}
 
 	wg.Wait()

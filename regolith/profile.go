@@ -155,29 +155,23 @@ func SetupTmpFiles(context RunContext) error {
 	wg := sync.WaitGroup{}
 	errCh := make(chan error, 3)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		if err := setupTmpDirectory(config.ResourceFolder, "RP", "resource folder"); err != nil {
 			errCh <- burrito.WrapErrorf(err, "Failed to setup RP folder in the temporary directory.")
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		if err := setupTmpDirectory(config.BehaviorFolder, "BP", "behavior folder"); err != nil {
 			errCh <- burrito.WrapErrorf(err, "Failed to setup BP folder in the temporary directory.")
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		if err := setupTmpDirectory(config.DataPath, "data", "data folder"); err != nil {
 			errCh <- burrito.WrapErrorf(err, "Failed to setup data folder in the temporary directory.")
 		}
-	}()
+	})
 
 	wg.Wait()
 	close(errCh)
@@ -322,13 +316,13 @@ func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterColle
 		return nil, extraFilterJsonErrorInfo(
 			path, burrito.WrappedErrorf(jsonPathMissingError, "filters"))
 	}
-	filters, ok := filtersObj.([]interface{})
+	filters, ok := filtersObj.([]any)
 	if !ok {
 		return nil, extraFilterJsonErrorInfo(
 			path, burrito.WrappedErrorf(jsonPathTypeError, "filters", "array"))
 	}
 	for i, filter := range filters {
-		filter, ok := filter.(map[string]interface{})
+		filter, ok := filter.(map[string]any)
 		jsonPath := fmt.Sprintf("filters->%d", i) // Used for error messages
 		if !ok {
 			return nil, extraFilterJsonErrorInfo(
@@ -375,23 +369,23 @@ type FilterCollection struct {
 // When editing, adjust ProfileFromObject function as well
 type Profile struct {
 	FilterCollection
-	ExportTarget ExportTarget `json:"export,omitempty"`
+	ExportTarget ExportTarget `json:"export,omitzero"`
 }
 
 func ProfileFromObject(
-	obj map[string]interface{}, filterDefinitions map[string]FilterInstaller,
+	obj map[string]any, filterDefinitions map[string]FilterInstaller,
 ) (Profile, error) {
 	result := Profile{}
 	// Filters
 	if _, ok := obj["filters"]; !ok {
 		return result, burrito.WrappedErrorf(jsonPathMissingError, "filters")
 	}
-	filters, ok := obj["filters"].([]interface{})
+	filters, ok := obj["filters"].([]any)
 	if !ok {
 		return result, burrito.WrappedErrorf(jsonPathTypeError, "filters", "array")
 	}
 	for i, filter := range filters {
-		filter, ok := filter.(map[string]interface{})
+		filter, ok := filter.(map[string]any)
 		if !ok {
 			return result, burrito.WrappedErrorf(
 				jsonPathTypeError, fmt.Sprintf("filters->%d", i), "object")
@@ -408,7 +402,7 @@ func ProfileFromObject(
 	if _, ok := obj["export"]; !ok {
 		return result, burrito.WrappedErrorf(jsonPathMissingError, "export")
 	}
-	export, ok := obj["export"].(map[string]interface{})
+	export, ok := obj["export"].(map[string]any)
 	if !ok {
 		return result, burrito.WrappedErrorf(jsonPathTypeError, "export", "object")
 	}

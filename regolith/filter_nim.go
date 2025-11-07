@@ -26,7 +26,7 @@ type NimFilter struct {
 }
 
 func NimFilterDefinitionFromObject(
-	id string, obj map[string]interface{},
+	id string, obj map[string]any,
 ) (*NimFilterDefinition, error) {
 	filter := &NimFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	scriptObj, ok := obj["script"]
@@ -97,7 +97,7 @@ func (f *NimFilter) Run(context RunContext) (bool, error) {
 	return context.IsInterrupted(), nil
 }
 
-func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}, id string) (FilterRunner, error) {
+func (f *NimFilterDefinition) CreateFilterRunner(runConfiguration map[string]any, id string) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
