@@ -38,16 +38,17 @@ func GetExportPaths(
 }
 
 func FindMojangDir(build string, pathType ComMojangPathType) (string, error) {
-	if build == "standard" {
+	switch build {
+	case "standard":
 		return FindStandardMojangDir(pathType)
-	} else if build == "preview" {
+	case "preview":
 		return FindPreviewDir(pathType)
-	} else if build == "education" {
+	case "education":
 		return FindEducationDir()
 		// WARNING: If for some reason we will expand this in the future to
 		// match a new format version, we need to split this into versioned
 		// functions.
-	} else {
+	default:
 		return "", burrito.WrappedErrorf(
 			invalidExportPathError,
 			// current value; valid values
@@ -60,35 +61,36 @@ func FindMojangDir(build string, pathType ComMojangPathType) (string, error) {
 func getExportPathsV1_2_0(
 	exportTarget ExportTarget, bpName string, rpName string,
 ) (bpPath string, rpPath string, err error) {
-	if exportTarget.Target == "development" {
+	switch exportTarget.Target {
+	case "development":
 		comMojang, err := FindStandardMojangDir(PacksPath)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, findMojangDirError)
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
-	} else if exportTarget.Target == "preview" {
+	case "preview":
 		comMojang, err := FindPreviewDir(PacksPath)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, findPreviewDirError)
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
-	} else if exportTarget.Target == "exact" {
+	case "exact":
 		return GetExactExportPaths(exportTarget)
-	} else if exportTarget.Target == "world" {
+	case "world":
 		return GetWorldExportPaths(
 			exportTarget.WorldPath,
 			exportTarget.WorldName,
 			"standard",
 			bpName, rpName)
-	} else if exportTarget.Target == "local" {
+	case "local":
 		bpPath = "build/" + bpName + "/"
 		rpPath = "build/" + rpName + "/"
-	} else if exportTarget.Target == "none" {
+	case "none":
 		bpPath = ""
 		rpPath = ""
-	} else {
+	default:
 		err = burrito.WrappedErrorf(
 			"Export target %q is not valid", exportTarget.Target)
 	}
@@ -100,27 +102,28 @@ func getExportPathsV1_2_0(
 func getExportPathsV1_4_0(
 	exportTarget ExportTarget, bpName string, rpName string,
 ) (bpPath string, rpPath string, err error) {
-	if exportTarget.Target == "development" {
+	switch exportTarget.Target {
+	case "development":
 		comMojang, err := FindMojangDir(exportTarget.Build, PacksPath)
 		if err != nil {
 			return "", "", burrito.PassError(err)
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
-	} else if exportTarget.Target == "world" {
+	case "world":
 		return GetWorldExportPaths(
 			exportTarget.WorldPath,
 			exportTarget.WorldName,
 			exportTarget.Build,
 			bpName, rpName)
-	} else if exportTarget.Target == "exact" {
+	case "exact":
 		return GetExactExportPaths(exportTarget)
-	} else if exportTarget.Target == "local" {
+	case "local":
 		bpPath = "build/" + bpName + "/"
 		rpPath = "build/" + rpName + "/"
-	} else if exportTarget.Target == "none" {
+	case "none":
 		bpPath = ""
 		rpPath = ""
-	} else {
+	default:
 		err = burrito.WrappedErrorf(
 			"Export target %q is not valid", exportTarget.Target)
 	}

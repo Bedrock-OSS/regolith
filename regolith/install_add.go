@@ -198,13 +198,14 @@ func GetRemoteFilterDownloadRef(url, name, version string) (string, error) {
 	type vg []func(string, string) (string, error)
 	var versionGetters vg
 	getHeadSha := func(url, _ string) (string, error) { return GetHeadSha(url) }
-	if version == "" {
+	switch version {
+	case "":
 		versionGetters = vg{GetLatestRemoteFilterTag, getHeadSha}
-	} else if version == "latest" {
+	case "latest":
 		versionGetters = vg{GetLatestRemoteFilterTag}
-	} else if version == "HEAD" {
+	case "HEAD":
 		versionGetters = vg{getHeadSha}
-	} else {
+	default:
 		if semver.IsValid("v" + version) {
 			version = name + "-" + version
 		}
