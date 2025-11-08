@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -282,6 +283,7 @@ func main() {
 	subcommands = append(subcommands, cmdInstallAll)
 
 	// regolith run
+	var uwpDevelopment bool
 	cmdRun := &cobra.Command{
 		Use:   "run [profile_name]",
 		Short: "Runs Regolith using specified profile",
@@ -291,7 +293,7 @@ func main() {
 			if len(args) != 0 {
 				profile = args[0]
 			}
-			err = regolith.Run(profile, burrito.PrintStackTrace)
+			err = regolith.Run(profile, uwpDevelopment, burrito.PrintStackTrace)
 		},
 	}
 	subcommands = append(subcommands, cmdRun)
@@ -306,10 +308,18 @@ func main() {
 			if len(args) != 0 {
 				profile = args[0]
 			}
-			err = regolith.Watch(profile, burrito.PrintStackTrace)
+			err = regolith.Watch(profile, uwpDevelopment, burrito.PrintStackTrace)
 		},
 	}
 	subcommands = append(subcommands, cmdWatch)
+
+	if runtime.GOOS == "windows" {
+		for _, cmd := range []*cobra.Command{cmdWatch, cmdRun} {
+			cmd.Flags().BoolVar(
+				&uwpDevelopment, "uwp-development", false,
+				"Enable exporting to the old UWP paths used by Minecraft before 1.21.120 update")
+		}
+	}
 
 	// regolith apply-filter
 	cmdApplyFilter := &cobra.Command{

@@ -25,10 +25,10 @@ func GetExportPaths(
 
 	if semver.Compare(vFormatVersion, "v1.4.0") < 0 {
 		bpPath, rpPath, err = getExportPathsV1_2_0(
-			exportTarget, bpName, rpName)
+			exportTarget, bpName, rpName, ctx.uwpDevelopment)
 	} else if semver.Compare(vFormatVersion, "v1.4.0") == 0 {
 		bpPath, rpPath, err = getExportPathsV1_4_0(
-			exportTarget, bpName, rpName)
+			exportTarget, bpName, rpName, ctx.uwpDevelopment)
 	} else {
 		err = burrito.WrappedErrorf(
 			incompatibleFormatVersionError,
@@ -37,12 +37,12 @@ func GetExportPaths(
 	return
 }
 
-func FindMojangDir(build string, pathType ComMojangPathType) (string, error) {
+func FindMojangDir(build string, pathType ComMojangPathType, uwpDevelopment bool) (string, error) {
 	switch build {
 	case "standard":
-		return FindStandardMojangDir(pathType)
+		return FindStandardMojangDir(pathType, uwpDevelopment)
 	case "preview":
-		return FindPreviewDir(pathType)
+		return FindPreviewDir(pathType, uwpDevelopment)
 	case "education":
 		return FindEducationDir()
 		// WARNING: If for some reason we will expand this in the future to
@@ -60,17 +60,18 @@ func FindMojangDir(build string, pathType ComMojangPathType) (string, error) {
 // below 1.4.0.
 func getExportPathsV1_2_0(
 	exportTarget ExportTarget, bpName string, rpName string,
+	uwpDevelopment bool,
 ) (bpPath string, rpPath string, err error) {
 	switch exportTarget.Target {
 	case "development":
-		comMojang, err := FindStandardMojangDir(PacksPath)
+		comMojang, err := FindStandardMojangDir(PacksPath, uwpDevelopment)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, findMojangDirError)
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
 	case "preview":
-		comMojang, err := FindPreviewDir(PacksPath)
+		comMojang, err := FindPreviewDir(PacksPath, uwpDevelopment)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, findPreviewDirError)
@@ -83,7 +84,7 @@ func getExportPathsV1_2_0(
 			exportTarget.WorldPath,
 			exportTarget.WorldName,
 			"standard",
-			bpName, rpName)
+			bpName, rpName, uwpDevelopment)
 	case "local":
 		bpPath = "build/" + bpName + "/"
 		rpPath = "build/" + rpName + "/"
@@ -101,10 +102,11 @@ func getExportPathsV1_2_0(
 // 1.4.0.
 func getExportPathsV1_4_0(
 	exportTarget ExportTarget, bpName string, rpName string,
+	uwpDevelopment bool,
 ) (bpPath string, rpPath string, err error) {
 	switch exportTarget.Target {
 	case "development":
-		comMojang, err := FindMojangDir(exportTarget.Build, PacksPath)
+		comMojang, err := FindMojangDir(exportTarget.Build, PacksPath, uwpDevelopment)
 		if err != nil {
 			return "", "", burrito.PassError(err)
 		}
@@ -114,7 +116,7 @@ func getExportPathsV1_4_0(
 			exportTarget.WorldPath,
 			exportTarget.WorldName,
 			exportTarget.Build,
-			bpName, rpName)
+			bpName, rpName, uwpDevelopment)
 	case "exact":
 		return GetExactExportPaths(exportTarget)
 	case "local":
@@ -152,6 +154,7 @@ func GetExactExportPaths(exportTarget ExportTarget) (bpPath string, rpPath strin
 
 func GetWorldExportPaths(
 	worldPath, worldName, build, bpName, rpName string,
+	uwpDevelopment bool,
 ) (bpPath string, rpPath string, err error) {
 	if worldPath != "" {
 		if worldName != "" {
@@ -169,7 +172,7 @@ func GetWorldExportPaths(
 		rpPath = filepath.Join(
 			wPath, "resource_packs", rpName)
 	} else if worldName != "" {
-		dir, err := FindMojangDir(build, WorldPath)
+		dir, err := FindMojangDir(build, WorldPath, uwpDevelopment)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, "Failed to find \"com.mojang\" directory.")

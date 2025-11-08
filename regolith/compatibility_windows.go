@@ -59,8 +59,9 @@ func findSomeMojangDir(
 	comMojangWordsVar string,
 	comMojangPacksVar string,
 	comMojangVar string,
-	theSomeDirName string,
+	isStandard bool,
 	pathType ComMojangPathType,
+	uwpDevelopment bool,
 ) (string, error) {
 	// Try specific path environment variables first
 	switch pathType {
@@ -91,9 +92,37 @@ func findSomeMojangDir(
 		}
 		return nil
 	}
+
+	// Handle the UWP export
+	if uwpDevelopment {
+		if isStandard {
+			result = filepath.Join(
+				os.Getenv("LOCALAPPDATA"), "Packages",
+				"Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games",
+				"com.mojang")
+		} else {
+			result = filepath.Join(
+				os.Getenv("LOCALAPPDATA"), "Packages",
+				"Microsoft.MinecraftWindowsBeta_8wekyb3d8bbwe", "LocalState", "games",
+				"com.mojang")
+
+		}
+		if err := checkResult(); err != nil {
+			return "", burrito.PassError(err)
+		}
+		return result, nil
+	}
+
+	var mcBuildName string
+	if isStandard {
+		mcBuildName = "Minecraft Bedrock"
+	} else {
+		mcBuildName = "Minecraft Bedrock Preview"
+
+	}
 	switch pathType {
 	case WorldPath:
-		result = filepath.Join(os.Getenv("APPDATA"), theSomeDirName, "Users")
+		result = filepath.Join(os.Getenv("APPDATA"), mcBuildName, "Users")
 		if err := checkResult(); err != nil {
 			return "", burrito.PassError(err)
 		}
@@ -126,7 +155,7 @@ func findSomeMojangDir(
 		return result, nil
 	case PacksPath:
 		result = filepath.Join(
-			os.Getenv("APPDATA"), theSomeDirName, "Users", "Shared", "games",
+			os.Getenv("APPDATA"), mcBuildName, "Users", "Shared", "games",
 			"com.mojang")
 		if err := checkResult(); err != nil {
 			return "", burrito.PassError(err)
@@ -139,29 +168,31 @@ func findSomeMojangDir(
 
 // FindStandardMojangDir returns path to the com.mojang folder in the standard
 // Minecraft build.
-func FindStandardMojangDir(pathType ComMojangPathType) (string, error) {
+func FindStandardMojangDir(pathType ComMojangPathType, uwpDevelopment bool) (string, error) {
 	return findSomeMojangDir(
 		// Environment variables
 		"COM_MOJANG_WORLDS",
 		"COM_MOJANG_PACKS",
 		"COM_MOJANG",
 		// The name of the folder in APPDATA
-		"Minecraft Bedrock",
+		true,
 		pathType,
+		uwpDevelopment,
 	)
 }
 
 // FindPreviewDir returns path to the com.mojang folder in the preview
 // Minecraft build.
-func FindPreviewDir(pathType ComMojangPathType) (string, error) {
+func FindPreviewDir(pathType ComMojangPathType, uwpDevelopment bool) (string, error) {
 	return findSomeMojangDir(
 		// Environment variables
 		"COM_MOJANG_WORLDS_PREVIEW",
 		"COM_MOJANG_PACKS_PREVIEW",
 		"COM_MOJANG_PREVIEW",
 		// The name of the folder in APPDATA
-		"Minecraft Bedrock Preview",
+		false,
 		pathType,
+		uwpDevelopment,
 	)
 }
 
@@ -192,28 +223,31 @@ func CheckSuspiciousLocation() error {
 	if err != nil {
 		return burrito.WrapErrorf(err, osGetwdError)
 	}
-	// Check if project directory is within mojang dir
-	dir, err := FindStandardMojangDir(PacksPath)
-	if err == nil {
-		dir1 := filepath.Join(dir, "development_behavior_packs")
-		if isPathWithinDirectory(path, dir1) {
-			return burrito.WrappedErrorf(projectInMojangDirError, path, dir1)
+
+	for _, uwpDevelopment := range []bool{true, false} {
+		// Check if project directory is within mojang dir
+		dir, err := FindStandardMojangDir(PacksPath, uwpDevelopment)
+		if err == nil {
+			dir1 := filepath.Join(dir, "development_behavior_packs")
+			if isPathWithinDirectory(path, dir1) {
+				return burrito.WrappedErrorf(projectInMojangDirError, path, dir1)
+			}
+			dir1 = filepath.Join(dir, "development_resource_packs")
+			if isPathWithinDirectory(path, dir1) {
+				return burrito.WrappedErrorf(projectInMojangDirError, path, dir1)
+			}
 		}
-		dir1 = filepath.Join(dir, "development_resource_packs")
-		if isPathWithinDirectory(path, dir1) {
-			return burrito.WrappedErrorf(projectInMojangDirError, path, dir1)
-		}
-	}
-	// Check if project directory is within mojang dir
-	dir, err = FindPreviewDir(PacksPath)
-	if err == nil {
-		dir1 := filepath.Join(dir, "development_behavior_packs")
-		if isPathWithinDirectory(path, dir1) {
-			return burrito.WrappedErrorf(projectInPreviewDirError, path, dir1)
-		}
-		dir1 = filepath.Join(dir, "development_resource_packs")
-		if isPathWithinDirectory(path, dir1) {
-			return burrito.WrappedErrorf(projectInPreviewDirError, path, dir1)
+		// Check if project directory is within mojang dir
+		dir, err = FindPreviewDir(PacksPath, uwpDevelopment)
+		if err == nil {
+			dir1 := filepath.Join(dir, "development_behavior_packs")
+			if isPathWithinDirectory(path, dir1) {
+				return burrito.WrappedErrorf(projectInPreviewDirError, path, dir1)
+			}
+			dir1 = filepath.Join(dir, "development_resource_packs")
+			if isPathWithinDirectory(path, dir1) {
+				return burrito.WrappedErrorf(projectInPreviewDirError, path, dir1)
+			}
 		}
 	}
 	// Check if project directory is within OneDrive directories

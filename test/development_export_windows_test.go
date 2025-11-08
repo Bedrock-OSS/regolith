@@ -22,7 +22,7 @@ func TestDevelopmentStandardExportLocation(t *testing.T) {
 	_testCustomDevelopmentExportLocation(
 		t,
 		func() (string, error) {
-			return regolith.FindStandardMojangDir(regolith.PacksPath)
+			return regolith.FindStandardMojangDir(regolith.PacksPath, false)
 		},
 		"standard",
 		"TestDevelopmentStandardExportLocation")
@@ -52,7 +52,7 @@ func TestDevelopmentPreviewExportLocation(t *testing.T) {
 	_testCustomDevelopmentExportLocation(
 		t,
 		func() (string, error) {
-			return regolith.FindPreviewDir(regolith.PacksPath)
+			return regolith.FindPreviewDir(regolith.PacksPath, false)
 		},
 		"preview",
 		"TestDevelopmentPreviewExportLocation")
@@ -103,7 +103,7 @@ func _testCustomDevelopmentExportLocation(
 
 	// THE TEST
 	t.Log("Testing the 'regolith run' command...")
-	err = regolith.Run(profileToRun, true)
+	err = regolith.Run(profileToRun, false, true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}

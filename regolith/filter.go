@@ -1,8 +1,9 @@
 package regolith
 
 import (
-	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"slices"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 type FilterDefinition struct {
@@ -25,6 +26,7 @@ type RunContext struct {
 	Profile          string
 	Parent           *RunContext
 	DotRegolithPath  string
+	uwpDevelopment   bool
 	Settings         map[string]any
 
 	// interruption is a channel used to receive notifications about changes

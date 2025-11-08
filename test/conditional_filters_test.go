@@ -29,7 +29,7 @@ func TestConditionalFilter(t *testing.T) {
 
 	// THE TEST
 	t.Log("Running Regolith with a conditional filter...")
-	if err := regolith.Run("default", true); err != nil {
+	if err := regolith.Run("default", false, true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 

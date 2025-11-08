@@ -58,7 +58,7 @@ func findSomeMojangDir(
 	return comMojang, nil
 }
 
-func FindStandardMojangDir(pathType ComMojangPathType) (string, error) {
+func FindStandardMojangDir(pathType ComMojangPathType, _uwpDevelopment bool) (string, error) {
 	return findSomeMojangDir(
 		"COM_MOJANG_WORLDS",
 		"COM_MOJANG_PACKS",
@@ -68,7 +68,7 @@ func FindStandardMojangDir(pathType ComMojangPathType) (string, error) {
 	)
 }
 
-func FindPreviewDir(pathType ComMojangPathType) (string, error) {
+func FindPreviewDir(pathType ComMojangPathType, _uwpDevelopment bool) (string, error) {
 	return findSomeMojangDir(
 		"COM_MOJANG_WORLDS_PREVIEW",
 		"COM_MOJANG_PACKS_PREVIEW",
