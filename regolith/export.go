@@ -37,11 +37,11 @@ func GetExportPaths(
 	return
 }
 
-func FindMojangDir(build string) (string, error) {
+func FindMojangDir(build string, pathType ComMojangPathType) (string, error) {
 	if build == "standard" {
-		return FindStandardMojangDir()
+		return FindStandardMojangDir(pathType)
 	} else if build == "preview" {
-		return FindPreviewDir()
+		return FindPreviewDir(pathType)
 	} else if build == "education" {
 		return FindEducationDir()
 		// WARNING: If for some reason we will expand this in the future to
@@ -61,14 +61,14 @@ func getExportPathsV1_2_0(
 	exportTarget ExportTarget, bpName string, rpName string,
 ) (bpPath string, rpPath string, err error) {
 	if exportTarget.Target == "development" {
-		comMojang, err := FindStandardMojangDir()
+		comMojang, err := FindStandardMojangDir(PacksPath)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, findMojangDirError)
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
 	} else if exportTarget.Target == "preview" {
-		comMojang, err := FindPreviewDir()
+		comMojang, err := FindPreviewDir(PacksPath)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, findPreviewDirError)
@@ -101,7 +101,7 @@ func getExportPathsV1_4_0(
 	exportTarget ExportTarget, bpName string, rpName string,
 ) (bpPath string, rpPath string, err error) {
 	if exportTarget.Target == "development" {
-		comMojang, err := FindMojangDir(exportTarget.Build)
+		comMojang, err := FindMojangDir(exportTarget.Build, PacksPath)
 		if err != nil {
 			return "", "", burrito.PassError(err)
 		}
@@ -166,7 +166,7 @@ func GetWorldExportPaths(
 		rpPath = filepath.Join(
 			wPath, "resource_packs", rpName)
 	} else if worldName != "" {
-		dir, err := FindMojangDir(build)
+		dir, err := FindMojangDir(build, WorldPath)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, "Failed to find \"com.mojang\" directory.")
@@ -176,13 +176,18 @@ func GetWorldExportPaths(
 			return "", "", burrito.WrapError(err, "Failed to list worlds.")
 		}
 		for _, world := range worlds {
-			if world.Name == worldName {
-				bpPath = filepath.Join(
-					world.Path, "behavior_packs", bpName)
-				rpPath = filepath.Join(
-					world.Path, "resource_packs", rpName)
+			if world.Name != worldName {
+				continue
 			}
+			bpPath = filepath.Join(
+				world.Path, "behavior_packs", bpName)
+			rpPath = filepath.Join(
+				world.Path, "resource_packs", rpName)
+			return bpPath, rpPath, nil
 		}
+		return "", "", burrito.WrappedErrorf(
+			"Failed to find the world.\n"+
+				"World name: %s", worldName)
 	} else {
 		err = burrito.WrappedError(
 			"The \"world\" export target requires either a " +

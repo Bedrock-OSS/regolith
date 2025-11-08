@@ -35,7 +35,7 @@ func TestMoveFilesAcl(t *testing.T) {
 
 	// Find path to com.mojang
 	t.Log("Finding the path to com.mojang...")
-	mojangDir, err := regolith.FindStandardMojangDir()
+	mojangDir, err := regolith.FindStandardMojangDir(regolith.PacksPath)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

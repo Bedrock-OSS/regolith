@@ -30,20 +30,52 @@ func copyFileSecurityInfo(source string, target string) error {
 	return nil
 }
 
-func FindStandardMojangDir() (string, error) {
-	comMojang := os.Getenv("COM_MOJANG")
+func findSomeMojangDir(
+	comMojangWordsVar,
+	comMojangPacksVar,
+	comMojangVar,
+	comMojangEnvUnsetError string,
+	pathType ComMojangPathType,
+) (string, error) {
+	// Try specific path environment variables first
+	switch pathType {
+	case WorldPath:
+		comMojang := os.Getenv(comMojangWordsVar)
+		if comMojang != "" {
+			return comMojang, nil
+		}
+	case PacksPath:
+		comMojang := os.Getenv(comMojangPacksVar)
+		if comMojang != "" {
+			return comMojang, nil
+		}
+	}
+	// Try general environment variable
+	comMojang := os.Getenv(comMojangVar)
 	if comMojang == "" {
 		return "", burrito.WrappedError(comMojangEnvUnsetError)
 	}
 	return comMojang, nil
 }
 
-func FindPreviewDir() (string, error) {
-	comMojangPreview := os.Getenv("COM_MOJANG_PREVIEW")
-	if comMojangPreview == "" {
-		return "", burrito.WrappedError(comMojangPreviewEnvUnsetError)
-	}
-	return comMojangPreview, nil
+func FindStandardMojangDir(pathType ComMojangPathType) (string, error) {
+	return findSomeMojangDir(
+		"COM_MOJANG_WORLDS",
+		"COM_MOJANG_PACKS",
+		"COM_MOJANG",
+		comMojangEnvUnsetError,
+		pathType,
+	)
+}
+
+func FindPreviewDir(pathType ComMojangPathType) (string, error) {
+	return findSomeMojangDir(
+		"COM_MOJANG_WORLDS_PREVIEW",
+		"COM_MOJANG_PACKS_PREVIEW",
+		"COM_MOJANG_PREVIEW",
+		comMojangPreviewEnvUnsetError,
+		pathType,
+	)
 }
 
 func FindEducationDir() (string, error) {
