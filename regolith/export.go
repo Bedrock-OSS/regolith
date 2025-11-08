@@ -278,6 +278,21 @@ func ExportProject(ctx RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, updatedFilesDumpError)
 	}
+	// Remove the exported pack paths if they're empty
+	if !IsExperimentEnabled(SymlinkExport) {
+		MeasureStart("Export - Remove Empty Export Paths")
+		for _, packPath := range []string{rpPath, bpPath} {
+			pathEmpty, _ := IsDirEmpty(packPath)
+			if pathEmpty {
+				if err := os.Remove(packPath); err != nil {
+					Logger.Warnf(
+						"Failed to remove empty pack directory.\n"+
+							"Path: %s\n"+
+							"Error: %v", packPath, err)
+				}
+			}
+		}
+	}
 	MeasureEnd()
 	return nil
 }
