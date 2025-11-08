@@ -95,7 +95,7 @@ func findSomeMojangDir(
 	case WorldPath:
 		result = filepath.Join(os.Getenv("APPDATA"), theSomeDirName, "Users")
 		if err := checkResult(); err != nil {
-			return "", err
+			return "", burrito.PassError(err)
 		}
 		// List directories in the Users folder and pick the first one that isn't
 		// "Shared". From that folder navigate to "games/com.mojang" and validate
@@ -121,7 +121,7 @@ func findSomeMojangDir(
 		}
 		result = filepath.Join(result, chosen, "games", "com.mojang")
 		if err := checkResult(); err != nil {
-			return "", err
+			return "", burrito.PassError(err)
 		}
 		return result, nil
 	case PacksPath:
@@ -129,7 +129,7 @@ func findSomeMojangDir(
 			os.Getenv("APPDATA"), theSomeDirName, "Users", "Shared", "games",
 			"com.mojang")
 		if err := checkResult(); err != nil {
-			return "", err
+			return "", burrito.PassError(err)
 		}
 		return result, nil
 	}
