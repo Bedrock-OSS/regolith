@@ -176,13 +176,18 @@ func GetWorldExportPaths(
 			return "", "", burrito.WrapError(err, "Failed to list worlds.")
 		}
 		for _, world := range worlds {
-			if world.Name == worldName {
-				bpPath = filepath.Join(
-					world.Path, "behavior_packs", bpName)
-				rpPath = filepath.Join(
-					world.Path, "resource_packs", rpName)
+			if world.Name != worldName {
+				continue
 			}
+			bpPath = filepath.Join(
+				world.Path, "behavior_packs", bpName)
+			rpPath = filepath.Join(
+				world.Path, "resource_packs", rpName)
+			return bpPath, rpPath, nil
 		}
+		return "", "", burrito.WrappedErrorf(
+			"Failed to find the world.\n"+
+				"World name: %s", worldName)
 	} else {
 		err = burrito.WrappedError(
 			"The \"world\" export target requires either a " +
