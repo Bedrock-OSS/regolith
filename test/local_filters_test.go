@@ -127,10 +127,10 @@ func TestProfileFilterRun(t *testing.T) {
 	t.Log("Running invalid profile filter with circular dependencies (this should fail).")
 	err := regolith.Run("invalid_circular_profile_1", true)
 	if err == nil {
-		t.Fatal("'regolith run' didn't return an error after running"+
-			" a circular profile filter:", err.Error())
+		t.Fatal("'regolith run' didn't return an error after running" +
+			" a circular profile filter.")
 	} else {
-		t.Log("Task failed successfully")
+		t.Log("Task failed successfully. Error: ", err.Error())
 	}
 	// Valid profile (should succeed)
 	t.Log("Running valid profile filter.")

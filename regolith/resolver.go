@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
-	"github.com/paul-mannino/go-fuzzywuzzy"
+	fuzzy "github.com/paul-mannino/go-fuzzywuzzy"
 )
 
 const (
@@ -150,9 +150,6 @@ func DownloadResolverMaps(forceUpdate bool) ([]string, []string, error) {
 		if err != nil {
 			return nil, nil, burrito.PassError(err)
 		}
-	}
-	if err != nil {
-		return nil, nil, burrito.WrapError(err, "Failed to download the resolvers")
 	}
 	return globalUserConfig.Resolvers, resolverFilePaths, nil
 }

@@ -635,7 +635,7 @@ func ForceMoveFile(source, target string) error {
 		if err != nil {
 			return burrito.WrapErrorf(err, osMkdirError, target)
 		}
-		os.Remove(source) // Only works for empty directories
+		err = os.Remove(source) // Only works for empty directories
 		if err != nil {
 			return burrito.WrapErrorf(err, osRemoveError, source)
 		}
