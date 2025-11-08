@@ -14,11 +14,11 @@ type ExeFilterDefinition struct {
 
 type ExeFilter struct {
 	Filter
-	Definition ExeFilterDefinition `json:"definition,omitempty"`
+	Definition ExeFilterDefinition `json:"definition,omitzero"`
 }
 
 func ExeFilterDefinitionFromObject(
-	id string, obj map[string]interface{},
+	id string, obj map[string]any,
 ) (*ExeFilterDefinition, error) {
 	filter := &ExeFilterDefinition{
 		FilterDefinition: *FilterDefinitionFromObject(id)}
@@ -44,9 +44,9 @@ func (f *ExeFilter) Run(context RunContext) (bool, error) {
 }
 
 func (f *ExeFilterDefinition) CreateFilterRunner(
-	runConfiguration map[string]interface{},
+	runConfiguration map[string]any, id string,
 ) (FilterRunner, error) {
-	basicFilter, err := filterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
@@ -72,7 +72,7 @@ func (f *ExeFilter) Check(context RunContext) error {
 }
 
 func (f *ExeFilter) run(
-	settings map[string]interface{},
+	settings map[string]any,
 	context RunContext,
 ) error {
 	var err error = nil

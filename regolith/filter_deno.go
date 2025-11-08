@@ -19,7 +19,7 @@ type DenoFilter struct {
 	Definition DenoFilterDefinition `json:"-"`
 }
 
-func DenoFilterDefinitionFromObject(id string, obj map[string]interface{}) (*DenoFilterDefinition, error) {
+func DenoFilterDefinitionFromObject(id string, obj map[string]any) (*DenoFilterDefinition, error) {
 	filter := &DenoFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	scriptObj, ok := obj["script"]
 	if !ok {
@@ -79,8 +79,8 @@ func (f *DenoFilter) Run(context RunContext) (bool, error) {
 	return context.IsInterrupted(), nil
 }
 
-func (f *DenoFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := filterFromObject(runConfiguration)
+func (f *DenoFilterDefinition) CreateFilterRunner(runConfiguration map[string]any, id string) (FilterRunner, error) {
+	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
 	}

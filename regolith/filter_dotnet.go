@@ -18,7 +18,7 @@ type DotNetFilter struct {
 	Definition DotNetFilterDefinition `json:"-"`
 }
 
-func DotNetFilterDefinitionFromObject(id string, obj map[string]interface{}) (*DotNetFilterDefinition, error) {
+func DotNetFilterDefinitionFromObject(id string, obj map[string]any) (*DotNetFilterDefinition, error) {
 	filter := &DotNetFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	pathObj, ok := obj["path"]
 	if !ok {
@@ -78,8 +78,8 @@ func (f *DotNetFilter) run(context RunContext) error {
 	return nil
 }
 
-func (f *DotNetFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := filterFromObject(runConfiguration)
+func (f *DotNetFilterDefinition) CreateFilterRunner(runConfiguration map[string]any, id string) (FilterRunner, error) {
+	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
 	}

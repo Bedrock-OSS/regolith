@@ -19,7 +19,7 @@ type JavaFilter struct {
 	Definition JavaFilterDefinition `json:"-"`
 }
 
-func JavaFilterDefinitionFromObject(id string, obj map[string]interface{}) (*JavaFilterDefinition, error) {
+func JavaFilterDefinitionFromObject(id string, obj map[string]any) (*JavaFilterDefinition, error) {
 	filter := &JavaFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	var path string
 	pathObj, ok := obj["path"]
@@ -90,8 +90,8 @@ func (f *JavaFilter) run(context RunContext) error {
 	return nil
 }
 
-func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := filterFromObject(runConfiguration)
+func (f *JavaFilterDefinition) CreateFilterRunner(runConfiguration map[string]any, id string) (FilterRunner, error) {
+	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
 	}

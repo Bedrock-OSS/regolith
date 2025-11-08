@@ -25,7 +25,7 @@ type NodeJSFilter struct {
 	Definition NodeJSFilterDefinition `json:"-"`
 }
 
-func NodeJSFilterDefinitionFromObject(id string, obj map[string]interface{}) (*NodeJSFilterDefinition, error) {
+func NodeJSFilterDefinitionFromObject(id string, obj map[string]any) (*NodeJSFilterDefinition, error) {
 	filter := &NodeJSFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	scriptObj, ok := obj["script"]
 	if !ok {
@@ -93,8 +93,8 @@ func (f *NodeJSFilter) Run(context RunContext) (bool, error) {
 	return context.IsInterrupted(), nil
 }
 
-func (f *NodeJSFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}) (FilterRunner, error) {
-	basicFilter, err := filterFromObject(runConfiguration)
+func (f *NodeJSFilterDefinition) CreateFilterRunner(runConfiguration map[string]any, id string) (FilterRunner, error) {
+	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
 	}

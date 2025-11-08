@@ -7,7 +7,7 @@ import (
 )
 
 func TestSimplePath(t *testing.T) {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"foo": "bar",
 	}
 	expected := "bar"
@@ -21,8 +21,8 @@ func TestSimplePath(t *testing.T) {
 }
 
 func TestSimplePath2(t *testing.T) {
-	obj := map[string]interface{}{
-		"foo": []interface{}{"bar"},
+	obj := map[string]any{
+		"foo": []any{"bar"},
 	}
 	expected := "bar"
 	actual, err := regolith.FindByJSONPath[string](obj, "foo/0")
@@ -35,8 +35,8 @@ func TestSimplePath2(t *testing.T) {
 }
 
 func TestSimplePath3(t *testing.T) {
-	obj := map[string]interface{}{
-		"foo": map[string]interface{}{
+	obj := map[string]any{
+		"foo": map[string]any{
 			"bar": "baz",
 		},
 	}
@@ -51,7 +51,7 @@ func TestSimplePath3(t *testing.T) {
 }
 
 func TestEscapedPath(t *testing.T) {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"fo/o": "bar",
 	}
 	expected := "bar"
@@ -65,7 +65,7 @@ func TestEscapedPath(t *testing.T) {
 }
 
 func TestEscapedPath2(t *testing.T) {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"fo/o": "bar",
 	}
 	expected := "bar"
@@ -79,8 +79,8 @@ func TestEscapedPath2(t *testing.T) {
 }
 
 func TestInvalidPath(t *testing.T) {
-	obj := map[string]interface{}{
-		"foo": map[string]interface{}{
+	obj := map[string]any{
+		"foo": map[string]any{
 			"bar": "baz",
 		},
 	}
@@ -95,8 +95,8 @@ func TestInvalidPath(t *testing.T) {
 }
 
 func TestInvalidPath2(t *testing.T) {
-	obj := map[string]interface{}{
-		"foo": map[string]interface{}{
+	obj := map[string]any{
+		"foo": map[string]any{
 			"bar": "baz",
 		},
 	}

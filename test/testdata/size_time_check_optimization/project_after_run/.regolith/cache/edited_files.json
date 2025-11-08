@@ -11,11 +11,12 @@
 			"bp_file_3.txt",
 			"bp_file_4.txt",
 			"bp_file_5.txt",
-			"filter_generated_data_1.txt",
-			"filter_generated_data_2.txt",
-			"filter_generated_data_3.txt",
-			"filter_generated_data_4.txt",
-			"filter_generated_data_5.txt"
+			"generated/filter_generated_data_1.txt",
+			"generated/filter_generated_data_2.txt",
+			"generated/filter_generated_data_3.txt",
+			"generated/filter_generated_data_4.txt",
+			"generated/filter_generated_data_5.txt",
+			"nested_path/bp_file_6.txt"
 		]
 	}
 }

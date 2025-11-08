@@ -16,11 +16,11 @@ type ShellFilterDefinition struct {
 
 type ShellFilter struct {
 	Filter
-	Definition ShellFilterDefinition `json:"definition,omitempty"`
+	Definition ShellFilterDefinition `json:"definition,omitzero"`
 }
 
 func ShellFilterDefinitionFromObject(
-	id string, obj map[string]interface{},
+	id string, obj map[string]any,
 ) (*ShellFilterDefinition, error) {
 	filter := &ShellFilterDefinition{
 		FilterDefinition: *FilterDefinitionFromObject(id)}
@@ -44,9 +44,9 @@ func (f *ShellFilter) Run(context RunContext) (bool, error) {
 }
 
 func (f *ShellFilterDefinition) CreateFilterRunner(
-	runConfiguration map[string]interface{},
+	runConfiguration map[string]any, id string,
 ) (FilterRunner, error) {
-	basicFilter, err := filterFromObject(runConfiguration)
+	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
@@ -78,7 +78,7 @@ var shells = [][]string{
 	{"powershell", "-command"}, {"cmd", "/k"}, {"bash", "-c"}, {"sh", "-c"}}
 
 func (f *ShellFilter) run(
-	settings map[string]interface{},
+	settings map[string]any,
 	context RunContext,
 ) error {
 	var err error = nil

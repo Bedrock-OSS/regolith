@@ -18,8 +18,8 @@ const GitIgnore = "/build\n/.regolith"
 type Config struct {
 	Name            string `json:"name,omitempty"`
 	Author          string `json:"author,omitempty"`
-	Packs           `json:"packs,omitempty"`
-	RegolithProject `json:"regolith,omitempty"`
+	Packs           `json:"packs,omitzero"`
+	RegolithProject `json:"regolith,omitzero"`
 }
 
 // ExportTarget is a part of "config.json" that contains export information
@@ -55,7 +55,7 @@ type RegolithProject struct {
 }
 
 // ConfigFromObject creates a "Config" object from map[string]interface{}
-func ConfigFromObject(obj map[string]interface{}) (*Config, error) {
+func ConfigFromObject(obj map[string]any) (*Config, error) {
 	result := &Config{}
 	// Name
 	name, ok := obj["name"].(string)
@@ -71,7 +71,7 @@ func ConfigFromObject(obj map[string]interface{}) (*Config, error) {
 	result.Author = author
 	// Packs
 	if packs, ok := obj["packs"]; ok {
-		packs, ok := packs.(map[string]interface{})
+		packs, ok := packs.(map[string]any)
 		if !ok {
 			return nil, burrito.WrappedErrorf(jsonPathTypeError, "packs", "object")
 		}
@@ -82,7 +82,7 @@ func ConfigFromObject(obj map[string]interface{}) (*Config, error) {
 	}
 	// Regolith
 	if regolith, ok := obj["regolith"]; ok {
-		regolith, ok := regolith.(map[string]interface{})
+		regolith, ok := regolith.(map[string]any)
 		if !ok {
 			return nil, burrito.WrappedErrorf(
 				jsonPathTypeError, "regolith", "object")
@@ -99,7 +99,7 @@ func ConfigFromObject(obj map[string]interface{}) (*Config, error) {
 }
 
 // ProfileFromObject creates a "Profile" object from map[string]interface{}
-func PacksFromObject(obj map[string]interface{}) Packs {
+func PacksFromObject(obj map[string]any) Packs {
 	result := Packs{}
 	// BehaviorPack
 	behaviorPack, _ := obj["behaviorPack"].(string)
@@ -113,7 +113,7 @@ func PacksFromObject(obj map[string]interface{}) Packs {
 // RegolithProjectFromObject creates a "RegolithProject" object from
 // map[string]interface{}
 func RegolithProjectFromObject(
-	obj map[string]interface{},
+	obj map[string]any,
 ) (RegolithProject, error) {
 	result := RegolithProject{
 		Profiles:          make(map[string]Profile),
@@ -166,10 +166,10 @@ func RegolithProjectFromObject(
 		}
 	}
 	// Filter definitions
-	filterDefinitions, ok := obj["filterDefinitions"].(map[string]interface{})
+	filterDefinitions, ok := obj["filterDefinitions"].(map[string]any)
 	if ok { // filter definitions are optional
 		for filterDefinitionName, filterDefinition := range filterDefinitions {
-			filterDefinitionMap, ok := filterDefinition.(map[string]interface{})
+			filterDefinitionMap, ok := filterDefinition.(map[string]any)
 			if !ok {
 				return result, burrito.WrappedErrorf(
 					jsonPropertyTypeError, "filterDefinitions",
@@ -185,12 +185,12 @@ func RegolithProjectFromObject(
 		}
 	}
 	// Profiles
-	profiles, ok := obj["profiles"].(map[string]interface{})
+	profiles, ok := obj["profiles"].(map[string]any)
 	if !ok {
 		return result, burrito.WrappedErrorf(jsonPropertyMissingError, "profiles")
 	}
 	for profileName, profile := range profiles {
-		profileMap, ok := profile.(map[string]interface{})
+		profileMap, ok := profile.(map[string]any)
 		if !ok {
 			return result, burrito.WrappedErrorf(
 				jsonPropertyTypeError,
@@ -209,7 +209,7 @@ func RegolithProjectFromObject(
 
 // ExportTargetFromObject creates a "ExportTarget" object from
 // map[string]interface{}
-func ExportTargetFromObject(obj map[string]interface{}) (ExportTarget, error) {
+func ExportTargetFromObject(obj map[string]any) (ExportTarget, error) {
 	result := ExportTarget{}
 	// Target
 	targetObj, ok := obj["target"]
