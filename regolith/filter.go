@@ -317,11 +317,23 @@ func FilterInstallerFromObject(id string, obj map[string]any) (FilterInstaller, 
 }
 
 func FilterRunnerFromObjectAndDefinitions(
-	obj map[string]any, filterDefinitions map[string]FilterInstaller,
+	obj map[string]any,
+	filterDefinitions map[string]FilterInstaller,
+	isInAsyncFilter bool,
 ) (FilterRunner, error) {
 	profile, ok := obj["profile"].(string)
 	if ok {
 		return &ProfileFilter{Profile: profile}, nil
+	}
+	if !isInAsyncFilter {
+		_, ok := obj["asyncFilters"]
+		if ok {
+			asyncFilter, err := AsyncFilterFromObject(obj, filterDefinitions)
+			if err != nil {
+				return nil, burrito.PassError(err)
+			}
+			return asyncFilter, nil
+		}
 	}
 	filterObj, ok := obj["filter"]
 	if !ok {
