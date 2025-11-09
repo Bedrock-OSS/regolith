@@ -1,8 +1,10 @@
 package regolith
 
 import (
-	"github.com/Bedrock-OSS/go-burrito/burrito"
+	"fmt"
 	"slices"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 type FilterDefinition struct {
@@ -107,7 +109,13 @@ func filterFromObject(obj map[string]any, id string) (*Filter, error) {
 		case []any:
 			s := make([]string, len(arguments))
 			for i, v := range arguments {
-				s[i] = v.(string)
+				s[i], ok = v.(string)
+				if !ok {
+					return nil, burrito.WrappedErrorf(
+						jsonPropertyTypeError,
+						fmt.Sprintf("arguments->%d", i),
+						"string")
+				}
 			}
 			filter.Arguments = s
 		case []string:
