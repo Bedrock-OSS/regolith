@@ -26,7 +26,7 @@ func GetExportPaths(
 	if semver.Compare(vFormatVersion, "v1.4.0") < 0 {
 		bpPath, rpPath, err = getExportPathsV1_2_0(
 			exportTarget, bpName, rpName)
-	} else if semver.Compare(vFormatVersion, "v1.4.0") == 0 {
+	} else if semver.Compare(vFormatVersion, "v1.6.0") <= 0 {
 		bpPath, rpPath, err = getExportPathsV1_4_0(
 			exportTarget, bpName, rpName)
 	} else {
