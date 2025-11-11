@@ -1,0 +1,56 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.6.json",
+    "author": "Bedrock-OSS",
+    "name": "async_filter",
+    "packs": {
+        "behaviorPack": "./packs/BP",
+        "resourcePack": "./packs/RP"
+    },
+    "regolith": {
+        "dataPath": "./packs/data",
+        "filterDefinitions": {
+            "wait_and_print": {
+                "runWith": "python",
+                "script": "local_filters/wait_and_print.py"
+            }
+        },
+        "formatVersion": "1.6.0",
+        "profiles": {
+            "default": {
+                "export": {
+                    "target": "local"
+                },
+                "filters": [
+                    {
+                        "asyncFilters": [
+                            {
+                                "filter": "wait_and_print",
+                                "settings": {
+                                    "wait_time": 3,
+                                    "output": "BP/hello_1.txt",
+                                    "message": "Hello 1"
+                                }
+                            },
+                            {
+                                "filter": "wait_and_print",
+                                "settings": {
+                                    "wait_time": 3,
+                                    "output": "BP/hello_2.txt",
+                                    "message": "Hello 2"
+                                }
+                            },
+                            {
+                                "filter": "wait_and_print",
+                                "settings": {
+                                    "wait_time": 3,
+                                    "output": "BP/hello_3.txt",
+                                    "message": "Hello 3"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}
