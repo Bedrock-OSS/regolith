@@ -1,0 +1,55 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.6.json",
+    "author": "Bedrock-OSS",
+    "name": "async_filter_error",
+    "packs": {
+        "behaviorPack": "./packs/BP",
+        "resourcePack": "./packs/RP"
+    },
+    "regolith": {
+        "dataPath": "./packs/data",
+        "filterDefinitions": {
+            "error_filter": {
+                "runWith": "python",
+                "script": "local_filters/error_filter.py"
+            },
+            "slow_success": {
+                "runWith": "python",
+                "script": "local_filters/slow_success.py"
+            }
+        },
+        "formatVersion": "1.6.0",
+        "profiles": {
+            "default": {
+                "export": {
+                    "target": "local"
+                },
+                "filters": [
+                    {
+                        "asyncFilters": [
+                            {
+                                "filter": "error_filter"
+                            },
+                            {
+                                "filter": "slow_success",
+                                "settings": {
+                                    "wait_time": 5,
+                                    "output": "BP/hello_2.txt",
+                                    "message": "Hello 2"
+                                }
+                            },
+                            {
+                                "filter": "slow_success",
+                                "settings": {
+                                    "wait_time": 5,
+                                    "output": "BP/hello_3.txt",
+                                    "message": "Hello 3"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}
