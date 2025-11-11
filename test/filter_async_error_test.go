@@ -40,13 +40,15 @@ func TestAsyncFilterWithError(t *testing.T) {
 
 	t.Logf("Regolith failed as expected with error: %v", err)
 
-	// The test should fail quickly (within ~2 seconds) after the first filter fails
-	// and should not wait for all filters to complete (which would take 5+ seconds)
-	// However, with the current implementation, we need to ensure all goroutines
-	// have a chance to write to the channel before we exit
+	// The implementation now waits for all filters to complete before returning
+	// This ensures no goroutines are orphaned and all resources are cleaned up properly
+	// Even though one filter fails quickly, we wait for the slow filters (5 seconds)
+	if duration < 4*time.Second {
+		t.Fatalf("'regolith run' completed too quickly: %v, expected ~5s to wait for all filters", duration)
+	}
 	if duration > 10*time.Second {
-		t.Fatalf("'regolith run' took too long: %v, expected less than 10s", duration)
+		t.Fatalf("'regolith run' took too long: %v, expected ~5s", duration)
 	}
 
-	t.Logf("Duration: %v", duration)
+	t.Logf("Duration: %v (waited for all filters to complete)", duration)
 }

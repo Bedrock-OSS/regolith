@@ -104,15 +104,26 @@ func (f *AsyncFilter) run(context RunContext) (bool, error) {
 		wg.Wait()
 		close(results)
 	}()
+	// Collect all results, even if we encounter an error
+	// This ensures we don't leave goroutines orphaned
+	var firstErr error
+	var wasInterrupted bool
 	for result := range results {
-		if result.err != nil {
-			return false, result.err
+		if result.err != nil && firstErr == nil {
+			firstErr = result.err
 		}
 		if result.interrupted {
-			return true, nil
+			wasInterrupted = true
 		}
 	}
 	Logger.Debugf("Executed in %s", time.Since(start))
+	// Return the first error we encountered, if any
+	if firstErr != nil {
+		return false, firstErr
+	}
+	if wasInterrupted {
+		return true, nil
+	}
 	return false, nil
 }
 
