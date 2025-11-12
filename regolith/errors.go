@@ -261,4 +261,8 @@ const (
 
 	updatedFilesDumpError = "Failed to update the list of the files edited by Regolith." +
 		"This may cause the next run to fail."
+
+	invalidArgumentModeError = "The extraArgs property of a filter is invalid:\n" +
+		"Current value: %q\n" +
+		"Valid values are: %s"
 )

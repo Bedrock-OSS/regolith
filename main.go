@@ -288,10 +288,12 @@ func main() {
 		Long:  regolithRunDesc,
 		Run: func(cmd *cobra.Command, args []string) {
 			var profile string
+			var extraFilterArgs []string
 			if len(args) != 0 {
 				profile = args[0]
+				extraFilterArgs = args[1:]
 			}
-			err = regolith.Run(profile, burrito.PrintStackTrace)
+			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace)
 		},
 	}
 	subcommands = append(subcommands, cmdRun)
@@ -303,10 +305,12 @@ func main() {
 		Long:  regolithWatchDesc,
 		Run: func(cmd *cobra.Command, args []string) {
 			var profile string
+			var extraFilterArgs []string
 			if len(args) != 0 {
 				profile = args[0]
+				extraFilterArgs = args[1:]
 			}
-			err = regolith.Watch(profile, burrito.PrintStackTrace)
+			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace)
 		},
 	}
 	subcommands = append(subcommands, cmdWatch)

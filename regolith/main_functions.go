@@ -211,7 +211,7 @@ func InstallAll(force, update, debug, refreshFilters bool) error {
 
 // prepareRunContext prepares the context for the "regolith run" and
 // "regolith watch" commands.
-func prepareRunContext(profileName string, debug bool) (*RunContext, error) {
+func prepareRunContext(profileName string, extraFilterArgs []string, debug bool) (*RunContext, error) {
 	InitLogging(debug)
 	if profileName == "" {
 		profileName = "default"
@@ -254,14 +254,15 @@ func prepareRunContext(profileName string, debug bool) (*RunContext, error) {
 		Profile:          profileName,
 		DotRegolithPath:  dotRegolithPath,
 		Settings:         map[string]any{},
+		ExtraArguments:   extraFilterArgs,
 	}, nil
 }
 
 // Run handles the "regolith run" command. It runs selected profile and exports
 // created resource pack and behavior pack to the target destination.
-func Run(profileName string, debug bool) error {
+func Run(profileName string, extraFilterArgs []string, debug bool) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, debug)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -284,9 +285,9 @@ func Run(profileName string, debug bool) error {
 // Watch handles the "regolith watch" command. It watches the project
 // directories, and it runs selected profile and exports created resource pack
 // and behavior pack to the target destination when the project changes.
-func Watch(profileName string, debug bool) error {
+func Watch(profileName string, extraFilterArgs []string, debug bool) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, debug)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
