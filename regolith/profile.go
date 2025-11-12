@@ -391,7 +391,7 @@ func ProfileFromObject(
 				jsonPathTypeError, fmt.Sprintf("filters->%d", i), "object")
 		}
 		filterRunner, err := FilterRunnerFromObjectAndDefinitions(
-			filter, filterDefinitions)
+			filter, filterDefinitions, false)
 		if err != nil {
 			return result, burrito.WrapErrorf(
 				err, jsonPathParseError, fmt.Sprintf("filters->%d", i))
