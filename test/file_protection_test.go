@@ -34,18 +34,18 @@ func TestSwitchingExportTargets(t *testing.T) {
 	// Run Regolith with targets: A, B, A
 	t.Log("Testing the 'regolith run' with changing export targets...")
 	t.Log("Running Regolith with target A...")
-	err := regolith.Run("exact_export_A", true)
+	err := regolith.Run("exact_export_A", []string{}, true)
 	if err != nil {
 		t.Fatal(
 			"Unable RunProfile failed on first attempt to export to A:", err)
 	}
 	t.Log("Running Regolith with target B...")
-	err = regolith.Run("exact_export_B", true)
+	err = regolith.Run("exact_export_B", []string{}, true)
 	if err != nil {
 		t.Fatal("Unable RunProfile failed on attempt to export to B:", err)
 	}
 	t.Log("Running Regolith with target A (2nd time)...")
-	err = regolith.Run("exact_export_A", true)
+	err = regolith.Run("exact_export_A", []string{}, true)
 	if err != nil {
 		t.Fatal(
 			"Unable RunProfile failed on second attempt to export to A:", err)
@@ -78,7 +78,7 @@ func TestTriggerFileProtection(t *testing.T) {
 	// 1. Run Regolith (export to A)
 	t.Log("Testing the 'regolith run' with file protection...")
 	t.Log("Running Regolith...")
-	err := regolith.Run("exact_export_A", true)
+	err := regolith.Run("exact_export_A", []string{}, true)
 	if err != nil {
 		t.Fatal(
 			"Unable RunProfile failed on first attempt to export to A:", err)
@@ -94,7 +94,7 @@ func TestTriggerFileProtection(t *testing.T) {
 
 	// 3. Run Regolith (export to A), expect failure.
 	t.Log("Running Regolith (this should be stopped by file protection system)...")
-	err = regolith.Run("exact_export_A", true)
+	err = regolith.Run("exact_export_A", []string{}, true)
 	if err == nil {
 		t.Fatal("Expected RunProfile to fail on second attempt to export to A")
 	}
