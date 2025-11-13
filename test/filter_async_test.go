@@ -30,7 +30,7 @@ func TestAsyncFilter(t *testing.T) {
 	t.Log("Running Regolith with a conditional filter...")
 
 	start := time.Now()
-	if err := regolith.Run("default", true); err != nil {
+	if err := regolith.Run("default", []string{}, true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 	duration := time.Since(start)
