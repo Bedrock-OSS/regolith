@@ -69,6 +69,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 			err,
 			"Failed to get the list of filter definitions from config file.")
 	}
+
 	// Get dotRegolithPath
 	dotRegolithPath, err := GetDotRegolith(".")
 	if err != nil {
@@ -86,6 +87,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 	if err != nil {
 		return burrito.WrapError(err, "Failed to parse arguments.")
 	}
+
 	// Check if the filters are already installed if force mode is disabled
 	if !force {
 		for _, parsedArg := range parsedArgs {
@@ -100,20 +102,44 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 			}
 		}
 	}
+
 	// Convert to filter definitions for download
 	filterInstallers := make(map[string]FilterInstaller, 0)
 	for _, parsedArg := range parsedArgs {
+
+		preResolvedVersion := parsedArg.version
+
 		// Get the filter definition from the Internet
 		remoteFilterDefinition, err := FilterDefinitionFromTheInternet(
 			parsedArg.url, parsedArg.name, parsedArg.version)
 		if err != nil {
-			return burrito.PassError(err)
+			return burrito.WrapErrorf(
+				err, filterDefinitionFromTheInternetError,
+				parsedArg.url, parsedArg.name, parsedArg.version)
 		}
 		if parsedArg.version == "HEAD" || parsedArg.version == "latest" {
 			// The "HEAD" and "latest" keywords should be the same in the
 			// config file don't lock them to the actual versions
 			remoteFilterDefinition.Version = parsedArg.version
 		}
+
+		remoteFilterDefinition.PreResolveVersion = preResolvedVersion
+
+		if remoteFilterDefinition.RepoManifest != nil {
+			if urlBased, err := remoteFilterDefinition.RepoManifest.IsUrlBased(remoteFilterDefinition.Id); err == nil {
+				if urlBased {
+					if parsedArg.version == "" {
+						remoteFilterDefinition.Version = "latest"
+					} else {
+						remoteFilterDefinition.Version = parsedArg.version
+					}
+				}
+			} else {
+				return burrito.WrapErrorf(
+					err, isUrlBasedRemoteFitlerError, remoteFilterDefinition.Id)
+			}
+		}
+
 		filterInstallers[parsedArg.name] = remoteFilterDefinition
 	}
 	// Download the filter definitions
@@ -181,7 +207,9 @@ func InstallAll(force, update, debug, refreshFilters bool) error {
 				filterInstaller, err := FilterDefinitionFromTheInternet(
 					fd.Url, fd.Id, "")
 				if err != nil {
-					return burrito.PassError(err)
+					return burrito.WrapErrorf(
+						err, filterDefinitionFromTheInternetError,
+						fd.Url, fd.Id, "")
 				}
 				filtersToInstall[filterName] = filterInstaller
 				remoteFilters[filterName] = filterInstaller
@@ -191,6 +219,26 @@ func InstallAll(force, update, debug, refreshFilters bool) error {
 		}
 	} else {
 		filtersToInstall = config.FilterDefinitions
+
+		// Since this bypasses the code which reads the manifest normally we need to read it here
+
+		for _, installer := range filtersToInstall {
+			switch installer := installer.(type) {
+			case *RemoteFilterDefinition:
+				manifest, err := ManifestForRepo(installer.Url)
+				if err != nil {
+					return burrito.WrapErrorf(
+						err, getRemoteManifestError, installer.Url, installer.Id,
+						installer.Version)
+				}
+
+				installer.RepoManifest = manifest
+
+			default:
+			}
+
+		}
+
 	}
 	// Install the filters
 	err = installFilters(

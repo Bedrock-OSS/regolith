@@ -459,6 +459,10 @@ func SliceAny[T any](slice []T, predicate func(T) bool) bool {
 	return slices.ContainsFunc(slice, predicate)
 }
 
+func VersionIsLatest(version string) bool {
+	return version == "latest" || version == "HEAD"
+}
+
 func isSymlinkTo(path, target string) bool {
 	info, err := os.Lstat(path)
 	if err != nil || info.Mode()&os.ModeSymlink == 0 {
