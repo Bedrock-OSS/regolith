@@ -90,7 +90,7 @@ func TestManifest(t *testing.T) {
 			t.Fatal("Failed to install filter: ", err)
 		}
 		t.Log("Running Regolith...")
-		err = regolith.Run("default", false)
+		err = regolith.Run("default", []string{}, false)
 		if err != nil {
 			t.Fatal("Failed to run Regolith: ", err)
 		}
