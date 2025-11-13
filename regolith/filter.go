@@ -18,7 +18,7 @@ type Filter struct {
 	Arguments          []string       `json:"arguments,omitempty"`
 	Settings           map[string]any `json:"settings,omitempty"`
 	When               string         `json:"when,omitempty"`
-	ExtraArgumentsMode string         `json:"extraArgs,omitempty"`
+	ExtraArgumentsMode string         `json:"extraArguments,omitempty"`
 }
 
 type RunContext struct {
@@ -157,14 +157,14 @@ func filterFromObject(obj map[string]any, id string) (*Filter, error) {
 	}
 	filter.Id = id
 
-	// extraArgs mode
-	extraArgs, ok := obj["extraArgs"]
+	// extraArguments mode
+	extraArguments, ok := obj["extraArguments"]
 	if ok {
-		extraArgs, ok := extraArgs.(string)
+		extraArguments, ok := extraArguments.(string)
 		if !ok {
-			return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "extraArgs", "string")
+			return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "extraArguments", "string")
 		}
-		filter.ExtraArgumentsMode = extraArgs
+		filter.ExtraArgumentsMode = extraArguments
 	}
 
 	return filter, nil
@@ -206,7 +206,7 @@ type FilterRunner interface {
 
 	// AddExtraArguments adds additional arguments to the filter according to
 	// the method provided in the filter runner settings
-	AddExtraArguments(extraArgs []string) error
+	AddExtraArguments(extraArguments []string) error
 }
 
 func (f *Filter) CopyArguments(parent *RemoteFilter) {
@@ -251,13 +251,13 @@ func (f *Filter) IsUsingDataExport(_ string, _ RunContext) (bool, error) {
 	return false, nil
 }
 
-func (f *Filter) AddExtraArguments(extraArgs []string) error {
+func (f *Filter) AddExtraArguments(extraArguments []string) error {
 	switch f.ExtraArgumentsMode {
 	case "", "ignore":
 	case "override":
-		f.Arguments = extraArgs
+		f.Arguments = extraArguments
 	case "append":
-		f.Arguments = append(f.Arguments, extraArgs...)
+		f.Arguments = append(f.Arguments, extraArguments...)
 	default:
 		return burrito.WrappedErrorf(
 			invalidArgumentModeError,
