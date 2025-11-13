@@ -38,12 +38,12 @@ func EvalString(expression string, ctx RunContext) (string, error) {
 	return "", burrito.WrapErrorf(err, "Expression evaluated to non-string value: %s", expression)
 }
 
-func prepareScope(ctx RunContext) map[string]interface{} {
+func prepareScope(ctx RunContext) map[string]any {
 	semverString, err := utils.ParseSemverString(Version)
 	if err != nil {
 		semverString = utils.Semver{}
 	}
-	projectData := map[string]interface{}{
+	projectData := map[string]any{
 		"name":   ctx.Config.Name,
 		"author": ctx.Config.Author,
 	}
@@ -51,7 +51,7 @@ func prepareScope(ctx RunContext) map[string]interface{} {
 	if ctx.IsInWatchMode() {
 		mode = "watch"
 	}
-	return map[string]interface{}{
+	return map[string]any{
 		"os":             runtime.GOOS,
 		"arch":           runtime.GOARCH,
 		"debug":          burrito.PrintStackTrace,

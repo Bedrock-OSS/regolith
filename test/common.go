@@ -99,6 +99,11 @@ const (
 	// and one after running 'regolith install-all' command. On a project that
 	// uses filters from a repository with regolith_filter_manifest.json file.
 	remoteManifestInstallAllPath = "testdata/remote_manifest_install_all"
+
+	// asyncFilterPath contains two subdirectories 'project' and
+	// 'expected_build_result'. They are used for testing the asynchronous
+	// filters.
+	asyncFilterPath = "testdata/async_filter"
 )
 
 // firstErr returns the first error in a list of errors. If the list is empty

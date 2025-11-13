@@ -53,45 +53,116 @@ func copyFileSecurityInfo(source string, target string) error {
 	return nil
 }
 
-// FindStandardMojangDir returns path to the com.mojang folder in the standard
-// Minecraft build.
-func FindStandardMojangDir() (string, error) {
-	comMojang := os.Getenv("COM_MOJANG")
+// findSomeMojangDir is reused in FindStandardMojangDir and
+// FindPreviewMojangDir functions to avoid code duplication.
+func findSomeMojangDir(
+	comMojangWordsVar string,
+	comMojangPacksVar string,
+	comMojangVar string,
+	theSomeDirName string,
+	pathType ComMojangPathType,
+) (string, error) {
+	// Try specific path environment variables first
+	switch pathType {
+	case WorldPath:
+		comMojang := os.Getenv(comMojangWordsVar)
+		if comMojang != "" {
+			return comMojang, nil
+		}
+	case PacksPath:
+		comMojang := os.Getenv(comMojangPacksVar)
+		if comMojang != "" {
+			return comMojang, nil
+		}
+	}
+	// Try general environment variable
+	comMojang := os.Getenv(comMojangVar)
 	if comMojang != "" {
 		return comMojang, nil
 	}
-	result := filepath.Join(
-		os.Getenv("LOCALAPPDATA"), "Packages",
-		"Microsoft.MinecraftUWP_8wekyb3d8bbwe", "LocalState", "games",
-		"com.mojang")
-	if _, err := os.Stat(result); err != nil {
-		if os.IsNotExist(err) {
-			return "", burrito.WrapErrorf(err, osStatErrorIsNotExist, result)
+
+	var result string
+	checkResult := func() error {
+		if _, err := os.Stat(result); err != nil {
+			if os.IsNotExist(err) {
+				return burrito.WrapErrorf(err, osStatErrorIsNotExist, result)
+			}
+			return burrito.WrapErrorf(err, osStatErrorAny, result)
 		}
-		return "", burrito.WrapErrorf(err, osStatErrorAny, result)
+		return nil
 	}
-	return result, nil
+	switch pathType {
+	case WorldPath:
+		result = filepath.Join(os.Getenv("APPDATA"), theSomeDirName, "Users")
+		if err := checkResult(); err != nil {
+			return "", burrito.PassError(err)
+		}
+		// List directories in the Users folder and pick the first one that isn't
+		// "Shared". From that folder navigate to "games/com.mojang" and validate
+		// the path.
+		entries, err := os.ReadDir(result)
+		if err != nil {
+			return "", burrito.WrapErrorf(err, osReadDirError, result)
+		}
+		var chosen string
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			// Skip the shared folder (case insensitive)
+			if strings.EqualFold(e.Name(), "Shared") {
+				continue
+			}
+			chosen = e.Name()
+			break
+		}
+		if chosen == "" {
+			return "", burrito.WrappedErrorf(findMojangDirError)
+		}
+		result = filepath.Join(result, chosen, "games", "com.mojang")
+		if err := checkResult(); err != nil {
+			return "", burrito.PassError(err)
+		}
+		return result, nil
+	case PacksPath:
+		result = filepath.Join(
+			os.Getenv("APPDATA"), theSomeDirName, "Users", "Shared", "games",
+			"com.mojang")
+		if err := checkResult(); err != nil {
+			return "", burrito.PassError(err)
+		}
+		return result, nil
+	}
+	// Should never happen
+	return "", burrito.WrappedErrorf("Invalid path type")
+}
+
+// FindStandardMojangDir returns path to the com.mojang folder in the standard
+// Minecraft build.
+func FindStandardMojangDir(pathType ComMojangPathType) (string, error) {
+	return findSomeMojangDir(
+		// Environment variables
+		"COM_MOJANG_WORLDS",
+		"COM_MOJANG_PACKS",
+		"COM_MOJANG",
+		// The name of the folder in APPDATA
+		"Minecraft Bedrock",
+		pathType,
+	)
 }
 
 // FindPreviewDir returns path to the com.mojang folder in the preview
 // Minecraft build.
-func FindPreviewDir() (string, error) {
-	comMojang := os.Getenv("COM_MOJANG_PREVIEW")
-	if comMojang != "" {
-		return comMojang, nil
-	}
-	result := filepath.Join(
-		os.Getenv("LOCALAPPDATA"), "Packages",
-		"Microsoft.MinecraftWindowsBeta_8wekyb3d8bbwe", "LocalState", "games",
-		"com.mojang")
-	if _, err := os.Stat(result); err != nil {
-		if os.IsNotExist(err) {
-			return "", burrito.WrapErrorf(err, osStatErrorIsNotExist, result)
-		}
-		return "", burrito.WrapErrorf(
-			err, osStatErrorAny, result)
-	}
-	return result, nil
+func FindPreviewDir(pathType ComMojangPathType) (string, error) {
+	return findSomeMojangDir(
+		// Environment variables
+		"COM_MOJANG_WORLDS_PREVIEW",
+		"COM_MOJANG_PACKS_PREVIEW",
+		"COM_MOJANG_PREVIEW",
+		// The name of the folder in APPDATA
+		"Minecraft Bedrock Preview",
+		pathType,
+	)
 }
 
 // FindEducationDir returns path to the com.mojang folder in the education
@@ -114,13 +185,15 @@ func FindEducationDir() (string, error) {
 	return result, nil
 }
 
+// CheckSuspiciousLocation checks if the current working directory is within
+// one of directories not valid for a Regolith project.
 func CheckSuspiciousLocation() error {
 	path, err := os.Getwd()
 	if err != nil {
 		return burrito.WrapErrorf(err, osGetwdError)
 	}
 	// Check if project directory is within mojang dir
-	dir, err := FindStandardMojangDir()
+	dir, err := FindStandardMojangDir(PacksPath)
 	if err == nil {
 		dir1 := filepath.Join(dir, "development_behavior_packs")
 		if isPathWithinDirectory(path, dir1) {
@@ -132,7 +205,7 @@ func CheckSuspiciousLocation() error {
 		}
 	}
 	// Check if project directory is within mojang dir
-	dir, err = FindPreviewDir()
+	dir, err = FindPreviewDir(PacksPath)
 	if err == nil {
 		dir1 := filepath.Join(dir, "development_behavior_packs")
 		if isPathWithinDirectory(path, dir1) {

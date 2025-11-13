@@ -26,7 +26,7 @@ func GetExportPaths(
 	if semver.Compare(vFormatVersion, "v1.4.0") < 0 {
 		bpPath, rpPath, err = getExportPathsV1_2_0(
 			exportTarget, bpName, rpName)
-	} else if semver.Compare(vFormatVersion, "v1.4.0") == 0 {
+	} else if semver.Compare(vFormatVersion, "v1.6.0") <= 0 {
 		bpPath, rpPath, err = getExportPathsV1_4_0(
 			exportTarget, bpName, rpName)
 	} else {
@@ -37,17 +37,18 @@ func GetExportPaths(
 	return
 }
 
-func FindMojangDir(build string) (string, error) {
-	if build == "standard" {
-		return FindStandardMojangDir()
-	} else if build == "preview" {
-		return FindPreviewDir()
-	} else if build == "education" {
+func FindMojangDir(build string, pathType ComMojangPathType) (string, error) {
+	switch build {
+	case "standard":
+		return FindStandardMojangDir(pathType)
+	case "preview":
+		return FindPreviewDir(pathType)
+	case "education":
 		return FindEducationDir()
 		// WARNING: If for some reason we will expand this in the future to
 		// match a new format version, we need to split this into versioned
 		// functions.
-	} else {
+	default:
 		return "", burrito.WrappedErrorf(
 			invalidExportPathError,
 			// current value; valid values
@@ -60,35 +61,36 @@ func FindMojangDir(build string) (string, error) {
 func getExportPathsV1_2_0(
 	exportTarget ExportTarget, bpName string, rpName string,
 ) (bpPath string, rpPath string, err error) {
-	if exportTarget.Target == "development" {
-		comMojang, err := FindStandardMojangDir()
+	switch exportTarget.Target {
+	case "development":
+		comMojang, err := FindStandardMojangDir(PacksPath)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, findMojangDirError)
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
-	} else if exportTarget.Target == "preview" {
-		comMojang, err := FindPreviewDir()
+	case "preview":
+		comMojang, err := FindPreviewDir(PacksPath)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, findPreviewDirError)
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
-	} else if exportTarget.Target == "exact" {
+	case "exact":
 		return GetExactExportPaths(exportTarget)
-	} else if exportTarget.Target == "world" {
+	case "world":
 		return GetWorldExportPaths(
 			exportTarget.WorldPath,
 			exportTarget.WorldName,
 			"standard",
 			bpName, rpName)
-	} else if exportTarget.Target == "local" {
+	case "local":
 		bpPath = "build/" + bpName + "/"
 		rpPath = "build/" + rpName + "/"
-	} else if exportTarget.Target == "none" {
+	case "none":
 		bpPath = ""
 		rpPath = ""
-	} else {
+	default:
 		err = burrito.WrappedErrorf(
 			"Export target %q is not valid", exportTarget.Target)
 	}
@@ -100,27 +102,28 @@ func getExportPathsV1_2_0(
 func getExportPathsV1_4_0(
 	exportTarget ExportTarget, bpName string, rpName string,
 ) (bpPath string, rpPath string, err error) {
-	if exportTarget.Target == "development" {
-		comMojang, err := FindMojangDir(exportTarget.Build)
+	switch exportTarget.Target {
+	case "development":
+		comMojang, err := FindMojangDir(exportTarget.Build, PacksPath)
 		if err != nil {
 			return "", "", burrito.PassError(err)
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
-	} else if exportTarget.Target == "world" {
+	case "world":
 		return GetWorldExportPaths(
 			exportTarget.WorldPath,
 			exportTarget.WorldName,
 			exportTarget.Build,
 			bpName, rpName)
-	} else if exportTarget.Target == "exact" {
+	case "exact":
 		return GetExactExportPaths(exportTarget)
-	} else if exportTarget.Target == "local" {
+	case "local":
 		bpPath = "build/" + bpName + "/"
 		rpPath = "build/" + rpName + "/"
-	} else if exportTarget.Target == "none" {
+	case "none":
 		bpPath = ""
 		rpPath = ""
-	} else {
+	default:
 		err = burrito.WrappedErrorf(
 			"Export target %q is not valid", exportTarget.Target)
 	}
@@ -166,7 +169,7 @@ func GetWorldExportPaths(
 		rpPath = filepath.Join(
 			wPath, "resource_packs", rpName)
 	} else if worldName != "" {
-		dir, err := FindMojangDir(build)
+		dir, err := FindMojangDir(build, WorldPath)
 		if err != nil {
 			return "", "", burrito.WrapError(
 				err, "Failed to find \"com.mojang\" directory.")
@@ -176,13 +179,18 @@ func GetWorldExportPaths(
 			return "", "", burrito.WrapError(err, "Failed to list worlds.")
 		}
 		for _, world := range worlds {
-			if world.Name == worldName {
-				bpPath = filepath.Join(
-					world.Path, "behavior_packs", bpName)
-				rpPath = filepath.Join(
-					world.Path, "resource_packs", rpName)
+			if world.Name != worldName {
+				continue
 			}
+			bpPath = filepath.Join(
+				world.Path, "behavior_packs", bpName)
+			rpPath = filepath.Join(
+				world.Path, "resource_packs", rpName)
+			return bpPath, rpPath, nil
 		}
+		return "", "", burrito.WrappedErrorf(
+			"Failed to find the world.\n"+
+				"World name: %s", worldName)
 	} else {
 		err = burrito.WrappedError(
 			"The \"world\" export target requires either a " +
@@ -273,6 +281,21 @@ func ExportProject(ctx RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, updatedFilesDumpError)
 	}
+	// Remove the exported pack paths if they're empty
+	if !IsExperimentEnabled(SymlinkExport) {
+		MeasureStart("Export - Remove Empty Export Paths")
+		for _, packPath := range []string{rpPath, bpPath} {
+			pathEmpty, _ := IsDirEmpty(packPath)
+			if pathEmpty {
+				if err := os.Remove(packPath); err != nil {
+					Logger.Warnf(
+						"Failed to remove empty pack directory.\n"+
+							"Path: %s\n"+
+							"Error: %v", packPath, err)
+				}
+			}
+		}
+	}
 	MeasureEnd()
 	return nil
 }
@@ -316,9 +339,7 @@ func exportProjectRpAndBp(profile Profile, rpPath, bpPath string, ctx RunContext
 	errChan := make(chan error, len(packsData))
 	for _, packData := range packsData {
 		packPath, tmpPath, packType := packData.packPath, packData.tmpPath, packData.packType
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			Logger.Infof("Exporting %s pack to \"%s\".", packType, packPath)
 			var e error
 			if IsExperimentEnabled(SizeTimeCheck) {
@@ -331,7 +352,7 @@ func exportProjectRpAndBp(profile Profile, rpPath, bpPath string, ctx RunContext
 				return
 			}
 			errChan <- nil
-		}()
+		})
 	}
 
 	wg.Wait()

@@ -1,5 +1,7 @@
 package regolith
 
+import "slices"
+
 type Experiment int
 
 const (
@@ -39,10 +41,5 @@ func IsExperimentEnabled(exp Experiment) bool {
 	if EnabledExperiments == nil {
 		return false
 	}
-	for _, e := range EnabledExperiments {
-		if e == AvailableExperiments[exp].Name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(EnabledExperiments, AvailableExperiments[exp].Name)
 }

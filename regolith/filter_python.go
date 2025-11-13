@@ -27,7 +27,7 @@ type PythonFilter struct {
 	Definition PythonFilterDefinition `json:"-"`
 }
 
-func PythonFilterDefinitionFromObject(id string, obj map[string]interface{}) (*PythonFilterDefinition, error) {
+func PythonFilterDefinitionFromObject(id string, obj map[string]any) (*PythonFilterDefinition, error) {
 	filter := &PythonFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	scripObj, ok := obj["script"]
 	if !ok {
@@ -109,7 +109,7 @@ func (f *PythonFilter) Run(context RunContext) (bool, error) {
 	return context.IsInterrupted(), nil
 }
 
-func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]interface{}, id string) (FilterRunner, error) {
+func (f *PythonFilterDefinition) CreateFilterRunner(runConfiguration map[string]any, id string) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)

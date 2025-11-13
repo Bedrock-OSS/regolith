@@ -20,7 +20,11 @@ func TestDevelopmentStandardExportLocation(t *testing.T) {
 		t.Skip("Skipping test on local machine")
 	}
 	_testCustomDevelopmentExportLocation(
-		t, regolith.FindStandardMojangDir, "standard",
+		t,
+		func() (string, error) {
+			return regolith.FindStandardMojangDir(regolith.PacksPath)
+		},
+		"standard",
 		"TestDevelopmentStandardExportLocation")
 }
 
@@ -46,7 +50,11 @@ func TestDevelopmentPreviewExportLocation(t *testing.T) {
 		t.Skip("Skipping test on local machine")
 	}
 	_testCustomDevelopmentExportLocation(
-		t, regolith.FindPreviewDir, "preview",
+		t,
+		func() (string, error) {
+			return regolith.FindPreviewDir(regolith.PacksPath)
+		},
+		"preview",
 		"TestDevelopmentPreviewExportLocation")
 }
 
@@ -95,7 +103,7 @@ func _testCustomDevelopmentExportLocation(
 
 	// THE TEST
 	t.Log("Testing the 'regolith run' command...")
-	err = regolith.Run(profileToRun, true)
+	err = regolith.Run(profileToRun, []string{}, true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}

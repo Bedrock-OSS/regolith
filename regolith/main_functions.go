@@ -52,7 +52,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 	}
 	// Check if selected profiles exist
 	for _, profile := range profiles {
-		_, err := FindByJSONPath[map[string]interface{}](config, "regolith/profiles/"+EscapePathPart(profile))
+		_, err := FindByJSONPath[map[string]any](config, "regolith/profiles/"+EscapePathPart(profile))
 		if err != nil {
 			return burrito.WrapErrorf(
 				err, "Profile %s does not exist or is invalid.", profile)
@@ -259,7 +259,7 @@ func InstallAll(force, update, debug, refreshFilters bool) error {
 
 // prepareRunContext prepares the context for the "regolith run" and
 // "regolith watch" commands.
-func prepareRunContext(profileName string, debug, watch bool) (*RunContext, error) {
+func prepareRunContext(profileName string, extraFilterArgs []string, debug bool) (*RunContext, error) {
 	InitLogging(debug)
 	if profileName == "" {
 		profileName = "default"
@@ -301,15 +301,16 @@ func prepareRunContext(profileName string, debug, watch bool) (*RunContext, erro
 		Parent:           nil,
 		Profile:          profileName,
 		DotRegolithPath:  dotRegolithPath,
-		Settings:         map[string]interface{}{},
+		Settings:         map[string]any{},
+		ExtraArguments:   extraFilterArgs,
 	}, nil
 }
 
 // Run handles the "regolith run" command. It runs selected profile and exports
 // created resource pack and behavior pack to the target destination.
-func Run(profileName string, debug bool) error {
+func Run(profileName string, extraFilterArgs []string, debug bool) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, debug, false)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -332,9 +333,9 @@ func Run(profileName string, debug bool) error {
 // Watch handles the "regolith watch" command. It watches the project
 // directories, and it runs selected profile and exports created resource pack
 // and behavior pack to the target destination when the project changes.
-func Watch(profileName string, debug bool) error {
+func Watch(profileName string, extraFilterArgs []string, debug bool) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, debug, false)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -424,7 +425,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 	}()
 
 	// Create the filter
-	runConfiguration := map[string]interface{}{
+	runConfiguration := map[string]any{
 		"arguments": filterArgs,
 	}
 	filterRunner, err := filterDefinition.CreateFilterRunner(runConfiguration, filterName)
@@ -511,7 +512,7 @@ func Init(debug, force bool) error {
 			ResourceFolder: "./packs/RP",
 		},
 		RegolithProject: RegolithProject{
-			FormatVersion:     "1.4.0",
+			FormatVersion:     "1.6.0",
 			DataPath:          "./packs/data",
 			FilterDefinitions: map[string]FilterInstaller{},
 			Profiles: map[string]Profile{
@@ -530,9 +531,9 @@ func Init(debug, force bool) error {
 	}
 	jsonBytes, _ := json.MarshalIndent(jsonData, "", "")
 	// Add the schema property, this is a little hacky
-	rawJsonData := make(map[string]interface{}, 0)
+	rawJsonData := make(map[string]any, 0)
 	json.Unmarshal(jsonBytes, &rawJsonData)
-	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.4.json"
+	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.6.json"
 	jsonBytes, _ = json.MarshalIndent(rawJsonData, "", "\t")
 
 	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
@@ -661,7 +662,7 @@ func UpdateResolvers(debug bool) error {
 
 // manageUserConfigPrint is a helper function for ManageConfig used to print
 // the specified value from the user configuration.
-func manageUserConfigPrint(debug, full bool, key string) error {
+func manageUserConfigPrint(full bool, key string) error {
 	var err error // prevent shadowing
 	configPath := ""
 	userConfig := NewUserConfig()
@@ -683,14 +684,14 @@ func manageUserConfigPrint(debug, full bool, key string) error {
 	if err != nil {
 		return burrito.WrapErrorf(err, invalidUserConfigPropertyError, key)
 	}
-	result = "\t" + strings.Replace(result, "\n", "\n\t", -1) // Indent
+	result = "\t" + strings.ReplaceAll(result, "\n", "\n\t") // Indent
 	fmt.Println(result)
 	return nil
 }
 
 // manageUserConfigPrintAll is a helper function for ManageConfig used to print
 // whole user configuration.
-func manageUserConfigPrintAll(debug, full bool) error {
+func manageUserConfigPrintAll(full bool) error {
 	var err error // prevent shadowing
 	configPath := ""
 	var userConfig *UserConfig
@@ -712,13 +713,13 @@ func manageUserConfigPrintAll(debug, full bool) error {
 		}
 	}
 	fmt.Println( // Print with additional indentation
-		"\t" + strings.Replace(userConfig.String(), "\n", "\n\t", -1))
+		"\t" + strings.ReplaceAll(userConfig.String(), "\n", "\n\t"))
 	return nil
 }
 
 // manageUserConfigEdit is a helper function for ManageConfig used to edit
 // the specified value from the user configuration.
-func manageUserConfigEdit(debug bool, index int, key, value string) error {
+func manageUserConfigEdit(index int, key, value string) error {
 	configPath, err := getGlobalUserConfigPath()
 	if err != nil {
 		return burrito.WrapError(err, getGlobalUserConfigPathError)
@@ -795,7 +796,7 @@ func manageUserConfigEdit(debug bool, index int, key, value string) error {
 
 // manageUserConfigDelete is a helper function for ManageConfig used to delete
 // the specified value from the user configuration.
-func manageUserConfigDelete(debug bool, index int, key string) error {
+func manageUserConfigDelete(index int, key string) error {
 	configPath, err := getGlobalUserConfigPath()
 	if err != nil {
 		return burrito.WrapError(err, getGlobalUserConfigPathError)
@@ -867,7 +868,7 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 			return burrito.WrappedError("Cannot use --append without a key.")
 		}
 		// Print all
-		err = manageUserConfigPrintAll(debug, full)
+		err = manageUserConfigPrintAll(full)
 		if err != nil {
 			return burrito.PassError(err)
 		}
@@ -885,7 +886,7 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 			if full {
 				return burrito.WrappedError("The --full flag is only valid for printing.")
 			}
-			err = manageUserConfigDelete(debug, index, args[0])
+			err = manageUserConfigDelete(index, args[0])
 			if err != nil {
 				return burrito.PassError(err)
 			}
@@ -894,7 +895,7 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 			if index != -1 {
 				return burrito.WrappedError("The --index flag is not allowed for printing.")
 			}
-			err = manageUserConfigPrint(debug, full, args[0])
+			err = manageUserConfigPrint(full, args[0])
 			if err != nil {
 				return burrito.PassError(err)
 			}
@@ -912,7 +913,7 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string) er
 		}
 
 		// Set or append
-		err = manageUserConfigEdit(debug, index, args[0], args[1])
+		err = manageUserConfigEdit(index, args[0], args[1])
 		if err != nil {
 			return burrito.PassError(err)
 		}

@@ -1,6 +1,9 @@
 package regolith
 
 import (
+	"fmt"
+	"slices"
+
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
@@ -9,12 +12,13 @@ type FilterDefinition struct {
 }
 
 type Filter struct {
-	Id          string                 `json:"filter,omitempty"`
-	Description string                 `json:"name,omitempty"`
-	Disabled    bool                   `json:"disabled,omitempty"`
-	Arguments   []string               `json:"arguments,omitempty"`
-	Settings    map[string]interface{} `json:"settings,omitempty"`
-	When        string                 `json:"when,omitempty"`
+	Id                 string         `json:"filter,omitempty"`
+	Description        string         `json:"name,omitempty"`
+	Disabled           bool           `json:"disabled,omitempty"`
+	Arguments          []string       `json:"arguments,omitempty"`
+	Settings           map[string]any `json:"settings,omitempty"`
+	When               string         `json:"when,omitempty"`
+	ExtraArgumentsMode string         `json:"extraArguments,omitempty"`
 }
 
 type RunContext struct {
@@ -24,7 +28,8 @@ type RunContext struct {
 	Profile          string
 	Parent           *RunContext
 	DotRegolithPath  string
-	Settings         map[string]interface{}
+	Settings         map[string]any
+	ExtraArguments   []string
 
 	// interruption is a channel used to receive notifications about changes
 	// in the source files, in order to trigger a restart of the program in
@@ -78,12 +83,7 @@ func (c *RunContext) IsInterrupted(ignoredSource ...string) bool {
 	}
 	select {
 	case source := <-c.interruption:
-		for _, ignored := range ignoredSource {
-			if ignored == source {
-				return false
-			}
-		}
-		return true
+		return !slices.Contains(ignoredSource, source)
 	default:
 		return false
 	}
@@ -93,7 +93,7 @@ func FilterDefinitionFromObject(id string) *FilterDefinition {
 	return &FilterDefinition{Id: id}
 }
 
-func filterFromObject(obj map[string]interface{}, id string) (*Filter, error) {
+func filterFromObject(obj map[string]any, id string) (*Filter, error) {
 	filter := &Filter{}
 	// Name
 	description, _ := obj["description"].(string)
@@ -108,10 +108,16 @@ func filterFromObject(obj map[string]interface{}, id string) (*Filter, error) {
 		// one format is used when parsed from JSON, and the other format is
 		// used by the ApplyFilter() function.
 		switch arguments := arguments.(type) {
-		case []interface{}:
+		case []any:
 			s := make([]string, len(arguments))
 			for i, v := range arguments {
-				s[i] = v.(string)
+				s[i], ok = v.(string)
+				if !ok {
+					return nil, burrito.WrappedErrorf(
+						jsonPropertyTypeError,
+						fmt.Sprintf("arguments->%d", i),
+						"string")
+				}
 			}
 			filter.Arguments = s
 		case []string:
@@ -123,7 +129,7 @@ func filterFromObject(obj map[string]interface{}, id string) (*Filter, error) {
 		filter.Arguments = []string{}
 	}
 	// Settings
-	settings, _ := obj["settings"].(map[string]interface{})
+	settings, _ := obj["settings"].(map[string]any)
 	filter.Settings = settings
 	// When
 	when, ok := obj["when"]
@@ -150,13 +156,24 @@ func filterFromObject(obj map[string]interface{}, id string) (*Filter, error) {
 		id = parsedId
 	}
 	filter.Id = id
+
+	// extraArguments mode
+	extraArguments, ok := obj["extraArguments"]
+	if ok {
+		extraArguments, ok := extraArguments.(string)
+		if !ok {
+			return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "extraArguments", "string")
+		}
+		filter.ExtraArgumentsMode = extraArguments
+	}
+
 	return filter, nil
 }
 
 type FilterInstaller interface {
 	InstallDependencies(parent *RemoteFilterDefinition, dotRegolithPath string) error
 	Check(context RunContext) error
-	CreateFilterRunner(runConfiguration map[string]interface{}, id string) (FilterRunner, error)
+	CreateFilterRunner(runConfiguration map[string]any, id string) (FilterRunner, error)
 }
 
 type FilterRunner interface {
@@ -177,7 +194,7 @@ type FilterRunner interface {
 	GetId() string
 
 	// GetSettings returns the settings of the filter.
-	GetSettings() map[string]interface{}
+	GetSettings() map[string]any
 
 	// Check checks whether the requirements of the filter are met. For
 	// example, a Python filter requires Python to be installed.
@@ -186,6 +203,10 @@ type FilterRunner interface {
 	// IsUsingDataExport returns whether the filter wants its data to be
 	// exported back to the data folder after running the profile.
 	IsUsingDataExport(dotRegolithPath string, ctx RunContext) (bool, error)
+
+	// AddExtraArguments adds additional arguments to the filter according to
+	// the method provided in the filter runner settings
+	AddExtraArguments(extraArguments []string) error
 }
 
 func (f *Filter) CopyArguments(parent *RemoteFilter) {
@@ -208,7 +229,7 @@ func (f *Filter) GetId() string {
 	return f.Id
 }
 
-func (f *Filter) GetSettings() map[string]interface{} {
+func (f *Filter) GetSettings() map[string]any {
 	return f.Settings
 }
 
@@ -230,69 +251,85 @@ func (f *Filter) IsUsingDataExport(_ string, _ RunContext) (bool, error) {
 	return false, nil
 }
 
+func (f *Filter) AddExtraArguments(extraArguments []string) error {
+	switch f.ExtraArgumentsMode {
+	case "", "ignore":
+	case "override":
+		f.Arguments = extraArguments
+	case "append":
+		f.Arguments = append(f.Arguments, extraArguments...)
+	default:
+		return burrito.WrappedErrorf(
+			invalidArgumentModeError,
+			// current value; valid values
+			f.ExtraArgumentsMode, "ignore, override, append")
+	}
+	return nil
+}
+
 type filterInstallerFactory struct {
-	constructor func(string, map[string]interface{}) (FilterInstaller, error)
+	constructor func(string, map[string]any) (FilterInstaller, error)
 	name        string
 }
 
 var filterInstallerFactories = map[string]filterInstallerFactory{
 	"java": {
-		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return JavaFilterDefinitionFromObject(id, obj)
 		},
 		name: "Java",
 	},
 	"dotnet": {
-		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return DotNetFilterDefinitionFromObject(id, obj)
 		},
 		name: ".Net",
 	},
 	"nim": {
-		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return NimFilterDefinitionFromObject(id, obj)
 		},
 		name: "Nim",
 	},
 	"deno": {
-		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return DenoFilterDefinitionFromObject(id, obj)
 		},
 		name: "Deno",
 	},
 	"nodejs": {
-		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return NodeJSFilterDefinitionFromObject(id, obj)
 		},
 		name: "NodeJs",
 	},
 	"python": {
-		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return PythonFilterDefinitionFromObject(id, obj)
 		},
 		name: "Python",
 	},
 	"shell": {
-		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return ShellFilterDefinitionFromObject(id, obj)
 		},
 		name: "shell",
 	},
 	"exe": {
-		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return ExeFilterDefinitionFromObject(id, obj)
 		},
 		name: "exe",
 	},
 	"": {
-		constructor: func(id string, obj map[string]interface{}) (FilterInstaller, error) {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return RemoteFilterDefinitionFromObject(id, obj)
 		},
 		name: "remote",
 	},
 }
 
-func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterInstaller, error) {
+func FilterInstallerFromObject(id string, obj map[string]any) (FilterInstaller, error) {
 	runWith, _ := obj["runWith"].(string)
 	if factory, ok := filterInstallerFactories[runWith]; ok {
 		filter, err := factory.constructor(id, obj)
@@ -313,11 +350,23 @@ func FilterInstallerFromObject(id string, obj map[string]interface{}) (FilterIns
 }
 
 func FilterRunnerFromObjectAndDefinitions(
-	obj map[string]interface{}, filterDefinitions map[string]FilterInstaller,
+	obj map[string]any,
+	filterDefinitions map[string]FilterInstaller,
+	isInAsyncFilter bool,
 ) (FilterRunner, error) {
 	profile, ok := obj["profile"].(string)
 	if ok {
 		return &ProfileFilter{Profile: profile}, nil
+	}
+	if !isInAsyncFilter {
+		_, ok := obj["asyncFilters"]
+		if ok {
+			asyncFilter, err := AsyncFilterFromObject(obj, filterDefinitions)
+			if err != nil {
+				return nil, burrito.PassError(err)
+			}
+			return asyncFilter, nil
+		}
 	}
 	filterObj, ok := obj["filter"]
 	if !ok {
