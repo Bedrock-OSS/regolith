@@ -44,7 +44,7 @@ func TestRegolithRunMissingRp(t *testing.T) {
 	os.Chdir(tmpDir)
 
 	// THE TEST
-	err := regolith.Run("dev", true)
+	err := regolith.Run("dev", []string{}, true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
@@ -71,7 +71,7 @@ func TestLocalRequirementsInstallAndRun(t *testing.T) {
 		t.Fatal("'regolith install-all' failed", err.Error())
 	}
 	t.Log("Testing the 'regolith run' command...")
-	if err := regolith.Run("dev", true); err != nil {
+	if err := regolith.Run("dev", []string{}, true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 }
@@ -95,7 +95,7 @@ func TestExeFilterRun(t *testing.T) {
 
 	// THE TEST
 	t.Log("Testing the 'regolith run' command...")
-	if err := regolith.Run("dev", true); err != nil {
+	if err := regolith.Run("dev", []string{}, true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 	// TEST EVALUATION
@@ -125,7 +125,7 @@ func TestProfileFilterRun(t *testing.T) {
 	// THE TEST
 	// Invalid profile (shoud fail)
 	t.Log("Running invalid profile filter with circular dependencies (this should fail).")
-	err := regolith.Run("invalid_circular_profile_1", true)
+	err := regolith.Run("invalid_circular_profile_1", []string{}, true)
 	if err == nil {
 		t.Fatal("'regolith run' didn't return an error after running" +
 			" a circular profile filter.")
@@ -134,7 +134,7 @@ func TestProfileFilterRun(t *testing.T) {
 	}
 	// Valid profile (should succeed)
 	t.Log("Running valid profile filter.")
-	err = regolith.Run("correct_nested_profile", true)
+	err = regolith.Run("correct_nested_profile", []string{}, true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}

@@ -12,12 +12,13 @@ type FilterDefinition struct {
 }
 
 type Filter struct {
-	Id          string         `json:"filter,omitempty"`
-	Description string         `json:"name,omitempty"`
-	Disabled    bool           `json:"disabled,omitempty"`
-	Arguments   []string       `json:"arguments,omitempty"`
-	Settings    map[string]any `json:"settings,omitempty"`
-	When        string         `json:"when,omitempty"`
+	Id                 string         `json:"filter,omitempty"`
+	Description        string         `json:"name,omitempty"`
+	Disabled           bool           `json:"disabled,omitempty"`
+	Arguments          []string       `json:"arguments,omitempty"`
+	Settings           map[string]any `json:"settings,omitempty"`
+	When               string         `json:"when,omitempty"`
+	ExtraArgumentsMode string         `json:"extraArguments,omitempty"`
 }
 
 type RunContext struct {
@@ -28,6 +29,7 @@ type RunContext struct {
 	Parent           *RunContext
 	DotRegolithPath  string
 	Settings         map[string]any
+	ExtraArguments   []string
 
 	// interruption is a channel used to receive notifications about changes
 	// in the source files, in order to trigger a restart of the program in
@@ -154,6 +156,17 @@ func filterFromObject(obj map[string]any, id string) (*Filter, error) {
 		id = parsedId
 	}
 	filter.Id = id
+
+	// extraArguments mode
+	extraArguments, ok := obj["extraArguments"]
+	if ok {
+		extraArguments, ok := extraArguments.(string)
+		if !ok {
+			return nil, burrito.WrappedErrorf(jsonPropertyTypeError, "extraArguments", "string")
+		}
+		filter.ExtraArgumentsMode = extraArguments
+	}
+
 	return filter, nil
 }
 
@@ -190,6 +203,10 @@ type FilterRunner interface {
 	// IsUsingDataExport returns whether the filter wants its data to be
 	// exported back to the data folder after running the profile.
 	IsUsingDataExport(dotRegolithPath string, ctx RunContext) (bool, error)
+
+	// AddExtraArguments adds additional arguments to the filter according to
+	// the method provided in the filter runner settings
+	AddExtraArguments(extraArguments []string) error
 }
 
 func (f *Filter) CopyArguments(parent *RemoteFilter) {
@@ -232,6 +249,22 @@ func (f *Filter) IsDisabled(ctx RunContext) (bool, error) {
 
 func (f *Filter) IsUsingDataExport(_ string, _ RunContext) (bool, error) {
 	return false, nil
+}
+
+func (f *Filter) AddExtraArguments(extraArguments []string) error {
+	switch f.ExtraArgumentsMode {
+	case "", "ignore":
+	case "override":
+		f.Arguments = extraArguments
+	case "append":
+		f.Arguments = append(f.Arguments, extraArguments...)
+	default:
+		return burrito.WrappedErrorf(
+			invalidArgumentModeError,
+			// current value; valid values
+			f.ExtraArgumentsMode, "ignore, override, append")
+	}
+	return nil
 }
 
 type filterInstallerFactory struct {
@@ -317,11 +350,23 @@ func FilterInstallerFromObject(id string, obj map[string]any) (FilterInstaller, 
 }
 
 func FilterRunnerFromObjectAndDefinitions(
-	obj map[string]any, filterDefinitions map[string]FilterInstaller,
+	obj map[string]any,
+	filterDefinitions map[string]FilterInstaller,
+	isInAsyncFilter bool,
 ) (FilterRunner, error) {
 	profile, ok := obj["profile"].(string)
 	if ok {
 		return &ProfileFilter{Profile: profile}, nil
+	}
+	if !isInAsyncFilter {
+		_, ok := obj["asyncFilters"]
+		if ok {
+			asyncFilter, err := AsyncFilterFromObject(obj, filterDefinitions)
+			if err != nil {
+				return nil, burrito.PassError(err)
+			}
+			return asyncFilter, nil
+		}
 	}
 	filterObj, ok := obj["filter"]
 	if !ok {

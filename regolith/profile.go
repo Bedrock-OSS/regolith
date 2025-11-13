@@ -287,6 +287,12 @@ func RunProfileImpl(context RunContext) (bool, error) {
 		if filter.GetId() != "" {
 			Logger.Infof("Running filter %s", filter.GetId())
 		}
+
+		err = filter.AddExtraArguments(context.ExtraArguments)
+		if err != nil {
+			return false, burrito.WrapErrorf(err, filterRunnerRunError, filter.GetId())
+		}
+
 		// Run the filter in watch mode
 		start := time.Now()
 		interrupted, err := filter.Run(context)
@@ -391,7 +397,7 @@ func ProfileFromObject(
 				jsonPathTypeError, fmt.Sprintf("filters->%d", i), "object")
 		}
 		filterRunner, err := FilterRunnerFromObjectAndDefinitions(
-			filter, filterDefinitions)
+			filter, filterDefinitions, false)
 		if err != nil {
 			return result, burrito.WrapErrorf(
 				err, jsonPathParseError, fmt.Sprintf("filters->%d", i))

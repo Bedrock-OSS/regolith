@@ -103,7 +103,7 @@ func _testCustomDevelopmentExportLocation(
 
 	// THE TEST
 	t.Log("Testing the 'regolith run' command...")
-	err = regolith.Run(profileToRun, true)
+	err = regolith.Run(profileToRun, []string{}, true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}

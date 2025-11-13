@@ -51,7 +51,7 @@ func TestSizeTimeCheckOptimizationCorectness(t *testing.T) {
 	// Run the project
 	t.Log("Running Regolith...")
 
-	if err := regolith.Run("default", true); err != nil {
+	if err := regolith.Run("default", []string{}, true); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 	// TEST EVALUATION
@@ -94,7 +94,7 @@ func TestSizeTimeCheckOptimizationSpeed(t *testing.T) {
 
 		// Start the timer
 		start := time.Now()
-		if err := regolith.Run("default", true); err != nil {
+		if err := regolith.Run("default", []string{}, true); err != nil {
 			t.Fatal("'regolith run' failed:", err.Error())
 		}
 		// Stop the timer

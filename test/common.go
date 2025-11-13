@@ -89,6 +89,11 @@ const (
 	// 'project_after_run' is the same project but after running Regolith with
 	// the size_time_check experiment enabled.
 	sizeTimeCheckOptimizationPath = "testdata/size_time_check_optimization"
+
+	// asyncFilterPath contains two subdirectories 'project' and
+	// 'expected_build_result'. They are used for testing the asynchronous
+	// filters.
+	asyncFilterPath = "testdata/async_filter"
 )
 
 // firstErr returns the first error in a list of errors. If the list is empty
