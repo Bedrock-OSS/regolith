@@ -61,6 +61,7 @@ func prepareScope(ctx RunContext) map[string]any {
 		"settings":       ctx.Settings,
 		"project":        projectData,
 		"mode":           mode,
+		"nested":         ctx.Parent != nil,
 		"initial":        ctx.Initial,
 	}
 }
