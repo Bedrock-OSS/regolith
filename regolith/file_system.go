@@ -6,9 +6,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -854,6 +856,10 @@ func MoveOrCopy(
 func SyncDirectories(
 	source string, destination string, makeReadOnly bool,
 ) error {
+	// Ensure destination root exists early to avoid race with junction handling
+	if err := os.MkdirAll(destination, 0755); err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, destination)
+	}
 	// Make destination parent if not exists
 	destinationParent := filepath.Dir(destination)
 	if err := os.MkdirAll(destinationParent, 0755); err != nil {
@@ -863,11 +869,21 @@ func SyncDirectories(
 		if err != nil {
 			return err
 		}
+		Logger.Debugf("SYNC: Inspecting %s isDir=%v mode=%v", srcPath, d.IsDir(), func() fs.FileMode {
+			info, e := d.Info()
+			if e != nil {
+				return 0
+			}
+			return info.Mode()
+		}())
 		relPath, err := filepath.Rel(source, srcPath)
 		if err != nil {
 			return burrito.WrapErrorf(err, filepathRelError, source, srcPath)
 		}
 		destPath := filepath.Join(destination, relPath)
+		if relPath == "." { // Normalize root path
+			destPath = destination
+		}
 
 		destInfo, err := os.Stat(destPath)
 		if err != nil && !os.IsNotExist(err) {
@@ -878,6 +894,54 @@ func SyncDirectories(
 			return ierr
 		}
 		if (err != nil && os.IsNotExist(err)) || info.ModTime() != destInfo.ModTime() || info.Size() != destInfo.Size() {
+			// Treat Windows NTFS junctions (directory reparse points) as directories
+			if runtime.GOOS == "windows" && !d.IsDir() {
+				if linfo, lerr := os.Lstat(srcPath); lerr == nil {
+					if wad, ok := linfo.Sys().(*syscall.Win32FileAttributeData); ok {
+						const FILE_ATTRIBUTE_REPARSE_POINT = 0x0400
+						const FILE_ATTRIBUTE_DIRECTORY = 0x0010
+						if wad.FileAttributes&FILE_ATTRIBUTE_REPARSE_POINT != 0 && wad.FileAttributes&FILE_ATTRIBUTE_DIRECTORY != 0 {
+							// Junction appears as file to Go but is a directory; copy contents
+							// Treat junction as directory and manually copy contents
+							// Ensure parent exists before creating junction destination
+							if pmkerr := os.MkdirAll(filepath.Dir(destPath), 0755); pmkerr != nil {
+								return burrito.WrapErrorf(pmkerr, osMkdirError, filepath.Dir(destPath))
+							}
+							if mkerr := os.MkdirAll(destPath, 0755); mkerr != nil {
+								return burrito.WrapErrorf(mkerr, osMkdirError, destPath)
+							}
+							Logger.Debugf("SYNC: Handling junction %s", srcPath)
+							entries, rderr := os.ReadDir(srcPath)
+							if rderr != nil {
+								return burrito.WrapErrorf(rderr, osReadDirError, srcPath)
+							}
+							for _, entry := range entries {
+								childSrc := filepath.Join(srcPath, entry.Name())
+								childDest := filepath.Join(destPath, entry.Name())
+								cinfo, cierr := entry.Info()
+								if cierr != nil {
+									return cierr
+								}
+								if entry.IsDir() {
+									if mkerr := os.MkdirAll(childDest, cinfo.Mode()); mkerr != nil {
+										return burrito.WrapErrorf(mkerr, osMkdirError, childDest)
+									}
+									// Use SyncDirectories recursively for nested directories (not junction root)
+									if rerr := SyncDirectories(childSrc, childDest, false); rerr != nil {
+										return rerr
+									}
+								} else {
+									Logger.Debugf("SYNC: Copying junction file %s to %s", childSrc, childDest)
+									if cerr := CopyFile(childSrc, childDest); cerr != nil {
+										return cerr
+									}
+								}
+							}
+							return nil
+						}
+					}
+				}
+			}
 			if d.IsDir() {
 				return os.MkdirAll(destPath, info.Mode())
 			}
