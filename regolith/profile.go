@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
-
-	"github.com/otiai10/copy"
 )
 
 // SetupTmpFiles set up the workspace for the filters.
@@ -131,10 +129,8 @@ func SetupTmpFiles(context RunContext) error {
 						return burrito.WrapError(err, "Failed to export behavior pack.")
 					}
 				} else {
-					err = copy.Copy(
-						path,
-						p,
-						copy.Options{PreserveTimes: false, Sync: false})
+					// Standard copy path; fallback for Windows junction errors handled inside
+					err = CopyDirOrFallback(path, p)
 					if err != nil {
 						return burrito.WrapErrorf(err, osCopyError, path, p)
 					}
