@@ -16,10 +16,12 @@ require (
 	github.com/stirante/go-simple-eval v0.0.0-20230131075324-9ed520afbec1
 	go.uber.org/zap v1.23.0
 	golang.org/x/mod v0.6.0
-	golang.org/x/sys v0.13.0
+	golang.org/x/sys v0.24.0
 )
 
 replace github.com/hashicorp/go-getter => github.com/arikkfir/go-getter v1.6.3-0.20220803164326-281b7670b734
+
+replace github.com/otiai10/copy => github.com/Bedrock-OSS/copy v1.7.0-junctionfix
 
 require (
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20221202181307-76fa05c21b12 // indirect
@@ -28,11 +30,13 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/exp v0.0.0-20230131013936-aae9b4e6329d // indirect
+	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 )
