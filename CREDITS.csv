@@ -11,7 +11,7 @@ github.com/mattn/go-colorable,https://github.com/mattn/go-colorable/blob/v0.1.13
 github.com/mattn/go-isatty,https://github.com/mattn/go-isatty/blob/v0.0.17/LICENSE,MIT
 github.com/muhammadmuzzammil1998/jsonc,https://github.com/muhammadmuzzammil1998/jsonc/blob/v1.0.0/LICENSE,MIT
 github.com/nightlyone/lockfile,https://github.com/nightlyone/lockfile/blob/v1.0.0/LICENSE,MIT
-github.com/otiai10/copy,https://github.com/otiai10/copy/blob/v1.7.0/LICENSE,MIT
+github.com/otiai10/copy,https://github.com/Bedrock-OSS/copy/blob/v1.7.0-junctionfix/LICENSE,MIT
 github.com/paul-mannino/go-fuzzywuzzy,https://github.com/paul-mannino/go-fuzzywuzzy/blob/54652b135d0e/LICENSE,GPL-3.0
 github.com/spf13/cobra,https://github.com/spf13/cobra/blob/v1.6.1/LICENSE.txt,Apache-2.0
 github.com/spf13/pflag,https://github.com/spf13/pflag/blob/v1.0.5/LICENSE,BSD-3-Clause
@@ -22,5 +22,6 @@ go.uber.org/zap,https://github.com/uber-go/zap/blob/v1.23.0/LICENSE.txt,MIT
 golang.org/x/crypto,https://cs.opensource.google/go/x/crypto/+/v0.1.0:LICENSE,BSD-3-Clause
 golang.org/x/exp,https://cs.opensource.google/go/x/exp/+/aae9b4e6:LICENSE,BSD-3-Clause
 golang.org/x/mod/semver,https://cs.opensource.google/go/x/mod/+/v0.6.0:LICENSE,BSD-3-Clause
-golang.org/x/sys/unix,https://cs.opensource.google/go/x/sys/+/v0.13.0:LICENSE,BSD-3-Clause
+golang.org/x/sync,https://cs.opensource.google/go/x/sync/+/v0.8.0:LICENSE,BSD-3-Clause
+golang.org/x/sys/unix,https://cs.opensource.google/go/x/sys/+/v0.24.0:LICENSE,BSD-3-Clause
 golang.org/x/text,https://cs.opensource.google/go/x/text/+/v0.6.0:LICENSE,BSD-3-Clause
