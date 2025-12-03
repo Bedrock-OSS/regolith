@@ -356,7 +356,15 @@ func FilterRunnerFromObjectAndDefinitions(
 ) (FilterRunner, error) {
 	profile, ok := obj["profile"].(string)
 	if ok {
-		return &ProfileFilter{Profile: profile}, nil
+		// For profile filters, we pass the profile name as the ID since there's no "filter" property
+		basicFilter, err := filterFromObject(obj, profile)
+		if err != nil {
+			return nil, burrito.WrapError(err, filterFromObjectError)
+		}
+		return &ProfileFilter{
+			Filter:  *basicFilter,
+			Profile: profile,
+		}, nil
 	}
 	if !isInAsyncFilter {
 		_, ok := obj["asyncFilters"]
