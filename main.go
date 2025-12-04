@@ -166,6 +166,12 @@ the new filter is available in the Regolith.
 `
 
 func main() {
+	// Load environment variables from .env file (if present)
+	// This is done before any other initialization to ensure environment variables are available
+	if err := regolith.LoadEnvFile(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load .env file: %v\n", err)
+	}
+
 	// Schedule error handling
 	var err error
 	defer func() {
