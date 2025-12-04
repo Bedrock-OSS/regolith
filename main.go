@@ -172,6 +172,25 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to load .env file: %v\n", err)
 	}
 
+	// Parse early for --env flag to load custom .env file
+	var customEnvFile string
+	for i, arg := range os.Args[1:] {
+		if arg == "--env" && i+2 < len(os.Args) {
+			customEnvFile = os.Args[i+2]
+			break
+		} else if strings.HasPrefix(arg, "--env=") {
+			customEnvFile = strings.TrimPrefix(arg, "--env=")
+			break
+		}
+	}
+
+	// Load custom .env file if specified
+	if customEnvFile != "" {
+		if err := regolith.LoadEnvFileFromPath(customEnvFile); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to load custom .env file: %v\n", err)
+		}
+	}
+
 	// Schedule error handling
 	var err error
 	defer func() {
@@ -225,6 +244,9 @@ func main() {
 		Version: version,
 	}
 	subcommands := make([]*cobra.Command, 0)
+
+	// Add --env flag to root command
+	rootCmd.PersistentFlags().StringVar(&customEnvFile, "env", "", "Path to a custom .env file to load")
 
 	var force bool
 	// regolith init
