@@ -218,10 +218,10 @@ func InstallAll(force, update, debug, refreshFilters bool, env string) error {
 // prepareRunContext prepares the context for the "regolith run" and
 // "regolith watch" commands.
 func prepareRunContext(profileName string, extraFilterArgs []string, debug bool, env string) (*RunContext, error) {
+	InitLogging(debug)
 	if err := loadEnvFileFromArg(env); err != nil {
 		return nil, burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
-	InitLogging(debug)
 	if profileName == "" {
 		profileName = "default"
 	}
