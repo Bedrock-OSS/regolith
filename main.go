@@ -166,6 +166,7 @@ the new filter is available in the Regolith.
 `
 
 func main() {
+
 	// Schedule error handling
 	var err error
 	defer func() {
@@ -220,6 +221,10 @@ func main() {
 	}
 	subcommands := make([]*cobra.Command, 0)
 
+	// Add --env flag to root command
+	var envFile string
+	rootCmd.PersistentFlags().StringVar(&envFile, "env", "", "Path to a custom .env file to load")
+
 	var force bool
 	// regolith init
 	cmdInit := &cobra.Command{
@@ -227,7 +232,8 @@ func main() {
 		Short: "Initializes a Regolith project in current directory",
 		Long:  regolithInitDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Init(burrito.PrintStackTrace, force)
+			env, _ := cmd.Flags().GetString("env")
+			err = regolith.Init(burrito.PrintStackTrace, force, env)
 		},
 	}
 	cmdInit.Flags().BoolVarP(
@@ -249,7 +255,8 @@ func main() {
 			if cmd.Flags().Lookup("profile").Changed && len(profiles) == 0 {
 				profiles = append(profiles, "default")
 			}
-			err = regolith.Install(filters, force || update, resolverRefresh, filterRefresh, profiles, burrito.PrintStackTrace)
+			env, _ := cmd.Flags().GetString("env")
+			err = regolith.Install(filters, force || update, resolverRefresh, filterRefresh, profiles, burrito.PrintStackTrace, env)
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
@@ -270,7 +277,8 @@ func main() {
 		Short: "Installs all nonexistent or outdated filters defined in filterDefinitions list",
 		Long:  regolithInstallAllDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.InstallAll(force, update, burrito.PrintStackTrace, filterRefresh)
+			env, _ := cmd.Flags().GetString("env")
+			err = regolith.InstallAll(force, update, burrito.PrintStackTrace, filterRefresh, env)
 		},
 	}
 	cmdInstallAll.Flags().BoolVarP(
@@ -293,7 +301,8 @@ func main() {
 				profile = args[0]
 				extraFilterArgs = args[1:]
 			}
-			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace)
+			env, _ := cmd.Flags().GetString("env")
+			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env)
 		},
 	}
 	subcommands = append(subcommands, cmdRun)
@@ -310,7 +319,8 @@ func main() {
 				profile = args[0]
 				extraFilterArgs = args[1:]
 			}
-			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace)
+			env, _ := cmd.Flags().GetString("env")
+			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env)
 		},
 	}
 	subcommands = append(subcommands, cmdWatch)
@@ -327,7 +337,8 @@ func main() {
 			}
 			filter := args[0]
 			filterArgs := args[1:] // First arg is the filter name
-			err = regolith.ApplyFilter(filter, filterArgs, burrito.PrintStackTrace)
+			env, _ := cmd.Flags().GetString("env")
+			err = regolith.ApplyFilter(filter, filterArgs, burrito.PrintStackTrace, env)
 		},
 	}
 	subcommands = append(subcommands, cmdApplyFilter)
@@ -338,13 +349,12 @@ func main() {
 		Short: " Print or modify the user configuration.",
 		Long:  regolithConfigDesc,
 		Run: func(cmd *cobra.Command, args []string) {
-			regolith.InitLogging(burrito.PrintStackTrace)
-			defer regolith.ShutdownLogging()
 			full, _ := cmd.Flags().GetBool("full")
 			delete, _ := cmd.Flags().GetBool("delete")
 			append, _ := cmd.Flags().GetBool("append")
 			index, _ := cmd.Flags().GetInt("index")
-			err = regolith.ManageConfig(burrito.PrintStackTrace, full, delete, append, index, args)
+			env, _ := cmd.Flags().GetString("env")
+			err = regolith.ManageConfig(burrito.PrintStackTrace, full, delete, append, index, args, env)
 		},
 	}
 	cmdConfig.Flags().BoolP("full", "f", false, "When printing, prints the full configuration including default values.")
@@ -360,7 +370,8 @@ func main() {
 		Short: "Cleans Regolith cache",
 		Long:  regolithCleanDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.Clean(burrito.PrintStackTrace, userCache, filterCache)
+			env, _ := cmd.Flags().GetString("env")
+			err = regolith.Clean(burrito.PrintStackTrace, userCache, filterCache, env)
 		},
 	}
 	cmdClean.Flags().BoolVarP(
@@ -377,7 +388,8 @@ func main() {
 		Short: "Updates cached resolver repositories",
 		Long:  regolithUpdateResolversDesc,
 		Run: func(cmd *cobra.Command, _ []string) {
-			err = regolith.UpdateResolvers(burrito.PrintStackTrace)
+			env, _ := cmd.Flags().GetString("env")
+			err = regolith.UpdateResolvers(burrito.PrintStackTrace, env)
 		},
 	}
 	subcommands = append(subcommands, cmdUpdateResolvers)

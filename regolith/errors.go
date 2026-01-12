@@ -265,4 +265,7 @@ const (
 	invalidArgumentModeError = "The extraArguments property of a filter is invalid:\n" +
 		"Current value: %q\n" +
 		"Valid values are: %s"
+
+	loadEnvFileFromArgError = "Failed to the file with environment variables:\n" +
+		"File path: %s"
 )
