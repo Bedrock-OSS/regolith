@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -501,10 +502,33 @@ type FilterCollection struct {
 // - A simple array of strings (executed on all OS)
 // - An object with OS-specific arrays (windows, linux, darwin)
 type ShellCommands struct {
-	All     []string
-	Windows []string
-	Linux   []string
-	Darwin  []string
+	All     []string `json:"-"`
+	Windows []string `json:"windows,omitempty"`
+	Linux   []string `json:"linux,omitempty"`
+	Darwin  []string `json:"darwin,omitempty"`
+}
+
+// MarshalJSON implements custom JSON marshaling for ShellCommands.
+// If only All field has values, marshals as a JSON array.
+// Otherwise, marshals as a JSON object with platform-specific keys.
+func (sc ShellCommands) MarshalJSON() ([]byte, error) {
+	// If only All has commands, marshal as array
+	if len(sc.All) > 0 && len(sc.Windows) == 0 && len(sc.Linux) == 0 && len(sc.Darwin) == 0 {
+		return json.Marshal(sc.All)
+	}
+
+	// Otherwise, marshal as object with platform keys
+	obj := make(map[string][]string)
+	if len(sc.Windows) > 0 {
+		obj["windows"] = sc.Windows
+	}
+	if len(sc.Linux) > 0 {
+		obj["linux"] = sc.Linux
+	}
+	if len(sc.Darwin) > 0 {
+		obj["darwin"] = sc.Darwin
+	}
+	return json.Marshal(obj)
 }
 
 // GetCommandsForCurrentOS returns the commands to execute for the current OS
@@ -529,9 +553,9 @@ func (sc *ShellCommands) GetCommandsForCurrentOS() []string {
 // When editing, adjust ProfileFromObject function as well
 type Profile struct {
 	FilterCollection
-	ExportTarget ExportTarget `json:"export,omitzero"`
-	PreShell     ShellCommands
-	PostShell    ShellCommands
+	ExportTarget ExportTarget  `json:"export,omitzero"`
+	PreShell     ShellCommands `json:"preShell,omitzero"`
+	PostShell    ShellCommands `json:"postShell,omitzero"`
 }
 
 func shellCommandsFromObject(obj map[string]any, key string) (ShellCommands, error) {
