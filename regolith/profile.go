@@ -1,16 +1,118 @@
 package regolith
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
-
 	"github.com/otiai10/copy"
 )
+
+// runShellCommands executes multiple shell commands in a single shell session,
+// allowing environment variables to persist across commands and be injected into the parent process.
+func runShellCommands(commands []string) error {
+	if len(commands) == 0 {
+		return nil
+	}
+
+	if runtime.GOOS == "windows" {
+		return runShellCommandsWindows(commands)
+	}
+	return runShellCommandsUnix(commands)
+}
+
+// runShellCommandsWindows executes commands in PowerShell and captures environment changes
+func runShellCommandsWindows(commands []string) error {
+	// Build a script that:
+	// 1. Executes all user commands
+	// 2. Outputs environment variables in a parseable format
+	script := ""
+	for _, cmd := range commands {
+		Logger.Debugf("Executing shell command: %s", cmd)
+		script += cmd + "; "
+	}
+	// Output all environment variables after commands execute
+	script += "[Environment]::GetEnvironmentVariables('Process').GetEnumerator() | ForEach-Object { Write-Output \"__REGOLITH_ENV__$($_.Key)=$($_.Value)\" }"
+
+	cmd := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script)
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+
+	// Capture stdout to parse environment variables
+	output, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+
+	// Display output (excluding our env markers)
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "__REGOLITH_ENV__") {
+			// Parse and set environment variable
+			envLine := strings.TrimPrefix(line, "__REGOLITH_ENV__")
+			if idx := strings.Index(envLine, "="); idx > 0 {
+				key := envLine[:idx]
+				value := strings.TrimSpace(envLine[idx+1:])
+				os.Setenv(key, value)
+			}
+		} else if line != "" {
+			// Print regular output
+			fmt.Println(line)
+		}
+	}
+
+	return nil
+}
+
+// runShellCommandsUnix executes commands in sh and captures environment changes
+func runShellCommandsUnix(commands []string) error {
+	// Build a script that:
+	// 1. Executes all user commands
+	// 2. Outputs environment variables in a parseable format
+	script := "set -e\n" // Exit on error
+	for _, cmd := range commands {
+		Logger.Debugf("Executing shell command: %s", cmd)
+		script += cmd + "\n"
+	}
+	// Output all environment variables after commands execute
+	script += "env | while IFS='=' read -r key value; do echo \"__REGOLITH_ENV__$key=$value\"; done"
+
+	cmd := exec.Command("sh", "-c", script)
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+
+	// Capture stdout to parse environment variables
+	output, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+
+	// Display output (excluding our env markers)
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "__REGOLITH_ENV__") {
+			// Parse and set environment variable
+			envLine := strings.TrimPrefix(line, "__REGOLITH_ENV__")
+			if idx := strings.Index(envLine, "="); idx > 0 {
+				key := envLine[:idx]
+				value := strings.TrimSpace(envLine[idx+1:])
+				os.Setenv(key, value)
+			}
+		} else if line != "" {
+			// Print regular output
+			fmt.Println(line)
+		}
+	}
+
+	return nil
+}
 
 // SetupTmpFiles set up the workspace for the filters.
 func SetupTmpFiles(context RunContext) error {
@@ -226,8 +328,22 @@ func CheckProfileImpl(
 // times in case of interruptions (changes in the source files).
 func RunProfile(context RunContext) error {
 start:
+	// Execute preShell commands if present
+	profile, err := context.GetProfile()
+	if err != nil {
+		return burrito.WrapErrorf(err, runContextGetProfileError)
+	}
+	preShellCmds := profile.PreShell.GetCommandsForCurrentOS()
+	if len(preShellCmds) > 0 {
+		Logger.Info("Running preShell commands...")
+		err := runShellCommands(preShellCmds)
+		if err != nil {
+			return burrito.WrapErrorf(err, "PreShell commands failed")
+		}
+	}
+
 	// Prepare tmp files
-	err := SetupTmpFiles(context)
+	err = SetupTmpFiles(context)
 	if err != nil {
 		return burrito.WrapErrorf(err, setupTmpFilesError, context.DotRegolithPath)
 	}
@@ -261,6 +377,17 @@ start:
 		goto start
 	}
 	Logger.Debug("Done in ", time.Since(start))
+
+	// Execute postShell commands if present
+	postShellCmds := profile.PostShell.GetCommandsForCurrentOS()
+	if len(postShellCmds) > 0 {
+		Logger.Info("Running postShell commands...")
+		err := runShellCommands(postShellCmds)
+		if err != nil {
+			return burrito.WrapErrorf(err, "PostShell commands failed")
+		}
+	}
+
 	return nil
 }
 
@@ -371,11 +498,132 @@ type FilterCollection struct {
 	Filters []FilterRunner `json:"filters"`
 }
 
+// ShellCommands represents shell commands that can be either:
+// - A simple array of strings (executed on all OS)
+// - An object with OS-specific arrays (windows, linux, darwin)
+type ShellCommands struct {
+	All     []string `json:"-"`
+	Windows []string `json:"windows,omitempty"`
+	Linux   []string `json:"linux,omitempty"`
+	Darwin  []string `json:"darwin,omitempty"`
+}
+
+// MarshalJSON implements custom JSON marshaling for ShellCommands.
+// If only All field has values, marshals as a JSON array.
+// Otherwise, marshals as a JSON object with platform-specific keys.
+func (sc ShellCommands) MarshalJSON() ([]byte, error) {
+	// If only All has commands, marshal as array
+	if len(sc.All) > 0 && len(sc.Windows) == 0 && len(sc.Linux) == 0 && len(sc.Darwin) == 0 {
+		return json.Marshal(sc.All)
+	}
+
+	// Otherwise, marshal as object with platform keys
+	obj := make(map[string][]string)
+	if len(sc.Windows) > 0 {
+		obj["windows"] = sc.Windows
+	}
+	if len(sc.Linux) > 0 {
+		obj["linux"] = sc.Linux
+	}
+	if len(sc.Darwin) > 0 {
+		obj["darwin"] = sc.Darwin
+	}
+	return json.Marshal(obj)
+}
+
+// GetCommandsForCurrentOS returns the commands to execute for the current OS
+func (sc *ShellCommands) GetCommandsForCurrentOS() []string {
+	if len(sc.All) > 0 {
+		return sc.All
+	}
+
+	switch runtime.GOOS {
+	case "windows":
+		return sc.Windows
+	case "linux":
+		return sc.Linux
+	case "darwin":
+		return sc.Darwin
+	default:
+		return nil
+	}
+}
+
 // Profile is a collection of filters and an export target
 // When editing, adjust ProfileFromObject function as well
 type Profile struct {
 	FilterCollection
-	ExportTarget ExportTarget `json:"export,omitzero"`
+	ExportTarget ExportTarget  `json:"export,omitzero"`
+	PreShell     ShellCommands `json:"preShell,omitzero"`
+	PostShell    ShellCommands `json:"postShell,omitzero"`
+}
+
+func shellCommandsFromObject(obj map[string]any, key string) (ShellCommands, error) {
+	var result ShellCommands
+	if shellObj, ok := obj[key]; ok {
+		if shellArray, ok := shellObj.([]any); ok {
+			// Simple array format - applies to all OS
+			for i, cmd := range shellArray {
+				cmdStr, ok := cmd.(string)
+				if !ok {
+					return result, burrito.WrappedErrorf(
+						jsonPathTypeError, fmt.Sprintf("%s->%d", key, i), "string")
+				}
+				result.All = append(result.All, cmdStr)
+			}
+		} else if shellMap, ok := shellObj.(map[string]any); ok {
+			// OS-specific format
+			if windowsCmds, exists := shellMap["windows"]; exists {
+				windowsArray, ok := windowsCmds.([]any)
+				if !ok {
+					return result, burrito.WrappedErrorf(
+						jsonPathTypeError, fmt.Sprintf("%s->windows", key), "array")
+				}
+				for i, cmd := range windowsArray {
+					cmdStr, ok := cmd.(string)
+					if !ok {
+						return result, burrito.WrappedErrorf(
+							jsonPathTypeError, fmt.Sprintf("%s->windows->%d", key, i), "string")
+					}
+					result.Windows = append(result.Windows, cmdStr)
+				}
+			}
+			if linuxCmds, exists := shellMap["linux"]; exists {
+				linuxArray, ok := linuxCmds.([]any)
+				if !ok {
+					return result, burrito.WrappedErrorf(
+						jsonPathTypeError, fmt.Sprintf("%s->linux", key), "array")
+				}
+				for i, cmd := range linuxArray {
+					cmdStr, ok := cmd.(string)
+					if !ok {
+						return result, burrito.WrappedErrorf(
+							jsonPathTypeError, fmt.Sprintf("%s->linux->%d", key, i), "string")
+					}
+					result.Linux = append(result.Linux, cmdStr)
+				}
+			}
+			if darwinCmds, exists := shellMap["darwin"]; exists {
+				darwinArray, ok := darwinCmds.([]any)
+				if !ok {
+					return result, burrito.WrappedErrorf(
+						jsonPathTypeError, fmt.Sprintf("%s->darwin", key), "array")
+				}
+				for i, cmd := range darwinArray {
+					cmdStr, ok := cmd.(string)
+					if !ok {
+						return result, burrito.WrappedErrorf(
+							jsonPathTypeError, fmt.Sprintf("%s->darwin->%d", key, i), "string")
+					}
+					result.Darwin = append(result.Darwin, cmdStr)
+				}
+			}
+		} else {
+			return result, burrito.WrappedErrorf(
+				jsonPathTypeError, key, "array or object")
+		}
+	}
+	return result, nil
 }
 
 func ProfileFromObject(
@@ -417,6 +665,19 @@ func ProfileFromObject(
 		return result, burrito.WrapErrorf(err, jsonPathParseError, "export")
 	}
 	result.ExportTarget = exportTarget
+	// PreShell and PostShell
+	preShell, err := shellCommandsFromObject(obj, "preShell")
+	if err != nil {
+		return result, burrito.PassError(err)
+	}
+	result.PreShell = preShell
+
+	postShell, err := shellCommandsFromObject(obj, "postShell")
+	if err != nil {
+		return result, burrito.PassError(err)
+	}
+	result.PostShell = postShell
+
 	return result, nil
 }
 

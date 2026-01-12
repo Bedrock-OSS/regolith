@@ -1,0 +1,17 @@
+{
+	"format_version": 2,
+	"header": {
+		"name": "Test Behavior Pack",
+		"description": "Test BP",
+		"uuid": "12345678-1234-1234-1234-123456789012",
+		"version": [1, 0, 0],
+		"min_engine_version": [1, 16, 0]
+	},
+	"modules": [
+		{
+			"type": "data",
+			"uuid": "22345678-1234-1234-1234-123456789012",
+			"version": [1, 0, 0]
+		}
+	]
+}

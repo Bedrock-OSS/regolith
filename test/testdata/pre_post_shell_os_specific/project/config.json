@@ -1,0 +1,47 @@
+{
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.2.json",
+	"name": "pre_post_shell_os_test",
+	"author": "Bedrock-OSS",
+	"packs": {
+		"behaviorPack": "./packs/BP",
+		"resourcePack": "./packs/RP"
+	},
+	"regolith": {
+		"profiles": {
+			"default": {
+				"preShell": {
+					"windows": [
+						"$env:OS_NAME = 'Windows'",
+						"echo \"Running on $env:OS_NAME\" | Out-File -Encoding UTF8 os_output.txt"
+					],
+					"linux": [
+						"export OS_NAME='Linux'",
+						"echo \"Running on $OS_NAME\" > os_output.txt"
+					],
+					"darwin": [
+						"export OS_NAME='macOS'",
+						"echo \"Running on $OS_NAME\" > os_output.txt"
+					]
+				},
+				"filters": [],
+				"export": {
+					"target": "local",
+					"rpPath": "./build/RP",
+					"bpPath": "./build/BP"
+				},
+				"postShell": {
+					"windows": [
+						"echo \"PostShell on $env:OS_NAME\" | Out-File -Encoding UTF8 post_os_output.txt"
+					],
+					"linux": [
+						"echo \"PostShell on $OS_NAME\" > post_os_output.txt"
+					],
+					"darwin": [
+						"echo \"PostShell on $OS_NAME\" > post_os_output.txt"
+					]
+				}
+			}
+		},
+		"dataPath": "./packs/data"
+	}
+}
