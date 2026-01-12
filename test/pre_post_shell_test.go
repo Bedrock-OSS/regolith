@@ -5,33 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"unicode/utf16"
 
 	"github.com/Bedrock-OSS/regolith/regolith"
 )
 
 const prePostShellPath = "testdata/pre_post_shell"
-
-// decodeUTF16LE decodes UTF-16 LE byte array to string
-func decodeUTF16LE(b []byte) string {
-	// Check for UTF-16 LE BOM (FF FE)
-	if len(b) >= 2 && b[0] == 0xFF && b[1] == 0xFE {
-		b = b[2:] // Skip BOM
-	}
-	
-	// Convert bytes to uint16 slice
-	if len(b)%2 != 0 {
-		// Odd length, pad with zero
-		b = append(b, 0)
-	}
-	
-	u16s := make([]uint16, len(b)/2)
-	for i := 0; i < len(u16s); i++ {
-		u16s[i] = uint16(b[i*2]) | uint16(b[i*2+1])<<8
-	}
-	
-	return string(utf16.Decode(u16s))
-}
 
 // TestPrePostShellCommands tests if preShell and postShell commands are executed
 // properly before and after the filter pipeline.
@@ -65,9 +43,9 @@ func TestPrePostShellCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to read pre_output.txt:", err)
 	}
-	
-	// Decode UTF-16 LE (PowerShell default output encoding on Windows)
-	preContentStr := decodeUTF16LE(preContent)
+
+	// Files are now UTF-8 encoded
+	preContentStr := string(preContent)
 	t.Logf("preShell output: %s", preContentStr)
 
 	// Verify that environment variables were set in preShell
@@ -87,9 +65,9 @@ func TestPrePostShellCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to read post_output.txt:", err)
 	}
-	
-	// Decode UTF-16 LE (PowerShell default output encoding on Windows)
-	postContentStr := decodeUTF16LE(postContent)
+
+	// Files are now UTF-8 encoded
+	postContentStr := string(postContent)
 	t.Logf("postShell output: %s", postContentStr)
 
 	// Verify that environment variables from preShell are available in postShell
@@ -99,7 +77,7 @@ func TestPrePostShellCommands(t *testing.T) {
 	if !strings.Contains(postContentStr, "another_value") {
 		t.Fatal("postShell did not receive ANOTHER_VAR from preShell - environment variables did not persist!")
 	}
-	
+
 	t.Log("✓ Environment variables successfully persisted from preShell to postShell!")
 
 	// Verify that export happened (build directory should exist)

@@ -12,7 +12,7 @@
 				"preShell": {
 					"windows": [
 						"$env:OS_NAME = 'Windows'",
-						"echo \"Running on $env:OS_NAME\" > os_output.txt"
+						"echo \"Running on $env:OS_NAME\" | Out-File -Encoding UTF8 os_output.txt"
 					],
 					"linux": [
 						"export OS_NAME='Linux'",
@@ -31,10 +31,14 @@
 				},
 				"postShell": {
 					"windows": [
-						"echo \"PostShell on $env:OS_NAME\" > post_os_output.txt"
+						"echo \"PostShell on $env:OS_NAME\" | Out-File -Encoding UTF8 post_os_output.txt"
 					],
-					"linux": ["echo \"PostShell on $OS_NAME\" > post_os_output.txt"],
-					"darwin": ["echo \"PostShell on $OS_NAME\" > post_os_output.txt"]
+					"linux": [
+						"echo \"PostShell on $OS_NAME\" > post_os_output.txt"
+					],
+					"darwin": [
+						"echo \"PostShell on $OS_NAME\" > post_os_output.txt"
+					]
 				}
 			}
 		},

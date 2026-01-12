@@ -44,13 +44,8 @@ func TestPrePostShellCommandsOSSpecific(t *testing.T) {
 		t.Fatal("Failed to read os_output.txt:", err)
 	}
 
-	// Decode UTF-16 LE on Windows
-	var osContentStr string
-	if runtime.GOOS == "windows" {
-		osContentStr = decodeUTF16LE(osContent)
-	} else {
-		osContentStr = string(osContent)
-	}
+	// Files are now UTF-8 encoded
+	osContentStr := string(osContent)
 	t.Logf("OS-specific preShell output: %s", osContentStr)
 
 	// Verify correct OS was detected
@@ -79,13 +74,8 @@ func TestPrePostShellCommandsOSSpecific(t *testing.T) {
 		t.Fatal("Failed to read post_os_output.txt:", err)
 	}
 
-	// Decode UTF-16 LE on Windows
-	var postOsContentStr string
-	if runtime.GOOS == "windows" {
-		postOsContentStr = decodeUTF16LE(postOsContent)
-	} else {
-		postOsContentStr = string(postOsContent)
-	}
+	// Files are now UTF-8 encoded
+	postOsContentStr := string(postOsContent)
 	t.Logf("OS-specific postShell output: %s", postOsContentStr)
 
 	// Verify postShell received the OS variable from preShell
