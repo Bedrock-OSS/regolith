@@ -8,11 +8,16 @@ import (
 	"strings"
 )
 
-// LoadEnvFile loads environment variables from a .env file in the current directory.
+// loadEnvFileFromArg loads environment variables from a .env file specified by the env argument.
+// If env is empty, loads from ".env" in the current directory.
 // Variables already present in the environment are not overwritten (standard priority).
 // Returns an error if the file cannot be read (other than not existing).
-func LoadEnvFile() error {
-	return LoadEnvFileFromPath(".env")
+func loadEnvFileFromArg(env string) error {
+	envPath := ".env"
+	if env != "" {
+		envPath = env
+	}
+	return LoadEnvFileFromPath(envPath)
 }
 
 // LoadEnvFileFromPath loads environment variables from a .env file at a specified path.

@@ -39,9 +39,12 @@ var disallowedFiles = []string{
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Install(filters []string, force, refreshResolvers, refreshFilters bool, profiles []string, debug bool) error {
+func Install(filters []string, force, refreshResolvers, refreshFilters bool, profiles []string, debug bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapError(err, "Failed to load environment file")
+	}
 	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalledWarning)
@@ -146,9 +149,12 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func InstallAll(force, update, debug, refreshFilters bool) error {
+func InstallAll(force, update, debug, refreshFilters bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapError(err, "Failed to load environment file")
+	}
 	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalledWarning)
@@ -211,7 +217,10 @@ func InstallAll(force, update, debug, refreshFilters bool) error {
 
 // prepareRunContext prepares the context for the "regolith run" and
 // "regolith watch" commands.
-func prepareRunContext(profileName string, extraFilterArgs []string, debug bool) (*RunContext, error) {
+func prepareRunContext(profileName string, extraFilterArgs []string, debug bool, env string) (*RunContext, error) {
+	if err := loadEnvFileFromArg(env); err != nil {
+		return nil, burrito.WrapError(err, "Failed to load environment file")
+	}
 	InitLogging(debug)
 	if profileName == "" {
 		profileName = "default"
@@ -260,9 +269,9 @@ func prepareRunContext(profileName string, extraFilterArgs []string, debug bool)
 
 // Run handles the "regolith run" command. It runs selected profile and exports
 // created resource pack and behavior pack to the target destination.
-func Run(profileName string, extraFilterArgs []string, debug bool) error {
+func Run(profileName string, extraFilterArgs []string, debug bool, env string) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, extraFilterArgs, debug)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -285,9 +294,9 @@ func Run(profileName string, extraFilterArgs []string, debug bool) error {
 // Watch handles the "regolith watch" command. It watches the project
 // directories, and it runs selected profile and exports created resource pack
 // and behavior pack to the target destination when the project changes.
-func Watch(profileName string, extraFilterArgs []string, debug bool) error {
+func Watch(profileName string, extraFilterArgs []string, debug bool, env string) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, extraFilterArgs, debug)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -336,9 +345,12 @@ func Watch(profileName string, extraFilterArgs []string, debug bool) error {
 // ApplyFilter handles the "regolith apply-filter" command.
 // ApplyFilter mode modifies RP and BP file in place (using source). The config and
 // properties of the filter are passed via commandline.
-func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
+func ApplyFilter(filterName string, filterArgs []string, debug bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapError(err, "Failed to load environment file")
+	}
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
@@ -427,9 +439,12 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Init(debug, force bool) error {
+func Init(debug, force bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapError(err, "Failed to load environment file")
+	}
 	Logger.Info("Initializing Regolith project...")
 
 	wd, err := os.Getwd()
@@ -589,9 +604,12 @@ func CleanFilterCache() error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Clean(debug, userCache, filterCache bool) error {
+func Clean(debug, userCache, filterCache bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapError(err, "Failed to load environment file")
+	}
 	if userCache {
 		return CleanUserCache()
 	} else if filterCache {
@@ -605,9 +623,12 @@ func Clean(debug, userCache, filterCache bool) error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func UpdateResolvers(debug bool) error {
+func UpdateResolvers(debug bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapError(err, "Failed to load environment file")
+	}
 	_, _, err := DownloadResolverMaps(true)
 	return err
 }
@@ -800,9 +821,12 @@ func manageUserConfigDelete(index int, key string) error {
 //     properties
 //   - args - the arguments of the command, the length of the list must be 0, 1
 //     or 2. The length determines the action of the command.
-func ManageConfig(debug, full, delete, append bool, index int, args []string) error {
+func ManageConfig(debug, full, delete, append bool, index int, args []string, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapError(err, "Failed to load environment file")
+	}
 	var err error
 
 	// Based on number of arguments, determine what to do
