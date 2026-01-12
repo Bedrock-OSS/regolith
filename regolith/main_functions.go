@@ -43,7 +43,7 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 	InitLogging(debug)
 	defer ShutdownLogging()
 	if err := loadEnvFileFromArg(env); err != nil {
-		return burrito.WrapError(err, "Failed to load environment file")
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -153,7 +153,7 @@ func InstallAll(force, update, debug, refreshFilters bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
 	if err := loadEnvFileFromArg(env); err != nil {
-		return burrito.WrapError(err, "Failed to load environment file")
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
 	Logger.Info("Installing filters...")
 	if !hasGit() {
@@ -219,7 +219,7 @@ func InstallAll(force, update, debug, refreshFilters bool, env string) error {
 // "regolith watch" commands.
 func prepareRunContext(profileName string, extraFilterArgs []string, debug bool, env string) (*RunContext, error) {
 	if err := loadEnvFileFromArg(env); err != nil {
-		return nil, burrito.WrapError(err, "Failed to load environment file")
+		return nil, burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
 	InitLogging(debug)
 	if profileName == "" {
@@ -349,7 +349,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool, env string)
 	InitLogging(debug)
 	defer ShutdownLogging()
 	if err := loadEnvFileFromArg(env); err != nil {
-		return burrito.WrapError(err, "Failed to load environment file")
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
@@ -443,7 +443,7 @@ func Init(debug, force bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
 	if err := loadEnvFileFromArg(env); err != nil {
-		return burrito.WrapError(err, "Failed to load environment file")
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
 	Logger.Info("Initializing Regolith project...")
 
@@ -608,7 +608,7 @@ func Clean(debug, userCache, filterCache bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
 	if err := loadEnvFileFromArg(env); err != nil {
-		return burrito.WrapError(err, "Failed to load environment file")
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
 	if userCache {
 		return CleanUserCache()
@@ -627,7 +627,7 @@ func UpdateResolvers(debug bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
 	if err := loadEnvFileFromArg(env); err != nil {
-		return burrito.WrapError(err, "Failed to load environment file")
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
 	_, _, err := DownloadResolverMaps(true)
 	return err
@@ -825,7 +825,7 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string, en
 	InitLogging(debug)
 	defer ShutdownLogging()
 	if err := loadEnvFileFromArg(env); err != nil {
-		return burrito.WrapError(err, "Failed to load environment file")
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
 	var err error
 

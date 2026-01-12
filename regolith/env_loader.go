@@ -2,10 +2,11 @@ package regolith
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
 // loadEnvFileFromArg loads environment variables from a .env file specified by the env argument.
@@ -27,7 +28,7 @@ func LoadEnvFileFromPath(envFilePath string) error {
 	// Resolve the path to be absolute
 	absPath, err := filepath.Abs(envFilePath)
 	if err != nil {
-		return fmt.Errorf("error resolving path %s: %w", envFilePath, err)
+		return burrito.WrapErrorf(err, filepathAbsError, envFilePath)
 	}
 
 	// Check if the file exists
@@ -35,13 +36,13 @@ func LoadEnvFileFromPath(envFilePath string) error {
 		// File doesn't exist, which is fine - silently return
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("error checking .env file at %s: %w", absPath, err)
+		return burrito.WrapErrorf(err, osStatErrorAny, absPath)
 	}
 
 	// Open the .env file
 	file, err := os.Open(absPath)
 	if err != nil {
-		return fmt.Errorf("error opening .env file at %s: %w", absPath, err)
+		return burrito.WrapErrorf(err, osOpenError, absPath)
 	}
 	defer file.Close()
 
@@ -78,13 +79,17 @@ func LoadEnvFileFromPath(envFilePath string) error {
 		if _, exists := os.LookupEnv(key); !exists {
 			err := os.Setenv(key, value)
 			if err != nil {
-				return fmt.Errorf("error setting environment variable %s: %w", key, err)
+				return burrito.WrapErrorf(
+					err,
+					"Failed to set environment variable:\nKey: %s\nValue: %s",
+					key, value,
+				)
 			}
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading .env file at %s: %w", absPath, err)
+		return burrito.WrapErrorf(err, fileReadError, absPath)
 	}
 
 	return nil
