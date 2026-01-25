@@ -1,5 +1,5 @@
 {
-    "$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.6.json",
+    "$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.7.json",
     "author": "Bedrock-OSS",
     "name": "async_filter",
     "packs": {
@@ -14,7 +14,7 @@
                 "script": "local_filters/wait_and_print.py"
             }
         },
-        "formatVersion": "1.6.0",
+        "formatVersion": "1.7.0",
         "profiles": {
             "default": {
                 "export": {
