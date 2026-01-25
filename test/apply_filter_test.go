@@ -28,7 +28,7 @@ func TestApplyFilter(t *testing.T) {
 
 	// THE TEST
 	t.Log("Running 'rego apply-filter'...")
-	if err := regolith.ApplyFilter("test_filter", []string{"Regolith"}, true); err != nil {
+	if err := regolith.ApplyFilter("test_filter", []string{"Regolith"}, true, ""); err != nil {
 		t.Fatal("'regolith apply-filter' failed:", err.Error())
 	}
 	// TEST EVALUATION

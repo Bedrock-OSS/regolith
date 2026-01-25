@@ -1,0 +1,32 @@
+{
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.7.json",
+	"name": "pre_post_shell_test",
+	"author": "Bedrock-OSS",
+	"packs": {
+		"behaviorPack": "./packs/BP",
+		"resourcePack": "./packs/RP"
+	},
+	"regolith": {
+		"profiles": {
+			"default": {
+				"preShell": [
+					"$env:TEST_VAR = 'hello_from_preshell'",
+					"echo \"PreShell executed, TEST_VAR=$env:TEST_VAR\" | Out-File -Encoding UTF8 pre_output.txt",
+					"$env:ANOTHER_VAR = 'another_value'",
+					"echo \"ANOTHER_VAR=$env:ANOTHER_VAR\" | Out-File -Encoding UTF8 -Append pre_output.txt"
+				],
+				"filters": [],
+				"export": {
+					"target": "local",
+					"rpPath": "./build/RP",
+					"bpPath": "./build/BP"
+				},
+				"postShell": [
+					"echo \"PostShell executed, TEST_VAR=$env:TEST_VAR\" | Out-File -Encoding UTF8 post_output.txt",
+					"echo \"ANOTHER_VAR=$env:ANOTHER_VAR\" | Out-File -Encoding UTF8 -Append post_output.txt"
+				]
+			}
+		},
+		"dataPath": "./packs/data"
+	}
+}

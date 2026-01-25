@@ -1,0 +1,17 @@
+{
+	"format_version": 2,
+	"header": {
+		"name": "Test Resource Pack",
+		"description": "Test RP",
+		"uuid": "32345678-1234-1234-1234-123456789012",
+		"version": [1, 0, 0],
+		"min_engine_version": [1, 16, 0]
+	},
+	"modules": [
+		{
+			"type": "resources",
+			"uuid": "42345678-1234-1234-1234-123456789012",
+			"version": [1, 0, 0]
+		}
+	]
+}

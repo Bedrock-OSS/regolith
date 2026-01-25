@@ -1,7 +1,9 @@
 package regolith
 
 import (
+	"os"
 	"runtime"
+	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"github.com/stirante/go-simple-eval/eval"
@@ -51,6 +53,13 @@ func prepareScope(ctx RunContext) map[string]any {
 	if ctx.IsInWatchMode() {
 		mode = "watch"
 	}
+	// Collect all environment variables
+	envVars := make(map[string]any)
+	for _, env := range os.Environ() {
+		if pair := strings.SplitN(env, "=", 2); len(pair) == 2 {
+			envVars[pair[0]] = pair[1]
+		}
+	}
 	return map[string]any{
 		"os":             runtime.GOOS,
 		"arch":           runtime.GOARCH,
@@ -61,6 +70,8 @@ func prepareScope(ctx RunContext) map[string]any {
 		"settings":       ctx.Settings,
 		"project":        projectData,
 		"mode":           mode,
+		"nested":         ctx.Parent != nil,
 		"initial":        ctx.Initial,
+		"env":            envVars,
 	}
 }

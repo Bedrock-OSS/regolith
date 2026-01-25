@@ -39,9 +39,12 @@ var disallowedFiles = []string{
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Install(filters []string, force, refreshResolvers, refreshFilters bool, profiles []string, debug bool) error {
+func Install(filters []string, force, refreshResolvers, refreshFilters bool, profiles []string, debug bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
+	}
 	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalledWarning)
@@ -146,9 +149,12 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func InstallAll(force, update, debug, refreshFilters bool) error {
+func InstallAll(force, update, debug, refreshFilters bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
+	}
 	Logger.Info("Installing filters...")
 	if !hasGit() {
 		Logger.Warn(gitNotInstalledWarning)
@@ -211,8 +217,11 @@ func InstallAll(force, update, debug, refreshFilters bool) error {
 
 // prepareRunContext prepares the context for the "regolith run" and
 // "regolith watch" commands.
-func prepareRunContext(profileName string, debug bool) (*RunContext, error) {
+func prepareRunContext(profileName string, extraFilterArgs []string, debug bool, env string) (*RunContext, error) {
 	InitLogging(debug)
+	if err := loadEnvFileFromArg(env); err != nil {
+		return nil, burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
+	}
 	if profileName == "" {
 		profileName = "default"
 	}
@@ -254,14 +263,15 @@ func prepareRunContext(profileName string, debug bool) (*RunContext, error) {
 		Profile:          profileName,
 		DotRegolithPath:  dotRegolithPath,
 		Settings:         map[string]any{},
+		ExtraArguments:   extraFilterArgs,
 	}, nil
 }
 
 // Run handles the "regolith run" command. It runs selected profile and exports
 // created resource pack and behavior pack to the target destination.
-func Run(profileName string, debug bool) error {
+func Run(profileName string, extraFilterArgs []string, debug bool, env string) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, debug)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -284,9 +294,9 @@ func Run(profileName string, debug bool) error {
 // Watch handles the "regolith watch" command. It watches the project
 // directories, and it runs selected profile and exports created resource pack
 // and behavior pack to the target destination when the project changes.
-func Watch(profileName string, debug bool) error {
+func Watch(profileName string, extraFilterArgs []string, debug bool, env string) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, debug)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -335,9 +345,12 @@ func Watch(profileName string, debug bool) error {
 // ApplyFilter handles the "regolith apply-filter" command.
 // ApplyFilter mode modifies RP and BP file in place (using source). The config and
 // properties of the filter are passed via commandline.
-func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
+func ApplyFilter(filterName string, filterArgs []string, debug bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
+	}
 	// Load the Config and the profile
 	configJson, err := LoadConfigAsMap()
 	if err != nil {
@@ -426,9 +439,12 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool) error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Init(debug, force bool) error {
+func Init(debug, force bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
+	}
 	Logger.Info("Initializing Regolith project...")
 
 	wd, err := os.Getwd()
@@ -463,7 +479,7 @@ func Init(debug, force bool) error {
 			ResourceFolder: "./packs/RP",
 		},
 		RegolithProject: RegolithProject{
-			FormatVersion:     "1.6.0",
+			FormatVersion:     "1.7.0",
 			DataPath:          "./packs/data",
 			FilterDefinitions: map[string]FilterInstaller{},
 			Profiles: map[string]Profile{
@@ -484,7 +500,7 @@ func Init(debug, force bool) error {
 	// Add the schema property, this is a little hacky
 	rawJsonData := make(map[string]any, 0)
 	json.Unmarshal(jsonBytes, &rawJsonData)
-	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.6.json"
+	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.7.json"
 	jsonBytes, _ = json.MarshalIndent(rawJsonData, "", "\t")
 
 	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
@@ -588,9 +604,12 @@ func CleanFilterCache() error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func Clean(debug, userCache, filterCache bool) error {
+func Clean(debug, userCache, filterCache bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
+	}
 	if userCache {
 		return CleanUserCache()
 	} else if filterCache {
@@ -604,9 +623,12 @@ func Clean(debug, userCache, filterCache bool) error {
 //
 // The "debug" parameter is a boolean that determines if the debug messages
 // should be printed.
-func UpdateResolvers(debug bool) error {
+func UpdateResolvers(debug bool, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
+	}
 	_, _, err := DownloadResolverMaps(true)
 	return err
 }
@@ -799,9 +821,12 @@ func manageUserConfigDelete(index int, key string) error {
 //     properties
 //   - args - the arguments of the command, the length of the list must be 0, 1
 //     or 2. The length determines the action of the command.
-func ManageConfig(debug, full, delete, append bool, index int, args []string) error {
+func ManageConfig(debug, full, delete, append bool, index int, args []string, env string) error {
 	InitLogging(debug)
 	defer ShutdownLogging()
+	if err := loadEnvFileFromArg(env); err != nil {
+		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
+	}
 	var err error
 
 	// Based on number of arguments, determine what to do

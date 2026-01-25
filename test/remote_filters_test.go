@@ -32,13 +32,13 @@ func TestInstallAllAndRun(t *testing.T) {
 
 	// THE TEST
 	t.Log("Testing the 'regolith install-all' command...")
-	err := regolith.InstallAll(false, false, true, false)
+	err := regolith.InstallAll(false, false, true, false, "")
 	if err != nil {
 		t.Fatal("'regolith install-all' failed:", err)
 	}
 
 	t.Log("Testing the 'regolith run' command...")
-	err = regolith.Run("dev", true)
+	err = regolith.Run("dev", []string{}, true, "")
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
@@ -72,13 +72,13 @@ func TestDataModifyRemoteFilter(t *testing.T) {
 
 	// THE TEST
 	t.Log("Testing the 'regolith install-all' command...")
-	err := regolith.InstallAll(false, false, true, false)
+	err := regolith.InstallAll(false, false, true, false, "")
 	if err != nil {
 		t.Fatal("'regolith install-all' failed:", err)
 	}
 
 	t.Log("Testing the 'regolith run' command...")
-	err = regolith.Run("default", true)
+	err = regolith.Run("default", []string{}, true, "")
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
@@ -130,6 +130,7 @@ func TestInstall(t *testing.T) {
 			false,                                 // Refresh filters
 			[]string{},                            // Profiles that should have the filter added
 			true,                                  // Debug
+			"",                                    // Env
 		)
 		if err != nil {
 			t.Fatal("'regolith install' failed:", err)
@@ -187,7 +188,7 @@ func TestInstallAll(t *testing.T) {
 
 		// Run 'regolith update' / 'regolith update-all'
 		t.Log("Running 'regolith update'...")
-		err = regolith.InstallAll(false, false, true, false)
+		err = regolith.InstallAll(false, false, true, false, "")
 		if err != nil {
 			t.Fatal("'regolith update' failed:", err)
 		}
@@ -209,7 +210,7 @@ func TestNestedRemoteFilter(t *testing.T) {
 	os.Chdir(tmpDir)
 
 	t.Log("Testing the 'regolith install-all' command (should fail)...")
-	err := regolith.InstallAll(false, false, true, false)
+	err := regolith.InstallAll(false, false, true, false, "")
 	if err == nil {
 		t.Fatal("Expected 'regolith install-all' to fail, but it succeeded")
 	}
