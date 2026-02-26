@@ -757,6 +757,11 @@ func manageUserConfigEdit(index int, key, value string) error {
 				resolversSet[resolver] = struct{}{}
 			}
 		}
+	case "tmp_dir":
+		if index != -1 {
+			return burrito.WrappedError("Cannot use --index with non-array property.")
+		}
+		userConfig.TmpDir = &value
 	default:
 		return burrito.WrappedErrorf(invalidUserConfigPropertyError, key)
 	}
@@ -799,6 +804,11 @@ func manageUserConfigDelete(index int, key string) error {
 				userConfig.Resolvers[:index],
 				userConfig.Resolvers[index+1:]...)
 		}
+	case "tmp_dir":
+		if index != -1 {
+			return burrito.WrappedError("Cannot use --index with non-array property.")
+		}
+		userConfig.TmpDir = nil
 	default:
 		return burrito.WrappedErrorf(invalidUserConfigPropertyError, key)
 	}

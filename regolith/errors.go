@@ -194,7 +194,7 @@ const (
 	// Error used on attempt to access user config property that is not known
 	// to Regolith.
 	invalidUserConfigPropertyError = "Invalid user configuration property:\n" +
-		"Property name: %s\n"
+		"Property name: %s"
 
 	// Error used when the getGlobalUserConfigPath function fails
 	getGlobalUserConfigPathError = "Failed to get global user_config.json path"
@@ -268,4 +268,6 @@ const (
 
 	loadEnvFileFromArgError = "Failed to the file with environment variables:\n" +
 		"File path: %s"
+
+	getAbsoluteWorkingDirectoryError = "Failed to get the absolute path of the working directory for filter execution."
 )

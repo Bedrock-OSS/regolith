@@ -53,7 +53,10 @@ func NimFilterDefinitionFromObject(
 }
 
 func (f *NimFilter) run(context RunContext) error {
-	// Run filter
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(context.DotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			"nim",
@@ -63,7 +66,7 @@ func (f *NimFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+			absWorkingDir,
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -80,7 +83,7 @@ func (f *NimFilter) run(context RunContext) error {
 				string(jsonSettings)},
 				f.Arguments...),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+			absWorkingDir,
 			ShortFilterName(f.Id),
 		)
 		if err != nil {

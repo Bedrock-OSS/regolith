@@ -54,7 +54,10 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]any) (*PythonFil
 }
 
 func (f *PythonFilter) run(context RunContext) error {
-	// Run filter
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(context.DotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	pythonCommand, err := findPython()
 	if err != nil {
 		return burrito.PassError(err)
@@ -94,7 +97,7 @@ func (f *PythonFilter) run(context RunContext) error {
 	}
 	err = RunSubProcess(
 		pythonCommand, args, context.AbsoluteLocation,
-		GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+		absWorkingDir,
 		ShortFilterName(f.Id))
 	if err != nil {
 		return burrito.WrapError(err, "Failed to run Python script.")

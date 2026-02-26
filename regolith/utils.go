@@ -103,10 +103,29 @@ func NotImplementedError(text string) error {
 	return burrito.WrappedError(text)
 }
 
-// GetAbsoluteWorkingDirectory returns an absolute path to [dotRegolithPath]/tmp
-func GetAbsoluteWorkingDirectory(dotRegolithPath string) string {
-	absoluteWorkingDir, _ := filepath.Abs(filepath.Join(dotRegolithPath, "tmp"))
-	return absoluteWorkingDir
+// GetWorkingDirectory returns the working directory for Regolith (the tmp path).
+// [dotRegolithPath]/tmp by default or a path from user config, with
+// /tmp appended to it. The returned path is not absolute.
+func GetAbsoluteWorkingDirectory(dotRegolithPath string) (string, error) {
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return "", burrito.WrapError(err, getUserConfigError)
+	}
+	if userConfig.TmpDir == nil {
+		// Should never happen - getComvinedUserConfig() fills the defaults
+		return "", burrito.WrappedError("tmp_dir is null in user config")
+	}
+	tmpDir := filepath.Join(*userConfig.TmpDir, "tmp")
+	if !filepath.IsAbs(tmpDir) {
+		tmpDir = filepath.Join(dotRegolithPath, tmpDir)
+		absTmpDir, err := filepath.Abs(tmpDir)
+		if err != nil {
+			return "", burrito.WrapErrorf(err, filepathAbsError, tmpDir)
+		}
+		return absTmpDir, nil
+	}
+	// else IsAbs == true: clean and return
+	return filepath.Clean(tmpDir), nil
 }
 
 // CreateEnvironmentVariables creates an array of environment variables including custom ones

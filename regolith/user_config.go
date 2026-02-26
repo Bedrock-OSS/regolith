@@ -42,6 +42,11 @@ type UserConfig struct {
 
 	// FilterCacheUpdateCooldown is a cooldown duration, to not update resolver cache too often.
 	FilterCacheUpdateCooldown *string `json:"filter_cache_update_cooldown,omitempty"`
+
+	// TmpDir is optional path for setting where regolith should create the tmp directory
+	// for running filters. When not set, the tmp directory will be placed inside
+	// the project in .regolith directory.
+	TmpDir *string `json:"tmp_dir,omitempty"`
 }
 
 func NewUserConfig() *UserConfig {
@@ -51,6 +56,7 @@ func NewUserConfig() *UserConfig {
 		Resolvers:                   []string{},
 		ResolverCacheUpdateCooldown: nil,
 		FilterCacheUpdateCooldown:   nil,
+		TmpDir:                      nil,
 	}
 }
 
@@ -63,6 +69,8 @@ func (u *UserConfig) String() string {
 	extra, _ = u.stringPropertyValue("resolver_cache_update_cooldown")
 	result += "\n" + extra
 	extra, _ = u.stringPropertyValue("filter_cache_update_cooldown")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("tmp_dir")
 	result += "\n" + extra
 	return result
 }
@@ -104,6 +112,12 @@ func (u *UserConfig) stringPropertyValue(name string) (string, error) {
 			value = fmt.Sprintf("%v", *u.FilterCacheUpdateCooldown)
 		}
 		return fmt.Sprintf("filter_cache_update_cooldown: %v", value), nil
+	case "tmp_dir":
+		value := "null"
+		if u.TmpDir != nil {
+			value = fmt.Sprintf("%v", *u.TmpDir)
+		}
+		return fmt.Sprintf("tmp_dir: %v", value), nil
 	}
 	return "", burrito.WrapErrorf(nil, invalidUserConfigPropertyError, name)
 }
@@ -125,6 +139,10 @@ func (u *UserConfig) fillDefaults() {
 	if u.FilterCacheUpdateCooldown == nil {
 		u.FilterCacheUpdateCooldown = new(string)
 		*u.FilterCacheUpdateCooldown = "5m"
+	}
+	if u.TmpDir == nil {
+		u.TmpDir = new(string)
+		*u.TmpDir = ""
 	}
 	// Make sure resolvers is not nil and append the default resolver
 	if u.Resolvers == nil {

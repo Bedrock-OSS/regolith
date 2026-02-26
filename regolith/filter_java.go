@@ -51,7 +51,10 @@ func (f *JavaFilter) Run(context RunContext) (bool, error) {
 }
 
 func (f *JavaFilter) run(context RunContext) error {
-	// Run the filter
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(context.DotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			"java",
@@ -63,7 +66,7 @@ func (f *JavaFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+			absWorkingDir,
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -80,7 +83,7 @@ func (f *JavaFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+			absWorkingDir,
 			ShortFilterName(f.Id),
 		)
 		if err != nil {

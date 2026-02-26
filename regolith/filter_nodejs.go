@@ -51,7 +51,10 @@ func NodeJSFilterDefinitionFromObject(id string, obj map[string]any) (*NodeJSFil
 }
 
 func (f *NodeJSFilter) run(context RunContext) error {
-	// Run filter
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(context.DotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			"node",
@@ -61,7 +64,7 @@ func (f *NodeJSFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+			absWorkingDir,
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -76,7 +79,7 @@ func (f *NodeJSFilter) run(context RunContext) error {
 					f.Definition.Script,
 				string(jsonSettings)}, f.Arguments...),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+			absWorkingDir,
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
