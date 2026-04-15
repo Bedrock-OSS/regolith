@@ -107,9 +107,23 @@ func (f *BunFilterDefinition) Check(context RunContext) error {
 	return nil
 }
 
-func (f *BunFilterDefinition) InstallDependencies(
-	parent *RemoteFilterDefinition, dotRegolithPath string,
-) error {
+func (f *BunFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition, dotRegolithPath string) error {
+	installLocation := ""
+	// Install dependencies
+	if parent != nil {
+		installLocation = parent.GetDownloadPath(dotRegolithPath)
+	}
+	Logger.Infof("Downloading dependencies for %s...", f.Id)
+	if hasPackageJson(installLocation) {
+		Logger.Info("Installing bun dependencies...")
+		err := RunSubProcess("bun", []string{"install", "--silent"}, installLocation, installLocation, ShortFilterName(f.Id))
+		if err != nil {
+			return burrito.WrapErrorf(
+				err, "Failed to run bun and install dependencies."+
+					"\nFilter name: %s", f.Id)
+		}
+	}
+	Logger.Infof("Dependencies for %s installed successfully", f.Id)
 	return nil
 }
 
