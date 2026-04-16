@@ -35,6 +35,10 @@ func BunFilterDefinitionFromObject(id string, obj map[string]any) (*BunFilterDef
 }
 
 func (f *BunFilter) run(context RunContext) error {
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(context.DotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	// Run filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
@@ -46,7 +50,7 @@ func (f *BunFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+			absWorkingDir,
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -62,7 +66,7 @@ func (f *BunFilter) run(context RunContext) error {
 					f.Definition.Script,
 				string(jsonSettings)}, f.Arguments...),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+			absWorkingDir,
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
