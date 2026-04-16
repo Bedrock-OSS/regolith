@@ -303,6 +303,12 @@ var filterInstallerFactories = map[string]filterInstallerFactory{
 		},
 		name: "NodeJs",
 	},
+	"bun": {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
+			return BunFilterDefinitionFromObject(id, obj)
+		},
+		name: "Bun",
+	},
 	"python": {
 		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return PythonFilterDefinitionFromObject(id, obj)
