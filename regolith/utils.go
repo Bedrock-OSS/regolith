@@ -124,8 +124,22 @@ func GetAbsoluteWorkingDirectory(dotRegolithPath string) (string, error) {
 		}
 		return absTmpDir, nil
 	}
-	// else IsAbs == true: clean and return
-	return filepath.Clean(tmpDir), nil
+	// Path is NOT absolute, this means we're using userConfig.TmpDir,
+	// instead of using the 'tmp' folder we use a hash from the Regolith's
+	// working directory to avoid collisions when multiple instances of
+	// Regolith are running.
+
+	// Get the md5 of the current working directory
+	projectDir, err := os.Getwd()
+	if err != nil {
+		return "", burrito.WrapErrorf(err, osGetwdError)
+	}
+	hash := md5.New()
+	hash.Write([]byte(projectDir))
+	hashInBytes := hash.Sum(nil)
+	projectPathHash := hex.EncodeToString(hashInBytes)
+
+	return filepath.Clean(filepath.Join(*userConfig.TmpDir, projectPathHash)), nil
 }
 
 // CreateEnvironmentVariables creates an array of environment variables including custom ones
