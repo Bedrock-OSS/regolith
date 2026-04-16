@@ -121,9 +121,12 @@ func SetupTmpFiles(context RunContext) error {
 	start := time.Now()
 	useSizeTimeCheck := IsExperimentEnabled(SizeTimeCheck)
 	useSymlinkExport := IsExperimentEnabled(SymlinkExport)
-	tmpPath := filepath.Join(dotRegolithPath, "tmp")
-	bpTmpPath := filepath.Join(tmpPath, "BP")
-	rpTmpPath := filepath.Join(tmpPath, "RP")
+	absTmpPath, err := GetAbsoluteWorkingDirectory(dotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
+	bpTmpPath := filepath.Join(absTmpPath, "BP")
+	rpTmpPath := filepath.Join(absTmpPath, "RP")
 
 	// Check if should create symlinks, if yes load bp and rp paths
 	var bpExportPath, rpExportPath string
@@ -165,17 +168,17 @@ func SetupTmpFiles(context RunContext) error {
 	// Clean the temporary directory
 	isRegularRun := !useSizeTimeCheck && !useSymlinkExport
 	if isRegularRun || shouldCreateSymlinks {
-		Logger.Debugf("Cleaning \"%s\"", tmpPath)
-		err := os.RemoveAll(tmpPath)
+		Logger.Debugf("Cleaning \"%s\"", absTmpPath)
+		err := os.RemoveAll(absTmpPath)
 		if err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, tmpPath)
+			return burrito.WrapErrorf(err, osRemoveError, absTmpPath)
 		}
 	}
 
 	// Prepare temp path root
-	err := os.MkdirAll(tmpPath, 0755)
+	err = os.MkdirAll(absTmpPath, 0755)
 	if err != nil {
-		return burrito.WrapErrorf(err, osMkdirError, tmpPath)
+		return burrito.WrapErrorf(err, osMkdirError, absTmpPath)
 	}
 
 	// Create symlinks
@@ -199,22 +202,22 @@ func SetupTmpFiles(context RunContext) error {
 		}
 
 		// Create symlinks
-		if err := createDirLink(filepath.Join(tmpPath, "BP"), bpExportPath); err != nil {
-			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(tmpPath, "BP"), bpExportPath)
+		if err := createDirLink(filepath.Join(absTmpPath, "BP"), bpExportPath); err != nil {
+			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(absTmpPath, "BP"), bpExportPath)
 		}
-		if err := createDirLink(filepath.Join(tmpPath, "RP"), rpExportPath); err != nil {
-			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(tmpPath, "RP"), rpExportPath)
+		if err := createDirLink(filepath.Join(absTmpPath, "RP"), rpExportPath); err != nil {
+			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(absTmpPath, "RP"), rpExportPath)
 		}
 	}
 
 	// Copy the contents of the 'regolith' folder to '[dotRegolithPath]/tmp'
-	Logger.Debugf("Copying project files to \"%s\"", tmpPath)
+	Logger.Debugf("Copying project files to \"%s\"", absTmpPath)
 	// Avoid repetitive code of preparing ResourceFolder, BehaviorFolder
 	// and DataPath with a closure
 	setupTmpDirectory := func(
 		path, shortName, descriptiveName string,
 	) error {
-		p := filepath.Join(tmpPath, shortName)
+		p := filepath.Join(absTmpPath, shortName)
 		if path != "" {
 			stats, err := os.Stat(path)
 			if err != nil {

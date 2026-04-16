@@ -81,19 +81,22 @@ func (f *ShellFilter) run(
 	settings map[string]any,
 	context RunContext,
 ) error {
-	var err error = nil
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(context.DotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	if len(settings) == 0 {
 		err = executeCommand(f.Id,
 			f.Definition.Command,
 			f.Arguments, context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
+			absWorkingDir)
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
 		err = executeCommand(f.Id,
 			f.Definition.Command,
 			append([]string{string(jsonSettings)}, f.Arguments...),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
+			absWorkingDir)
 	}
 	if err != nil {
 		return burrito.WrapError(err, "Failed to run shell command.")

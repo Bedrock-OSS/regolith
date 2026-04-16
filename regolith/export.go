@@ -327,25 +327,29 @@ func exportProjectRpAndBp(profile Profile, rpPath, bpPath string, ctx RunContext
 		}
 	}
 	MeasureStart("Export - MoveOrCopy")
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(dotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	var wg sync.WaitGroup
 	packsData := []struct {
-		packPath string
-		tmpPath  string
-		packType string
+		packPath     string
+		subpathInTmp string
+		packType     string
 	}{
-		{bpPath, "tmp/BP", "behavior"},
-		{rpPath, "tmp/RP", "resource"},
+		{bpPath, "BP", "behavior"},
+		{rpPath, "RP", "resource"},
 	}
 	errChan := make(chan error, len(packsData))
 	for _, packData := range packsData {
-		packPath, tmpPath, packType := packData.packPath, packData.tmpPath, packData.packType
+		packPath, subpathInTmp, packType := packData.packPath, packData.subpathInTmp, packData.packType
 		wg.Go(func() {
 			Logger.Infof("Exporting %s pack to \"%s\".", packType, packPath)
 			var e error
 			if IsExperimentEnabled(SizeTimeCheck) {
-				e = SyncDirectories(filepath.Join(dotRegolithPath, tmpPath), packPath, exportTarget.ReadOnly)
+				e = SyncDirectories(filepath.Join(absWorkingDir, subpathInTmp), packPath, exportTarget.ReadOnly)
 			} else {
-				e = MoveOrCopy(filepath.Join(dotRegolithPath, tmpPath), packPath, exportTarget.ReadOnly, true)
+				e = MoveOrCopy(filepath.Join(absWorkingDir, subpathInTmp), packPath, exportTarget.ReadOnly, true)
 			}
 			if e != nil {
 				errChan <- burrito.WrapErrorf(e, "Failed to export %s pack.", packType)
@@ -421,6 +425,10 @@ func exportProjectData(profile Profile, ctx RunContext) error {
 		return burrito.WrapErrorf(err, newRevertibleFsOperationsError, backupPath)
 	}
 	// Export data
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(dotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	for _, exportedFilterName := range exportedFilterNames {
 		// Clear export target
 		targetPath := filepath.Join(dataPath, exportedFilterName)
@@ -445,7 +453,7 @@ func exportProjectData(profile Profile, ctx RunContext) error {
 		} else {
 			return burrito.WrapErrorf(err, osStatErrorAny, targetPath)
 		}
-		sourcePath := filepath.Join(dotRegolithPath, "tmp/data", exportedFilterName)
+		sourcePath := filepath.Join(absWorkingDir, "data", exportedFilterName)
 		// If source path doesn't exist, skip
 		if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
 			continue
@@ -516,10 +524,14 @@ func InplaceExportProject(
 		}
 	}
 	// Move files from tmp to RP, BP and data
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(dotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	moveFiles := [][2]string{
-		{filepath.Join(dotRegolithPath, "tmp/RP"), config.ResourceFolder},
-		{filepath.Join(dotRegolithPath, "tmp/BP"), config.BehaviorFolder},
-		{filepath.Join(dotRegolithPath, "tmp/data"), config.DataPath},
+		{filepath.Join(absWorkingDir, "RP"), config.ResourceFolder},
+		{filepath.Join(absWorkingDir, "BP"), config.BehaviorFolder},
+		{filepath.Join(absWorkingDir, "data"), config.DataPath},
 	}
 	for _, moveFile := range moveFiles {
 		source, target := moveFile[0], moveFile[1]

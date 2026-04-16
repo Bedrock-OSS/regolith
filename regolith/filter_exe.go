@@ -75,19 +75,21 @@ func (f *ExeFilter) run(
 	settings map[string]any,
 	context RunContext,
 ) error {
-	var err error = nil
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(context.DotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	if len(settings) == 0 {
 		err = executeExeFile(f.Id,
 			f.Definition.Exe,
 			f.Arguments, context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath))
+			absWorkingDir)
 	} else {
 		jsonSettings, _ := json.Marshal(settings)
 		err = executeExeFile(f.Id,
 			f.Definition.Exe,
 			append([]string{string(jsonSettings)}, f.Arguments...),
-			context.AbsoluteLocation, GetAbsoluteWorkingDirectory(
-				context.DotRegolithPath))
+			context.AbsoluteLocation, absWorkingDir)
 	}
 	if err != nil {
 		return burrito.WrapErrorf(

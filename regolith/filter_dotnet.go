@@ -39,7 +39,10 @@ func (f *DotNetFilter) Run(context RunContext) (bool, error) {
 }
 
 func (f *DotNetFilter) run(context RunContext) error {
-	// Run the filter
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(context.DotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			"dotnet",
@@ -51,7 +54,7 @@ func (f *DotNetFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+			absWorkingDir,
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
@@ -68,7 +71,7 @@ func (f *DotNetFilter) run(context RunContext) error {
 				f.Arguments...,
 			),
 			context.AbsoluteLocation,
-			GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+			absWorkingDir,
 			ShortFilterName(f.Id),
 		)
 		if err != nil {
