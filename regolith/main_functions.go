@@ -703,7 +703,7 @@ func manageUserConfigEdit(index int, key, value string) error {
 	switch key {
 	case "use_project_app_data_storage":
 		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
 		}
 		boolValue, err := strconv.ParseBool(value)
 		if err != nil {
@@ -713,12 +713,12 @@ func manageUserConfigEdit(index int, key, value string) error {
 		userConfig.UseProjectAppDataStorage = &boolValue
 	case "username":
 		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
 		}
 		userConfig.Username = &value
 	case "resolver_cache_update_cooldown":
 		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
 		}
 		_, err = time.ParseDuration(value)
 		if err != nil {
@@ -728,7 +728,7 @@ func manageUserConfigEdit(index int, key, value string) error {
 		userConfig.ResolverCacheUpdateCooldown = &value
 	case "filter_cache_update_cooldown":
 		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
 		}
 		_, err = time.ParseDuration(value)
 		if err != nil {
@@ -759,7 +759,7 @@ func manageUserConfigEdit(index int, key, value string) error {
 		}
 	case "tmp_dir":
 		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
 		}
 		userConfig.TmpDir = &value
 	default:

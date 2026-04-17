@@ -270,4 +270,8 @@ const (
 		"File path: %s"
 
 	getAbsoluteWorkingDirectoryError = "Failed to get the absolute path of the working directory for filter execution."
+
+	// userSettingIncorrectIndexUseError is used when the user tries to use the --index flag with a non-array property
+	// when changing the user settings.
+	userSettingIncorrectIndexUseError = "Cannot use --index with non-array property."
 )
