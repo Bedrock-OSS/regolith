@@ -43,7 +43,7 @@ type UserConfig struct {
 	// FilterCacheUpdateCooldown is a cooldown duration, to not update resolver cache too often.
 	FilterCacheUpdateCooldown *string `json:"filter_cache_update_cooldown,omitempty"`
 
-	// TmpDir is optional path for setting where regolith should create the tmp directory
+	// TmpDir is optional path for setting where Regolith should create the tmp directory
 	// for running filters. When not set, the tmp directory will be placed inside
 	// the project in .regolith directory.
 	TmpDir *string `json:"tmp_dir,omitempty"`
