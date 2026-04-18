@@ -39,10 +39,15 @@ func (f *BunFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return burrito.WrapError(err, getUserConfigError)
+	}
+	bunRunner := *userConfig.BunRunner
 	// Run filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
-			"bun",
+			bunRunner,
 			append([]string{
 				"run",
 				context.AbsoluteLocation + string(os.PathSeparator) +
@@ -59,7 +64,7 @@ func (f *BunFilter) run(context RunContext) error {
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
 		err := RunSubProcess(
-			"bun",
+			bunRunner,
 			append([]string{
 				"run",
 				context.AbsoluteLocation + string(os.PathSeparator) +
@@ -96,13 +101,18 @@ func (f *BunFilterDefinition) CreateFilterRunner(runConfiguration map[string]any
 }
 
 func (f *BunFilterDefinition) Check(context RunContext) error {
-	_, err := exec.LookPath("bun")
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return burrito.WrapError(err, getUserConfigError)
+	}
+	bunRunner := *userConfig.BunRunner
+	_, err = exec.LookPath(bunRunner)
 	if err != nil {
 		return burrito.WrapError(
 			err, "Bun not found, download and install it from"+
 				" https://bun.com/")
 	}
-	cmd, err := exec.Command("bun", "--version").Output()
+	cmd, err := exec.Command(bunRunner, "--version").Output()
 	if err != nil {
 		return burrito.WrapError(err, "Failed to check Bun version")
 	}
@@ -119,8 +129,13 @@ func (f *BunFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	if hasPackageJson(installLocation) {
+		userConfig, err := getCombinedUserConfig()
+		if err != nil {
+			return burrito.WrapError(err, getUserConfigError)
+		}
+		bunRunner := *userConfig.BunRunner
 		Logger.Info("Installing bun dependencies...")
-		err := RunSubProcess("bun", []string{"install", "--silent"}, installLocation, installLocation, ShortFilterName(f.Id))
+		err = RunSubProcess(bunRunner, []string{"install", "--silent"}, installLocation, installLocation, ShortFilterName(f.Id))
 		if err != nil {
 			return burrito.WrapErrorf(
 				err, "Failed to run bun and install dependencies."+

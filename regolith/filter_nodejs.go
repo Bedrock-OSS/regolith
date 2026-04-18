@@ -55,9 +55,14 @@ func (f *NodeJSFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return burrito.WrapError(err, getUserConfigError)
+	}
+	nodeRunner := *userConfig.NodeRunner
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
-			"node",
+			nodeRunner,
 			append([]string{
 				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script},
@@ -73,7 +78,7 @@ func (f *NodeJSFilter) run(context RunContext) error {
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
 		err := RunSubProcess(
-			"node",
+			nodeRunner,
 			append([]string{
 				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
@@ -133,8 +138,13 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 		requirementsPath = installPath
 	}
 	if hasPackageJson(requirementsPath) {
+		userConfig, err := getCombinedUserConfig()
+		if err != nil {
+			return burrito.WrapError(err, getUserConfigError)
+		}
+		npmRunner := *userConfig.NpmRunner
 		Logger.Info("Installing npm dependencies...")
-		err := RunSubProcess("npm", []string{"i", "--no-fund", "--no-audit"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
+		err = RunSubProcess(npmRunner, []string{"i", "--no-fund", "--no-audit"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
 		if err != nil {
 			return burrito.WrapErrorf(
 				err, "Failed to run npm and install dependencies."+
@@ -146,13 +156,18 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 }
 
 func (f *NodeJSFilterDefinition) Check(context RunContext) error {
-	_, err := exec.LookPath("node")
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return burrito.WrapError(err, getUserConfigError)
+	}
+	nodeRunner := *userConfig.NodeRunner
+	_, err = exec.LookPath(nodeRunner)
 	if err != nil {
 		return burrito.WrapError(
 			err, "NodeJS not found, download and install it from"+
 				" https://nodejs.org/en/")
 	}
-	cmd, err := exec.Command("node", "--version").Output()
+	cmd, err := exec.Command(nodeRunner, "--version").Output()
 	if err != nil {
 		return burrito.WrapError(err, "Failed to check NodeJS version")
 	}

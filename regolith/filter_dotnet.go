@@ -43,9 +43,14 @@ func (f *DotNetFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return burrito.WrapError(err, getUserConfigError)
+	}
+	dotnetRunner := *userConfig.DotnetRunner
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
-			"dotnet",
+			dotnetRunner,
 			append(
 				[]string{
 					context.AbsoluteLocation + string(os.PathSeparator) +
@@ -63,7 +68,7 @@ func (f *DotNetFilter) run(context RunContext) error {
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
 		err := RunSubProcess(
-			"dotnet",
+			dotnetRunner,
 			append(
 				[]string{
 					context.AbsoluteLocation + string(os.PathSeparator) +
@@ -98,14 +103,19 @@ func (f *DotNetFilterDefinition) InstallDependencies(*RemoteFilterDefinition, st
 }
 
 func (f *DotNetFilterDefinition) Check(context RunContext) error {
-	_, err := exec.LookPath("dotnet")
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return burrito.WrapError(err, getUserConfigError)
+	}
+	dotnetRunner := *userConfig.DotnetRunner
+	_, err = exec.LookPath(dotnetRunner)
 	if err != nil {
 		return burrito.WrapError(
 			err,
 			".Net not found, download and install it"+
 				" from https://dotnet.microsoft.com/download")
 	}
-	cmd, err := exec.Command("dotnet", "--version").Output()
+	cmd, err := exec.Command(dotnetRunner, "--version").Output()
 	if err != nil {
 		return burrito.WrapError(err, "Failed to check .Net version")
 	}

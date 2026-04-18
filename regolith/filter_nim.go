@@ -57,9 +57,14 @@ func (f *NimFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return burrito.WrapError(err, getUserConfigError)
+	}
+	nimRunner := *userConfig.NimRunner
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
-			"nim",
+			nimRunner,
 			append([]string{
 				"-r", "c", "--hints:off", "--warnings:off", "--mm:orc",
 				context.AbsoluteLocation + string(os.PathSeparator) + f.Definition.Script},
@@ -75,7 +80,7 @@ func (f *NimFilter) run(context RunContext) error {
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
 		err := RunSubProcess(
-			"nim",
+			nimRunner,
 			append([]string{
 				"-r", "c", "--hints:off", "--warnings:off", "--mm:orc",
 				context.AbsoluteLocation + string(os.PathSeparator) +
@@ -140,9 +145,14 @@ func (f *NimFilterDefinition) InstallDependencies(
 	}
 	Logger.Debugf("Installing dependencies using nimble in %s", requirementsPath)
 	if hasNimble(requirementsPath) {
+		userConfig, err := getCombinedUserConfig()
+		if err != nil {
+			return burrito.WrapError(err, getUserConfigError)
+		}
+		nimbleRunner := *userConfig.NimbleRunner
 		Logger.Info("Installing nim dependencies...")
-		err := RunSubProcess(
-			"nimble", []string{"install", "-d", "-y"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
+		err = RunSubProcess(
+			nimbleRunner, []string{"install", "-d", "-y"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
 		if err != nil {
 			return burrito.WrapErrorf(
 				err, "Failed to run nimble to install dependencies of a filter.\n"+
@@ -155,14 +165,19 @@ func (f *NimFilterDefinition) InstallDependencies(
 }
 
 func (f *NimFilterDefinition) Check(context RunContext) error {
-	_, err := exec.LookPath("nim")
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return burrito.WrapError(err, getUserConfigError)
+	}
+	nimRunner := *userConfig.NimRunner
+	_, err = exec.LookPath(nimRunner)
 	if err != nil {
 		return burrito.WrapError(
 			err,
 			"Nim not found, download and install it from"+
 				" https://nim-lang.org/")
 	}
-	cmd, err := exec.Command("nim", "--version").Output()
+	cmd, err := exec.Command(nimRunner, "--version").Output()
 	if err != nil {
 		return burrito.WrapError(err, "Failed to check Nim version.")
 	}
