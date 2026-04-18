@@ -49,6 +49,10 @@ type UserConfig struct {
 	// the project in .regolith directory.
 	TmpDir *string `json:"tmp_dir,omitempty"`
 
+	// NodeRunnerOverride is an option that lets you override the Node runner
+	// to run filters with Bun or Deno
+	NodeRunnerOverride *string `json:"node_runner_override,omitempty"`
+
 	// BunRunner is optional path for Regolith to look for Bun to run filters.
 	BunRunner *string `json:"bun_runner,omitempty"`
 
@@ -87,6 +91,7 @@ func NewUserConfig() *UserConfig {
 		ResolverCacheUpdateCooldown: nil,
 		FilterCacheUpdateCooldown:   nil,
 		TmpDir:                      nil,
+		NodeRunnerOverride:          nil,
 		BunRunner:                   nil,
 		DenoRunner:                  nil,
 		DotnetRunner:                nil,
@@ -110,6 +115,8 @@ func (u *UserConfig) String() string {
 	extra, _ = u.stringPropertyValue("filter_cache_update_cooldown")
 	result += "\n" + extra
 	extra, _ = u.stringPropertyValue("tmp_dir")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("node_runner_override")
 	result += "\n" + extra
 	extra, _ = u.stringPropertyValue("bun_runner")
 	result += "\n" + extra
@@ -175,6 +182,12 @@ func (u *UserConfig) stringPropertyValue(name string) (string, error) {
 			value = fmt.Sprintf("%v", *u.TmpDir)
 		}
 		return fmt.Sprintf("tmp_dir: %v", value), nil
+	case "node_runner_override":
+		value := "null"
+		if u.NodeRunnerOverride != nil {
+			value = fmt.Sprintf("%v", *u.NodeRunnerOverride)
+		}
+		return fmt.Sprintf("node_runner_override: %v", value), nil
 	case "bun_runner":
 		value := "null"
 		if u.BunRunner != nil {
@@ -256,10 +269,10 @@ func (u *UserConfig) fillDefaults() {
 		u.TmpDir = new(string)
 		*u.TmpDir = ""
 	}
-
-	// WARNING: It's CRITICAL to set the default values for the runners, the
-	// filters code dereferences the values received from
-	// getCombinedUserConfig() with assumption that they are not nil.
+	if u.NodeRunnerOverride == nil {
+		u.NodeRunnerOverride = new(string)
+		*u.NodeRunnerOverride = "nodejs"
+	}
 	if u.BunRunner == nil {
 		u.BunRunner = new(string)
 		*u.BunRunner = "bun"
