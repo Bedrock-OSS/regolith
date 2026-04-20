@@ -762,6 +762,17 @@ func manageUserConfigEdit(index int, key, value string) error {
 			return burrito.WrappedError(userSettingIncorrectIndexUseError)
 		}
 		userConfig.TmpDir = &value
+	case "node_runner_override":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		if value != "nodejs" && value != "bun" && value != "deno" {
+			return burrito.WrappedErrorf(
+				"Invalid value for node_runner_override property.\n"+
+					"Value: %s\n"+
+					"Allowed values: nodejs, bun, deno", value)
+		}
+		userConfig.NodeRunnerOverride = &value
 	default:
 		return burrito.WrappedErrorf(invalidUserConfigPropertyError, key)
 	}
@@ -809,6 +820,11 @@ func manageUserConfigDelete(index int, key string) error {
 			return burrito.WrappedError("Cannot use --index with non-array property.")
 		}
 		userConfig.TmpDir = nil
+	case "node_runner_override":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.NodeRunnerOverride = nil
 	default:
 		return burrito.WrappedErrorf(invalidUserConfigPropertyError, key)
 	}

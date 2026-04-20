@@ -47,6 +47,10 @@ type UserConfig struct {
 	// for running filters. When not set, the tmp directory will be placed inside
 	// the project in .regolith directory.
 	TmpDir *string `json:"tmp_dir,omitempty"`
+
+	// NodeRunnerOverride is an option that lets you override the Node runner
+	// to run filters with Bun or Deno
+	NodeRunnerOverride *string `json:"node_runner_override,omitempty"`
 }
 
 func NewUserConfig() *UserConfig {
@@ -57,6 +61,7 @@ func NewUserConfig() *UserConfig {
 		ResolverCacheUpdateCooldown: nil,
 		FilterCacheUpdateCooldown:   nil,
 		TmpDir:                      nil,
+		NodeRunnerOverride:          nil,
 	}
 }
 
@@ -71,6 +76,8 @@ func (u *UserConfig) String() string {
 	extra, _ = u.stringPropertyValue("filter_cache_update_cooldown")
 	result += "\n" + extra
 	extra, _ = u.stringPropertyValue("tmp_dir")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("node_runner_override")
 	result += "\n" + extra
 	return result
 }
@@ -118,6 +125,12 @@ func (u *UserConfig) stringPropertyValue(name string) (string, error) {
 			value = fmt.Sprintf("%v", *u.TmpDir)
 		}
 		return fmt.Sprintf("tmp_dir: %v", value), nil
+	case "node_runner_override":
+		value := "null"
+		if u.NodeRunnerOverride != nil {
+			value = fmt.Sprintf("%v", *u.NodeRunnerOverride)
+		}
+		return fmt.Sprintf("node_runner_override: %v", value), nil
 	}
 	return "", burrito.WrapErrorf(nil, invalidUserConfigPropertyError, name)
 }
