@@ -55,11 +55,10 @@ func (f *JavaFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
-	userConfig, err := getCombinedUserConfig()
+	javaRunner, err := getRunner("java", "java")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	javaRunner := *userConfig.JavaRunner
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			javaRunner,
@@ -115,11 +114,10 @@ func (f *JavaFilterDefinition) InstallDependencies(*RemoteFilterDefinition, stri
 }
 
 func (f *JavaFilterDefinition) Check(context RunContext) error {
-	userConfig, err := getCombinedUserConfig()
+	javaRunner, err := getRunner("java", "java")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	javaRunner := *userConfig.JavaRunner
 	_, err = exec.LookPath(javaRunner)
 	if err != nil {
 		return burrito.WrapError(

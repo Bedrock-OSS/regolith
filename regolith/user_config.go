@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
@@ -224,12 +223,11 @@ func (u *UserConfig) stringPropertyValue(name string) (string, error) {
 		}
 		return fmt.Sprintf("npm_runner: %v", value), nil
 	case "python_runner":
+		value := "null"
 		if u.PythonRunner != nil {
-			return fmt.Sprintf("python_runner: %v", *u.PythonRunner), nil
+			value = fmt.Sprintf("%v", *u.PythonRunner)
 		}
-		return fmt.Sprintf(
-			"python_runner: null (attempts to run %s)",
-			strings.Join(pythonExeNames, ", ")), nil
+		return fmt.Sprintf("python_runner: %v", value), nil
 	}
 	return "", burrito.WrapErrorf(nil, invalidUserConfigPropertyError, name)
 }
@@ -256,44 +254,6 @@ func (u *UserConfig) fillDefaults() {
 		u.TmpDir = new(string)
 		*u.TmpDir = ""
 	}
-
-	// WARNING: It's CRITICAL to set the default values for the runners, the
-	// filters code dereferences the values received from
-	// getCombinedUserConfig() with assumption that they are not nil.
-	if u.BunRunner == nil {
-		u.BunRunner = new(string)
-		*u.BunRunner = "bun"
-	}
-	if u.DenoRunner == nil {
-		u.DenoRunner = new(string)
-		*u.DenoRunner = "deno"
-	}
-	if u.DotnetRunner == nil {
-		u.DotnetRunner = new(string)
-		*u.DotnetRunner = "dotnet"
-	}
-	if u.JavaRunner == nil {
-		u.JavaRunner = new(string)
-		*u.JavaRunner = "java"
-	}
-	if u.NimRunner == nil {
-		u.NimRunner = new(string)
-		*u.NimRunner = "nim"
-	}
-	if u.NimbleRunner == nil {
-		u.NimbleRunner = new(string)
-		*u.NimbleRunner = "nimble"
-	}
-	if u.NodeRunner == nil {
-		u.NodeRunner = new(string)
-		*u.NodeRunner = "node"
-	}
-	if u.NpmRunner == nil {
-		u.NpmRunner = new(string)
-		*u.NpmRunner = "npm"
-	}
-	// PythonRunner intentionally has no default (nil = auto-detect).
-	// When nil, findPython() falls back to the platform-specific pythonExeNames list.
 	// Make sure resolvers is not nil and append the default resolver
 	if u.Resolvers == nil {
 		u.Resolvers = []string{}
@@ -390,4 +350,38 @@ func getGlobalUserConfig() (*UserConfig, error) {
 		}
 	}
 	return cachedGlobalUserConfig, nil
+}
+
+// getRunner returns the runner path from the user config, or the default
+// if the config doesn't specify it.
+func getRunner(runnerType, defaultRunner string) (string, error) {
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return "", burrito.WrapError(err, getUserConfigError)
+	}
+	var result *string = nil
+	switch runnerType {
+	case "bun":
+		result = userConfig.BunRunner
+	case "deno":
+		result = userConfig.DenoRunner
+	case "dotnet":
+		result = userConfig.DotnetRunner
+	case "java":
+		result = userConfig.JavaRunner
+	case "nim":
+		result = userConfig.NimRunner
+	case "nimble":
+		result = userConfig.NimbleRunner
+	case "node":
+		result = userConfig.NodeRunner
+	case "npm":
+		result = userConfig.NpmRunner
+	case "python":
+		result = userConfig.PythonRunner
+	}
+	if result != nil {
+		return *result, nil
+	}
+	return defaultRunner, nil
 }

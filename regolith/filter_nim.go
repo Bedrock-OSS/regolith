@@ -57,11 +57,10 @@ func (f *NimFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
-	userConfig, err := getCombinedUserConfig()
+	nimRunner, err := getRunner("nim", "nim")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	nimRunner := *userConfig.NimRunner
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			nimRunner,
@@ -145,11 +144,10 @@ func (f *NimFilterDefinition) InstallDependencies(
 	}
 	Logger.Debugf("Installing dependencies using nimble in %s", requirementsPath)
 	if hasNimble(requirementsPath) {
-		userConfig, err := getCombinedUserConfig()
+		nimbleRunner, err := getRunner("nimble", "nimble")
 		if err != nil {
-			return burrito.WrapError(err, getUserConfigError)
+			return burrito.WrapError(err, getRunnerError)
 		}
-		nimbleRunner := *userConfig.NimbleRunner
 		Logger.Info("Installing nim dependencies...")
 		err = RunSubProcess(
 			nimbleRunner, []string{"install", "-d", "-y"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
@@ -165,11 +163,10 @@ func (f *NimFilterDefinition) InstallDependencies(
 }
 
 func (f *NimFilterDefinition) Check(context RunContext) error {
-	userConfig, err := getCombinedUserConfig()
+	nimRunner, err := getRunner("nim", "nim")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	nimRunner := *userConfig.NimRunner
 	_, err = exec.LookPath(nimRunner)
 	if err != nil {
 		return burrito.WrapError(

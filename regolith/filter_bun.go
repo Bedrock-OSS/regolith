@@ -39,11 +39,10 @@ func (f *BunFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
-	userConfig, err := getCombinedUserConfig()
+	bunRunner, err := getRunner("bun", "bun")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	bunRunner := *userConfig.BunRunner
 	// Run filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
@@ -101,11 +100,10 @@ func (f *BunFilterDefinition) CreateFilterRunner(runConfiguration map[string]any
 }
 
 func (f *BunFilterDefinition) Check(context RunContext) error {
-	userConfig, err := getCombinedUserConfig()
+	bunRunner, err := getRunner("bun", "bun")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	bunRunner := *userConfig.BunRunner
 	_, err = exec.LookPath(bunRunner)
 	if err != nil {
 		return burrito.WrapError(
@@ -129,11 +127,10 @@ func (f *BunFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition
 	}
 	Logger.Infof("Downloading dependencies for %s...", f.Id)
 	if hasPackageJson(installLocation) {
-		userConfig, err := getCombinedUserConfig()
+		bunRunner, err := getRunner("bun", "bun")
 		if err != nil {
-			return burrito.WrapError(err, getUserConfigError)
+			return burrito.WrapError(err, getRunnerError)
 		}
-		bunRunner := *userConfig.BunRunner
 		Logger.Info("Installing bun dependencies...")
 		err = RunSubProcess(bunRunner, []string{"install", "--silent"}, installLocation, installLocation, ShortFilterName(f.Id))
 		if err != nil {

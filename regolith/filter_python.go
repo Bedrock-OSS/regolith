@@ -245,18 +245,18 @@ func needsVenv(requirementsFilePath string) bool {
 // user config, it uses that value directly. Otherwise, it falls back to
 // trying the platform-specific pythonExeNames list.
 func findPython() (string, error) {
-	userConfig, err := getCombinedUserConfig()
+	pythonRunner, err := getRunner("python", "")
 	if err != nil {
-		return "", burrito.WrapError(err, getUserConfigError)
+		return "", burrito.WrapError(err, getRunnerError)
 	}
-	if userConfig.PythonRunner != nil {
-		_, err = exec.LookPath(*userConfig.PythonRunner)
+	if pythonRunner != "" {
+		_, err = exec.LookPath(pythonRunner)
 		if err == nil {
-			return *userConfig.PythonRunner, nil
+			return pythonRunner, nil
 		}
 		return "", burrito.WrappedErrorf(
 			"Python not found at configured path %q, download and install it from "+
-				"https://www.python.org/downloads/", *userConfig.PythonRunner)
+				"https://www.python.org/downloads/", pythonRunner)
 	}
 	// Fallback: try platform-specific executable names
 	for _, c := range pythonExeNames {

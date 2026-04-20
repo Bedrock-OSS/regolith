@@ -39,11 +39,10 @@ func (f *DenoFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
-	userConfig, err := getCombinedUserConfig()
+	denoRunner, err := getRunner("deno", "deno")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	denoRunner := *userConfig.DenoRunner
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			denoRunner,
@@ -100,11 +99,10 @@ func (f *DenoFilterDefinition) CreateFilterRunner(runConfiguration map[string]an
 }
 
 func (f *DenoFilterDefinition) Check(context RunContext) error {
-	userConfig, err := getCombinedUserConfig()
+	denoRunner, err := getRunner("deno", "deno")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	denoRunner := *userConfig.DenoRunner
 	_, err = exec.LookPath(denoRunner)
 	if err != nil {
 		return burrito.WrapError(

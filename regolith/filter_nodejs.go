@@ -55,11 +55,10 @@ func (f *NodeJSFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
-	userConfig, err := getCombinedUserConfig()
+	nodeRunner, err := getRunner("node", "node")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	nodeRunner := *userConfig.NodeRunner
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			nodeRunner,
@@ -138,11 +137,10 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 		requirementsPath = installPath
 	}
 	if hasPackageJson(requirementsPath) {
-		userConfig, err := getCombinedUserConfig()
+		npmRunner, err := getRunner("npm", "npm")
 		if err != nil {
-			return burrito.WrapError(err, getUserConfigError)
+			return burrito.WrapError(err, getRunnerError)
 		}
-		npmRunner := *userConfig.NpmRunner
 		Logger.Info("Installing npm dependencies...")
 		err = RunSubProcess(npmRunner, []string{"i", "--no-fund", "--no-audit"}, requirementsPath, requirementsPath, ShortFilterName(f.Id))
 		if err != nil {
@@ -156,11 +154,10 @@ func (f *NodeJSFilterDefinition) InstallDependencies(parent *RemoteFilterDefinit
 }
 
 func (f *NodeJSFilterDefinition) Check(context RunContext) error {
-	userConfig, err := getCombinedUserConfig()
+	nodeRunner, err := getRunner("node", "node")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	nodeRunner := *userConfig.NodeRunner
 	_, err = exec.LookPath(nodeRunner)
 	if err != nil {
 		return burrito.WrapError(

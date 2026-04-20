@@ -43,11 +43,10 @@ func (f *DotNetFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
-	userConfig, err := getCombinedUserConfig()
+	dotnetRunner, err := getRunner("dotnet", "dotnet")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	dotnetRunner := *userConfig.DotnetRunner
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
 			dotnetRunner,
@@ -103,11 +102,10 @@ func (f *DotNetFilterDefinition) InstallDependencies(*RemoteFilterDefinition, st
 }
 
 func (f *DotNetFilterDefinition) Check(context RunContext) error {
-	userConfig, err := getCombinedUserConfig()
+	dotnetRunner, err := getRunner("dotnet", "dotnet")
 	if err != nil {
-		return burrito.WrapError(err, getUserConfigError)
+		return burrito.WrapError(err, getRunnerError)
 	}
-	dotnetRunner := *userConfig.DotnetRunner
 	_, err = exec.LookPath(dotnetRunner)
 	if err != nil {
 		return burrito.WrapError(
