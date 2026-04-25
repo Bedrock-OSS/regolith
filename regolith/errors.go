@@ -274,4 +274,6 @@ const (
 	// userSettingIncorrectIndexUseError is used when the user tries to use the --index flag with a non-array property
 	// when changing the user settings.
 	userSettingIncorrectIndexUseError = "Cannot use --index with non-array property."
+
+	getRunnerError = "Failed to get the path to filter runner."
 )
