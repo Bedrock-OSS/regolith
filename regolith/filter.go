@@ -343,7 +343,14 @@ func FilterInstallerFromObject(id string, obj map[string]any) (FilterInstaller, 
 			return nil, burrito.WrapError(err, getUserConfigError)
 		}
 		if userConfig.NodeRunnerOverride != nil {
-			runWith = *userConfig.NodeRunnerOverride
+			defaultOverride, ok := userConfig.NodeRunnerOverride["*"]
+			if ok {
+				runWith = defaultOverride
+			}
+			override, ok := userConfig.NodeRunnerOverride[id]
+			if ok {
+				runWith = override
+			}
 		}
 	}
 	if factory, ok := filterInstallerFactories[runWith]; ok {

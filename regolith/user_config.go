@@ -50,7 +50,7 @@ type UserConfig struct {
 
 	// NodeRunnerOverride is an option that lets you override the Node runner
 	// to run filters with Bun or Deno
-	NodeRunnerOverride *string `json:"node_runner_override,omitempty"`
+	NodeRunnerOverride map[string]string `json:"node_runner_override,omitempty"`
 
 	// BunRunner is optional path for Regolith to look for Bun to run filters.
 	BunRunner *string `json:"bun_runner,omitempty"`
@@ -90,7 +90,7 @@ func NewUserConfig() *UserConfig {
 		ResolverCacheUpdateCooldown: nil,
 		FilterCacheUpdateCooldown:   nil,
 		TmpDir:                      nil,
-		NodeRunnerOverride:          nil,
+		NodeRunnerOverride:          map[string]string{},
 		BunRunner:                   nil,
 		DenoRunner:                  nil,
 		DotnetRunner:                nil,
@@ -182,11 +182,23 @@ func (u *UserConfig) stringPropertyValue(name string) (string, error) {
 		}
 		return fmt.Sprintf("tmp_dir: %v", value), nil
 	case "node_runner_override":
-		value := "null"
-		if u.NodeRunnerOverride != nil {
-			value = fmt.Sprintf("%v", *u.NodeRunnerOverride)
+		if len(u.NodeRunnerOverride) == 0 {
+			return "node_runner_override: {}", nil
 		}
-		return fmt.Sprintf("node_runner_override: %v", value), nil
+		result := "node_runner_override: \n"
+		// Print default value first
+		defaultVal, ok := u.NodeRunnerOverride["*"]
+		if ok {
+			result += fmt.Sprintf("\t- * => %v\n", defaultVal)
+		}
+		// Other values...
+		for k, v := range u.NodeRunnerOverride {
+			if k == "*" {
+				continue
+			}
+			result += fmt.Sprintf("\t- %v => %v\n", k, v)
+		}
+		return result, nil
 	case "bun_runner":
 		value := "null"
 		if u.BunRunner != nil {
@@ -267,7 +279,9 @@ func (u *UserConfig) fillDefaults() {
 		u.TmpDir = new(string)
 		*u.TmpDir = ""
 	}
-	// Make sure resolvers is not nil and append the default resolver
+	if u.NodeRunnerOverride == nil {
+		u.NodeRunnerOverride = map[string]string{}
+	}
 	if u.Resolvers == nil {
 		u.Resolvers = []string{}
 	}
