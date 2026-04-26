@@ -39,9 +39,13 @@ func (f *DenoFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
+	denoRunner, err := getRunner("deno", "deno")
+	if err != nil {
+		return burrito.WrapError(err, getRunnerError)
+	}
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
-			"deno",
+			denoRunner,
 			append([]string{
 				"run", "--allow-all",
 				context.AbsoluteLocation + string(os.PathSeparator) +
@@ -58,7 +62,7 @@ func (f *DenoFilter) run(context RunContext) error {
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
 		err := RunSubProcess(
-			"deno",
+			denoRunner,
 			append([]string{
 				"run", "--allow-all",
 				context.AbsoluteLocation + string(os.PathSeparator) +
@@ -95,13 +99,17 @@ func (f *DenoFilterDefinition) CreateFilterRunner(runConfiguration map[string]an
 }
 
 func (f *DenoFilterDefinition) Check(context RunContext) error {
-	_, err := exec.LookPath("deno")
+	denoRunner, err := getRunner("deno", "deno")
+	if err != nil {
+		return burrito.WrapError(err, getRunnerError)
+	}
+	_, err = exec.LookPath(denoRunner)
 	if err != nil {
 		return burrito.WrapError(
 			err, "Deno not found, download and install it from"+
 				" https://deno.land/")
 	}
-	cmd, err := exec.Command("deno", "--version").Output()
+	cmd, err := exec.Command(denoRunner, "--version").Output()
 	if err != nil {
 		return burrito.WrapError(err, "Failed to check Deno version")
 	}

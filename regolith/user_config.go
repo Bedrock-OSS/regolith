@@ -51,6 +51,35 @@ type UserConfig struct {
 	// NodeRunnerOverride is an option that lets you override the Node runner
 	// to run filters with Bun or Deno
 	NodeRunnerOverride *string `json:"node_runner_override,omitempty"`
+
+	// BunRunner is optional path for Regolith to look for Bun to run filters.
+	BunRunner *string `json:"bun_runner,omitempty"`
+
+	// DenoRunner is optional path for Regolith to look for Deno to run filters.
+	DenoRunner *string `json:"deno_runner,omitempty"`
+
+	// DotnetRunner is optional path for Regolith to look for .Net to run filters.
+	DotnetRunner *string `json:"dotnet_runner,omitempty"`
+
+	// JavaRunner is optional path for Regolith to look for Java to run filters.
+	JavaRunner *string `json:"java_runner,omitempty"`
+
+	// NimRunner is optional path for Regolith to look for Nim to run filters.
+	NimRunner *string `json:"nim_runner,omitempty"`
+
+	// NimbleRunner is optional path for Regolith to look for Nimble to install Nim dependencies.
+	NimbleRunner *string `json:"nimble_runner,omitempty"`
+
+	// NodeRunner is optional path for Regolith to look for Node to run filters.
+	NodeRunner *string `json:"node_runner,omitempty"`
+
+	// NpmRunner is optional path for Regolith to look for Npm to install Node dependencies.
+	NpmRunner *string `json:"npm_runner,omitempty"`
+
+	// PythonRunner is optional path for Regolith to look for Python to run
+	// filters. When nil, Regolith tries the platform-specific executable names
+	// (e.g. python3, python).
+	PythonRunner *string `json:"python_runner,omitempty"`
 }
 
 func NewUserConfig() *UserConfig {
@@ -62,6 +91,15 @@ func NewUserConfig() *UserConfig {
 		FilterCacheUpdateCooldown:   nil,
 		TmpDir:                      nil,
 		NodeRunnerOverride:          nil,
+		BunRunner:                   nil,
+		DenoRunner:                  nil,
+		DotnetRunner:                nil,
+		JavaRunner:                  nil,
+		NimRunner:                   nil,
+		NimbleRunner:                nil,
+		NodeRunner:                  nil,
+		NpmRunner:                   nil,
+		PythonRunner:                nil,
 	}
 }
 
@@ -78,6 +116,24 @@ func (u *UserConfig) String() string {
 	extra, _ = u.stringPropertyValue("tmp_dir")
 	result += "\n" + extra
 	extra, _ = u.stringPropertyValue("node_runner_override")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("bun_runner")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("deno_runner")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("dotnet_runner")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("java_runner")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("nim_runner")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("nimble_runner")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("node_runner")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("npm_runner")
+	result += "\n" + extra
+	extra, _ = u.stringPropertyValue("python_runner")
 	result += "\n" + extra
 	return result
 }
@@ -131,6 +187,60 @@ func (u *UserConfig) stringPropertyValue(name string) (string, error) {
 			value = fmt.Sprintf("%v", *u.NodeRunnerOverride)
 		}
 		return fmt.Sprintf("node_runner_override: %v", value), nil
+	case "bun_runner":
+		value := "null"
+		if u.BunRunner != nil {
+			value = fmt.Sprintf("%v", *u.BunRunner)
+		}
+		return fmt.Sprintf("bun_runner: %v", value), nil
+	case "deno_runner":
+		value := "null"
+		if u.DenoRunner != nil {
+			value = fmt.Sprintf("%v", *u.DenoRunner)
+		}
+		return fmt.Sprintf("deno_runner: %v", value), nil
+	case "dotnet_runner":
+		value := "null"
+		if u.DotnetRunner != nil {
+			value = fmt.Sprintf("%v", *u.DotnetRunner)
+		}
+		return fmt.Sprintf("dotnet_runner: %v", value), nil
+	case "java_runner":
+		value := "null"
+		if u.JavaRunner != nil {
+			value = fmt.Sprintf("%v", *u.JavaRunner)
+		}
+		return fmt.Sprintf("java_runner: %v", value), nil
+	case "nim_runner":
+		value := "null"
+		if u.NimRunner != nil {
+			value = fmt.Sprintf("%v", *u.NimRunner)
+		}
+		return fmt.Sprintf("nim_runner: %v", value), nil
+	case "nimble_runner":
+		value := "null"
+		if u.NimbleRunner != nil {
+			value = fmt.Sprintf("%v", *u.NimbleRunner)
+		}
+		return fmt.Sprintf("nimble_runner: %v", value), nil
+	case "node_runner":
+		value := "null"
+		if u.NodeRunner != nil {
+			value = fmt.Sprintf("%v", *u.NodeRunner)
+		}
+		return fmt.Sprintf("node_runner: %v", value), nil
+	case "npm_runner":
+		value := "null"
+		if u.NpmRunner != nil {
+			value = fmt.Sprintf("%v", *u.NpmRunner)
+		}
+		return fmt.Sprintf("npm_runner: %v", value), nil
+	case "python_runner":
+		value := "null"
+		if u.PythonRunner != nil {
+			value = fmt.Sprintf("%v", *u.PythonRunner)
+		}
+		return fmt.Sprintf("python_runner: %v", value), nil
 	}
 	return "", burrito.WrapErrorf(nil, invalidUserConfigPropertyError, name)
 }
@@ -253,4 +363,38 @@ func getGlobalUserConfig() (*UserConfig, error) {
 		}
 	}
 	return cachedGlobalUserConfig, nil
+}
+
+// getRunner returns the runner path from the user config, or the default
+// if the config doesn't specify it.
+func getRunner(runnerType, defaultRunner string) (string, error) {
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return "", burrito.WrapError(err, getUserConfigError)
+	}
+	var result *string = nil
+	switch runnerType {
+	case "bun":
+		result = userConfig.BunRunner
+	case "deno":
+		result = userConfig.DenoRunner
+	case "dotnet":
+		result = userConfig.DotnetRunner
+	case "java":
+		result = userConfig.JavaRunner
+	case "nim":
+		result = userConfig.NimRunner
+	case "nimble":
+		result = userConfig.NimbleRunner
+	case "node":
+		result = userConfig.NodeRunner
+	case "npm":
+		result = userConfig.NpmRunner
+	case "python":
+		result = userConfig.PythonRunner
+	}
+	if result != nil {
+		return *result, nil
+	}
+	return defaultRunner, nil
 }

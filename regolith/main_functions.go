@@ -773,6 +773,51 @@ func manageUserConfigEdit(index int, key, value string) error {
 					"Allowed values: nodejs, bun, deno", value)
 		}
 		userConfig.NodeRunnerOverride = &value
+	case "bun_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.BunRunner = &value
+	case "deno_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.DenoRunner = &value
+	case "dotnet_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.DotnetRunner = &value
+	case "java_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.JavaRunner = &value
+	case "nim_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.NimRunner = &value
+	case "nimble_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.NimbleRunner = &value
+	case "node_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.NodeRunner = &value
+	case "npm_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.NpmRunner = &value
+	case "python_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.PythonRunner = &value
 	default:
 		return burrito.WrappedErrorf(invalidUserConfigPropertyError, key)
 	}
@@ -796,12 +841,12 @@ func manageUserConfigDelete(index int, key string) error {
 	switch key {
 	case "use_project_app_data_storage":
 		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
 		}
 		userConfig.UseProjectAppDataStorage = nil
 	case "username":
 		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
 		}
 		userConfig.Username = nil
 	case "resolvers":
@@ -817,7 +862,7 @@ func manageUserConfigDelete(index int, key string) error {
 		}
 	case "tmp_dir":
 		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
 		}
 		userConfig.TmpDir = nil
 	case "node_runner_override":
@@ -825,6 +870,51 @@ func manageUserConfigDelete(index int, key string) error {
 			return burrito.WrappedError(userSettingIncorrectIndexUseError)
 		}
 		userConfig.NodeRunnerOverride = nil
+	case "bun_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.BunRunner = nil
+	case "deno_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.DenoRunner = nil
+	case "dotnet_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.DotnetRunner = nil
+	case "java_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.JavaRunner = nil
+	case "nim_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.NimRunner = nil
+	case "nimble_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.NimbleRunner = nil
+	case "node_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.NodeRunner = nil
+	case "npm_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.NpmRunner = nil
+	case "python_runner":
+		if index != -1 {
+			return burrito.WrappedError(userSettingIncorrectIndexUseError)
+		}
+		userConfig.PythonRunner = nil
 	default:
 		return burrito.WrappedErrorf(invalidUserConfigPropertyError, key)
 	}

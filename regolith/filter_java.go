@@ -55,9 +55,13 @@ func (f *JavaFilter) run(context RunContext) error {
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
+	javaRunner, err := getRunner("java", "java")
+	if err != nil {
+		return burrito.WrapError(err, getRunnerError)
+	}
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
-			"java",
+			javaRunner,
 			append(
 				[]string{
 					"-jar", context.AbsoluteLocation + string(os.PathSeparator) +
@@ -75,7 +79,7 @@ func (f *JavaFilter) run(context RunContext) error {
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
 		err := RunSubProcess(
-			"java",
+			javaRunner,
 			append(
 				[]string{
 					"-jar", context.AbsoluteLocation + string(os.PathSeparator) +
@@ -110,14 +114,18 @@ func (f *JavaFilterDefinition) InstallDependencies(*RemoteFilterDefinition, stri
 }
 
 func (f *JavaFilterDefinition) Check(context RunContext) error {
-	_, err := exec.LookPath("java")
+	javaRunner, err := getRunner("java", "java")
+	if err != nil {
+		return burrito.WrapError(err, getRunnerError)
+	}
+	_, err = exec.LookPath(javaRunner)
 	if err != nil {
 		return burrito.WrapError(
 			err,
 			"Java not found, download and install it"+
 				" from https://adoptopenjdk.net/")
 	}
-	cmd, err := exec.Command("java", "-version").Output()
+	cmd, err := exec.Command(javaRunner, "-version").Output()
 	if err != nil {
 		return burrito.WrapError(err, "Failed to check Java version")
 	}
