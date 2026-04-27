@@ -312,14 +312,12 @@ func exportProjectRpAndBp(profile Profile, rpPath, bpPath string, ctx RunContext
 	if !IsExperimentEnabled(SizeTimeCheck) {
 		// Clearing output locations
 		MeasureStart("Export - Clean")
-		err = os.RemoveAll(bpPath)
-		if err != nil {
+		if err := removeJunctionSafe(bpPath); err != nil {
 			return burrito.WrapErrorf(
 				err, "Failed to clear behavior pack from build path %q.\n"+
 					"Are user permissions correct?", bpPath)
 		}
-		err = os.RemoveAll(rpPath)
-		if err != nil {
+		if err := removeJunctionSafe(rpPath); err != nil {
 			return burrito.WrapErrorf(
 				err, "Failed to clear resource pack from build path %q.\n"+
 					"Are user permissions correct?", rpPath)

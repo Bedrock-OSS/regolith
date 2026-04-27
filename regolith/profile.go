@@ -3,7 +3,6 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -176,21 +175,8 @@ func SetupTmpFiles(context RunContext) error {
 		}
 	} else if shouldCreateSymlinks {
 		for _, tmpPath := range []string{bpTmpPath, rpTmpPath} {
-			linfo, err := os.Lstat(tmpPath)
-			if err != nil {
-				if os.IsNotExist(err) {
-					continue
-				}
-				return burrito.WrapErrorf(err, osStatErrorAny, tmpPath)
-			}
-			if linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
-				if err := os.Remove(tmpPath); err != nil {
-					return burrito.WrapErrorf(err, osRemoveError, tmpPath)
-				}
-			} else {
-				if err := os.RemoveAll(tmpPath); err != nil {
-					return burrito.WrapErrorf(err, osRemoveError, tmpPath)
-				}
+			if err := removeJunctionSafe(tmpPath); err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, tmpPath)
 			}
 		}
 	}

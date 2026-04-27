@@ -881,27 +881,41 @@ func (c *syncMetadataCache) invalidate(path string) {
 	c.m.Delete(path)
 }
 
+// removeJunctionSafe removes a path that might be a junction/symlink.
+// For junctions/symlinks it uses os.Remove (won't follow into target).
+// For real directories it uses os.RemoveAll.
+// Returns nil if the path doesn't exist.
+func removeJunctionSafe(path string) error {
+	linfo, err := os.Lstat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return burrito.WrapErrorf(err, osStatErrorAny, path)
+	}
+	if linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
+		return os.Remove(path)
+	}
+	if linfo.IsDir() {
+		return os.RemoveAll(path)
+	}
+	return os.Remove(path)
+}
+
 func syncLink(srcPath, dstPath string) error {
 	linkTarget, err := os.Readlink(srcPath)
 	if err != nil {
 		Logger.Debugf("SYNC: Skipping irregular file %s", srcPath)
 		return nil
 	}
-	if linfo, lerr := os.Lstat(dstPath); lerr == nil {
-		if linfo.IsDir() && linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) == 0 {
-			if err := os.RemoveAll(dstPath); err != nil {
-				return burrito.WrapErrorf(err, osRemoveError, dstPath)
-			}
-		} else {
-			if err := os.Remove(dstPath); err != nil {
-				return burrito.WrapErrorf(err, osRemoveError, dstPath)
-			}
-		}
-	} else if !os.IsNotExist(lerr) {
-		return burrito.WrapErrorf(lerr, osStatErrorAny, dstPath)
+	if err := removeJunctionSafe(dstPath); err != nil {
+		return burrito.WrapErrorf(err, osRemoveError, dstPath)
 	}
-	targetInfo, err := os.Stat(srcPath)
-	if err == nil && targetInfo.IsDir() {
+	srcLinfo, lerr := os.Lstat(srcPath)
+	isJunction := lerr == nil && srcLinfo.Mode()&fs.ModeIrregular != 0
+	targetInfo, serr := os.Stat(srcPath)
+	isDirLink := isJunction || (serr == nil && targetInfo.IsDir())
+	if isDirLink {
 		err = createDirLink(dstPath, linkTarget)
 	} else {
 		err = os.Symlink(linkTarget, dstPath)
@@ -937,6 +951,10 @@ func SyncDirectories(
 			return
 		}
 		if cache.get(dstDir) == nil {
+			if err := removeJunctionSafe(dstDir); err != nil {
+				syncErr = burrito.WrapErrorf(err, osRemoveError, dstDir)
+				return
+			}
 			if err := os.MkdirAll(dstDir, 0755); err != nil {
 				syncErr = burrito.WrapErrorf(err, osMkdirError, dstDir)
 				return
@@ -970,13 +988,15 @@ func SyncDirectories(
 			if srcMeta != nil && srcMeta.IsDir() {
 				dstMeta := cache.get(dstPath)
 				if dstMeta != nil && !dstMeta.IsDir() {
-					if err := os.Remove(dstPath); err != nil {
+					// Destination is a file but source is a dir — remove it
+					if err := removeJunctionSafe(dstPath); err != nil {
 						syncErr = burrito.WrapErrorf(err, osRemoveError, dstPath)
 						return
 					}
 					cache.invalidate(dstPath)
-				}
-				if dstMeta != nil && dstMeta.IsDir() {
+				} else if dstMeta != nil {
+					// Destination looks like a dir via os.Stat — check if it's
+					// actually a junction and remove just the junction
 					linfo, lerr := os.Lstat(dstPath)
 					if lerr != nil {
 						syncErr = burrito.WrapErrorf(lerr, osStatErrorAny, dstPath)
@@ -1000,18 +1020,8 @@ func SyncDirectories(
 				}
 				dstMeta := cache.get(dstPath)
 				if dstMeta != nil && dstMeta.IsDir() {
-					linfo, lerr := os.Lstat(dstPath)
-					if lerr != nil {
-						return burrito.WrapErrorf(lerr, osStatErrorAny, dstPath)
-					}
-					if linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
-						if err := os.Remove(dstPath); err != nil {
-							return burrito.WrapErrorf(err, osRemoveError, dstPath)
-						}
-					} else {
-						if err := os.RemoveAll(dstPath); err != nil {
-							return burrito.WrapErrorf(err, osRemoveError, dstPath)
-						}
+					if err := removeJunctionSafe(dstPath); err != nil {
+						return burrito.WrapErrorf(err, osRemoveError, dstPath)
 					}
 					dstMeta = nil
 				}
@@ -1036,6 +1046,20 @@ func SyncDirectories(
 				}
 				return nil
 			})
+		}
+	}
+
+	// If the destination is a junction (from symlink_export), ensure its target
+	// directory exists so os.Stat follows it successfully and we don't replace
+	// the junction with a real directory.
+	if linfo, lerr := os.Lstat(destination); lerr == nil {
+		if linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
+			if target, err := os.Readlink(destination); err == nil {
+				if !filepath.IsAbs(target) {
+					target = filepath.Join(filepath.Dir(destination), target)
+				}
+				os.MkdirAll(target, 0755)
+			}
 		}
 	}
 
@@ -1080,10 +1104,7 @@ func SyncDirectories(
 						return ctx2.Err()
 					}
 					Logger.Debugf("SYNC: Removing %s", dstPath)
-					if isLink || !isDir {
-						return os.Remove(dstPath)
-					}
-					return os.RemoveAll(dstPath)
+					return removeJunctionSafe(dstPath)
 				})
 			} else if isDir && !isLink {
 				cleanupDir(srcPath, dstPath)
