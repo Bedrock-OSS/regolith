@@ -887,8 +887,18 @@ func syncLink(srcPath, dstPath string) error {
 		Logger.Debugf("SYNC: Skipping irregular file %s", srcPath)
 		return nil
 	}
-	if err := os.Remove(dstPath); err != nil && !os.IsNotExist(err) {
-		return burrito.WrapErrorf(err, osRemoveError, dstPath)
+	if linfo, lerr := os.Lstat(dstPath); lerr == nil {
+		if linfo.IsDir() && linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) == 0 {
+			if err := os.RemoveAll(dstPath); err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, dstPath)
+			}
+		} else {
+			if err := os.Remove(dstPath); err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, dstPath)
+			}
+		}
+	} else if !os.IsNotExist(lerr) {
+		return burrito.WrapErrorf(lerr, osStatErrorAny, dstPath)
 	}
 	targetInfo, err := os.Stat(srcPath)
 	if err == nil && targetInfo.IsDir() {
@@ -964,6 +974,7 @@ func SyncDirectories(
 						syncErr = burrito.WrapErrorf(err, osRemoveError, dstPath)
 						return
 					}
+					cache.invalidate(dstPath)
 				}
 				if dstMeta != nil && dstMeta.IsDir() {
 					linfo, lerr := os.Lstat(dstPath)
@@ -976,6 +987,7 @@ func SyncDirectories(
 							syncErr = burrito.WrapErrorf(err, osRemoveError, dstPath)
 							return
 						}
+						cache.invalidate(dstPath)
 					}
 				}
 				syncDir(srcPath, dstPath)
