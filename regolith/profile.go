@@ -3,6 +3,7 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -167,11 +168,30 @@ func SetupTmpFiles(context RunContext) error {
 
 	// Clean the temporary directory
 	isRegularRun := !useSizeTimeCheck && !useSymlinkExport
-	if isRegularRun || shouldCreateSymlinks {
+	if isRegularRun {
 		Logger.Debugf("Cleaning \"%s\"", absTmpPath)
 		err := os.RemoveAll(absTmpPath)
 		if err != nil {
 			return burrito.WrapErrorf(err, osRemoveError, absTmpPath)
+		}
+	} else if shouldCreateSymlinks {
+		for _, tmpPath := range []string{bpTmpPath, rpTmpPath} {
+			linfo, err := os.Lstat(tmpPath)
+			if err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+				return burrito.WrapErrorf(err, osStatErrorAny, tmpPath)
+			}
+			if linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
+				if err := os.Remove(tmpPath); err != nil {
+					return burrito.WrapErrorf(err, osRemoveError, tmpPath)
+				}
+			} else {
+				if err := os.RemoveAll(tmpPath); err != nil {
+					return burrito.WrapErrorf(err, osRemoveError, tmpPath)
+				}
+			}
 		}
 	}
 
@@ -183,25 +203,23 @@ func SetupTmpFiles(context RunContext) error {
 
 	// Create symlinks
 	if shouldCreateSymlinks {
-		// Check deletion safety
-		editedFiles := LoadEditedFiles(dotRegolithPath)
-		err := editedFiles.CheckDeletionSafety(rpExportPath, bpExportPath)
-		if err != nil {
-			return burrito.WrapErrorf(
-				err,
-				checkDeletionSafetyError,
-				rpExportPath, bpExportPath)
+		if !UnsafeMode {
+			editedFiles := LoadEditedFiles(dotRegolithPath)
+			err := editedFiles.CheckDeletionSafety(rpExportPath, bpExportPath)
+			if err != nil {
+				return burrito.WrapErrorf(
+					err,
+					checkDeletionSafetyError,
+					rpExportPath, bpExportPath)
+			}
+		}
+		if err := os.MkdirAll(bpExportPath, 0755); err != nil {
+			return burrito.WrapErrorf(err, osMkdirError, bpExportPath)
+		}
+		if err := os.MkdirAll(rpExportPath, 0755); err != nil {
+			return burrito.WrapErrorf(err, osMkdirError, rpExportPath)
 		}
 
-		// Remove existing exported paths
-		if err := os.RemoveAll(bpExportPath); err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, bpExportPath)
-		}
-		if err := os.RemoveAll(rpExportPath); err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, rpExportPath)
-		}
-
-		// Create symlinks
 		if err := createDirLink(filepath.Join(absTmpPath, "BP"), bpExportPath); err != nil {
 			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(absTmpPath, "BP"), bpExportPath)
 		}
@@ -292,9 +310,7 @@ func SetupTmpFiles(context RunContext) error {
 		editedFiles := NewEditedFiles()
 		err = editedFiles.UpdateFromPaths(rpExportPath, bpExportPath)
 		if err != nil {
-			return burrito.WrapError(
-				err,
-				"Failed to create a list of files safe to edit")
+			return burrito.WrapError(err, updatedFilesUpdateError)
 		}
 		err = editedFiles.Dump(dotRegolithPath)
 		if err != nil {

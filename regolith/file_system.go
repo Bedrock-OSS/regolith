@@ -2,16 +2,20 @@ package regolith
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/otiai10/copy"
 )
@@ -851,107 +855,245 @@ func MoveOrCopy(
 // SyncDirectories copies the source to destination while checking size and modification time.
 // If the file in the destination is different than the one in the source, it's overwritten,
 // otherwise it's skipped (the destination file is not modified).
+
+type syncMetadataCache struct {
+	m sync.Map
+}
+
+type cachedMeta struct {
+	info os.FileInfo
+}
+
+func (c *syncMetadataCache) get(path string) os.FileInfo {
+	if v, ok := c.m.Load(path); ok {
+		return v.(*cachedMeta).info
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		c.m.Store(path, &cachedMeta{info: nil})
+		return nil
+	}
+	c.m.Store(path, &cachedMeta{info: info})
+	return info
+}
+
+func (c *syncMetadataCache) invalidate(path string) {
+	c.m.Delete(path)
+}
+
+func syncLink(srcPath, dstPath string) error {
+	linkTarget, err := os.Readlink(srcPath)
+	if err != nil {
+		Logger.Debugf("SYNC: Skipping irregular file %s", srcPath)
+		return nil
+	}
+	if err := os.Remove(dstPath); err != nil && !os.IsNotExist(err) {
+		return burrito.WrapErrorf(err, osRemoveError, dstPath)
+	}
+	targetInfo, err := os.Stat(srcPath)
+	if err == nil && targetInfo.IsDir() {
+		err = createDirLink(dstPath, linkTarget)
+	} else {
+		err = os.Symlink(linkTarget, dstPath)
+	}
+	if err != nil {
+		return burrito.WrapErrorf(err, createDirLinkError, dstPath, linkTarget)
+	}
+	return nil
+}
+
 func SyncDirectories(
 	source string, destination string, makeReadOnly bool,
 ) error {
-	// Make destination parent if not exists
 	destinationParent := filepath.Dir(destination)
 	if err := os.MkdirAll(destinationParent, 0755); err != nil {
 		return burrito.WrapErrorf(err, osMkdirError, destinationParent)
 	}
-	err := filepath.WalkDir(source, func(srcPath string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		relPath, err := filepath.Rel(source, srcPath)
-		if err != nil {
-			return burrito.WrapErrorf(err, filepathRelError, source, srcPath)
-		}
-		destPath := filepath.Join(destination, relPath)
 
-		destInfo, err := os.Stat(destPath)
-		if err != nil && !os.IsNotExist(err) {
-			return burrito.WrapErrorf(err, osStatErrorAny, destPath)
+	cache := &syncMetadataCache{}
+	maxWorkers := runtime.GOMAXPROCS(0)
+	if maxWorkers < 4 {
+		maxWorkers = 4
+	}
+
+	// Phase 1: Sync source -> destination (parallel file I/O, sequential traversal)
+	g, ctx := errgroup.WithContext(context.Background())
+	g.SetLimit(maxWorkers)
+
+	var syncErr error
+	var syncDir func(srcDir, dstDir string)
+	syncDir = func(srcDir, dstDir string) {
+		if syncErr != nil {
+			return
 		}
-		info, ierr := d.Info()
-		if ierr != nil {
-			return ierr
-		}
-		if (err != nil && os.IsNotExist(err)) || info.ModTime() != destInfo.ModTime() || info.Size() != destInfo.Size() {
-			if d.IsDir() {
-				return os.MkdirAll(destPath, info.Mode())
+		if cache.get(dstDir) == nil {
+			if err := os.MkdirAll(dstDir, 0755); err != nil {
+				syncErr = burrito.WrapErrorf(err, osMkdirError, dstDir)
+				return
 			}
-			Logger.Debugf("SYNC: Copying file %s to %s", srcPath, destPath)
-			// If file exists, we need to remove it first to avoid permission issues when it's
-			// read-only
-			if destInfo != nil {
-				err = os.Remove(destPath)
-				if err != nil {
-					return burrito.WrapErrorf(err, osRemoveError, destPath)
+		}
+
+		entries, err := os.ReadDir(srcDir)
+		if err != nil {
+			syncErr = burrito.WrapErrorf(err, osReadDirError, srcDir)
+			return
+		}
+
+		for _, entry := range entries {
+			if syncErr != nil || ctx.Err() != nil {
+				return
+			}
+			srcPath := filepath.Join(srcDir, entry.Name())
+			dstPath := filepath.Join(dstDir, entry.Name())
+
+			if entry.Type()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
+				g.Go(func() error {
+					if ctx.Err() != nil {
+						return ctx.Err()
+					}
+					return syncLink(srcPath, dstPath)
+				})
+				continue
+			}
+
+			srcMeta := cache.get(srcPath)
+			if srcMeta != nil && srcMeta.IsDir() {
+				dstMeta := cache.get(dstPath)
+				if dstMeta != nil && !dstMeta.IsDir() {
+					if err := os.Remove(dstPath); err != nil {
+						syncErr = burrito.WrapErrorf(err, osRemoveError, dstPath)
+						return
+					}
 				}
+				if dstMeta != nil && dstMeta.IsDir() {
+					linfo, lerr := os.Lstat(dstPath)
+					if lerr != nil {
+						syncErr = burrito.WrapErrorf(lerr, osStatErrorAny, dstPath)
+						return
+					}
+					if linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
+						if err := os.Remove(dstPath); err != nil {
+							syncErr = burrito.WrapErrorf(err, osRemoveError, dstPath)
+							return
+						}
+					}
+				}
+				syncDir(srcPath, dstPath)
+				continue
 			}
-			return CopyFile(srcPath, destPath)
-		} else {
-			Logger.Debugf("SYNC: Skipping file %s", srcPath)
+
+			g.Go(func() error {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				dstMeta := cache.get(dstPath)
+				if dstMeta != nil && dstMeta.IsDir() {
+					linfo, lerr := os.Lstat(dstPath)
+					if lerr != nil {
+						return burrito.WrapErrorf(lerr, osStatErrorAny, dstPath)
+					}
+					if linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
+						if err := os.Remove(dstPath); err != nil {
+							return burrito.WrapErrorf(err, osRemoveError, dstPath)
+						}
+					} else {
+						if err := os.RemoveAll(dstPath); err != nil {
+							return burrito.WrapErrorf(err, osRemoveError, dstPath)
+						}
+					}
+					dstMeta = nil
+				}
+				needsCopy := dstMeta == nil || srcMeta == nil ||
+					srcMeta.Size() != dstMeta.Size() ||
+					!srcMeta.ModTime().Equal(dstMeta.ModTime())
+				if !needsCopy {
+					return nil
+				}
+				Logger.Debugf("SYNC: Copying file %s to %s", srcPath, dstPath)
+				if dstMeta != nil {
+					if err := os.Remove(dstPath); err != nil {
+						return burrito.WrapErrorf(err, osRemoveError, dstPath)
+					}
+				}
+				if err := CopyFile(srcPath, dstPath); err != nil {
+					return err
+				}
+				cache.invalidate(dstPath)
+				if makeReadOnly {
+					os.Chmod(dstPath, 0444)
+				}
+				return nil
+			})
 		}
-		return nil
-	})
-	if err != nil {
-		return burrito.WrapErrorf(err, osCopyError, source, destination)
 	}
 
-	// A simple linked list implementation
-	type Node struct {
-		next  *Node
-		value string
+	syncDir(source, destination)
+	waitErr := g.Wait()
+	if syncErr != nil {
+		return burrito.WrapErrorf(syncErr, osCopyError, source, destination)
 	}
-	// Remove files/folders in destination that are not in source
-	var root = &Node{
-		next:  nil,
-		value: "",
+	if waitErr != nil {
+		return burrito.WrapErrorf(waitErr, osCopyError, source, destination)
 	}
-	err = filepath.WalkDir(destination, func(destPath string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
+
+	// Phase 2: Cleanup destination — remove files not in source (parallel)
+	g2, ctx2 := errgroup.WithContext(context.Background())
+	g2.SetLimit(maxWorkers)
+
+	var cleanupErr error
+	var cleanupDir func(srcDir, dstDir string)
+	cleanupDir = func(srcDir, dstDir string) {
+		if cleanupErr != nil {
+			return
 		}
-		relPath, err := filepath.Rel(destination, destPath)
+		entries, err := os.ReadDir(dstDir)
 		if err != nil {
-			return burrito.WrapErrorf(err, filepathRelError, destination, destPath)
+			cleanupErr = burrito.WrapErrorf(err, osReadDirError, dstDir)
+			return
 		}
-		srcPath := filepath.Join(source, relPath)
-		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-			Logger.Debugf("SYNC: Removing file %s", destPath)
-			next := &Node{
-				next:  root,
-				value: destPath,
+
+		for _, entry := range entries {
+			if cleanupErr != nil || ctx2.Err() != nil {
+				return
 			}
-			root = next
-		}
-		return nil
-	})
+			srcPath := filepath.Join(srcDir, entry.Name())
+			dstPath := filepath.Join(dstDir, entry.Name())
 
-	if err != nil {
-		return burrito.PassError(err)
+			isLink := entry.Type()&(fs.ModeSymlink|fs.ModeIrregular) != 0
+			isDir := entry.IsDir()
+
+			if cache.get(srcPath) == nil {
+				g2.Go(func() error {
+					if ctx2.Err() != nil {
+						return ctx2.Err()
+					}
+					Logger.Debugf("SYNC: Removing %s", dstPath)
+					if isLink || !isDir {
+						return os.Remove(dstPath)
+					}
+					return os.RemoveAll(dstPath)
+				})
+			} else if isDir && !isLink {
+				cleanupDir(srcPath, dstPath)
+			}
+		}
 	}
 
-	for root.next != nil {
-		err = os.RemoveAll(root.value)
-		if err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, root.value)
-		}
-		root = root.next
+	cleanupDir(source, destination)
+	cleanupWaitErr := g2.Wait()
+	if cleanupErr != nil {
+		return burrito.PassError(cleanupErr)
+	}
+	if cleanupWaitErr != nil {
+		return burrito.PassError(cleanupWaitErr)
 	}
 
-	// Make files read only if this option is selected
 	if makeReadOnly {
 		Logger.Infof("Changing the access for output path to "+
 			"read-only.\n\tPath: %s", destination)
 		err := filepath.WalkDir(destination,
 			func(s string, d fs.DirEntry, e error) error {
-
 				if e != nil {
-					// Error message isn't important as it's not passed further
-					// in the code
 					return e
 				}
 				if !d.IsDir() {
@@ -962,8 +1104,7 @@ func SyncDirectories(
 		if err != nil {
 			Logger.Warnf(
 				"Failed to change access of the output path to read-only.\n"+
-					"\tPath: %s",
-				destination)
+					"\tPath: %s", destination)
 		}
 	}
 	return nil

@@ -410,6 +410,7 @@ func main() {
 			&regolith.EnabledExperiments, "experiments", nil,
 			"Enables experimental features. Currently supported experiments:\n"+
 				strings.Join(experimentDescs, "\n"))
+		cmd.Flags().BoolVar(&regolith.UnsafeMode, "unsafe", false, "Disables file protection safety checks for faster exports")
 	}
 
 	// Build and run CLI

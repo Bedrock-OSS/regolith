@@ -35,7 +35,10 @@ var AvailableExperiments = map[Experiment]ExperimentInfo{
 	SymlinkExport: {"symlink_export", symlinkExportDesc},
 }
 
-var EnabledExperiments []string
+var (
+	EnabledExperiments []string
+	UnsafeMode         bool
+)
 
 func IsExperimentEnabled(exp Experiment) bool {
 	if EnabledExperiments == nil {
