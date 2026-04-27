@@ -148,12 +148,14 @@ The behavior of the command changes based on the used flags and the number of pr
 The cheatsheet below shows the possible combinations of flags and arguments and what they do:
 
 Printing all properties:                        regolith config
-Printing specified property:                    regolith config <key>
-Setting property value:                         regolith config <key> <value>
-Deleting a property:                            regolith config <key> --delete
-Appending to a list property:                   regolith config <key> <value> --append
-Replacing item in a list property:              regolith config <key> <value> --index <index>
-Deleting item in a list property:               regolith config <key> --index <index> --delete
+Printing specified property:                    regolith config <setting>
+Setting property value:                         regolith config <setting> <value>
+Deleting a property:                            regolith config <setting> --delete
+Appending to a list property:                   regolith config <setting> <value> --append
+Replacing item in a list property:              regolith config <setting> <value> --index <index>
+Deleting item in a list property:               regolith config <setting> --index <index> --delete
+Setting a value in a map property:             	regolith config <setting> <key> <value>
+Deleting a value in a map property:            	regolith config <setting> <key> --delete
 
 The printing commands can take the --full flag to print configuration with the default values
 included (if they're not defined in the config file). Without the flag, the undefined properties

@@ -275,5 +275,9 @@ const (
 	// when changing the user settings.
 	userSettingIncorrectIndexUseError = "Cannot use --index with non-array property."
 
+	// userSettingIncorrectKeyUseError is used when the user tries to use the --key flag with a non-map property
+	// when changing the user settings.
+	userSettingIncorrectKeyUseError = "Cannot use <key> with non-map property."
+
 	getRunnerError = "Failed to get the path to filter runner."
 )
