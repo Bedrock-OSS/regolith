@@ -494,7 +494,7 @@ func SliceAny[T any](slice []T, predicate func(T) bool) bool {
 
 func isSymlinkTo(path, target string) bool {
 	info, err := os.Lstat(path)
-	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+	if err != nil || info.Mode()&(os.ModeSymlink|os.ModeIrregular) == 0 {
 		return false
 	}
 	dest, err := os.Readlink(path)
@@ -511,7 +511,7 @@ func isSymlinkTo(path, target string) bool {
 
 func isSymlink(path string) bool {
 	info, err := os.Lstat(path)
-	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+	if err != nil || info.Mode()&(os.ModeSymlink|os.ModeIrregular) == 0 {
 		return false
 	}
 	return true
