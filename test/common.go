@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/otiai10/copy"
 )
@@ -225,7 +226,7 @@ func prepareTestDirectory(path string, t *testing.T) string {
 	const testResultsDir = "test_results"
 	// Create the output directory
 	result := filepath.Join(testResultsDir, path)
-	if err := os.RemoveAll(result); err != nil {
+	if err := removeAllForTest(result); err != nil {
 		t.Fatalf(
 			"Failed to delete the files form the testing directory."+
 				"\nPath: %q\nError: %v",
@@ -247,6 +248,28 @@ func prepareTestDirectory(path string, t *testing.T) string {
 	return result
 }
 
+func removeAllForTest(path string) error {
+	var err error
+	for range 3 {
+		_ = filepath.WalkDir(path, func(currPath string, entry fs.DirEntry, walkErr error) error {
+			if walkErr == nil {
+				mode := os.FileMode(0666)
+				if entry.IsDir() {
+					mode = 0777
+				}
+				_ = os.Chmod(currPath, mode)
+			}
+			return nil
+		})
+		err = os.RemoveAll(path)
+		if err == nil {
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return err
+}
+
 // getWdOrFatal returns the current working directory or exits with t.Fatal in
 // case of error.
 func getWdOrFatal(t *testing.T) string {
@@ -262,7 +285,11 @@ func getWdOrFatal(t *testing.T) string {
 func copyFilesOrFatal(src, dest string, t *testing.T) {
 	os.MkdirAll(dest, 0755)
 	err := copy.Copy(
-		src, dest, copy.Options{PreserveTimes: false, Sync: false})
+		src, dest, copy.Options{
+			PreserveTimes:     false,
+			Sync:              false,
+			PermissionControl: copy.DoNothing,
+		})
 	if err != nil {
 		t.Fatalf(
 			"Failed to copy files.\nSource: %s\nDestination: %s\nError: %v",

@@ -821,31 +821,33 @@ func MoveOrCopy(
 			return err
 		}
 	}
-	// Make files read only if this option is selected
 	if makeReadOnly {
-		Logger.Infof("Changing the access for output path to "+
-			"read-only.\n\tPath: %s", destination)
-		err := filepath.WalkDir(destination,
-			func(s string, d fs.DirEntry, e error) error {
-
-				if e != nil {
-					// Error message isn't important as it's not passed further
-					// in the code
-					return e
-				}
-				if !d.IsDir() {
-					os.Chmod(s, 0444)
-				}
-				return nil
-			})
-		if err != nil {
-			Logger.Warnf(
-				"Failed to change access of the output path to read-only.\n"+
-					"\tPath: %s",
-				destination)
-		}
+		setPathReadOnly(destination)
 	}
 	return nil
+}
+
+func setPathReadOnly(path string) {
+	Logger.Infof("Changing the access for output path to "+
+		"read-only.\n\tPath: %s", path)
+	err := filepath.WalkDir(path,
+		func(s string, d fs.DirEntry, e error) error {
+			if e != nil {
+				// Error message isn't important as it's not passed further
+				// in the code.
+				return e
+			}
+			if !d.IsDir() {
+				os.Chmod(s, 0444)
+			}
+			return nil
+		})
+	if err != nil {
+		Logger.Warnf(
+			"Failed to change access of the output path to read-only.\n"+
+				"\tPath: %s",
+			path)
+	}
 }
 
 // SyncDirectories copies the source to destination while checking size and modification time.

@@ -487,10 +487,12 @@ func Init(debug, force bool, env string) error {
 					FilterCollection: FilterCollection{
 						Filters: []FilterRunner{},
 					},
-					ExportTarget: ExportTarget{
-						Target:   "development",
-						Build:    "standard",
-						ReadOnly: false,
+					ExportTargets: ExportTargets{
+						{
+							Target:   "development",
+							Build:    "standard",
+							ReadOnly: false,
+						},
 					},
 				},
 			},
