@@ -852,10 +852,6 @@ func MoveOrCopy(
 	return nil
 }
 
-// SyncDirectories copies the source to destination while checking size and modification time.
-// If the file in the destination is different than the one in the source, it's overwritten,
-// otherwise it's skipped (the destination file is not modified).
-
 type syncMetadataCache struct {
 	m sync.Map
 }
@@ -926,6 +922,9 @@ func syncLink(srcPath, dstPath string) error {
 	return nil
 }
 
+// SyncDirectories copies the source to destination while checking size and modification time.
+// If the file in the destination is different than the one in the source, it's overwritten,
+// otherwise it's skipped (the destination file is not modified).
 func SyncDirectories(
 	source string, destination string, makeReadOnly bool,
 ) error {
