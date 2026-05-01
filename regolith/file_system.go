@@ -852,10 +852,16 @@ func MoveOrCopy(
 	return nil
 }
 
+// syncMetadataCache is a thread-safe cache for file FileInfo used in
+// SyncDirectories to reduce the number of os.Stat calls.
 type syncMetadataCache struct {
 	m sync.Map
 }
 
+// cachedMeta is a wrapper for os.FileInfo used in syncMetadataCache. The
+// 'nil' value of the 'info' field indicates that the path was previously
+// checked but os.Stat returned an error (file not found or permission denied).
+// The errors aren't cached.
 type cachedMeta struct {
 	info os.FileInfo
 }
@@ -898,6 +904,10 @@ func removeJunctionSafe(path string) error {
 	return os.Remove(path)
 }
 
+// syncLink copies a symlink or junction from srcPath to make the dstPath
+// point to the same target. If srcPath is not a symlink or junction,
+// it's skipped without an error. If dstPath already exists, it's removed
+// first.
 func syncLink(srcPath, dstPath string) error {
 	linkTarget, err := os.Readlink(srcPath)
 	if err != nil {
@@ -973,6 +983,7 @@ func SyncDirectories(
 			srcPath := filepath.Join(srcDir, entry.Name())
 			dstPath := filepath.Join(dstDir, entry.Name())
 
+			// Symlink source
 			if entry.Type()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
 				g.Go(func() error {
 					if ctx.Err() != nil {
@@ -983,6 +994,7 @@ func SyncDirectories(
 				continue
 			}
 
+			// Directory source
 			srcMeta := cache.get(srcPath)
 			if srcMeta != nil && srcMeta.IsDir() {
 				dstMeta := cache.get(dstPath)
@@ -1013,6 +1025,7 @@ func SyncDirectories(
 				continue
 			}
 
+			// File source
 			g.Go(func() error {
 				if ctx.Err() != nil {
 					return ctx.Err()
