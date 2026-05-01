@@ -98,6 +98,7 @@ func (f *RemoteFilter) run(context RunContext) (bool, error) {
 			Parent:           context.Parent,
 			DotRegolithPath:  context.DotRegolithPath,
 			Settings:         filter.GetSettings(),
+			UnsafeMode:       context.UnsafeMode,
 		}
 		// Disabled filters are skipped
 		disabled, err := filter.IsDisabled(runContext)

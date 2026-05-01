@@ -247,12 +247,14 @@ func ExportProject(ctx RunContext) error {
 	// Load edited files
 	MeasureStart("Export - CheckDeletionSafety")
 	editedFiles := LoadEditedFiles(dotRegolithPath)
-	err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
-	if err != nil {
-		return burrito.WrapErrorf(
-			err,
-			checkDeletionSafetyError,
-			rpPath, bpPath)
+	if !IsExperimentEnabled(SymlinkExport) && !ctx.UnsafeMode {
+		err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
+		if err != nil {
+			return burrito.WrapErrorf(
+				err,
+				checkDeletionSafetyError,
+				rpPath, bpPath)
+		}
 	}
 	// Export RP and BP if necessary
 	if IsExperimentEnabled(SymlinkExport) {
@@ -270,12 +272,9 @@ func ExportProject(ctx RunContext) error {
 		return burrito.PassError(err)
 	}
 	MeasureStart("Export - EditedFiles.UpdateFromPaths")
-	// Update or create edited_files.json
 	err = editedFiles.UpdateFromPaths(rpPath, bpPath)
 	if err != nil {
-		return burrito.WrapError(
-			err,
-			"Failed to create a list of files edited by this 'regolith run'")
+		return burrito.WrapError(err, updatedFilesUpdateError)
 	}
 	err = editedFiles.Dump(dotRegolithPath)
 	if err != nil {
@@ -313,14 +312,12 @@ func exportProjectRpAndBp(profile Profile, rpPath, bpPath string, ctx RunContext
 	if !IsExperimentEnabled(SizeTimeCheck) {
 		// Clearing output locations
 		MeasureStart("Export - Clean")
-		err = os.RemoveAll(bpPath)
-		if err != nil {
+		if err := removeJunctionSafe(bpPath); err != nil {
 			return burrito.WrapErrorf(
 				err, "Failed to clear behavior pack from build path %q.\n"+
 					"Are user permissions correct?", bpPath)
 		}
-		err = os.RemoveAll(rpPath)
-		if err != nil {
+		if err := removeJunctionSafe(rpPath); err != nil {
 			return burrito.WrapErrorf(
 				err, "Failed to clear resource pack from build path %q.\n"+
 					"Are user permissions correct?", rpPath)
