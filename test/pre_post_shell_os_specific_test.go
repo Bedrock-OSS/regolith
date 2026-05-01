@@ -27,7 +27,7 @@ func TestPrePostShellCommandsOSSpecific(t *testing.T) {
 
 	// THE TEST
 	t.Log("Testing OS-specific preShell and postShell commands...")
-	if err := regolith.Run("default", nil, true, ""); err != nil {
+	if err := regolith.Run("default", nil, true, "", false); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 

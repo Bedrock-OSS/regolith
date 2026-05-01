@@ -304,9 +304,11 @@ func main() {
 				extraFilterArgs = args[1:]
 			}
 			env, _ := cmd.Flags().GetString("env")
-			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env)
+			unsafe, _ := cmd.Flags().GetBool("unsafe")
+			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe)
 		},
 	}
+	cmdRun.Flags().Bool("unsafe", false, "Disables file protection safety checks for faster exports")
 	subcommands = append(subcommands, cmdRun)
 
 	// regolith watch
@@ -322,9 +324,11 @@ func main() {
 				extraFilterArgs = args[1:]
 			}
 			env, _ := cmd.Flags().GetString("env")
-			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env)
+			unsafe, _ := cmd.Flags().GetBool("unsafe")
+			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe)
 		},
 	}
+	cmdWatch.Flags().Bool("unsafe", false, "Disables file protection safety checks for faster exports")
 	subcommands = append(subcommands, cmdWatch)
 
 	// regolith apply-filter

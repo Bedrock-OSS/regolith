@@ -259,6 +259,8 @@ const (
 		"Resource pack export path: %s\n" +
 		"Behavior pack export path: %s"
 
+	updatedFilesUpdateError = "Failed to create a list of files edited by Regolith."
+
 	updatedFilesDumpError = "Failed to update the list of the files edited by Regolith." +
 		"This may cause the next run to fail."
 

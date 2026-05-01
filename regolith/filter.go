@@ -30,6 +30,7 @@ type RunContext struct {
 	DotRegolithPath  string
 	Settings         map[string]any
 	ExtraArguments   []string
+	UnsafeMode       bool
 
 	// interruption is a channel used to receive notifications about changes
 	// in the source files, in order to trigger a restart of the program in

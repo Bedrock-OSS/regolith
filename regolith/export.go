@@ -262,13 +262,14 @@ func ExportProject(ctx RunContext) error {
 	dotRegolithPath := ctx.DotRegolithPath
 	useSymlink := IsExperimentEnabled(SymlinkExport) && len(activeTargets) == 1
 	editedFiles := LoadEditedFiles(dotRegolithPath)
-
-	for _, exportTarget := range activeTargets {
+	if !useSymlink && !ctx.UnsafeMode {
 		MeasureStart("Export - CheckDeletionSafety")
-		err = editedFiles.CheckDeletionSafety(exportTarget.rpPath, exportTarget.bpPath)
-		if err != nil {
-			return burrito.WrapErrorf(
-				err, checkDeletionSafetyError, exportTarget.rpPath, exportTarget.bpPath)
+		for _, exportTarget := range activeTargets {
+			err = editedFiles.CheckDeletionSafety(exportTarget.rpPath, exportTarget.bpPath)
+			if err != nil {
+				return burrito.WrapErrorf(
+					err, checkDeletionSafetyError, exportTarget.rpPath, exportTarget.bpPath)
+			}
 		}
 	}
 
@@ -288,6 +289,12 @@ func ExportProject(ctx RunContext) error {
 				return burrito.PassError(err)
 			}
 		}
+	}
+	// Export data once (not per target)
+	MeasureStart("Export - ExportData")
+	err = exportProjectData(profile, ctx)
+	if err != nil {
+		return burrito.PassError(err)
 	}
 	MeasureStart("Export - EditedFiles.UpdateFromPaths")
 	for _, exportTarget := range activeTargets {
@@ -319,12 +326,6 @@ func ExportProject(ctx RunContext) error {
 			}
 		}
 	}
-	// Export data once (not per target)
-	MeasureStart("Export - ExportData")
-	err = exportProjectData(profile, ctx)
-	if err != nil {
-		return burrito.PassError(err)
-	}
 	MeasureEnd()
 	return nil
 }
@@ -339,14 +340,12 @@ func exportProjectRpAndBp(exportTarget ExportTarget, rpPath, bpPath string, ctx 
 	var err error
 	if !IsExperimentEnabled(SizeTimeCheck) {
 		MeasureStart("Export - Clean")
-		err = os.RemoveAll(bpPath)
-		if err != nil {
+		if err := removeJunctionSafe(bpPath); err != nil {
 			return burrito.WrapErrorf(
 				err, "Failed to clear behavior pack from build path %q.\n"+
 					"Are user permissions correct?", bpPath)
 		}
-		err = os.RemoveAll(rpPath)
-		if err != nil {
+		if err := removeJunctionSafe(rpPath); err != nil {
 			return burrito.WrapErrorf(
 				err, "Failed to clear resource pack from build path %q.\n"+
 					"Are user permissions correct?", rpPath)

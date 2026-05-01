@@ -265,7 +265,7 @@ func TestRunWithMultipleExactExportTargets(t *testing.T) {
 	}
 
 	os.Chdir(workingDir)
-	if err := regolith.Run("multi", []string{}, true, ""); err != nil {
+	if err := regolith.Run("multi", []string{}, true, "", false); err != nil {
 		t.Fatal("First multi-target run failed:", err)
 	}
 
@@ -282,7 +282,7 @@ func TestRunWithMultipleExactExportTargets(t *testing.T) {
 		)
 	}
 
-	if err := regolith.Run("multi", []string{}, true, ""); err != nil {
+	if err := regolith.Run("multi", []string{}, true, "", false); err != nil {
 		t.Fatal("Second multi-target run failed safety checks:", err)
 	}
 
@@ -290,7 +290,7 @@ func TestRunWithMultipleExactExportTargets(t *testing.T) {
 	if err := os.WriteFile(unexpectedFile, []byte("not created by regolith"), 0644); err != nil {
 		t.Fatal("Unable to create unexpected target file:", err)
 	}
-	if err := regolith.Run("multi", []string{}, true, ""); err == nil {
+	if err := regolith.Run("multi", []string{}, true, "", false); err == nil {
 		t.Fatal("Expected file protection to reject unexpected file in first target")
 	}
 }
@@ -342,7 +342,7 @@ func TestRunWithMultipleTargetsIgnoresSymlinkExport(t *testing.T) {
 	}
 
 	os.Chdir(workingDir)
-	if err := regolith.Run("multi", []string{}, true, ""); err != nil {
+	if err := regolith.Run("multi", []string{}, true, "", false); err != nil {
 		t.Fatal("Multi-target run with symlink_export enabled failed:", err)
 	}
 
@@ -416,7 +416,7 @@ func TestRunWithLocalAndDevelopmentExportTargets(t *testing.T) {
 	}
 
 	os.Chdir(workingDir)
-	if err := regolith.Run("local_and_development", []string{}, false, ""); err != nil {
+	if err := regolith.Run("local_and_development", []string{}, false, "", false); err != nil {
 		t.Fatal("First mixed-target run failed:", err)
 	}
 
@@ -438,7 +438,7 @@ func TestRunWithLocalAndDevelopmentExportTargets(t *testing.T) {
 		t,
 	)
 
-	if err := regolith.Run("local_and_development", []string{}, false, ""); err != nil {
+	if err := regolith.Run("local_and_development", []string{}, false, "", false); err != nil {
 		t.Fatal("Second mixed-target run failed safety checks:", err)
 	}
 }
