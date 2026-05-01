@@ -292,7 +292,6 @@ func main() {
 	subcommands = append(subcommands, cmdInstallAll)
 
 	// regolith run
-	var runUnsafe bool
 	cmdRun := &cobra.Command{
 		Use:   "run [profile_name]",
 		Short: "Runs Regolith using specified profile",
@@ -305,14 +304,14 @@ func main() {
 				extraFilterArgs = args[1:]
 			}
 			env, _ := cmd.Flags().GetString("env")
-			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env, runUnsafe)
+			unsafe, _ := cmd.Flags().GetBool("unsafe")
+			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe)
 		},
 	}
-	cmdRun.Flags().BoolVar(&runUnsafe, "unsafe", false, "Disables file protection safety checks for faster exports")
+	cmdRun.Flags().Bool("unsafe", false, "Disables file protection safety checks for faster exports")
 	subcommands = append(subcommands, cmdRun)
 
 	// regolith watch
-	var watchUnsafe bool
 	cmdWatch := &cobra.Command{
 		Use:   "watch [profile_name]",
 		Short: "Watches project files and automatically runs Regolith when they change",
@@ -325,10 +324,11 @@ func main() {
 				extraFilterArgs = args[1:]
 			}
 			env, _ := cmd.Flags().GetString("env")
-			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env, watchUnsafe)
+			unsafe, _ := cmd.Flags().GetBool("unsafe")
+			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe)
 		},
 	}
-	cmdWatch.Flags().BoolVar(&watchUnsafe, "unsafe", false, "Disables file protection safety checks for faster exports")
+	cmdWatch.Flags().Bool("unsafe", false, "Disables file protection safety checks for faster exports")
 	subcommands = append(subcommands, cmdWatch)
 
 	// regolith apply-filter
