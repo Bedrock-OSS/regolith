@@ -247,7 +247,7 @@ func ExportProject(ctx RunContext) error {
 	// Load edited files
 	MeasureStart("Export - CheckDeletionSafety")
 	editedFiles := LoadEditedFiles(dotRegolithPath)
-	if !IsExperimentEnabled(SymlinkExport) && !UnsafeMode {
+	if !IsExperimentEnabled(SymlinkExport) && !ctx.UnsafeMode {
 		err = editedFiles.CheckDeletionSafety(rpPath, bpPath)
 		if err != nil {
 			return burrito.WrapErrorf(

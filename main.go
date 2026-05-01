@@ -292,6 +292,7 @@ func main() {
 	subcommands = append(subcommands, cmdInstallAll)
 
 	// regolith run
+	var runUnsafe bool
 	cmdRun := &cobra.Command{
 		Use:   "run [profile_name]",
 		Short: "Runs Regolith using specified profile",
@@ -304,12 +305,14 @@ func main() {
 				extraFilterArgs = args[1:]
 			}
 			env, _ := cmd.Flags().GetString("env")
-			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env)
+			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env, runUnsafe)
 		},
 	}
+	cmdRun.Flags().BoolVar(&runUnsafe, "unsafe", false, "Disables file protection safety checks for faster exports")
 	subcommands = append(subcommands, cmdRun)
 
 	// regolith watch
+	var watchUnsafe bool
 	cmdWatch := &cobra.Command{
 		Use:   "watch [profile_name]",
 		Short: "Watches project files and automatically runs Regolith when they change",
@@ -322,9 +325,10 @@ func main() {
 				extraFilterArgs = args[1:]
 			}
 			env, _ := cmd.Flags().GetString("env")
-			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env)
+			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env, watchUnsafe)
 		},
 	}
+	cmdWatch.Flags().BoolVar(&watchUnsafe, "unsafe", false, "Disables file protection safety checks for faster exports")
 	subcommands = append(subcommands, cmdWatch)
 
 	// regolith apply-filter
@@ -410,7 +414,6 @@ func main() {
 			&regolith.EnabledExperiments, "experiments", nil,
 			"Enables experimental features. Currently supported experiments:\n"+
 				strings.Join(experimentDescs, "\n"))
-		cmd.Flags().BoolVar(&regolith.UnsafeMode, "unsafe", false, "Disables file protection safety checks for faster exports")
 	}
 
 	// Build and run CLI

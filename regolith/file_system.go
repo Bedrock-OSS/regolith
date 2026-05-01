@@ -896,12 +896,24 @@ func removeJunctionSafe(path string) error {
 		return burrito.WrapErrorf(err, osStatErrorAny, path)
 	}
 	if linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
-		return os.Remove(path)
+		if err := os.Remove(path); err != nil {
+			return burrito.WrapErrorf(err,
+				"Failed to remove junction/symlink.\nPath: %s", path)
+		}
+		return nil
 	}
 	if linfo.IsDir() {
-		return os.RemoveAll(path)
+		if err := os.RemoveAll(path); err != nil {
+			return burrito.WrapErrorf(err,
+				"Failed to remove directory.\nPath: %s", path)
+		}
+		return nil
 	}
-	return os.Remove(path)
+	if err := os.Remove(path); err != nil {
+		return burrito.WrapErrorf(err,
+			"Failed to remove file.\nPath: %s", path)
+	}
+	return nil
 }
 
 // syncLink copies a symlink or junction from srcPath to make the dstPath
@@ -915,7 +927,7 @@ func syncLink(srcPath, dstPath string) error {
 		return nil
 	}
 	if err := removeJunctionSafe(dstPath); err != nil {
-		return burrito.WrapErrorf(err, osRemoveError, dstPath)
+		return burrito.PassError(err)
 	}
 	srcLinfo, lerr := os.Lstat(srcPath)
 	isJunction := lerr == nil && srcLinfo.Mode()&fs.ModeIrregular != 0
@@ -961,7 +973,7 @@ func SyncDirectories(
 		}
 		if cache.get(dstDir) == nil {
 			if err := removeJunctionSafe(dstDir); err != nil {
-				syncErr = burrito.WrapErrorf(err, osRemoveError, dstDir)
+				syncErr = burrito.PassError(err)
 				return
 			}
 			if err := os.MkdirAll(dstDir, 0755); err != nil {
@@ -1001,7 +1013,7 @@ func SyncDirectories(
 				if dstMeta != nil && !dstMeta.IsDir() {
 					// Destination is a file but source is a dir — remove it
 					if err := removeJunctionSafe(dstPath); err != nil {
-						syncErr = burrito.WrapErrorf(err, osRemoveError, dstPath)
+						syncErr = burrito.PassError(err)
 						return
 					}
 					cache.invalidate(dstPath)
@@ -1033,7 +1045,7 @@ func SyncDirectories(
 				dstMeta := cache.get(dstPath)
 				if dstMeta != nil && dstMeta.IsDir() {
 					if err := removeJunctionSafe(dstPath); err != nil {
-						return burrito.WrapErrorf(err, osRemoveError, dstPath)
+						return burrito.PassError(err)
 					}
 					dstMeta = nil
 				}

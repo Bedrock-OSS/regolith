@@ -176,7 +176,7 @@ func SetupTmpFiles(context RunContext) error {
 	} else if shouldCreateSymlinks {
 		for _, tmpPath := range []string{bpTmpPath, rpTmpPath} {
 			if err := removeJunctionSafe(tmpPath); err != nil {
-				return burrito.WrapErrorf(err, osRemoveError, tmpPath)
+				return burrito.PassError(err)
 			}
 		}
 	}
@@ -189,7 +189,7 @@ func SetupTmpFiles(context RunContext) error {
 
 	// Create symlinks
 	if shouldCreateSymlinks {
-		if !UnsafeMode {
+		if !context.UnsafeMode {
 			editedFiles := LoadEditedFiles(dotRegolithPath)
 			err := editedFiles.CheckDeletionSafety(rpExportPath, bpExportPath)
 			if err != nil {

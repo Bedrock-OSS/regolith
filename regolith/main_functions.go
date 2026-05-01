@@ -217,7 +217,7 @@ func InstallAll(force, update, debug, refreshFilters bool, env string) error {
 
 // prepareRunContext prepares the context for the "regolith run" and
 // "regolith watch" commands.
-func prepareRunContext(profileName string, extraFilterArgs []string, debug bool, env string) (*RunContext, error) {
+func prepareRunContext(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool) (*RunContext, error) {
 	InitLogging(debug)
 	if err := loadEnvFileFromArg(env); err != nil {
 		return nil, burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
@@ -264,14 +264,15 @@ func prepareRunContext(profileName string, extraFilterArgs []string, debug bool,
 		DotRegolithPath:  dotRegolithPath,
 		Settings:         map[string]any{},
 		ExtraArguments:   extraFilterArgs,
+		UnsafeMode:       unsafeMode,
 	}, nil
 }
 
 // Run handles the "regolith run" command. It runs selected profile and exports
 // created resource pack and behavior pack to the target destination.
-func Run(profileName string, extraFilterArgs []string, debug bool, env string) error {
+func Run(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env, unsafeMode)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -294,9 +295,9 @@ func Run(profileName string, extraFilterArgs []string, debug bool, env string) e
 // Watch handles the "regolith watch" command. It watches the project
 // directories, and it runs selected profile and exports created resource pack
 // and behavior pack to the target destination when the project changes.
-func Watch(profileName string, extraFilterArgs []string, debug bool, env string) error {
+func Watch(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env, unsafeMode)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
