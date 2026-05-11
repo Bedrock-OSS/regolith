@@ -249,6 +249,9 @@ func prepareTestDirectory(path string, t *testing.T) string {
 }
 
 func removeAllForTest(path string) error {
+	// Some tests export packs with readOnly enabled. On Windows, rerunning
+	// those tests can leave read-only files in test_results, so reset
+	// permissions before deleting the old test directory.
 	var err error
 	for range 3 {
 		_ = filepath.WalkDir(path, func(currPath string, entry fs.DirEntry, walkErr error) error {

@@ -562,23 +562,13 @@ func (sc *ShellCommands) GetCommandsForCurrentOS() []string {
 // When editing, adjust ProfileFromObject function as well.
 type Profile struct {
 	FilterCollection
-	ExportTargets ExportTargets `json:"export,omitzero"`
-	// Deprecated: use ExportTargets. This field is kept as a compatibility
-	// fallback for Go callers that still build Profile values with one export
-	// target.
-	ExportTarget ExportTarget  `json:"-"`
+	ExportTarget ExportTargets `json:"export,omitzero"`
 	PreShell     ShellCommands `json:"preShell,omitzero"`
 	PostShell    ShellCommands `json:"postShell,omitzero"`
 }
 
 func (p Profile) exportTargets() ExportTargets {
-	if len(p.ExportTargets) > 0 {
-		return p.ExportTargets
-	}
-	if p.ExportTarget.Target != "" {
-		return ExportTargets{p.ExportTarget}
-	}
-	return nil
+	return p.ExportTarget
 }
 
 func (p Profile) activeExportTargets() ExportTargets {
@@ -590,21 +580,6 @@ func (p Profile) activeExportTargets() ExportTargets {
 		}
 	}
 	return activeTargets
-}
-
-func (p Profile) MarshalJSON() ([]byte, error) {
-	type profileJSON struct {
-		Filters       []FilterRunner `json:"filters"`
-		ExportTargets ExportTargets  `json:"export,omitzero"`
-		PreShell      ShellCommands  `json:"preShell,omitzero"`
-		PostShell     ShellCommands  `json:"postShell,omitzero"`
-	}
-	return json.Marshal(profileJSON{
-		Filters:       p.Filters,
-		ExportTargets: p.exportTargets(),
-		PreShell:      p.PreShell,
-		PostShell:     p.PostShell,
-	})
 }
 
 func shellCommandsFromObject(obj map[string]any, key string) (ShellCommands, error) {
@@ -701,7 +676,7 @@ func ProfileFromObject(
 		}
 		result.Filters = append(result.Filters, filterRunner)
 	}
-	// ExportTargets
+	// ExportTarget
 	exportValue, ok := obj["export"]
 	if !ok {
 		return result, burrito.WrappedErrorf(jsonPathMissingError, "export")
@@ -710,10 +685,7 @@ func ProfileFromObject(
 	if err != nil {
 		return result, burrito.PassError(err)
 	}
-	result.ExportTargets = exportTargets
-	if len(exportTargets) > 0 {
-		result.ExportTarget = exportTargets[0]
-	}
+	result.ExportTarget = exportTargets
 	// PreShell and PostShell
 	preShell, err := shellCommandsFromObject(obj, "preShell")
 	if err != nil {

@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -232,6 +233,51 @@ type resolvedExportTarget struct {
 	rpPath string
 }
 
+func normalizeExportPathForCollision(path string) (string, error) {
+	absPath, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return "", burrito.WrapErrorf(err, filepathAbsError, path)
+	}
+	if resolvedPath, err := filepath.EvalSymlinks(absPath); err == nil {
+		absPath = resolvedPath
+	}
+	if runtime.GOOS == "windows" {
+		absPath = strings.ToLower(absPath)
+	}
+	return absPath, nil
+}
+
+func pathContains(parent, child string) bool {
+	rel, err := filepath.Rel(parent, child)
+	if err != nil {
+		return false
+	}
+	return rel != "." && rel != ".." &&
+		!strings.HasPrefix(rel, ".."+string(filepath.Separator)) &&
+		!filepath.IsAbs(rel)
+}
+
+func checkExportPathCollision(seen map[string]string, path, label string) error {
+	normalizedPath, err := normalizeExportPathForCollision(path)
+	if err != nil {
+		return burrito.PassError(err)
+	}
+	for seenPath, seenLabel := range seen {
+		if normalizedPath == seenPath ||
+			pathContains(normalizedPath, seenPath) ||
+			pathContains(seenPath, normalizedPath) {
+			return burrito.WrappedErrorf(
+				"Export path collision detected.\n"+
+					"First path: %s\n"+
+					"Second path: %s\n"+
+					"Overlapping path: %s",
+				seenLabel, label, normalizedPath)
+		}
+	}
+	seen[normalizedPath] = label
+	return nil
+}
+
 // ExportProject copies files from the tmp paths (tmp/BP and tmp/RP) into
 // the project's export targets. The paths are generated with GetExportPaths.
 func ExportProject(ctx RunContext) error {
@@ -244,10 +290,18 @@ func ExportProject(ctx RunContext) error {
 	// keeps failure atomic when a later target has an invalid path or unsafe
 	// existing files.
 	var activeTargets []resolvedExportTarget
-	for _, exportTarget := range profile.activeExportTargets() {
+	seenExportPaths := make(map[string]string)
+	for i, exportTarget := range profile.activeExportTargets() {
 		bpPath, rpPath, err := GetExportPaths(exportTarget, ctx)
 		if err != nil {
 			return burrito.WrapError(err, getExportPathsError)
+		}
+		targetLabel := fmt.Sprintf("export target %d (%s)", i+1, exportTarget.Target)
+		if err := checkExportPathCollision(seenExportPaths, bpPath, targetLabel+" behavior pack: "+bpPath); err != nil {
+			return burrito.PassError(err)
+		}
+		if err := checkExportPathCollision(seenExportPaths, rpPath, targetLabel+" resource pack: "+rpPath); err != nil {
+			return burrito.PassError(err)
 		}
 		activeTargets = append(activeTargets, resolvedExportTarget{
 			target: exportTarget,

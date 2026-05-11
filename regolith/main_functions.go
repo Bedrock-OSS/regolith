@@ -488,7 +488,7 @@ func Init(debug, force bool, env string) error {
 					FilterCollection: FilterCollection{
 						Filters: []FilterRunner{},
 					},
-					ExportTargets: ExportTargets{
+					ExportTarget: ExportTargets{
 						{
 							Target:   "development",
 							Build:    "standard",

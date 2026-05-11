@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -173,7 +174,7 @@ func TestExportTargets_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestProfileFromObject_SingleExportSetsCompatibilityField(t *testing.T) {
+func TestProfileFromObject_SingleExportSetsExportTarget(t *testing.T) {
 	profile, err := regolith.ProfileFromObject(
 		map[string]any{
 			"filters": []any{},
@@ -186,24 +187,21 @@ func TestProfileFromObject_SingleExportSetsCompatibilityField(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(profile.ExportTargets) != 1 {
-		t.Fatalf("Expected 1 target, got %d", len(profile.ExportTargets))
+	if len(profile.ExportTarget) != 1 {
+		t.Fatalf("Expected 1 target, got %d", len(profile.ExportTarget))
 	}
-	if profile.ExportTargets[0].Target != "local" {
-		t.Fatalf("Expected ExportTargets[0] to be local, got %q", profile.ExportTargets[0].Target)
-	}
-	if profile.ExportTarget.Target != "local" {
-		t.Fatalf("Expected deprecated ExportTarget fallback to be local, got %q", profile.ExportTarget.Target)
+	if profile.ExportTarget[0].Target != "local" {
+		t.Fatalf("Expected ExportTarget[0] to be local, got %q", profile.ExportTarget[0].Target)
 	}
 }
 
-func TestProfileMarshalJSON_DeprecatedExportTargetFallback(t *testing.T) {
+func TestProfileMarshalJSON_SingleExportTarget(t *testing.T) {
 	profile := regolith.Profile{
 		FilterCollection: regolith.FilterCollection{
 			Filters: []regolith.FilterRunner{},
 		},
-		ExportTarget: regolith.ExportTarget{
-			Target: "local",
+		ExportTarget: regolith.ExportTargets{
+			{Target: "local"},
 		},
 	}
 	data, err := json.Marshal(profile)
@@ -292,6 +290,64 @@ func TestRunWithMultipleExactExportTargets(t *testing.T) {
 	}
 	if err := regolith.Run("multi", []string{}, true, "", false); err == nil {
 		t.Fatal("Expected file protection to reject unexpected file in first target")
+	}
+}
+
+func TestRunWithOverlappingExportTargetsFails(t *testing.T) {
+	defer os.Chdir(getWdOrFatal(t))
+
+	tmpDir := prepareTestDirectory(
+		fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixNano()), t)
+	workingDir := filepath.Join(tmpDir, "working-dir")
+	copyFilesOrFatal(minimalProjectPath, workingDir, t)
+
+	config := []byte(`{
+		"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.2.json",
+		"name": "regolith_test_project",
+		"author": "Bedrock-OSS",
+		"packs": {
+			"behaviorPack": "./packs/BP",
+			"resourcePack": "./packs/RP"
+		},
+		"regolith": {
+			"profiles": {
+				"multi": {
+					"filters": [],
+					"export": [
+						{
+							"target": "exact",
+							"rpPath": "../target-a/RP",
+							"bpPath": "../target-a/BP"
+						},
+						{
+							"target": "exact",
+							"rpPath": "../target-b/RP",
+							"bpPath": "../target-a/BP/nested"
+						}
+					]
+				}
+			},
+			"dataPath": "./packs/data"
+		}
+	}`)
+	if err := os.WriteFile(filepath.Join(workingDir, "config.json"), config, 0644); err != nil {
+		t.Fatal("Unable to write overlapping-target config:", err)
+	}
+
+	os.Chdir(workingDir)
+	err := regolith.Run("multi", []string{}, true, "", false)
+	if err == nil {
+		t.Fatal("Expected overlapping export paths to fail")
+	}
+	t.Logf("Got expected export path collision error:\n%v", err)
+	if !strings.Contains(err.Error(), "Export path collision detected") {
+		t.Fatalf("Expected export path collision error, got: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(tmpDir, "target-a")); !os.IsNotExist(err) {
+		t.Fatal("Expected export to fail before creating target-a")
+	}
+	if _, err := os.Stat(filepath.Join(tmpDir, "target-b")); !os.IsNotExist(err) {
+		t.Fatal("Expected export to fail before creating target-b")
 	}
 }
 
