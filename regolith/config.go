@@ -8,7 +8,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const latestCompatibleVersion = "1.7.0"
+const latestCompatibleVersion = "1.8.0"
 
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
 const ConfigFilePath = "config.json"

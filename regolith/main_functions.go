@@ -480,7 +480,7 @@ func Init(debug, force bool, env string) error {
 			ResourceFolder: "./packs/RP",
 		},
 		RegolithProject: RegolithProject{
-			FormatVersion:     "1.7.0",
+			FormatVersion:     "1.8.0",
 			DataPath:          "./packs/data",
 			FilterDefinitions: map[string]FilterInstaller{},
 			Profiles: map[string]Profile{
@@ -503,7 +503,7 @@ func Init(debug, force bool, env string) error {
 	// Add the schema property, this is a little hacky
 	rawJsonData := make(map[string]any, 0)
 	json.Unmarshal(jsonBytes, &rawJsonData)
-	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.7.json"
+	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/unified.json"
 	jsonBytes, _ = json.MarshalIndent(rawJsonData, "", "\t")
 
 	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
