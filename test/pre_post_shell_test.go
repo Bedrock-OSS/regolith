@@ -27,7 +27,7 @@ func TestPrePostShellCommands(t *testing.T) {
 
 	// THE TEST
 	t.Log("Testing the 'regolith run' command with preShell and postShell...")
-	if err := regolith.Run("default", nil, true, "", false); err != nil {
+	if err := regolith.Run("default", nil, true, "", false, false, false); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 

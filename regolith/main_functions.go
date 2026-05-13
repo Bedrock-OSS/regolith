@@ -217,7 +217,7 @@ func InstallAll(force, update, debug, refreshFilters bool, env string) error {
 
 // prepareRunContext prepares the context for the "regolith run" and
 // "regolith watch" commands.
-func prepareRunContext(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool) (*RunContext, error) {
+func prepareRunContext(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool, symlinkExport bool, disableSizeTimeCheck bool) (*RunContext, error) {
 	InitLogging(debug)
 	if err := loadEnvFileFromArg(env); err != nil {
 		return nil, burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
@@ -256,23 +256,25 @@ func prepareRunContext(profileName string, extraFilterArgs []string, debug bool,
 	}
 	path, _ := filepath.Abs(".")
 	return &RunContext{
-		Initial:          true,
-		AbsoluteLocation: path,
-		Config:           config,
-		Parent:           nil,
-		Profile:          profileName,
-		DotRegolithPath:  dotRegolithPath,
-		Settings:         map[string]any{},
-		ExtraArguments:   extraFilterArgs,
-		UnsafeMode:       unsafeMode,
+		Initial:              true,
+		AbsoluteLocation:     path,
+		Config:               config,
+		Parent:               nil,
+		Profile:              profileName,
+		DotRegolithPath:      dotRegolithPath,
+		Settings:             map[string]any{},
+		ExtraArguments:       extraFilterArgs,
+		UnsafeMode:           unsafeMode,
+		SymlinkExport:        symlinkExport,
+		DisableSizeTimeCheck: disableSizeTimeCheck,
 	}, nil
 }
 
 // Run handles the "regolith run" command. It runs selected profile and exports
 // created resource pack and behavior pack to the target destination.
-func Run(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool) error {
+func Run(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool, symlinkExport bool, disableSizeTimeCheck bool) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env, unsafeMode)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env, unsafeMode, symlinkExport, disableSizeTimeCheck)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -295,9 +297,9 @@ func Run(profileName string, extraFilterArgs []string, debug bool, env string, u
 // Watch handles the "regolith watch" command. It watches the project
 // directories, and it runs selected profile and exports created resource pack
 // and behavior pack to the target destination when the project changes.
-func Watch(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool) error {
+func Watch(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool, symlinkExport bool, disableSizeTimeCheck bool) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env, unsafeMode)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env, unsafeMode, symlinkExport, disableSizeTimeCheck)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)

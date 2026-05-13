@@ -263,7 +263,7 @@ func TestRunWithMultipleExactExportTargets(t *testing.T) {
 	}
 
 	os.Chdir(workingDir)
-	if err := regolith.Run("multi", []string{}, true, "", false); err != nil {
+	if err := regolith.Run("multi", []string{}, true, "", false, false, false); err != nil {
 		t.Fatal("First multi-target run failed:", err)
 	}
 
@@ -280,7 +280,7 @@ func TestRunWithMultipleExactExportTargets(t *testing.T) {
 		)
 	}
 
-	if err := regolith.Run("multi", []string{}, true, "", false); err != nil {
+	if err := regolith.Run("multi", []string{}, true, "", false, false, false); err != nil {
 		t.Fatal("Second multi-target run failed safety checks:", err)
 	}
 
@@ -288,7 +288,7 @@ func TestRunWithMultipleExactExportTargets(t *testing.T) {
 	if err := os.WriteFile(unexpectedFile, []byte("not created by regolith"), 0644); err != nil {
 		t.Fatal("Unable to create unexpected target file:", err)
 	}
-	if err := regolith.Run("multi", []string{}, true, "", false); err == nil {
+	if err := regolith.Run("multi", []string{}, true, "", false, false, false); err == nil {
 		t.Fatal("Expected file protection to reject unexpected file in first target")
 	}
 }
@@ -335,7 +335,7 @@ func TestRunWithOverlappingExportTargetsFails(t *testing.T) {
 	}
 
 	os.Chdir(workingDir)
-	err := regolith.Run("multi", []string{}, true, "", false)
+	err := regolith.Run("multi", []string{}, true, "", false, false, false)
 	if err == nil {
 		t.Fatal("Expected overlapping export paths to fail")
 	}
@@ -353,11 +353,6 @@ func TestRunWithOverlappingExportTargetsFails(t *testing.T) {
 
 func TestRunWithMultipleTargetsIgnoresSymlinkExport(t *testing.T) {
 	defer os.Chdir(getWdOrFatal(t))
-	oldExperiments := regolith.EnabledExperiments
-	regolith.EnabledExperiments = []string{"symlink_export"}
-	t.Cleanup(func() {
-		regolith.EnabledExperiments = oldExperiments
-	})
 
 	tmpDir := prepareTestDirectory(
 		fmt.Sprintf("%s-%d", t.Name(), time.Now().UnixNano()), t)
@@ -398,8 +393,8 @@ func TestRunWithMultipleTargetsIgnoresSymlinkExport(t *testing.T) {
 	}
 
 	os.Chdir(workingDir)
-	if err := regolith.Run("multi", []string{}, true, "", false); err != nil {
-		t.Fatal("Multi-target run with symlink_export enabled failed:", err)
+	if err := regolith.Run("multi", []string{}, true, "", false, true, false); err != nil {
+		t.Fatal("Multi-target run with --symlink-export enabled failed:", err)
 	}
 
 	for _, tmpPack := range []string{"BP", "RP"} {
@@ -472,7 +467,7 @@ func TestRunWithLocalAndDevelopmentExportTargets(t *testing.T) {
 	}
 
 	os.Chdir(workingDir)
-	if err := regolith.Run("local_and_development", []string{}, false, "", false); err != nil {
+	if err := regolith.Run("local_and_development", []string{}, false, "", false, false, false); err != nil {
 		t.Fatal("First mixed-target run failed:", err)
 	}
 
@@ -494,7 +489,7 @@ func TestRunWithLocalAndDevelopmentExportTargets(t *testing.T) {
 		t,
 	)
 
-	if err := regolith.Run("local_and_development", []string{}, false, "", false); err != nil {
+	if err := regolith.Run("local_and_development", []string{}, false, "", false, false, false); err != nil {
 		t.Fatal("Second mixed-target run failed safety checks:", err)
 	}
 }

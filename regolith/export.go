@@ -314,7 +314,7 @@ func ExportProject(ctx RunContext) error {
 		return nil
 	}
 	dotRegolithPath := ctx.DotRegolithPath
-	useSymlink := IsExperimentEnabled(SymlinkExport) && len(activeTargets) == 1
+	useSymlink := ctx.SymlinkExport && len(activeTargets) == 1
 	editedFiles := LoadEditedFiles(dotRegolithPath)
 	if !useSymlink && !ctx.UnsafeMode {
 		MeasureStart("Export - CheckDeletionSafety")
@@ -330,7 +330,7 @@ func ExportProject(ctx RunContext) error {
 	for i, exportTarget := range activeTargets {
 		// Symlink export already placed files for the only active target.
 		if useSymlink && i == 0 {
-			Logger.Debugf("SymlinkExport experiment is enabled. Skipping RP and BP export.")
+			Logger.Debugf("Symlink export is enabled. Skipping RP and BP export.")
 		} else {
 			// Move is only safe when there is exactly one active target
 			// and symlink export is off, since tmp/ is the sole source and
@@ -392,7 +392,7 @@ func exportProjectRpAndBp(exportTarget ExportTarget, rpPath, bpPath string, ctx 
 	dotRegolithPath := ctx.DotRegolithPath
 
 	var err error
-	if !IsExperimentEnabled(SizeTimeCheck) {
+	if ctx.DisableSizeTimeCheck {
 		MeasureStart("Export - Clean")
 		if err := removeJunctionSafe(bpPath); err != nil {
 			return burrito.WrapErrorf(
@@ -425,7 +425,7 @@ func exportProjectRpAndBp(exportTarget ExportTarget, rpPath, bpPath string, ctx 
 		wg.Go(func() {
 			Logger.Infof("Exporting %s pack to \"%s\".", packType, packPath)
 			var e error
-			if IsExperimentEnabled(SizeTimeCheck) {
+			if !ctx.DisableSizeTimeCheck {
 				e = SyncDirectories(filepath.Join(absWorkingDir, subpathInTmp), packPath, exportTarget.ReadOnly)
 			} else if allowMove {
 				e = MoveOrCopy(filepath.Join(absWorkingDir, subpathInTmp), packPath, exportTarget.ReadOnly, true)

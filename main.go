@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"github.com/stirante/go-simple-eval/eval"
@@ -292,6 +291,7 @@ func main() {
 	subcommands = append(subcommands, cmdInstallAll)
 
 	// regolith run
+	var symlinkExport, disableSizeTimeCheck bool
 	cmdRun := &cobra.Command{
 		Use:   "run [profile_name]",
 		Short: "Runs Regolith using specified profile",
@@ -305,10 +305,14 @@ func main() {
 			}
 			env, _ := cmd.Flags().GetString("env")
 			unsafe, _ := cmd.Flags().GetBool("unsafe")
-			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe)
+			symlink, _ := cmd.Flags().GetBool("symlink-export")
+			disableStc, _ := cmd.Flags().GetBool("disable-size-time-check")
+			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe, symlink, disableStc)
 		},
 	}
 	cmdRun.Flags().Bool("unsafe", false, "Disables file protection safety checks for faster exports")
+	cmdRun.Flags().BoolVar(&symlinkExport, "symlink-export", false, "Creates links from the tmp directory to the export target so that files written to tmp are immediately reflected in the export location.")
+	cmdRun.Flags().BoolVar(&disableSizeTimeCheck, "disable-size-time-check", false, "Disables the size and modification time check optimization for file exporting.")
 	subcommands = append(subcommands, cmdRun)
 
 	// regolith watch
@@ -325,10 +329,14 @@ func main() {
 			}
 			env, _ := cmd.Flags().GetString("env")
 			unsafe, _ := cmd.Flags().GetBool("unsafe")
-			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe)
+			symlink, _ := cmd.Flags().GetBool("symlink-export")
+			disableStc, _ := cmd.Flags().GetBool("disable-size-time-check")
+			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe, symlink, disableStc)
 		},
 	}
 	cmdWatch.Flags().Bool("unsafe", false, "Disables file protection safety checks for faster exports")
+	cmdWatch.Flags().BoolVar(&symlinkExport, "symlink-export", false, "Creates links from the tmp directory to the export target so that files written to tmp are immediately reflected in the export location.")
+	cmdWatch.Flags().BoolVar(&disableSizeTimeCheck, "disable-size-time-check", false, "Disables the size and modification time check optimization for file exporting.")
 	subcommands = append(subcommands, cmdWatch)
 
 	// regolith apply-filter
@@ -400,20 +408,9 @@ func main() {
 	}
 	subcommands = append(subcommands, cmdUpdateResolvers)
 
-	// Generate the description for the experiments
-	experimentDescs := make([]string, len(regolith.AvailableExperiments))
-	for i, experiment := range regolith.AvailableExperiments {
-		experimentDescs[i] = "- " + experiment.Name + " - " + strings.Trim(experiment.Description, "\n")
-	}
-
-	// add --debug, --timings and --experiment flag to every command
 	for _, cmd := range subcommands {
 		cmd.Flags().BoolVarP(&burrito.PrintStackTrace, "debug", "", false, "Enables debugging")
 		cmd.Flags().BoolVarP(&regolith.EnableTimings, "timings", "", false, "Enables timing information")
-		cmd.Flags().StringSliceVar(
-			&regolith.EnabledExperiments, "experiments", nil,
-			"Enables experimental features. Currently supported experiments:\n"+
-				strings.Join(experimentDescs, "\n"))
 	}
 
 	// Build and run CLI

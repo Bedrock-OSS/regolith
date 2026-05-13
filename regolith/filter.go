@@ -22,15 +22,17 @@ type Filter struct {
 }
 
 type RunContext struct {
-	Initial          bool
-	AbsoluteLocation string
-	Config           *Config
-	Profile          string
-	Parent           *RunContext
-	DotRegolithPath  string
-	Settings         map[string]any
-	ExtraArguments   []string
-	UnsafeMode       bool
+	Initial              bool
+	AbsoluteLocation     string
+	Config               *Config
+	Profile              string
+	Parent               *RunContext
+	DotRegolithPath      string
+	Settings             map[string]any
+	ExtraArguments       []string
+	UnsafeMode           bool
+	SymlinkExport        bool
+	DisableSizeTimeCheck bool
 
 	// interruption is a channel used to receive notifications about changes
 	// in the source files, in order to trigger a restart of the program in
