@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"github.com/stirante/go-simple-eval/eval"
@@ -290,6 +289,7 @@ func main() {
 	subcommands = append(subcommands, cmdInstallAll)
 
 	// regolith run
+	var symlinkExport, disableSizeTimeCheck bool
 	cmdRun := &cobra.Command{
 		Use:   "run [profile_name]",
 		Short: "Runs Regolith using specified profile",
@@ -302,12 +302,15 @@ func main() {
 				extraFilterArgs = args[1:]
 			}
 			env, _ := cmd.Flags().GetString("env")
-			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env)
+			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env, symlinkExport, disableSizeTimeCheck)
 		},
 	}
+	cmdRun.Flags().BoolVar(&symlinkExport, "symlink-export", false, "Creates links from the tmp directory to the export target so that files written to tmp are immediately reflected in the export location.")
+	cmdRun.Flags().BoolVar(&disableSizeTimeCheck, "disable-size-time-check", false, "Disables the size and modification time check optimization for file exporting.")
 	subcommands = append(subcommands, cmdRun)
 
 	// regolith watch
+	var watchSymlinkExport, watchDisableSizeTimeCheck bool
 	cmdWatch := &cobra.Command{
 		Use:   "watch [profile_name]",
 		Short: "Watches project files and automatically runs Regolith when they change",
@@ -320,9 +323,11 @@ func main() {
 				extraFilterArgs = args[1:]
 			}
 			env, _ := cmd.Flags().GetString("env")
-			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env)
+			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env, watchSymlinkExport, watchDisableSizeTimeCheck)
 		},
 	}
+	cmdWatch.Flags().BoolVar(&watchSymlinkExport, "symlink-export", false, "Creates links from the tmp directory to the export target so that files written to tmp are immediately reflected in the export location.")
+	cmdWatch.Flags().BoolVar(&watchDisableSizeTimeCheck, "disable-size-time-check", false, "Disables the size and modification time check optimization for file exporting.")
 	subcommands = append(subcommands, cmdWatch)
 
 	// regolith apply-filter
@@ -394,20 +399,10 @@ func main() {
 	}
 	subcommands = append(subcommands, cmdUpdateResolvers)
 
-	// Generate the description for the experiments
-	experimentDescs := make([]string, len(regolith.AvailableExperiments))
-	for i, experiment := range regolith.AvailableExperiments {
-		experimentDescs[i] = "- " + experiment.Name + " - " + strings.Trim(experiment.Description, "\n")
-	}
-
-	// add --debug, --timings and --experiment flag to every command
+	// add --debug and --timings flag to every command
 	for _, cmd := range subcommands {
 		cmd.Flags().BoolVarP(&burrito.PrintStackTrace, "debug", "", false, "Enables debugging")
 		cmd.Flags().BoolVarP(&regolith.EnableTimings, "timings", "", false, "Enables timing information")
-		cmd.Flags().StringSliceVar(
-			&regolith.EnabledExperiments, "experiments", nil,
-			"Enables experimental features. Currently supported experiments:\n"+
-				strings.Join(experimentDescs, "\n"))
 	}
 
 	// Build and run CLI

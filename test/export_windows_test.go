@@ -88,7 +88,7 @@ func TestMoveFilesAcl(t *testing.T) {
 
 	// THE TEST
 	t.Log("Testing the 'regolith run' command...")
-	err = regolith.Run("dev", true)
+	err = regolith.Run("dev", []string{}, true, "", false, false)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}

@@ -38,7 +38,7 @@ func TestInstallAllAndRun(t *testing.T) {
 	}
 
 	t.Log("Testing the 'regolith run' command...")
-	err = regolith.Run("dev", []string{}, true, "")
+	err = regolith.Run("dev", []string{}, true, "", false, false)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
@@ -78,7 +78,7 @@ func TestDataModifyRemoteFilter(t *testing.T) {
 	}
 
 	t.Log("Testing the 'regolith run' command...")
-	err = regolith.Run("default", []string{}, true, "")
+	err = regolith.Run("default", []string{}, true, "", false, false)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}

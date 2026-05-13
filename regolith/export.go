@@ -255,8 +255,8 @@ func ExportProject(ctx RunContext) error {
 			rpPath, bpPath)
 	}
 	// Export RP and BP if necessary
-	if IsExperimentEnabled(SymlinkExport) {
-		Logger.Debugf("SymlinkExport experiment is enabled. Skipping RP and BP export.")
+	if ctx.SymlinkExportEnabled {
+		Logger.Debugf("Symlink export is enabled. Skipping RP and BP export.")
 	} else {
 		err = exportProjectRpAndBp(profile, rpPath, bpPath, ctx)
 		if err != nil {
@@ -282,7 +282,7 @@ func ExportProject(ctx RunContext) error {
 		return burrito.WrapError(err, updatedFilesDumpError)
 	}
 	// Remove the exported pack paths if they're empty
-	if !IsExperimentEnabled(SymlinkExport) {
+	if !ctx.SymlinkExportEnabled {
 		MeasureStart("Export - Remove Empty Export Paths")
 		for _, packPath := range []string{rpPath, bpPath} {
 			pathEmpty, _ := IsDirEmpty(packPath)
@@ -310,7 +310,7 @@ func exportProjectRpAndBp(profile Profile, rpPath, bpPath string, ctx RunContext
 	var err error
 	// When comparing the size and modification time of the files, we need to
 	// keep the files in target paths.
-	if !IsExperimentEnabled(SizeTimeCheck) {
+	if ctx.DisableSizeTimeCheck {
 		// Clearing output locations
 		MeasureStart("Export - Clean")
 		err = os.RemoveAll(bpPath)
@@ -342,7 +342,7 @@ func exportProjectRpAndBp(profile Profile, rpPath, bpPath string, ctx RunContext
 		wg.Go(func() {
 			Logger.Infof("Exporting %s pack to \"%s\".", packType, packPath)
 			var e error
-			if IsExperimentEnabled(SizeTimeCheck) {
+			if !ctx.DisableSizeTimeCheck {
 				e = SyncDirectories(filepath.Join(dotRegolithPath, tmpPath), packPath, exportTarget.ReadOnly)
 			} else {
 				e = MoveOrCopy(filepath.Join(dotRegolithPath, tmpPath), packPath, exportTarget.ReadOnly, true)

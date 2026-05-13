@@ -119,8 +119,8 @@ func SetupTmpFiles(context RunContext) error {
 	config := *context.Config
 	dotRegolithPath := context.DotRegolithPath
 	start := time.Now()
-	useSizeTimeCheck := IsExperimentEnabled(SizeTimeCheck)
-	useSymlinkExport := IsExperimentEnabled(SymlinkExport)
+	useSizeTimeCheck := !context.DisableSizeTimeCheck
+	useSymlinkExport := context.SymlinkExportEnabled
 	tmpPath := filepath.Join(dotRegolithPath, "tmp")
 	bpTmpPath := filepath.Join(tmpPath, "BP")
 	rpTmpPath := filepath.Join(tmpPath, "RP")
@@ -227,7 +227,7 @@ func SetupTmpFiles(context RunContext) error {
 					}
 				}
 			} else if stats.IsDir() {
-				if useSizeTimeCheck || useSymlinkExport {
+				if useSizeTimeCheck {
 					err = SyncDirectories(path, p, false)
 					if err != nil {
 						return burrito.WrapError(err, "Failed to export behavior pack.")
