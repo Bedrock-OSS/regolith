@@ -417,9 +417,20 @@ func main() {
 	}
 	subcommands = append(subcommands, cmdUpdateResolvers)
 
+	// // Generate the description for the experiments
+	// experimentDescs := make([]string, len(regolith.AvailableExperiments))
+	// for i, experiment := range regolith.AvailableExperiments {
+	// 	experimentDescs[i] = "- " + experiment.Name + " - " + strings.Trim(experiment.Description, "\n")
+	// }
+
+	// add --debug, --timings and --experiment flag to every command
 	for _, cmd := range subcommands {
 		cmd.Flags().BoolVarP(&burrito.PrintStackTrace, "debug", "", false, "Enables debugging")
 		cmd.Flags().BoolVarP(&regolith.EnableTimings, "timings", "", false, "Enables timing information")
+		// cmd.Flags().StringSliceVar(
+		// 	&regolith.EnabledExperiments, "experiments", nil,
+		// 	"Enables experimental features. Currently supported experiments:\n"+
+		// 		strings.Join(experimentDescs, "\n"))
 	}
 
 	// Build and run CLI
