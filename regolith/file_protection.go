@@ -109,6 +109,12 @@ func NewEditedFiles() EditedFiles {
 // listFiles returns a slice of strings with paths to all the files
 // starting from "path"
 func listFiles(path string) ([]string, error) {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return make([]string, 0), nil
+		}
+		return nil, burrito.WrapErrorf(err, osStatErrorAny, path)
+	}
 	// 150 is just an arbitrary number I chose to avoid constant memory
 	// allocation while expanding the slice capacity
 	result := make([]string, 0, 150)

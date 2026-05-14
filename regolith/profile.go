@@ -119,11 +119,14 @@ func SetupTmpFiles(context RunContext) error {
 	config := *context.Config
 	dotRegolithPath := context.DotRegolithPath
 	start := time.Now()
-	useSizeTimeCheck := IsExperimentEnabled(SizeTimeCheck)
-	useSymlinkExport := IsExperimentEnabled(SymlinkExport)
-	tmpPath := filepath.Join(dotRegolithPath, "tmp")
-	bpTmpPath := filepath.Join(tmpPath, "BP")
-	rpTmpPath := filepath.Join(tmpPath, "RP")
+	useSizeTimeCheck := !context.DisableSizeTimeCheck
+	useSymlinkExport := context.SymlinkExport
+	absTmpPath, err := GetAbsoluteWorkingDirectory(dotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
+	bpTmpPath := filepath.Join(absTmpPath, "BP")
+	rpTmpPath := filepath.Join(absTmpPath, "RP")
 
 	// Check if should create symlinks, if yes load bp and rp paths
 	var bpExportPath, rpExportPath string
@@ -133,16 +136,20 @@ func SetupTmpFiles(context RunContext) error {
 		if err != nil {
 			return burrito.WrapErrorf(err, runContextGetProfileError)
 		}
-		bpExportPath, rpExportPath, err = GetExportPaths(profile.ExportTarget, context)
-		if err != nil {
-			return burrito.WrapError(err, getExportPathsError)
-		}
-		if profile.ExportTarget.Target == "none" {
+		activeTargets := profile.activeExportTargets()
+		if len(activeTargets) != 1 {
+			if len(activeTargets) > 1 {
+				Logger.Debugf("Symlink export is enabled but the profile has multiple active export targets. Using regular export.")
+			}
 			useSymlinkExport = false
 		} else {
+			primaryTarget := activeTargets[0]
+			bpExportPath, rpExportPath, err = GetExportPaths(primaryTarget, context)
+			if err != nil {
+				return burrito.WrapError(err, getExportPathsError)
+			}
 			bpLink := isSymlinkTo(bpTmpPath, bpExportPath)
 			rpLink := isSymlinkTo(rpTmpPath, rpExportPath)
-			// If either symlink doesn't exist, create them
 			shouldCreateSymlinks = !bpLink || !rpLink
 		}
 	}
@@ -164,57 +171,61 @@ func SetupTmpFiles(context RunContext) error {
 
 	// Clean the temporary directory
 	isRegularRun := !useSizeTimeCheck && !useSymlinkExport
-	if isRegularRun || shouldCreateSymlinks {
-		Logger.Debugf("Cleaning \"%s\"", tmpPath)
-		err := os.RemoveAll(tmpPath)
+	if isRegularRun {
+		Logger.Debugf("Cleaning \"%s\"", absTmpPath)
+		err := os.RemoveAll(absTmpPath)
 		if err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, tmpPath)
+			return burrito.WrapErrorf(err, osRemoveError, absTmpPath)
+		}
+	} else if shouldCreateSymlinks {
+		for _, tmpPath := range []string{bpTmpPath, rpTmpPath} {
+			if err := removeJunctionSafe(tmpPath); err != nil {
+				return burrito.PassError(err)
+			}
 		}
 	}
 
 	// Prepare temp path root
-	err := os.MkdirAll(tmpPath, 0755)
+	err = os.MkdirAll(absTmpPath, 0755)
 	if err != nil {
-		return burrito.WrapErrorf(err, osMkdirError, tmpPath)
+		return burrito.WrapErrorf(err, osMkdirError, absTmpPath)
 	}
 
 	// Create symlinks
 	if shouldCreateSymlinks {
-		// Check deletion safety
-		editedFiles := LoadEditedFiles(dotRegolithPath)
-		err := editedFiles.CheckDeletionSafety(rpExportPath, bpExportPath)
-		if err != nil {
-			return burrito.WrapErrorf(
-				err,
-				checkDeletionSafetyError,
-				rpExportPath, bpExportPath)
+		if !context.UnsafeMode {
+			editedFiles := LoadEditedFiles(dotRegolithPath)
+			err := editedFiles.CheckDeletionSafety(rpExportPath, bpExportPath)
+			if err != nil {
+				return burrito.WrapErrorf(
+					err,
+					checkDeletionSafetyError,
+					rpExportPath, bpExportPath)
+			}
+		}
+		if err := os.MkdirAll(bpExportPath, 0755); err != nil {
+			return burrito.WrapErrorf(err, osMkdirError, bpExportPath)
+		}
+		if err := os.MkdirAll(rpExportPath, 0755); err != nil {
+			return burrito.WrapErrorf(err, osMkdirError, rpExportPath)
 		}
 
-		// Remove existing exported paths
-		if err := os.RemoveAll(bpExportPath); err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, bpExportPath)
+		if err := createDirLink(filepath.Join(absTmpPath, "BP"), bpExportPath); err != nil {
+			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(absTmpPath, "BP"), bpExportPath)
 		}
-		if err := os.RemoveAll(rpExportPath); err != nil {
-			return burrito.WrapErrorf(err, osRemoveError, rpExportPath)
-		}
-
-		// Create symlinks
-		if err := createDirLink(filepath.Join(tmpPath, "BP"), bpExportPath); err != nil {
-			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(tmpPath, "BP"), bpExportPath)
-		}
-		if err := createDirLink(filepath.Join(tmpPath, "RP"), rpExportPath); err != nil {
-			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(tmpPath, "RP"), rpExportPath)
+		if err := createDirLink(filepath.Join(absTmpPath, "RP"), rpExportPath); err != nil {
+			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(absTmpPath, "RP"), rpExportPath)
 		}
 	}
 
 	// Copy the contents of the 'regolith' folder to '[dotRegolithPath]/tmp'
-	Logger.Debugf("Copying project files to \"%s\"", tmpPath)
+	Logger.Debugf("Copying project files to \"%s\"", absTmpPath)
 	// Avoid repetitive code of preparing ResourceFolder, BehaviorFolder
 	// and DataPath with a closure
 	setupTmpDirectory := func(
 		path, shortName, descriptiveName string,
 	) error {
-		p := filepath.Join(tmpPath, shortName)
+		p := filepath.Join(absTmpPath, shortName)
 		if path != "" {
 			stats, err := os.Stat(path)
 			if err != nil {
@@ -227,7 +238,7 @@ func SetupTmpFiles(context RunContext) error {
 					}
 				}
 			} else if stats.IsDir() {
-				if useSizeTimeCheck || useSymlinkExport {
+				if useSizeTimeCheck {
 					err = SyncDirectories(path, p, false)
 					if err != nil {
 						return burrito.WrapError(err, "Failed to export behavior pack.")
@@ -289,9 +300,7 @@ func SetupTmpFiles(context RunContext) error {
 		editedFiles := NewEditedFiles()
 		err = editedFiles.UpdateFromPaths(rpExportPath, bpExportPath)
 		if err != nil {
-			return burrito.WrapError(
-				err,
-				"Failed to create a list of files safe to edit")
+			return burrito.WrapError(err, updatedFilesUpdateError)
 		}
 		err = editedFiles.Dump(dotRegolithPath)
 		if err != nil {
@@ -464,7 +473,7 @@ func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterColle
 		// Using the same JSON data to create both the filter
 		// definition (installer) and the filter (runner)
 		filterId := fmt.Sprintf("%v:subfilter%v", f.Id, i)
-		filterInstaller, err := FilterInstallerFromObject(filterId, filter)
+		filterInstaller, err := FilterInstallerFromObject(filterId, f.Id, filter)
 		if err != nil {
 			return nil, extraFilterJsonErrorInfo(
 				path, burrito.WrapErrorf(err, jsonPathParseError, jsonPath))
@@ -549,13 +558,28 @@ func (sc *ShellCommands) GetCommandsForCurrentOS() []string {
 	}
 }
 
-// Profile is a collection of filters and an export target
-// When editing, adjust ProfileFromObject function as well
+// Profile is a collection of filters and export targets.
+// When editing, adjust ProfileFromObject function as well.
 type Profile struct {
 	FilterCollection
-	ExportTarget ExportTarget  `json:"export,omitzero"`
+	ExportTarget ExportTargets `json:"export,omitzero"`
 	PreShell     ShellCommands `json:"preShell,omitzero"`
 	PostShell    ShellCommands `json:"postShell,omitzero"`
+}
+
+func (p Profile) exportTargets() ExportTargets {
+	return p.ExportTarget
+}
+
+func (p Profile) activeExportTargets() ExportTargets {
+	targets := p.exportTargets()
+	activeTargets := make(ExportTargets, 0, len(targets))
+	for _, target := range targets {
+		if target.Target != "none" {
+			activeTargets = append(activeTargets, target)
+		}
+	}
+	return activeTargets
 }
 
 func shellCommandsFromObject(obj map[string]any, key string) (ShellCommands, error) {
@@ -653,18 +677,15 @@ func ProfileFromObject(
 		result.Filters = append(result.Filters, filterRunner)
 	}
 	// ExportTarget
-	if _, ok := obj["export"]; !ok {
+	exportValue, ok := obj["export"]
+	if !ok {
 		return result, burrito.WrappedErrorf(jsonPathMissingError, "export")
 	}
-	export, ok := obj["export"].(map[string]any)
-	if !ok {
-		return result, burrito.WrappedErrorf(jsonPathTypeError, "export", "object")
-	}
-	exportTarget, err := ExportTargetFromObject(export)
+	exportTargets, err := ExportTargetsFromObject(exportValue)
 	if err != nil {
-		return result, burrito.WrapErrorf(err, jsonPathParseError, "export")
+		return result, burrito.PassError(err)
 	}
-	result.ExportTarget = exportTarget
+	result.ExportTarget = exportTargets
 	// PreShell and PostShell
 	preShell, err := shellCommandsFromObject(obj, "preShell")
 	if err != nil {

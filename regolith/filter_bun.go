@@ -9,18 +9,18 @@ import (
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 )
 
-type DenoFilterDefinition struct {
+type BunFilterDefinition struct {
 	FilterDefinition
 	Script string `json:"script,omitempty"`
 }
 
-type DenoFilter struct {
+type BunFilter struct {
 	Filter
-	Definition DenoFilterDefinition `json:"-"`
+	Definition BunFilterDefinition `json:"-"`
 }
 
-func DenoFilterDefinitionFromObject(id string, obj map[string]any) (*DenoFilterDefinition, error) {
-	filter := &DenoFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
+func BunFilterDefinitionFromObject(id string, obj map[string]any) (*BunFilterDefinition, error) {
+	filter := &BunFilterDefinition{FilterDefinition: *FilterDefinitionFromObject(id)}
 	scriptObj, ok := obj["script"]
 	if !ok {
 		return nil, burrito.WrappedErrorf(jsonPropertyMissingError, "script")
@@ -34,20 +34,21 @@ func DenoFilterDefinitionFromObject(id string, obj map[string]any) (*DenoFilterD
 	return filter, nil
 }
 
-func (f *DenoFilter) run(context RunContext) error {
+func (f *BunFilter) run(context RunContext) error {
 	absWorkingDir, err := GetAbsoluteWorkingDirectory(context.DotRegolithPath)
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
 	}
-	denoRunner, err := getRunner("deno", "deno")
+	bunRunner, err := getRunner("bun", "bun")
 	if err != nil {
 		return burrito.WrapError(err, getRunnerError)
 	}
+	// Run filter
 	if len(f.Settings) == 0 {
 		err := RunSubProcess(
-			denoRunner,
+			bunRunner,
 			append([]string{
-				"run", "--allow-all",
+				"run",
 				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script},
 				f.Arguments...,
@@ -62,9 +63,9 @@ func (f *DenoFilter) run(context RunContext) error {
 	} else {
 		jsonSettings, _ := json.Marshal(f.Settings)
 		err := RunSubProcess(
-			denoRunner,
+			bunRunner,
 			append([]string{
-				"run", "--allow-all",
+				"run",
 				context.AbsoluteLocation + string(os.PathSeparator) +
 					f.Definition.Script,
 				string(jsonSettings)}, f.Arguments...),
@@ -79,51 +80,69 @@ func (f *DenoFilter) run(context RunContext) error {
 	return nil
 }
 
-func (f *DenoFilter) Run(context RunContext) (bool, error) {
+func (f *BunFilter) Run(context RunContext) (bool, error) {
 	if err := f.run(context); err != nil {
 		return false, burrito.PassError(err)
 	}
 	return context.IsInterrupted(), nil
 }
 
-func (f *DenoFilterDefinition) CreateFilterRunner(runConfiguration map[string]any, id string) (FilterRunner, error) {
+func (f *BunFilterDefinition) CreateFilterRunner(runConfiguration map[string]any, id string) (FilterRunner, error) {
 	basicFilter, err := filterFromObject(runConfiguration, id)
 	if err != nil {
 		return nil, burrito.WrapError(err, filterFromObjectError)
 	}
-	filter := &DenoFilter{
+	filter := &BunFilter{
 		Filter:     *basicFilter,
 		Definition: *f,
 	}
 	return filter, nil
 }
 
-func (f *DenoFilterDefinition) Check(context RunContext) error {
-	denoRunner, err := getRunner("deno", "deno")
+func (f *BunFilterDefinition) Check(context RunContext) error {
+	bunRunner, err := getRunner("bun", "bun")
 	if err != nil {
 		return burrito.WrapError(err, getRunnerError)
 	}
-	_, err = exec.LookPath(denoRunner)
+	_, err = exec.LookPath(bunRunner)
 	if err != nil {
 		return burrito.WrapError(
-			err, "Deno not found, download and install it from"+
-				" https://deno.land/")
+			err, "Bun not found, download and install it from"+
+				" https://bun.com/")
 	}
-	cmd, err := exec.Command(denoRunner, "--version").Output()
+	cmd, err := exec.Command(bunRunner, "--version").Output()
 	if err != nil {
-		return burrito.WrapError(err, "Failed to check Deno version")
+		return burrito.WrapError(err, "Failed to check Bun version")
 	}
 	a := strings.TrimPrefix(strings.Trim(string(cmd), " \n\t"), "v")
-	Logger.Debugf("Found Deno version %s", a)
+	Logger.Debugf("Found Bun version %s", a)
 	return nil
 }
 
-func (f *DenoFilterDefinition) InstallDependencies(
-	parent *RemoteFilterDefinition, dotRegolithPath string,
-) error {
+func (f *BunFilterDefinition) InstallDependencies(parent *RemoteFilterDefinition, dotRegolithPath string) error {
+	installLocation := ""
+	// Install dependencies
+	if parent != nil {
+		installLocation = parent.GetDownloadPath(dotRegolithPath)
+	}
+	Logger.Infof("Downloading dependencies for %s...", f.Id)
+	if hasPackageJson(installLocation) {
+		bunRunner, err := getRunner("bun", "bun")
+		if err != nil {
+			return burrito.WrapError(err, getRunnerError)
+		}
+		Logger.Info("Installing bun dependencies...")
+		err = RunSubProcess(bunRunner, []string{"install", "--silent"}, installLocation, installLocation, ShortFilterName(f.Id))
+		if err != nil {
+			return burrito.WrapErrorf(
+				err, "Failed to run bun and install dependencies."+
+					"\nFilter name: %s", f.Id)
+		}
+	}
+	Logger.Infof("Dependencies for %s installed successfully", f.Id)
 	return nil
 }
 
-func (f *DenoFilter) Check(context RunContext) error {
+func (f *BunFilter) Check(context RunContext) error {
 	return f.Definition.Check(context)
 }

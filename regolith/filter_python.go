@@ -54,7 +54,10 @@ func PythonFilterDefinitionFromObject(id string, obj map[string]any) (*PythonFil
 }
 
 func (f *PythonFilter) run(context RunContext) error {
-	// Run filter
+	absWorkingDir, err := GetAbsoluteWorkingDirectory(context.DotRegolithPath)
+	if err != nil {
+		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
+	}
 	pythonCommand, err := findPython()
 	if err != nil {
 		return burrito.PassError(err)
@@ -94,7 +97,7 @@ func (f *PythonFilter) run(context RunContext) error {
 	}
 	err = RunSubProcess(
 		pythonCommand, args, context.AbsoluteLocation,
-		GetAbsoluteWorkingDirectory(context.DotRegolithPath),
+		absWorkingDir,
 		ShortFilterName(f.Id))
 	if err != nil {
 		return burrito.WrapError(err, "Failed to run Python script.")
@@ -179,9 +182,9 @@ func (f *PythonFilterDefinition) InstallDependencies(
 		Logger.Info("Installing pip dependencies...")
 		requirementsFolder := filepath.Dir(requirementsFile)
 		err = RunSubProcess(
-			filepath.Join(venvPath, venvScriptsPath, "pip"+exeSuffix),
-			[]string{"install", "-r", filepath.Base(requirementsFile)}, requirementsFolder,
-			requirementsFolder, ShortFilterName(f.Id))
+			venvPythonCommand,
+			[]string{"-m", "pip", "install", "-r", filepath.Base(requirementsFile)},
+			requirementsFolder, requirementsFolder, ShortFilterName(f.Id))
 		if err != nil {
 			return burrito.WrapErrorf(
 				err, "Couldn't run Pip to install dependencies of %s",
@@ -238,8 +241,24 @@ func needsVenv(requirementsFilePath string) bool {
 	return false
 }
 
+// findPython returns the Python command to use. If PythonRunner is set in the
+// user config, it uses that value directly. Otherwise, it falls back to
+// trying the platform-specific pythonExeNames list.
 func findPython() (string, error) {
-	var err error
+	pythonRunner, err := getRunner("python", "")
+	if err != nil {
+		return "", burrito.WrapError(err, getRunnerError)
+	}
+	if pythonRunner != "" {
+		_, err = exec.LookPath(pythonRunner)
+		if err == nil {
+			return pythonRunner, nil
+		}
+		return "", burrito.WrappedErrorf(
+			"Python not found at configured path %q, download and install it from "+
+				"https://www.python.org/downloads/", pythonRunner)
+	}
+	// Fallback: try platform-specific executable names
 	for _, c := range pythonExeNames {
 		_, err = exec.LookPath(c)
 		if err == nil {

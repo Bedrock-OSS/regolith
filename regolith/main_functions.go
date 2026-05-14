@@ -217,7 +217,7 @@ func InstallAll(force, update, debug, refreshFilters bool, env string) error {
 
 // prepareRunContext prepares the context for the "regolith run" and
 // "regolith watch" commands.
-func prepareRunContext(profileName string, extraFilterArgs []string, debug bool, env string) (*RunContext, error) {
+func prepareRunContext(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool, symlinkExport bool, disableSizeTimeCheck bool) (*RunContext, error) {
 	InitLogging(debug)
 	if err := loadEnvFileFromArg(env); err != nil {
 		return nil, burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
@@ -256,22 +256,25 @@ func prepareRunContext(profileName string, extraFilterArgs []string, debug bool,
 	}
 	path, _ := filepath.Abs(".")
 	return &RunContext{
-		Initial:          true,
-		AbsoluteLocation: path,
-		Config:           config,
-		Parent:           nil,
-		Profile:          profileName,
-		DotRegolithPath:  dotRegolithPath,
-		Settings:         map[string]any{},
-		ExtraArguments:   extraFilterArgs,
+		Initial:              true,
+		AbsoluteLocation:     path,
+		Config:               config,
+		Parent:               nil,
+		Profile:              profileName,
+		DotRegolithPath:      dotRegolithPath,
+		Settings:             map[string]any{},
+		ExtraArguments:       extraFilterArgs,
+		UnsafeMode:           unsafeMode,
+		SymlinkExport:        symlinkExport,
+		DisableSizeTimeCheck: disableSizeTimeCheck,
 	}, nil
 }
 
 // Run handles the "regolith run" command. It runs selected profile and exports
 // created resource pack and behavior pack to the target destination.
-func Run(profileName string, extraFilterArgs []string, debug bool, env string) error {
+func Run(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool, symlinkExport bool, disableSizeTimeCheck bool) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env, unsafeMode, symlinkExport, disableSizeTimeCheck)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -294,9 +297,9 @@ func Run(profileName string, extraFilterArgs []string, debug bool, env string) e
 // Watch handles the "regolith watch" command. It watches the project
 // directories, and it runs selected profile and exports created resource pack
 // and behavior pack to the target destination when the project changes.
-func Watch(profileName string, extraFilterArgs []string, debug bool, env string) error {
+func Watch(profileName string, extraFilterArgs []string, debug bool, env string, unsafeMode bool, symlinkExport bool, disableSizeTimeCheck bool) error {
 	// Get the context
-	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env)
+	context, err := prepareRunContext(profileName, extraFilterArgs, debug, env, unsafeMode, symlinkExport, disableSizeTimeCheck)
 	defer ShutdownLogging()
 	if err != nil {
 		return burrito.PassError(err)
@@ -479,7 +482,7 @@ func Init(debug, force bool, env string) error {
 			ResourceFolder: "./packs/RP",
 		},
 		RegolithProject: RegolithProject{
-			FormatVersion:     "1.7.0",
+			FormatVersion:     "1.8.0",
 			DataPath:          "./packs/data",
 			FilterDefinitions: map[string]FilterInstaller{},
 			Profiles: map[string]Profile{
@@ -487,10 +490,12 @@ func Init(debug, force bool, env string) error {
 					FilterCollection: FilterCollection{
 						Filters: []FilterRunner{},
 					},
-					ExportTarget: ExportTarget{
-						Target:   "development",
-						Build:    "standard",
-						ReadOnly: false,
+					ExportTarget: ExportTargets{
+						{
+							Target:   "development",
+							Build:    "standard",
+							ReadOnly: false,
+						},
 					},
 				},
 			},
@@ -500,7 +505,7 @@ func Init(debug, force bool, env string) error {
 	// Add the schema property, this is a little hacky
 	rawJsonData := make(map[string]any, 0)
 	json.Unmarshal(jsonBytes, &rawJsonData)
-	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.7.json"
+	rawJsonData["$schema"] = "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/unified.json"
 	jsonBytes, _ = json.MarshalIndent(rawJsonData, "", "\t")
 
 	err = os.WriteFile(ConfigFilePath, jsonBytes, 0644)
@@ -635,7 +640,7 @@ func UpdateResolvers(debug bool, env string) error {
 
 // manageUserConfigPrint is a helper function for ManageConfig used to print
 // the specified value from the user configuration.
-func manageUserConfigPrint(full bool, key string) error {
+func manageUserConfigPrint(full bool, setting string) error {
 	var err error // prevent shadowing
 	configPath := ""
 	userConfig := NewUserConfig()
@@ -653,9 +658,9 @@ func manageUserConfigPrint(full bool, key string) error {
 		fmt.Printf("\nGLOBAL USER CONFIGURATION: %s\n", configPath)
 		userConfig.fillWithFileData(configPath)
 	}
-	result, err := userConfig.stringPropertyValue(key)
+	result, err := userConfig.stringPropertyValue(setting)
 	if err != nil {
-		return burrito.WrapErrorf(err, invalidUserConfigPropertyError, key)
+		return burrito.WrapErrorf(err, invalidUserConfigPropertyError, setting)
 	}
 	result = "\t" + strings.ReplaceAll(result, "\n", "\n\t") // Indent
 	fmt.Println(result)
@@ -692,7 +697,7 @@ func manageUserConfigPrintAll(full bool) error {
 
 // manageUserConfigEdit is a helper function for ManageConfig used to edit
 // the specified value from the user configuration.
-func manageUserConfigEdit(index int, key, value string) error {
+func manageUserConfigEdit(setting string, index int, key, value string) error {
 	configPath, err := getGlobalUserConfigPath()
 	if err != nil {
 		return burrito.WrapError(err, getGlobalUserConfigPathError)
@@ -700,11 +705,18 @@ func manageUserConfigEdit(index int, key, value string) error {
 	Logger.Infof("Editing user configuration.\n\tPath: %s", configPath)
 	userConfig := NewUserConfig()
 	userConfig.fillWithFileData(configPath)
-	switch key {
+
+	// Only list properties can use 'index'
+	if setting != "resolvers" && index != -1 {
+		return burrito.WrappedError(userSettingIncorrectIndexUseError)
+	}
+	// Only map properties can use 'key'
+	if setting != "node_runner_override" && key != "" {
+		return burrito.WrappedError(userSettingIncorrectKeyUseError)
+	}
+
+	switch setting {
 	case "use_project_app_data_storage":
-		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
-		}
 		boolValue, err := strconv.ParseBool(value)
 		if err != nil {
 			return burrito.WrapErrorf(err, "Invalid value for boolean property.\n"+
@@ -712,14 +724,8 @@ func manageUserConfigEdit(index int, key, value string) error {
 		}
 		userConfig.UseProjectAppDataStorage = &boolValue
 	case "username":
-		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
-		}
 		userConfig.Username = &value
 	case "resolver_cache_update_cooldown":
-		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
-		}
 		_, err = time.ParseDuration(value)
 		if err != nil {
 			return burrito.WrapErrorf(err, "Invalid value for duration property.\n"+
@@ -727,9 +733,6 @@ func manageUserConfigEdit(index int, key, value string) error {
 		}
 		userConfig.ResolverCacheUpdateCooldown = &value
 	case "filter_cache_update_cooldown":
-		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
-		}
 		_, err = time.ParseDuration(value)
 		if err != nil {
 			return burrito.WrapErrorf(err, "Invalid value for duration property.\n"+
@@ -757,8 +760,39 @@ func manageUserConfigEdit(index int, key, value string) error {
 				resolversSet[resolver] = struct{}{}
 			}
 		}
+	case "tmp_dir":
+		userConfig.TmpDir = &value
+	case "node_runner_override":
+		if value != "nodejs" && value != "bun" && value != "deno" {
+			return burrito.WrappedErrorf(
+				"Invalid value for node_runner_override property.\n"+
+					"Value: %s\n"+
+					"Allowed values: nodejs, bun, deno", value)
+		}
+		if key == "" {
+			return burrito.WrappedErrorf("Key is required for setting node_runner_override property.")
+		}
+		userConfig.NodeRunnerOverride[key] = value
+	case "bun_runner":
+		userConfig.BunRunner = &value
+	case "deno_runner":
+		userConfig.DenoRunner = &value
+	case "dotnet_runner":
+		userConfig.DotnetRunner = &value
+	case "java_runner":
+		userConfig.JavaRunner = &value
+	case "nim_runner":
+		userConfig.NimRunner = &value
+	case "nimble_runner":
+		userConfig.NimbleRunner = &value
+	case "node_runner":
+		userConfig.NodeRunner = &value
+	case "npm_runner":
+		userConfig.NpmRunner = &value
+	case "python_runner":
+		userConfig.PythonRunner = &value
 	default:
-		return burrito.WrappedErrorf(invalidUserConfigPropertyError, key)
+		return burrito.WrappedErrorf(invalidUserConfigPropertyError, setting)
 	}
 	err = userConfig.dump(configPath)
 	if err != nil {
@@ -769,7 +803,7 @@ func manageUserConfigEdit(index int, key, value string) error {
 
 // manageUserConfigDelete is a helper function for ManageConfig used to delete
 // the specified value from the user configuration.
-func manageUserConfigDelete(index int, key string) error {
+func manageUserConfigDelete(setting string, index int, key string) error {
 	configPath, err := getGlobalUserConfigPath()
 	if err != nil {
 		return burrito.WrapError(err, getGlobalUserConfigPathError)
@@ -777,16 +811,20 @@ func manageUserConfigDelete(index int, key string) error {
 	Logger.Infof("Editing user configuration.\n\tPath: %s", configPath)
 	userConfig := NewUserConfig()
 	userConfig.fillWithFileData(configPath)
-	switch key {
+
+	// Only list properties can use 'index'
+	if setting != "resolvers" && index != -1 {
+		return burrito.WrappedError(userSettingIncorrectIndexUseError)
+	}
+	// Only map properties can use 'key'
+	if setting != "node_runner_override" && key != "" {
+		return burrito.WrappedError(userSettingIncorrectKeyUseError)
+	}
+
+	switch setting {
 	case "use_project_app_data_storage":
-		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
-		}
 		userConfig.UseProjectAppDataStorage = nil
 	case "username":
-		if index != -1 {
-			return burrito.WrappedError("Cannot use --index with non-array property.")
-		}
 		userConfig.Username = nil
 	case "resolvers":
 		if index == -1 {
@@ -799,8 +837,37 @@ func manageUserConfigDelete(index int, key string) error {
 				userConfig.Resolvers[:index],
 				userConfig.Resolvers[index+1:]...)
 		}
+	case "tmp_dir":
+		userConfig.TmpDir = nil
+	case "node_runner_override":
+		// Don't allow deleting everything because it's too destructive, and
+		// it could easily destroy someone's config by accident.
+		if key == "" {
+			return burrito.WrappedErrorf(
+				"Providing <key> is required for deleting elements from the " +
+					"node_runner_override setting.")
+		}
+		delete(userConfig.NodeRunnerOverride, key)
+	case "bun_runner":
+		userConfig.BunRunner = nil
+	case "deno_runner":
+		userConfig.DenoRunner = nil
+	case "dotnet_runner":
+		userConfig.DotnetRunner = nil
+	case "java_runner":
+		userConfig.JavaRunner = nil
+	case "nim_runner":
+		userConfig.NimRunner = nil
+	case "nimble_runner":
+		userConfig.NimbleRunner = nil
+	case "node_runner":
+		userConfig.NodeRunner = nil
+	case "npm_runner":
+		userConfig.NpmRunner = nil
+	case "python_runner":
+		userConfig.PythonRunner = nil
 	default:
-		return burrito.WrappedErrorf(invalidUserConfigPropertyError, key)
+		return burrito.WrappedErrorf(invalidUserConfigPropertyError, setting)
 	}
 	err = userConfig.dump(configPath)
 	if err != nil {
@@ -862,11 +929,10 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string, en
 			if full {
 				return burrito.WrappedError("The --full flag is only valid for printing.")
 			}
-			err = manageUserConfigDelete(index, args[0])
+			err = manageUserConfigDelete(args[0], index, "")
 			if err != nil {
 				return burrito.PassError(err)
 			}
-			return nil
 		} else {
 			if index != -1 {
 				return burrito.WrappedError("The --index flag is not allowed for printing.")
@@ -875,10 +941,32 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string, en
 			if err != nil {
 				return burrito.PassError(err)
 			}
-			return nil
 		}
+		return nil
 	} else if len(args) == 2 {
 		// 2 ARGUMENTS - Set or append
+
+		// Check illegal flags
+		if full {
+			return burrito.WrappedError("The --full flag is only valid for printing.")
+		}
+
+		// Delete
+		if delete {
+			err = manageUserConfigDelete(args[0], index, args[1])
+			if err != nil {
+				return burrito.PassError(err)
+			}
+		} else {
+			// Set or append
+			err = manageUserConfigEdit(args[0], index, "", args[1])
+			if err != nil {
+				return burrito.PassError(err)
+			}
+		}
+		return nil
+	} else if len(args) == 3 {
+		// 3 ARGUMENTS - Set (map property)
 
 		// Check illegal flags
 		if delete {
@@ -887,9 +975,11 @@ func ManageConfig(debug, full, delete, append bool, index int, args []string, en
 		if full {
 			return burrito.WrappedError("The --full flag is only valid for printing.")
 		}
+		if append {
+			return burrito.WrappedError("The --append flag is only valid for array properties.")
+		}
 
-		// Set or append
-		err = manageUserConfigEdit(index, args[0], args[1])
+		err = manageUserConfigEdit(args[0], index, args[1], args[2])
 		if err != nil {
 			return burrito.PassError(err)
 		}

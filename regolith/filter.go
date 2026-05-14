@@ -22,14 +22,17 @@ type Filter struct {
 }
 
 type RunContext struct {
-	Initial          bool
-	AbsoluteLocation string
-	Config           *Config
-	Profile          string
-	Parent           *RunContext
-	DotRegolithPath  string
-	Settings         map[string]any
-	ExtraArguments   []string
+	Initial              bool
+	AbsoluteLocation     string
+	Config               *Config
+	Profile              string
+	Parent               *RunContext
+	DotRegolithPath      string
+	Settings             map[string]any
+	ExtraArguments       []string
+	UnsafeMode           bool
+	SymlinkExport        bool
+	DisableSizeTimeCheck bool
 
 	// interruption is a channel used to receive notifications about changes
 	// in the source files, in order to trigger a restart of the program in
@@ -303,6 +306,12 @@ var filterInstallerFactories = map[string]filterInstallerFactory{
 		},
 		name: "NodeJs",
 	},
+	"bun": {
+		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
+			return BunFilterDefinitionFromObject(id, obj)
+		},
+		name: "Bun",
+	},
 	"python": {
 		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
 			return PythonFilterDefinitionFromObject(id, obj)
@@ -329,8 +338,29 @@ var filterInstallerFactories = map[string]filterInstallerFactory{
 	},
 }
 
-func FilterInstallerFromObject(id string, obj map[string]any) (FilterInstaller, error) {
+// FilterInstallerFromObject creates a FilterInstaller from a JSON object.
+//
+// It uses id as the filter ID, rootId as the remote root ID when applicable,
+// and obj as the JSON definition of the filter. The rootId should be the same
+// as id if the filter is not a remote filter.
+func FilterInstallerFromObject(id, rootId string, obj map[string]any) (FilterInstaller, error) {
 	runWith, _ := obj["runWith"].(string)
+	if runWith == "nodejs" {
+		userConfig, err := getCombinedUserConfig()
+		if err != nil {
+			return nil, burrito.WrapError(err, getUserConfigError)
+		}
+		if userConfig.NodeRunnerOverride != nil {
+			defaultOverride, ok := userConfig.NodeRunnerOverride["*"]
+			if ok {
+				runWith = defaultOverride
+			}
+			override, ok := userConfig.NodeRunnerOverride[rootId]
+			if ok {
+				runWith = override
+			}
+		}
+	}
 	if factory, ok := filterInstallerFactories[runWith]; ok {
 		filter, err := factory.constructor(id, obj)
 		if err != nil {

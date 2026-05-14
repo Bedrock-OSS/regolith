@@ -1,13 +1,14 @@
 package regolith
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"golang.org/x/mod/semver"
 )
 
-const latestCompatibleVersion = "1.7.0"
+const latestCompatibleVersion = "1.8.0"
 
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
 const ConfigFilePath = "config.json"
@@ -35,6 +36,37 @@ type ExportTarget struct {
 	WorldPath string `json:"worldPath,omitempty"`
 	ReadOnly  bool   `json:"readOnly"`        // Whether the exported files should be read-only
 	Build     string `json:"build,omitempty"` // The type of Minecraft build for the 'develop'
+}
+
+// ExportTargets is the config representation of a profile's "export" value.
+// It accepts both the single-object form and the multi-target array
+// form. When marshaling, a single target is written as an object to keep newly
+// generated configs backward compatible with older Regolith versions.
+type ExportTargets []ExportTarget
+
+// IsZero lets json:",omitzero" omit an unset target list.
+func (et ExportTargets) IsZero() bool {
+	return len(et) == 0
+}
+
+func (et ExportTargets) MarshalJSON() ([]byte, error) {
+	if len(et) == 1 {
+		return json.Marshal(et[0])
+	}
+	return json.Marshal([]ExportTarget(et))
+}
+
+func (et *ExportTargets) UnmarshalJSON(data []byte) error {
+	var raw any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	targets, err := ExportTargetsFromObject(raw)
+	if err != nil {
+		return err
+	}
+	*et = targets
+	return nil
 }
 
 // Packs is a part of "config.json" that points to the source behavior and
@@ -176,7 +208,7 @@ func RegolithProjectFromObject(
 					"object")
 			}
 			filterInstaller, err := FilterInstallerFromObject(
-				filterDefinitionName, filterDefinitionMap)
+				filterDefinitionName, filterDefinitionName, filterDefinitionMap)
 			if err != nil {
 				return result, burrito.WrapErrorf(
 					err, jsonPropertyParseError, "filterDefinitions")
@@ -205,6 +237,42 @@ func RegolithProjectFromObject(
 		result.Profiles[profileName] = profileValue
 	}
 	return result, nil
+}
+
+// ExportTargetsFromObject parses the "export" value which can be either a
+// single object (backward compatible) or an array of objects.
+func ExportTargetsFromObject(exportValue any) (ExportTargets, error) {
+	switch v := exportValue.(type) {
+	case map[string]any:
+		et, err := ExportTargetFromObject(v)
+		if err != nil {
+			return nil, burrito.WrapErrorf(err, jsonPropertyParseError, "export")
+		}
+		return ExportTargets{et}, nil
+	case []any:
+		if len(v) == 0 {
+			return nil, burrito.WrappedErrorf(
+				"The \"export\" array must contain at least one entry")
+		}
+		targets := make(ExportTargets, 0, len(v))
+		for i, item := range v {
+			obj, ok := item.(map[string]any)
+			if !ok {
+				return nil, burrito.WrappedErrorf(
+					jsonPathTypeError, fmt.Sprintf("export->%d", i), "object")
+			}
+			et, err := ExportTargetFromObject(obj)
+			if err != nil {
+				return nil, burrito.WrapErrorf(
+					err, jsonPropertyParseError, fmt.Sprintf("export->%d", i))
+			}
+			targets = append(targets, et)
+		}
+		return targets, nil
+	default:
+		return nil, burrito.WrappedErrorf(
+			jsonPropertyTypeError, "export", "object or array")
+	}
 }
 
 // ExportTargetFromObject creates a "ExportTarget" object from

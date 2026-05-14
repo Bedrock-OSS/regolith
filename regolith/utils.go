@@ -103,10 +103,43 @@ func NotImplementedError(text string) error {
 	return burrito.WrappedError(text)
 }
 
-// GetAbsoluteWorkingDirectory returns an absolute path to [dotRegolithPath]/tmp
-func GetAbsoluteWorkingDirectory(dotRegolithPath string) string {
-	absoluteWorkingDir, _ := filepath.Abs(filepath.Join(dotRegolithPath, "tmp"))
-	return absoluteWorkingDir
+// GetWorkingDirectory returns the working directory for Regolith (the tmp path).
+// [dotRegolithPath]/tmp by default or a path from user config, with
+// /tmp appended to it. The returned path is not absolute.
+func GetAbsoluteWorkingDirectory(dotRegolithPath string) (string, error) {
+	userConfig, err := getCombinedUserConfig()
+	if err != nil {
+		return "", burrito.WrapError(err, getUserConfigError)
+	}
+	if userConfig.TmpDir == nil {
+		// Should never happen - getComvinedUserConfig() fills the defaults
+		return "", burrito.WrappedError("tmp_dir is null in user config")
+	}
+	tmpDir := filepath.Join(*userConfig.TmpDir, "tmp")
+	if !filepath.IsAbs(tmpDir) {
+		tmpDir = filepath.Join(dotRegolithPath, tmpDir)
+		absTmpDir, err := filepath.Abs(tmpDir)
+		if err != nil {
+			return "", burrito.WrapErrorf(err, filepathAbsError, tmpDir)
+		}
+		return absTmpDir, nil
+	}
+	// Path is NOT absolute, this means we're using userConfig.TmpDir,
+	// instead of using the 'tmp' folder we use a hash from the Regolith's
+	// working directory to avoid collisions when multiple instances of
+	// Regolith are running.
+
+	// Get the md5 of the current working directory
+	projectDir, err := os.Getwd()
+	if err != nil {
+		return "", burrito.WrapErrorf(err, osGetwdError)
+	}
+	hash := md5.New()
+	hash.Write([]byte(projectDir))
+	hashInBytes := hash.Sum(nil)
+	projectPathHash := hex.EncodeToString(hashInBytes)
+
+	return filepath.Clean(filepath.Join(*userConfig.TmpDir, projectPathHash)), nil
 }
 
 // CreateEnvironmentVariables creates an array of environment variables including custom ones
@@ -461,7 +494,7 @@ func SliceAny[T any](slice []T, predicate func(T) bool) bool {
 
 func isSymlinkTo(path, target string) bool {
 	info, err := os.Lstat(path)
-	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+	if err != nil || info.Mode()&(os.ModeSymlink|os.ModeIrregular) == 0 {
 		return false
 	}
 	dest, err := os.Readlink(path)
@@ -478,7 +511,7 @@ func isSymlinkTo(path, target string) bool {
 
 func isSymlink(path string) bool {
 	info, err := os.Lstat(path)
-	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+	if err != nil || info.Mode()&(os.ModeSymlink|os.ModeIrregular) == 0 {
 		return false
 	}
 	return true

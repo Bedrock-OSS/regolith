@@ -22,6 +22,6 @@ go.uber.org/zap,https://github.com/uber-go/zap/blob/v1.23.0/LICENSE.txt,MIT
 golang.org/x/crypto,https://cs.opensource.google/go/x/crypto/+/v0.1.0:LICENSE,BSD-3-Clause
 golang.org/x/exp,https://cs.opensource.google/go/x/exp/+/aae9b4e6:LICENSE,BSD-3-Clause
 golang.org/x/mod/semver,https://cs.opensource.google/go/x/mod/+/v0.6.0:LICENSE,BSD-3-Clause
-golang.org/x/sync,https://cs.opensource.google/go/x/sync/+/v0.8.0:LICENSE,BSD-3-Clause
+golang.org/x/sync,https://cs.opensource.google/go/x/sync/+/v0.20.0:LICENSE,BSD-3-Clause
 golang.org/x/sys/unix,https://cs.opensource.google/go/x/sys/+/v0.24.0:LICENSE,BSD-3-Clause
 golang.org/x/text,https://cs.opensource.google/go/x/text/+/v0.6.0:LICENSE,BSD-3-Clause

@@ -194,7 +194,7 @@ const (
 	// Error used on attempt to access user config property that is not known
 	// to Regolith.
 	invalidUserConfigPropertyError = "Invalid user configuration property:\n" +
-		"Property name: %s\n"
+		"Property name: %s"
 
 	// Error used when the getGlobalUserConfigPath function fails
 	getGlobalUserConfigPathError = "Failed to get global user_config.json path"
@@ -259,6 +259,8 @@ const (
 		"Resource pack export path: %s\n" +
 		"Behavior pack export path: %s"
 
+	updatedFilesUpdateError = "Failed to create a list of files edited by Regolith."
+
 	updatedFilesDumpError = "Failed to update the list of the files edited by Regolith." +
 		"This may cause the next run to fail."
 
@@ -268,4 +270,16 @@ const (
 
 	loadEnvFileFromArgError = "Failed to the file with environment variables:\n" +
 		"File path: %s"
+
+	getAbsoluteWorkingDirectoryError = "Failed to get the absolute path of the working directory for filter execution."
+
+	// userSettingIncorrectIndexUseError is used when the user tries to use the --index flag with a non-array property
+	// when changing the user settings.
+	userSettingIncorrectIndexUseError = "Cannot use --index with non-array property."
+
+	// userSettingIncorrectKeyUseError is used when the user tries to use the --key flag with a non-map property
+	// when changing the user settings.
+	userSettingIncorrectKeyUseError = "Cannot use <key> with non-map property."
+
+	getRunnerError = "Failed to get the path to filter runner."
 )

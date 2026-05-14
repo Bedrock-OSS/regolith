@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"github.com/stirante/go-simple-eval/eval"
@@ -148,12 +147,14 @@ The behavior of the command changes based on the used flags and the number of pr
 The cheatsheet below shows the possible combinations of flags and arguments and what they do:
 
 Printing all properties:                        regolith config
-Printing specified property:                    regolith config <key>
-Setting property value:                         regolith config <key> <value>
-Deleting a property:                            regolith config <key> --delete
-Appending to a list property:                   regolith config <key> <value> --append
-Replacing item in a list property:              regolith config <key> <value> --index <index>
-Deleting item in a list property:               regolith config <key> --index <index> --delete
+Printing specified property:                    regolith config <setting>
+Setting property value:                         regolith config <setting> <value>
+Deleting a property:                            regolith config <setting> --delete
+Appending to a list property:                   regolith config <setting> <value> --append
+Replacing item in a list property:              regolith config <setting> <value> --index <index>
+Deleting item in a list property:               regolith config <setting> --index <index> --delete
+Setting a value in a map property:             	regolith config <setting> <key> <value>
+Deleting a value in a map property:            	regolith config <setting> <key> --delete
 
 The printing commands can take the --full flag to print configuration with the default values
 included (if they're not defined in the config file). Without the flag, the undefined properties
@@ -226,6 +227,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&envFile, "env", "", "Path to a custom .env file to load")
 
 	var force bool
+	forceDesc := "Force the operation, overriding potential safeguards."
 	// regolith init
 	cmdInit := &cobra.Command{
 		Use:   "init",
@@ -237,10 +239,13 @@ func main() {
 		},
 	}
 	cmdInit.Flags().BoolVarP(
-		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+		&force, "force", "f", false, forceDesc)
 	subcommands = append(subcommands, cmdInit)
 
 	profiles := []string{}
+	// Messages for common flags in 'regolith install' and 'regolith install-all'
+	forceFilterRefreshDesc := "Force filter cache refresh."
+
 	// regolith install
 	var update, resolverRefresh, filterRefresh bool
 	cmdInstall := &cobra.Command{
@@ -260,11 +265,11 @@ func main() {
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
-		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+		&force, "force", "f", false, forceDesc)
 	cmdInstall.Flags().BoolVar(
 		&resolverRefresh, "force-resolver-refresh", false, "Force resolvers refresh.")
 	cmdInstall.Flags().BoolVar(
-		&filterRefresh, "force-filter-refresh", false, "Force filter cache refresh.")
+		&filterRefresh, "force-filter-refresh", false, forceFilterRefreshDesc)
 	cmdInstall.Flags().BoolVarP(
 		&force, "update", "u", false, "An alias for --force flag. Use this flag to update filters.")
 	cmdInstall.Flags().StringSliceVarP(&profiles, "profile", "p", profiles, "Adds installed filters to the specified profiles. If no profile is provided, the filter will be added to the default profile.")
@@ -282,14 +287,20 @@ func main() {
 		},
 	}
 	cmdInstallAll.Flags().BoolVarP(
-		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+		&force, "force", "f", false, forceDesc)
 	cmdInstallAll.Flags().BoolVarP(
 		&update, "update", "u", false, "Updates the remote filters to the latest stable version available.")
 	cmdInstallAll.Flags().BoolVar(
-		&filterRefresh, "force-filter-refresh", false, "Force filter cache refresh.")
+		&filterRefresh, "force-filter-refresh", false, forceFilterRefreshDesc)
 	subcommands = append(subcommands, cmdInstallAll)
 
+	// Messages for common flags in 'regolith run' and 'regolith watch'
+	unsafeDesc := "Disables file protection safety checks for faster exports."
+	symlinkExportDesc := "Creates links from the tmp directory to the export target so that files written to tmp are immediately reflected in the export location."
+	disableSizeTimeCheckDesc := "Disables the size and modification time check optimization for file exporting."
+
 	// regolith run
+	var symlinkExport, disableSizeTimeCheck bool
 	cmdRun := &cobra.Command{
 		Use:   "run [profile_name]",
 		Short: "Runs Regolith using specified profile",
@@ -302,9 +313,15 @@ func main() {
 				extraFilterArgs = args[1:]
 			}
 			env, _ := cmd.Flags().GetString("env")
-			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env)
+			unsafe, _ := cmd.Flags().GetBool("unsafe")
+			symlink, _ := cmd.Flags().GetBool("symlink-export")
+			disableStc, _ := cmd.Flags().GetBool("disable-size-time-check")
+			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe, symlink, disableStc)
 		},
 	}
+	cmdRun.Flags().Bool("unsafe", false, unsafeDesc)
+	cmdRun.Flags().BoolVar(&symlinkExport, "symlink-export", false, symlinkExportDesc)
+	cmdRun.Flags().BoolVar(&disableSizeTimeCheck, "disable-size-time-check", false, disableSizeTimeCheckDesc)
 	subcommands = append(subcommands, cmdRun)
 
 	// regolith watch
@@ -320,9 +337,15 @@ func main() {
 				extraFilterArgs = args[1:]
 			}
 			env, _ := cmd.Flags().GetString("env")
-			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env)
+			unsafe, _ := cmd.Flags().GetBool("unsafe")
+			symlink, _ := cmd.Flags().GetBool("symlink-export")
+			disableStc, _ := cmd.Flags().GetBool("disable-size-time-check")
+			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe, symlink, disableStc)
 		},
 	}
+	cmdWatch.Flags().Bool("unsafe", false, unsafeDesc)
+	cmdWatch.Flags().BoolVar(&symlinkExport, "symlink-export", false, symlinkExportDesc)
+	cmdWatch.Flags().BoolVar(&disableSizeTimeCheck, "disable-size-time-check", false, disableSizeTimeCheckDesc)
 	subcommands = append(subcommands, cmdWatch)
 
 	// regolith apply-filter
@@ -394,20 +417,20 @@ func main() {
 	}
 	subcommands = append(subcommands, cmdUpdateResolvers)
 
-	// Generate the description for the experiments
-	experimentDescs := make([]string, len(regolith.AvailableExperiments))
-	for i, experiment := range regolith.AvailableExperiments {
-		experimentDescs[i] = "- " + experiment.Name + " - " + strings.Trim(experiment.Description, "\n")
-	}
+	// // Generate the description for the experiments
+	// experimentDescs := make([]string, len(regolith.AvailableExperiments))
+	// for i, experiment := range regolith.AvailableExperiments {
+	// 	experimentDescs[i] = "- " + experiment.Name + " - " + strings.Trim(experiment.Description, "\n")
+	// }
 
 	// add --debug, --timings and --experiment flag to every command
 	for _, cmd := range subcommands {
 		cmd.Flags().BoolVarP(&burrito.PrintStackTrace, "debug", "", false, "Enables debugging")
 		cmd.Flags().BoolVarP(&regolith.EnableTimings, "timings", "", false, "Enables timing information")
-		cmd.Flags().StringSliceVar(
-			&regolith.EnabledExperiments, "experiments", nil,
-			"Enables experimental features. Currently supported experiments:\n"+
-				strings.Join(experimentDescs, "\n"))
+		// cmd.Flags().StringSliceVar(
+		// 	&regolith.EnabledExperiments, "experiments", nil,
+		// 	"Enables experimental features. Currently supported experiments:\n"+
+		// 		strings.Join(experimentDescs, "\n"))
 	}
 
 	// Build and run CLI
