@@ -38,7 +38,7 @@ func TestInstallAllAndRun(t *testing.T) {
 	}
 
 	t.Log("Testing the 'regolith run' command...")
-	err = regolith.Run("dev", []string{}, true, "", false, false, false)
+	err = regolith.Run("dev", []string{}, true, "", false, false, true)
 	if err != nil {
 		t.Fatal("'regolith run' failed:", err)
 	}
