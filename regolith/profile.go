@@ -119,8 +119,8 @@ func SetupTmpFiles(context RunContext) error {
 	config := *context.Config
 	dotRegolithPath := context.DotRegolithPath
 	start := time.Now()
-	useSizeTimeCheck := IsExperimentEnabled(SizeTimeCheck)
-	useSymlinkExport := IsExperimentEnabled(SymlinkExport)
+	useSizeTimeCheck := !context.DisableSizeTimeCheck
+	useSymlinkExport := context.SymlinkExport
 	absTmpPath, err := GetAbsoluteWorkingDirectory(dotRegolithPath)
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
@@ -139,7 +139,7 @@ func SetupTmpFiles(context RunContext) error {
 		activeTargets := profile.activeExportTargets()
 		if len(activeTargets) != 1 {
 			if len(activeTargets) > 1 {
-				Logger.Debugf("SymlinkExport experiment is enabled but the profile has multiple active export targets. Using regular export.")
+				Logger.Debugf("Symlink export is enabled but the profile has multiple active export targets. Using regular export.")
 			}
 			useSymlinkExport = false
 		} else {
@@ -238,7 +238,7 @@ func SetupTmpFiles(context RunContext) error {
 					}
 				}
 			} else if stats.IsDir() {
-				if useSizeTimeCheck || useSymlinkExport {
+				if useSizeTimeCheck {
 					err = SyncDirectories(path, p, false)
 					if err != nil {
 						return burrito.WrapError(err, "Failed to export behavior pack.")

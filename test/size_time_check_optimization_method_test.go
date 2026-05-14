@@ -45,13 +45,12 @@ func TestSizeTimeCheckOptimizationCorectness(t *testing.T) {
 	os.Chdir(tmpDir)
 
 	// THE TEST
-	// Enable the experiment
-	regolith.EnabledExperiments = append(regolith.EnabledExperiments, "size_time_check")
+	// Size time check is enabled by default
 
 	// Run the project
 	t.Log("Running Regolith...")
 
-	if err := regolith.Run("default", []string{}, true, "", false); err != nil {
+		if err := regolith.Run("default", []string{}, true, "", false, false, false); err != nil {
 		t.Fatal("'regolith run' failed:", err.Error())
 	}
 	// TEST EVALUATION
@@ -83,8 +82,7 @@ func TestSizeTimeCheckOptimizationSpeed(t *testing.T) {
 	os.Chdir(tmpDir)
 
 	// THE TEST
-	// Enable the experiment
-	regolith.EnabledExperiments = append(regolith.EnabledExperiments, "size_time_check")
+	// Size time check is enabled by default
 
 	// Run the project twice, the second run should be faster
 	runtimes := make([]time.Duration, 0)
@@ -94,7 +92,7 @@ func TestSizeTimeCheckOptimizationSpeed(t *testing.T) {
 
 		// Start the timer
 		start := time.Now()
-		if err := regolith.Run("default", []string{}, true, "", false); err != nil {
+	if err := regolith.Run("default", []string{}, true, "", false, false, false); err != nil {
 			t.Fatal("'regolith run' failed:", err.Error())
 		}
 		// Stop the timer
