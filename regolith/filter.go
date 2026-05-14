@@ -338,7 +338,12 @@ var filterInstallerFactories = map[string]filterInstallerFactory{
 	},
 }
 
-func FilterInstallerFromObject(id string, obj map[string]any) (FilterInstaller, error) {
+// FilterInstallerFromObject creates a FilterInstaller from a JSON object.
+//
+// It uses id as the filter ID, rootId as the remote root ID when applicable,
+// and obj as the JSON definition of the filter. The rootId should be the same
+// as id if the filter is not a remote filter.
+func FilterInstallerFromObject(id, rootId string, obj map[string]any) (FilterInstaller, error) {
 	runWith, _ := obj["runWith"].(string)
 	if runWith == "nodejs" {
 		userConfig, err := getCombinedUserConfig()
@@ -350,7 +355,7 @@ func FilterInstallerFromObject(id string, obj map[string]any) (FilterInstaller, 
 			if ok {
 				runWith = defaultOverride
 			}
-			override, ok := userConfig.NodeRunnerOverride[id]
+			override, ok := userConfig.NodeRunnerOverride[rootId]
 			if ok {
 				runWith = override
 			}

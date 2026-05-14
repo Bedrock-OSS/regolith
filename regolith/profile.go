@@ -473,7 +473,7 @@ func (f *RemoteFilter) subfilterCollection(dotRegolithPath string) (*FilterColle
 		// Using the same JSON data to create both the filter
 		// definition (installer) and the filter (runner)
 		filterId := fmt.Sprintf("%v:subfilter%v", f.Id, i)
-		filterInstaller, err := FilterInstallerFromObject(filterId, filter)
+		filterInstaller, err := FilterInstallerFromObject(filterId, f.Id, filter)
 		if err != nil {
 			return nil, extraFilterJsonErrorInfo(
 				path, burrito.WrapErrorf(err, jsonPathParseError, jsonPath))

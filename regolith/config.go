@@ -208,7 +208,7 @@ func RegolithProjectFromObject(
 					"object")
 			}
 			filterInstaller, err := FilterInstallerFromObject(
-				filterDefinitionName, filterDefinitionMap)
+				filterDefinitionName, filterDefinitionName, filterDefinitionMap)
 			if err != nil {
 				return result, burrito.WrapErrorf(
 					err, jsonPropertyParseError, "filterDefinitions")

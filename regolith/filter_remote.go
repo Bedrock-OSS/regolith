@@ -181,7 +181,7 @@ func (f *RemoteFilterDefinition) InstallDependencies(_ *RemoteFilterDefinition, 
 					"Filter: %s", f.Id)
 		}
 		filterInstaller, err := FilterInstallerFromObject(
-			fmt.Sprintf("%v:subfilter%v", f.Id, i), filter)
+			fmt.Sprintf("%v:subfilter%v", f.Id, i), f.Id, filter)
 		if err != nil {
 			return extraFilterJsonErrorInfo(
 				path, burrito.WrapErrorf(err, jsonPathParseError, jsonPath))
