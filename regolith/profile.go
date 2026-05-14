@@ -243,14 +243,6 @@ func SetupTmpFiles(context RunContext) error {
 					if err != nil {
 						return burrito.WrapError(err, "Failed to export behavior pack.")
 					}
-				} else if useSymlinkExport {
-					err = copy.Copy(
-						path,
-						p,
-						copy.Options{PreserveTimes: false, Sync: true})
-					if err != nil {
-						return burrito.WrapErrorf(err, osCopyError, path, p)
-					}
 				} else {
 					err = copy.Copy(
 						path,
