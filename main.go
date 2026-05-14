@@ -227,6 +227,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&envFile, "env", "", "Path to a custom .env file to load")
 
 	var force bool
+	forceDesc := "Force the operation, overriding potential safeguards."
 	// regolith init
 	cmdInit := &cobra.Command{
 		Use:   "init",
@@ -238,10 +239,13 @@ func main() {
 		},
 	}
 	cmdInit.Flags().BoolVarP(
-		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+		&force, "force", "f", false, forceDesc)
 	subcommands = append(subcommands, cmdInit)
 
 	profiles := []string{}
+	// Messages for common flags in 'regolith install' and 'regolith install-all'
+	forceFilterRefreshDesc := "Force filter cache refresh."
+
 	// regolith install
 	var update, resolverRefresh, filterRefresh bool
 	cmdInstall := &cobra.Command{
@@ -261,11 +265,11 @@ func main() {
 		},
 	}
 	cmdInstall.Flags().BoolVarP(
-		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+		&force, "force", "f", false, forceDesc)
 	cmdInstall.Flags().BoolVar(
 		&resolverRefresh, "force-resolver-refresh", false, "Force resolvers refresh.")
 	cmdInstall.Flags().BoolVar(
-		&filterRefresh, "force-filter-refresh", false, "Force filter cache refresh.")
+		&filterRefresh, "force-filter-refresh", false, forceFilterRefreshDesc)
 	cmdInstall.Flags().BoolVarP(
 		&force, "update", "u", false, "An alias for --force flag. Use this flag to update filters.")
 	cmdInstall.Flags().StringSliceVarP(&profiles, "profile", "p", profiles, "Adds installed filters to the specified profiles. If no profile is provided, the filter will be added to the default profile.")
@@ -283,12 +287,17 @@ func main() {
 		},
 	}
 	cmdInstallAll.Flags().BoolVarP(
-		&force, "force", "f", false, "Force the operation, overriding potential safeguards.")
+		&force, "force", "f", false, forceDesc)
 	cmdInstallAll.Flags().BoolVarP(
 		&update, "update", "u", false, "Updates the remote filters to the latest stable version available.")
 	cmdInstallAll.Flags().BoolVar(
-		&filterRefresh, "force-filter-refresh", false, "Force filter cache refresh.")
+		&filterRefresh, "force-filter-refresh", false, forceFilterRefreshDesc)
 	subcommands = append(subcommands, cmdInstallAll)
+
+	// Messages for common flags in 'regolith run' and 'regolith watch'
+	unsafeDesc := "Disables file protection safety checks for faster exports."
+	symlinkExportDesc := "Creates links from the tmp directory to the export target so that files written to tmp are immediately reflected in the export location."
+	disableSizeTimeCheckDesc := "Disables the size and modification time check optimization for file exporting."
 
 	// regolith run
 	var symlinkExport, disableSizeTimeCheck bool
@@ -310,9 +319,9 @@ func main() {
 			err = regolith.Run(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe, symlink, disableStc)
 		},
 	}
-	cmdRun.Flags().Bool("unsafe", false, "Disables file protection safety checks for faster exports")
-	cmdRun.Flags().BoolVar(&symlinkExport, "symlink-export", false, "Creates links from the tmp directory to the export target so that files written to tmp are immediately reflected in the export location.")
-	cmdRun.Flags().BoolVar(&disableSizeTimeCheck, "disable-size-time-check", false, "Disables the size and modification time check optimization for file exporting.")
+	cmdRun.Flags().Bool("unsafe", false, unsafeDesc)
+	cmdRun.Flags().BoolVar(&symlinkExport, "symlink-export", false, symlinkExportDesc)
+	cmdRun.Flags().BoolVar(&disableSizeTimeCheck, "disable-size-time-check", false, disableSizeTimeCheckDesc)
 	subcommands = append(subcommands, cmdRun)
 
 	// regolith watch
@@ -334,9 +343,9 @@ func main() {
 			err = regolith.Watch(profile, extraFilterArgs, burrito.PrintStackTrace, env, unsafe, symlink, disableStc)
 		},
 	}
-	cmdWatch.Flags().Bool("unsafe", false, "Disables file protection safety checks for faster exports")
-	cmdWatch.Flags().BoolVar(&symlinkExport, "symlink-export", false, "Creates links from the tmp directory to the export target so that files written to tmp are immediately reflected in the export location.")
-	cmdWatch.Flags().BoolVar(&disableSizeTimeCheck, "disable-size-time-check", false, "Disables the size and modification time check optimization for file exporting.")
+	cmdWatch.Flags().Bool("unsafe", false, unsafeDesc)
+	cmdWatch.Flags().BoolVar(&symlinkExport, "symlink-export", false, symlinkExportDesc)
+	cmdWatch.Flags().BoolVar(&disableSizeTimeCheck, "disable-size-time-check", false, disableSizeTimeCheckDesc)
 	subcommands = append(subcommands, cmdWatch)
 
 	// regolith apply-filter
