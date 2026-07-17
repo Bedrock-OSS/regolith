@@ -51,6 +51,8 @@ jobs:
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         with:
           distribution: goreleaser
           version: latest
