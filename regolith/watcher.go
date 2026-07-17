@@ -1,6 +1,7 @@
 package regolith
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -85,11 +86,25 @@ func (d *DirWatcher) watch() error {
 	}
 	d.watcher = watcher
 	for _, root := range d.roots {
-		// We have to manually signal to fsnotify that it should recursively watch this
-		// path by using "/..." or "\...".
-		recursiveRoot := filepath.Join(root, "...")
-		if err := d.watcher.Add(recursiveRoot); err != nil {
+		// Add the root directory itself first
+		if err := d.watcher.Add(root); err != nil {
 			return burrito.WrapErrorf(err, "Could not start watching `%s`", root)
+		}
+		
+		// Manually walk and add subdirectories for macOS compatibility
+		err := filepath.WalkDir(root, func(path string, info os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() && path != root {
+				if err := d.watcher.Add(path); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return burrito.WrapErrorf(err, "Could not recursively watch `%s`", root)
 		}
 	}
 	return nil
