@@ -478,8 +478,8 @@ func Init(debug, force bool, env string) error {
 		Name:   "Project name",
 		Author: *userConfig.Username,
 		Packs: Packs{
-			BehaviorFolder: "./packs/BP",
-			ResourceFolder: "./packs/RP",
+			BehaviorPacks: []Pack{{Name: "BP", Source: "./packs/BP"}},
+			ResourcePacks: []Pack{{Name: "RP", Source: "./packs/RP"}},
 		},
 		RegolithProject: RegolithProject{
 			FormatVersion:     "1.8.0",

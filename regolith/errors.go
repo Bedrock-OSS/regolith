@@ -248,6 +248,19 @@ const (
 		"Version in config: %s\n" +
 		"Latest compatible version: %s"
 
+	// Error when a packs map is used on a formatVersion that predates 1.9.0.
+	multiPackVersionError = "Multiple packs require formatVersion 1.9.0 or " +
+		"higher.\nJSON property: %s"
+
+	// Error when both the singular and plural pack forms are present.
+	packsMixedFormError = "Cannot use both %q and %q in the \"packs\" object. " +
+		"Use only one of them."
+
+	// Error for an invalid pack name key in the packs map.
+	packKeyInvalidError = "Invalid pack name %q in %q.\n" +
+		"Pack names must be \"BP\"/\"RP\" or \"BP1\", \"BP2\", ... " +
+		"(\"BP0\"/\"RP0\" are not allowed)."
+
 	// Error used when createDirLink fails
 	createDirLinkError = "Failed to create directory link.\nSource: %s\nTarget: %s"
 
@@ -282,4 +295,8 @@ const (
 	userSettingIncorrectKeyUseError = "Cannot use <key> with non-map property."
 
 	getRunnerError = "Failed to get the path to filter runner."
+
+	// Error when an "exact" export target has no path for a given pack.
+	exactPathMissingError = "No \"exact\" export path configured for pack %q.\n" +
+		"Add it to the %q map of the export target."
 )

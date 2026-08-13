@@ -97,6 +97,38 @@ func (f *EditedFiles) UpdateFromPaths(rpPath string, bpPath string) error {
 	return nil
 }
 
+// CheckPackDeletionSafety runs the deletion-safety check for a single pack
+// directory. packType is "bp" or "rp".
+func (f *EditedFiles) CheckPackDeletionSafety(packType, path string) error {
+	files := f.packFiles(packType)[path]
+	if files == nil {
+		files = make([]string, 0)
+	}
+	if err := checkDeletionSafety(path, files); err != nil {
+		return burrito.WrapErrorf(
+			err, "Deletion safety check for %s pack failed.", packType)
+	}
+	return nil
+}
+
+// UpdatePackFromPath records the current file list of a single pack directory.
+// packType is "bp" or "rp".
+func (f *EditedFiles) UpdatePackFromPath(packType, path string) error {
+	files, err := listFiles(path)
+	if err != nil {
+		return burrito.WrapErrorf(err, "Failed to list %s pack files.", packType)
+	}
+	f.packFiles(packType)[path] = files
+	return nil
+}
+
+func (f *EditedFiles) packFiles(packType string) map[string]filesList {
+	if packType == "rp" {
+		return f.Rp
+	}
+	return f.Bp
+}
+
 // NewEditedFiles creates new EditedFiles object with lists of the files from
 // rpPath and bpPath.
 func NewEditedFiles() EditedFiles {
