@@ -1,0 +1,9 @@
+{
+	"description": "Writes a marker file with the version of the package into BP",
+	"filters": [
+		{
+			"runWith": "nodejs",
+			"script": "./filter.js"
+		}
+	]
+}
