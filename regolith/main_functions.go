@@ -34,6 +34,12 @@ var disallowedFiles = []string{
 // version tag. If "filter-version" is not specified, the filter will be
 // installed with the latest version or HEAD if there is no valid version tags.
 //
+// A filter from an npm registry is given as npm:<package>==<version> or
+// npm:<package> (npm:<package>@<version> works too). Its version is an exact
+// version, a semver range or a dist-tag; "HEAD" isn't valid for it. Without a
+// version, the exact version that "latest" resolves to is written to the
+// config. The filter is added under the package name without its scope.
+//
 // The "force" parameter is a boolean that determines if the installation
 // should be forced even if the filter is already installed.
 //
@@ -46,8 +52,14 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
 	Logger.Info("Installing filters...")
+	// Git is only needed for the filters hosted in Git repositories
 	if !hasGit() {
-		Logger.Warn(gitNotInstalledWarning)
+		for _, filter := range filters {
+			if !strings.HasPrefix(filter, "npm:") {
+				Logger.Warn(gitNotInstalledWarning)
+				break
+			}
+		}
 	}
 	config, err := LoadConfigAsMap()
 	if err != nil {
@@ -106,6 +118,16 @@ func Install(filters []string, force, refreshResolvers, refreshFilters bool, pro
 	// Convert to filter definitions for download
 	filterInstallers := make(map[string]FilterInstaller, 0)
 	for _, parsedArg := range parsedArgs {
+		if parsedArg.npmPackage != "" {
+			// Get the filter definition from the npm registry
+			npmFilterDefinition, err := NpmFilterDefinitionFromTheRegistry(
+				parsedArg.npmPackage, parsedArg.name, parsedArg.version)
+			if err != nil {
+				return burrito.PassError(err)
+			}
+			filterInstallers[parsedArg.name] = npmFilterDefinition
+			continue
+		}
 		// Get the filter definition from the Internet
 		remoteFilterDefinition, err := FilterDefinitionFromTheInternet(
 			parsedArg.url, parsedArg.name, parsedArg.version)

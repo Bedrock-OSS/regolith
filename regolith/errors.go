@@ -187,6 +187,14 @@ const (
 		"\"npm\" and the \"url\" properties.\n" +
 		"Filter: %s"
 
+	// Error used when a "regolith install npm:<package>" argument can't be
+	// parsed
+	npmInstallArgError = "Unable to parse argument.\n" +
+		"Argument: %s\n" +
+		"The argument should be \"npm:<package>\" optionally followed by a " +
+		"version specification separated by \"==\" (for example " +
+		"\"npm:@scope/name==1.0.0\")."
+
 	// Error used when exec.Command fails.
 	execCommandError = "Failed to execute command.\nCommand: %s"
 

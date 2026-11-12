@@ -106,6 +106,16 @@ func NpmFilterDefinitionFromTheRegistry(
 	return result, nil
 }
 
+// npmPackageFilterName returns the name under which a package is added to
+// the filter definitions by "regolith install npm:<package>": the package
+// name without its scope.
+func npmPackageFilterName(npmPackage string) string {
+	if i := strings.LastIndex(npmPackage, "/"); i >= 0 {
+		return npmPackage[i+1:]
+	}
+	return npmPackage
+}
+
 // isExactNpmVersion returns whether version is a single semantic version, as
 // opposed to a range or a dist-tag that has to be resolved on the registry.
 func isExactNpmVersion(version string) bool {
@@ -565,4 +575,27 @@ func extractNpmTarball(tarballPath, destPath string) error {
 		}
 	}
 	return nil
+}
+
+// parseNpmInstallArg parses the "<package>[==<version>]" part of a
+// "regolith install npm:<package>" argument into the package name and the
+// version specification. A version can also be given npm-style after an
+// "@" that isn't the scope marker ("@scope/name@1.0.0").
+func parseNpmInstallArg(arg, spec string) (npmPackage, version string, err error) {
+	if strings.Contains(spec, "==") {
+		splitStr := strings.Split(spec, "==")
+		if len(splitStr) != 2 {
+			return "", "", burrito.WrappedErrorf(npmInstallArgError, arg)
+		}
+		npmPackage, version = splitStr[0], splitStr[1]
+	} else {
+		npmPackage = spec
+		if i := strings.LastIndex(spec, "@"); i > 0 {
+			npmPackage, version = spec[:i], spec[i+1:]
+		}
+	}
+	if npmPackage == "" || npmPackage == "@" || strings.HasSuffix(npmPackage, "/") {
+		return "", "", burrito.WrappedErrorf(npmInstallArgError, arg)
+	}
+	return npmPackage, version, nil
 }

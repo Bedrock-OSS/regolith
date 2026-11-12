@@ -507,6 +507,66 @@ func TestNpmFilterUpdate(t *testing.T) {
 	}
 }
 
+// TestNpmFilterInstallCommand installs a filter with
+// 'regolith install npm:<package>' and checks the config.json it writes.
+func TestNpmFilterInstallCommand(t *testing.T) {
+	defer os.Chdir(getWdOrFatal(t))
+	registry := startFakeNpmRegistry(t, "1.0.0", "1.1.0")
+	setupNpmTestEnvironment(t, registry)
+	tmpDir := prepareTestDirectory("TestNpmFilterInstallCommand", t)
+	workingDir := filepath.Join(tmpDir, "working-dir")
+	copyFilesOrFatal(freshProjectPath, workingDir, t)
+	os.Chdir(workingDir)
+
+	// Without a version, the latest published version is locked in
+	err := regolith.Install(
+		[]string{"npm:" + npmFilterPackageName}, false, false, false,
+		[]string{"default"}, true, "")
+	if err != nil {
+		t.Fatal("'regolith install' failed:", err)
+	}
+	configMap, err := regolith.LoadConfigAsMap()
+	if err != nil {
+		t.Fatal(err)
+	}
+	definition, err := regolith.FindByJSONPath[map[string]any](
+		configMap, "regolith/filterDefinitions/"+npmFilterId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if definition["npm"] != npmFilterPackageName || definition["version"] != "1.1.0" {
+		t.Fatalf("Unexpected filter definition: %v", definition)
+	}
+	if version := readInstalledNpmFilterVersion(t); version != "1.1.0" {
+		t.Fatalf("Expected version 1.1.0, got %q", version)
+	}
+	// The filter was added to the profile
+	filters, err := regolith.FindByJSONPath[[]any](
+		configMap, "regolith/profiles/default/filters")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filters) != 1 || filters[0].(map[string]any)["filter"] != npmFilterId {
+		t.Fatalf("The filter should be added to the profile, got %v", filters)
+	}
+	// Installing it again is refused without --force
+	err = regolith.Install(
+		[]string{"npm:" + npmFilterPackageName}, false, false, false, nil, true, "")
+	if err == nil {
+		t.Fatal("'regolith install' should refuse to install an installed filter")
+	}
+	// With --force and a version, the version is kept as written
+	err = regolith.Install(
+		[]string{"npm:" + npmFilterPackageName + "==1.0.0"}, true, false, false,
+		nil, true, "")
+	if err != nil {
+		t.Fatal("'regolith install --force' failed:", err)
+	}
+	if version := readInstalledNpmFilterVersion(t); version != "1.0.0" {
+		t.Fatalf("Expected version 1.0.0, got %q", version)
+	}
+}
+
 // TestNpmFilterAuth runs against a registry that demands a token. Without
 // the token, the install fails with npm's 401 and Regolith's hint about the
 // .npmrc files; with the token in the project's .npmrc, npm sends it on

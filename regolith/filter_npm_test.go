@@ -413,6 +413,77 @@ func TestNpmErrorHint(t *testing.T) {
 	}
 }
 
+func TestParseNpmInstallArg(t *testing.T) {
+	cases := []struct {
+		spec        string
+		wantPackage string
+		wantVersion string
+		wantErr     bool
+	}{
+		{spec: "@scope/name", wantPackage: "@scope/name"},
+		{spec: "@scope/name==1.0.0", wantPackage: "@scope/name", wantVersion: "1.0.0"},
+		{spec: "@scope/name@1.0.0", wantPackage: "@scope/name", wantVersion: "1.0.0"},
+		{spec: "name@^1.0.0", wantPackage: "name", wantVersion: "^1.0.0"},
+		{spec: "name==latest", wantPackage: "name", wantVersion: "latest"},
+		{spec: "name", wantPackage: "name"},
+		{spec: "", wantErr: true},
+		{spec: "@", wantErr: true},
+		{spec: "@scope/", wantErr: true},
+		{spec: "a==b==c", wantErr: true},
+	}
+	for _, c := range cases {
+		pkg, version, err := parseNpmInstallArg("npm:"+c.spec, c.spec)
+		if c.wantErr {
+			if err == nil {
+				t.Errorf("parseNpmInstallArg(%q): expected an error", c.spec)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("parseNpmInstallArg(%q): unexpected error %v", c.spec, err)
+		} else if pkg != c.wantPackage || version != c.wantVersion {
+			t.Errorf("parseNpmInstallArg(%q) = %q, %q; want %q, %q",
+				c.spec, pkg, version, c.wantPackage, c.wantVersion)
+		}
+	}
+}
+
+func TestNpmPackageFilterName(t *testing.T) {
+	if npmPackageFilterName("@scope/name") != "name" {
+		t.Fatal("The scope should be stripped")
+	}
+	if npmPackageFilterName("name") != "name" {
+		t.Fatal("An unscoped name should be kept")
+	}
+}
+
+func TestParseInstallFilterArgs_Npm(t *testing.T) {
+	// npm arguments don't touch the resolvers, so no network is needed
+	parsed, err := parseInstallFilterArgs(
+		[]string{"npm:@scope/my-filter==1.2.3", "npm:other"}, false)
+	if err != nil {
+		t.Fatalf("parseInstallFilterArgs failed: %v", err)
+	}
+	if len(parsed) != 2 {
+		t.Fatalf("Expected 2 parsed arguments, got %d", len(parsed))
+	}
+	if parsed[0].npmPackage != "@scope/my-filter" || parsed[0].name != "my-filter" ||
+		parsed[0].version != "1.2.3" || parsed[0].url != "" {
+		t.Fatalf("Unexpected parsed argument: %+v", parsed[0])
+	}
+	if parsed[1].npmPackage != "other" || parsed[1].name != "other" || parsed[1].version != "" {
+		t.Fatalf("Unexpected parsed argument: %+v", parsed[1])
+	}
+	_, err = parseInstallFilterArgs([]string{"npm:x", "npm:x==1.0.0"}, false)
+	if err == nil {
+		t.Fatal("Expected an error for a duplicate filter")
+	}
+	_, err = parseInstallFilterArgs([]string{"npm:"}, false)
+	if err == nil {
+		t.Fatal("Expected an error for an empty package name")
+	}
+}
+
 func TestNpmSaveAndLoadVersionInfo(t *testing.T) {
 	dotRegolith := filepath.Join(t.TempDir(), ".regolith")
 	def := &NpmFilterDefinition{

@@ -57,6 +57,8 @@ the following forms:
 - <FILTER_NAME>==<VERSION>
 - <FILTER_URL>
 - <FILTER_URL>==<VERSION>
+- npm:<PACKAGE>
+- npm:<PACKAGE>==<VERSION>
 
 Where:
 - <FILTER_NAME> is the name of the filter to be resolved to URL using the Bedrock-OSS filter
@@ -89,6 +91,17 @@ Where:
   If no <VERSION> is specified, Regolith tries to download the filter using "latest" mode first, and
   when it fails (due to not being able to find any tags that refer to the version of the filter on
   the repository), it tries to download using "HEAD".
+- npm:<PACKAGE> installs a filter published to an npm registry (for example "npm:@scope/my-filter").
+  The package must have the "filter.json" file in its root. npm downloads it with the registry and
+  the credentials of the ".npmrc" files that "npm install" would use in the project, so a private
+  registry needs no configuration in Regolith. The filter is added to "config.json" under the
+  package name without its scope, with the "npm" property in place of "url".
+
+  The <VERSION> of an npm package is an exact version (like 1.2.3), a semver range (like ^1.2.0)
+  or a dist-tag (like "latest"); a range or a tag is resolved to the highest published version
+  that matches it whenever the filter is installed. The SHA, "HEAD" and tag forms of the Git
+  filters don't apply. Without a <VERSION>, the exact version that "latest" resolves to is written
+  to "config.json". The npm-style form "npm:<PACKAGE>@<VERSION>" is accepted as well.
 
 The "regolith install" combined with the "--force" flag can be used to change/update filters saved
 in the "config.json".
