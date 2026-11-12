@@ -73,7 +73,8 @@ type UserConfig struct {
 	// NodeRunner is optional path for Regolith to look for Node to run filters.
 	NodeRunner *string `json:"node_runner,omitempty"`
 
-	// NpmRunner is optional path for Regolith to look for Npm to install Node dependencies.
+	// NpmRunner is optional path for Regolith to look for Npm to install Node dependencies
+	// and to download filters from npm registries.
 	NpmRunner *string `json:"npm_runner,omitempty"`
 
 	// PythonRunner is optional path for Regolith to look for Python to run

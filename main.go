@@ -105,6 +105,10 @@ to make sure that your local copies of the filters is up to date.
 By default, the filters that are already installed with a correct version are ignored. You can
 change that by using the "--force" flag. "regolith install-all --force" forcefully reinstalls every
 filter on the project.
+
+With the "--update" flag, the filters are updated to their latest versions and the "config.json"
+file is updated with the new versions: Git filters to the latest version tag of their repository,
+and filters from npm registries to the exact version that the "latest" dist-tag resolves to.
 `
 const regolithInitDesc = `
 Initializes a new Regolith project in the current directory. The folder used for a new project must

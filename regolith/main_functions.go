@@ -156,13 +156,19 @@ func InstallAll(force, update, debug, refreshFilters bool, env string) error {
 		return burrito.WrapErrorf(err, loadEnvFileFromArgError, env)
 	}
 	Logger.Info("Installing filters...")
-	if !hasGit() {
-		Logger.Warn(gitNotInstalledWarning)
-	}
 	configMap, err1 := LoadConfigAsMap()
 	config, err2 := ConfigFromObject(configMap)
 	if err := firstErr(err1, err2); err != nil {
 		return burrito.WrapError(err, "Failed to load config.json.")
+	}
+	// Git is only needed for the filters hosted in Git repositories
+	if !hasGit() {
+		for _, filterDefinition := range config.FilterDefinitions {
+			if _, ok := filterDefinition.(*RemoteFilterDefinition); ok {
+				Logger.Warn(gitNotInstalledWarning)
+				break
+			}
+		}
 	}
 	// Get dotRegolithPath
 	dotRegolithPath, err := GetDotRegolith(".")
@@ -189,6 +195,15 @@ func InstallAll(force, update, debug, refreshFilters bool, env string) error {
 				if err != nil {
 					return burrito.PassError(err)
 				}
+				filtersToInstall[filterName] = filterInstaller
+				remoteFilters[filterName] = filterInstaller
+			case *NpmFilterDefinition:
+				filterInstaller, err := NpmFilterDefinitionFromTheRegistry(
+					fd.Package, fd.Id, "")
+				if err != nil {
+					return burrito.PassError(err)
+				}
+				filterInstaller.VenvSlot = fd.VenvSlot
 				filtersToInstall[filterName] = filterInstaller
 				remoteFilters[filterName] = filterInstaller
 			default:

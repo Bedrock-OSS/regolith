@@ -52,6 +52,12 @@ func installFilters(
 			if err != nil {
 				return burrito.WrapErrorf(err, remoteFilterDownloadError, name)
 			}
+		} else if npmFilter, ok := filterDefinition.(*NpmFilterDefinition); ok {
+			// Download the npm filter, and its dependencies
+			err := npmFilter.Update(force, dotRegolithPath, dataPath, refreshFilters)
+			if err != nil {
+				return burrito.WrapErrorf(err, remoteFilterDownloadError, name)
+			}
 		} else {
 			// Non-remote filters must always update their dependencies.
 			// TODO - add option to track if the filter already installed

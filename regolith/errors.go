@@ -134,6 +134,59 @@ const (
 	// Error used when remote filter fails to download
 	remoteFilterDownloadError = "Failed to download filter.\nFilter: %s"
 
+	// Error used when npm can't be found for downloading a filter from an
+	// npm registry
+	npmNotInstalledError = "npm is not installed or can't be found.\n" +
+		"npm is required to download filters from npm registries.\n" +
+		"npm runner: %s\n" +
+		"You can download Node.js, which includes npm, from " +
+		"https://nodejs.org/\n" +
+		"If npm is installed outside of the PATH, point the \"npm_runner\" " +
+		"property of the user configuration at it."
+
+	// Error used when a command of npm fails
+	npmCommandError = "Failed to run npm.\nCommand: %s\n" +
+		"npm output:\n%s\n%s"
+
+	// Error used when the version of a filter from an npm registry can't be
+	// resolved to an exact version
+	npmResolveVersionError = "Failed to resolve the version of the npm " +
+		"package.\nPackage: %s"
+
+	// Error used when no version of the package matches the version
+	// specification of a filter from an npm registry
+	npmNoMatchingVersionError = "No published version of the package " +
+		"satisfies the version specification.\n" +
+		"Package: %s\nVersion: %s"
+
+	// Error used when the download of a filter from an npm registry fails
+	npmPackError = "Failed to download the package from the npm registry.\n" +
+		"Package: %s"
+
+	// Error used when a package from an npm registry isn't a filter
+	npmFilterMissingFilterJsonError = "The npm package doesn't contain a " +
+		"\"filter.json\" file in its root.\n" +
+		"Package: %s\n" +
+		"A filter published to an npm registry must have its " +
+		"\"filter.json\" in the root of the package."
+
+	// Error used when an entry of a package tarball points outside of the
+	// extraction directory
+	npmTarballEntryEscapesError = "The package tarball contains an entry " +
+		"that would be extracted outside of the package directory.\n" +
+		"Tarball: %s\nEntry: %s"
+
+	// Error used when a filter from an npm registry uses the "HEAD" version
+	npmFilterHeadVersionError = "The \"HEAD\" version isn't supported for " +
+		"filters from npm registries.\n" +
+		"Filter: %s\n" +
+		"Use an exact version, a version range or a dist-tag like \"latest\"."
+
+	// Error used when a filter definition has both "npm" and "url"
+	npmFilterUrlConflictError = "A filter definition can't have both the " +
+		"\"npm\" and the \"url\" properties.\n" +
+		"Filter: %s"
+
 	// Error used when exec.Command fails.
 	execCommandError = "Failed to execute command.\nCommand: %s"
 
