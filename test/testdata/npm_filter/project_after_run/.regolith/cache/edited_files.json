@@ -1,0 +1,13 @@
+{
+	"rp": {
+		"build/npm_filter_test_project_rp/": [
+			"manifest.json"
+		]
+	},
+	"bp": {
+		"build/npm_filter_test_project_bp/": [
+			"manifest.json",
+			"npm_filter_marker.json"
+		]
+	}
+}
