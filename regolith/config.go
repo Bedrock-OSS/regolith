@@ -3,12 +3,15 @@ package regolith
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"sort"
+	"strconv"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
 	"golang.org/x/mod/semver"
 )
 
-const latestCompatibleVersion = "1.8.0"
+const latestCompatibleVersion = "1.9.0"
 
 const StandardLibraryUrl = "github.com/Bedrock-OSS/regolith-filters"
 const ConfigFilePath = "config.json"
@@ -19,7 +22,7 @@ const GitIgnore = "/build\n/.regolith"
 type Config struct {
 	Name            string `json:"name,omitempty"`
 	Author          string `json:"author,omitempty"`
-	Packs           `json:"packs,omitzero"`
+	Packs           Packs  `json:"packs,omitzero"`
 	RegolithProject `json:"regolith,omitzero"`
 }
 
@@ -27,15 +30,19 @@ type Config struct {
 // for a profile, which denotes where compiled files will go.
 // When editing, adjust ExportTargetFromObject function as well.
 type ExportTarget struct {
-	Target    string `json:"target,omitempty"` // The mode of exporting. "develop" or "exact"
-	RpPath    string `json:"rpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
-	BpPath    string `json:"bpPath,omitempty"` // Relative or absolute path to resource pack for "exact" export target
-	RpName    string `json:"rpName,omitempty"`
-	BpName    string `json:"bpName,omitempty"`
-	WorldName string `json:"worldName,omitempty"`
-	WorldPath string `json:"worldPath,omitempty"`
-	ReadOnly  bool   `json:"readOnly"`        // Whether the exported files should be read-only
-	Build     string `json:"build,omitempty"` // The type of Minecraft build for the 'develop'
+	Target    string            `json:"target,omitempty"`    // The mode of exporting. "develop" or "exact"
+	RpPath    string            `json:"rpPath,omitempty"`    // Relative or absolute path to resource pack for "exact" export target
+	BpPath    string            `json:"bpPath,omitempty"`    // Relative or absolute path to behavior pack for "exact" export target
+	RpName    string            `json:"rpName,omitempty"`
+	BpName    string            `json:"bpName,omitempty"`
+	WorldName string            `json:"worldName,omitempty"`
+	WorldPath string            `json:"worldPath,omitempty"`
+	ReadOnly  bool              `json:"readOnly"`            // Whether the exported files should be read-only
+	Build     string            `json:"build,omitempty"`     // The type of Minecraft build for the 'develop'
+	BpNames   map[string]string `json:"bpNames,omitempty"`   // per-pack name overrides (>=1.9.0)
+	RpNames   map[string]string `json:"rpNames,omitempty"`
+	BpPaths   map[string]string `json:"bpPaths,omitempty"`   // per-pack "exact" paths (>=1.9.0)
+	RpPaths   map[string]string `json:"rpPaths,omitempty"`
 }
 
 // ExportTargets is the config representation of a profile's "export" value.
@@ -69,11 +76,101 @@ func (et *ExportTargets) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Pack is a single source pack mapped into the tmp working directory under a
+// folder named Name ("BP", "BP1", "RP", ...). Source may be empty when the
+// pack has no source on disk and is produced by filters.
+type Pack struct {
+	Name   string
+	Source string
+}
+
 // Packs is a part of "config.json" that points to the source behavior and
-// resource packs.
+// resource packs. The first behavior pack is always named "BP" and the first
+// resource pack "RP" (the primary packs the filters operate on).
 type Packs struct {
-	BehaviorFolder string `json:"behaviorPack,omitempty"`
-	ResourceFolder string `json:"resourcePack,omitempty"`
+	BehaviorPacks []Pack
+	ResourcePacks []Pack
+}
+
+// IsZero lets json:",omitzero" omit an unset Packs value.
+func (p Packs) IsZero() bool {
+	return len(p.BehaviorPacks) == 0 && len(p.ResourcePacks) == 0
+}
+
+// packSuffix returns the numeric suffix of a pack name ("" for "BP", "1" for
+// "BP1", "12" for "BP12").
+func packSuffix(name string) string {
+	i := 0
+	for i < len(name) && (name[i] < '0' || name[i] > '9') {
+		i++
+	}
+	return name[i:]
+}
+
+// packIndex returns the numeric index of a pack name (0 for the bare "BP"/"RP").
+func packIndex(name string) int {
+	suffix := packSuffix(name)
+	if suffix == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(suffix)
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+// sortPacks orders packs by numeric index so the primary ("BP"/"RP") comes
+// first, then "BP1", "BP2", ...
+func sortPacks(packs []Pack) {
+	sort.SliceStable(packs, func(i, j int) bool {
+		return packIndex(packs[i].Name) < packIndex(packs[j].Name)
+	})
+}
+
+func hasPackNamed(packs []Pack, name string) bool {
+	for _, pack := range packs {
+		if pack.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// SortPacksForTest exposes sortPacks for external tests.
+func SortPacksForTest(packs []Pack) { sortPacks(packs) }
+
+var behaviorPackKeyRe = regexp.MustCompile(`^BP([1-9][0-9]*)?$`)
+var resourcePackKeyRe = regexp.MustCompile(`^RP([1-9][0-9]*)?$`)
+
+// MarshalJSON writes the single-pack default (one "BP" and/or one "RP") as the
+// legacy string form for backward compatibility, and the multi-pack form as
+// name->path maps.
+func (p Packs) MarshalJSON() ([]byte, error) {
+	obj := map[string]any{}
+	marshalPackList(obj, p.BehaviorPacks, "BP", "behaviorPack", "behaviorPacks")
+	marshalPackList(obj, p.ResourcePacks, "RP", "resourcePack", "resourcePacks")
+	return json.Marshal(obj)
+}
+
+func marshalPackList(
+	obj map[string]any, packs []Pack, primaryName, singularKey, pluralKey string,
+) {
+	isSingleDefault := len(packs) == 1 && packs[0].Name == primaryName
+	if isSingleDefault {
+		if packs[0].Source != "" {
+			obj[singularKey] = packs[0].Source
+		}
+		return
+	}
+	if len(packs) == 0 {
+		return
+	}
+	m := make(map[string]string, len(packs))
+	for _, pack := range packs {
+		m[pack.Name] = pack.Source
+	}
+	obj[pluralKey] = m
 }
 
 // RegolithProject is a part of "config.json" with the regolith namespace
@@ -101,14 +198,26 @@ func ConfigFromObject(obj map[string]any) (*Config, error) {
 		return nil, burrito.WrappedErrorf(jsonPathMissingError, "author")
 	}
 	result.Author = author
+	// Read formatVersion early so packs parsing can gate the multi-pack map
+	// form. Full validation of formatVersion still happens in
+	// RegolithProjectFromObject below.
+	formatVersion := "1.2.0"
+	if regolithObj, ok := obj["regolith"].(map[string]any); ok {
+		if fv, ok := regolithObj["formatVersion"].(string); ok {
+			formatVersion = fv
+		}
+	}
 	// Packs
 	if packs, ok := obj["packs"]; ok {
 		packs, ok := packs.(map[string]any)
 		if !ok {
 			return nil, burrito.WrappedErrorf(jsonPathTypeError, "packs", "object")
 		}
-		// Packs can be empty, no need to check for errors
-		result.Packs = PacksFromObject(packs)
+		parsedPacks, err := PacksFromObject(packs, formatVersion)
+		if err != nil {
+			return nil, burrito.WrapErrorf(err, jsonPropertyParseError, "packs")
+		}
+		result.Packs = parsedPacks
 	} else {
 		return nil, burrito.WrappedErrorf(jsonPathMissingError, "packs")
 	}
@@ -130,16 +239,78 @@ func ConfigFromObject(obj map[string]any) (*Config, error) {
 	return result, nil
 }
 
-// ProfileFromObject creates a "Profile" object from map[string]interface{}
-func PacksFromObject(obj map[string]any) Packs {
+// PacksFromObject creates a "Packs" object from map[string]interface{}. The
+// formatVersion gates the multi-pack map form: it is only allowed for
+// formatVersion >= 1.9.0. Older versions accept only the singular string form.
+func PacksFromObject(obj map[string]any, formatVersion string) (Packs, error) {
 	result := Packs{}
-	// BehaviorPack
-	behaviorPack, _ := obj["behaviorPack"].(string)
-	result.BehaviorFolder = behaviorPack
-	// ResourcePack
-	resourcePack, _ := obj["resourcePack"].(string)
-	result.ResourceFolder = resourcePack
-	return result
+	multiPackSupported := semver.Compare("v"+formatVersion, "v1.9.0") >= 0
+
+	behaviorPacks, err := parsePackField(
+		obj, "behaviorPack", "behaviorPacks", "BP",
+		behaviorPackKeyRe, multiPackSupported)
+	if err != nil {
+		return result, burrito.PassError(err)
+	}
+	result.BehaviorPacks = behaviorPacks
+
+	resourcePacks, err := parsePackField(
+		obj, "resourcePack", "resourcePacks", "RP",
+		resourcePackKeyRe, multiPackSupported)
+	if err != nil {
+		return result, burrito.PassError(err)
+	}
+	result.ResourcePacks = resourcePacks
+	return result, nil
+}
+
+// parsePackField parses one pack type. It accepts the singular string form
+// (single primary pack) or the plural map form (multiple packs, >=1.9.0). The
+// primary pack (primaryName) is always present in the returned slice.
+func parsePackField(
+	obj map[string]any,
+	singularKey, pluralKey, primaryName string,
+	keyRe *regexp.Regexp,
+	multiPackSupported bool,
+) ([]Pack, error) {
+	_, hasPlural := obj[pluralKey]
+	_, hasSingular := obj[singularKey]
+
+	if hasPlural {
+		if !multiPackSupported {
+			return nil, burrito.WrappedErrorf(multiPackVersionError, pluralKey)
+		}
+		if hasSingular {
+			return nil, burrito.WrappedErrorf(
+				packsMixedFormError, singularKey, pluralKey)
+		}
+		packMap, ok := obj[pluralKey].(map[string]any)
+		if !ok {
+			return nil, burrito.WrappedErrorf(jsonPropertyTypeError, pluralKey, "object")
+		}
+		packs := make([]Pack, 0, len(packMap))
+		for name, src := range packMap {
+			if !keyRe.MatchString(name) {
+				return nil, burrito.WrappedErrorf(packKeyInvalidError, name, pluralKey)
+			}
+			srcStr, ok := src.(string)
+			if !ok {
+				return nil, burrito.WrappedErrorf(
+					jsonPathTypeError, pluralKey+"->"+name, "string")
+			}
+			packs = append(packs, Pack{Name: name, Source: srcStr})
+		}
+		if !hasPackNamed(packs, primaryName) {
+			packs = append(packs, Pack{Name: primaryName, Source: ""})
+		}
+		sortPacks(packs)
+		return packs, nil
+	}
+
+	// Singular string form (legacy and >=1.9.0 sugar). The primary pack always
+	// exists, even when the source is empty/missing.
+	src, _ := obj[singularKey].(string)
+	return []Pack{{Name: primaryName, Source: src}}, nil
 }
 
 // RegolithProjectFromObject creates a "RegolithProject" object from
@@ -314,5 +485,26 @@ func ExportTargetFromObject(obj map[string]any) (ExportTarget, error) {
 	// Build - can be empty
 	build, _ := obj["build"].(string)
 	result.Build = build
+	// Per-pack overrides (used only for formatVersion >= 1.9.0 multi-pack).
+	result.BpNames = stringMapFromObject(obj, "bpNames")
+	result.RpNames = stringMapFromObject(obj, "rpNames")
+	result.BpPaths = stringMapFromObject(obj, "bpPaths")
+	result.RpPaths = stringMapFromObject(obj, "rpPaths")
 	return result, nil
+}
+
+// stringMapFromObject reads a JSON object value into a map[string]string,
+// returning nil when the key is absent or not an object.
+func stringMapFromObject(obj map[string]any, key string) map[string]string {
+	raw, ok := obj[key].(map[string]any)
+	if !ok {
+		return nil
+	}
+	result := make(map[string]string, len(raw))
+	for k, v := range raw {
+		if s, ok := v.(string); ok {
+			result[k] = s
+		}
+	}
+	return result
 }

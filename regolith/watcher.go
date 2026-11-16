@@ -44,25 +44,37 @@ type DirWatcher struct {
 	stage <-chan string
 }
 
+// watchRoots returns the directories the watcher should observe: every pack
+// source, the data folder, and any extra watch paths.
+func watchRoots(config *Config) []string {
+	var roots []string
+	for _, pack := range config.Packs.ResourcePacks {
+		if pack.Source != "" {
+			roots = append(roots, pack.Source)
+		}
+	}
+	for _, pack := range config.Packs.BehaviorPacks {
+		if pack.Source != "" {
+			roots = append(roots, pack.Source)
+		}
+	}
+	if config.DataPath != "" {
+		roots = append(roots, config.DataPath)
+	}
+	roots = append(roots, config.WatchPaths...)
+	return roots
+}
+
+// WatchRootsForTest exposes watchRoots for external tests.
+func WatchRootsForTest(config *Config) []string { return watchRoots(config) }
+
 func NewDirWatcher(
 	config *Config,
 	interruption chan string,
 	errors chan error,
 	stage <-chan string,
 ) error {
-	var roots []string
-	if config.ResourceFolder != "" {
-		roots = append(roots, config.ResourceFolder)
-	}
-	if config.BehaviorFolder != "" {
-		roots = append(roots, config.BehaviorFolder)
-	}
-	if config.DataPath != "" {
-		roots = append(roots, config.DataPath)
-	}
-	if config.WatchPaths != nil {
-		roots = append(roots, config.WatchPaths...)
-	}
+	roots := watchRoots(config)
 	d := &DirWatcher{
 		roots:        roots,
 		config:       config,
@@ -122,13 +134,28 @@ func (d *DirWatcher) start() {
 			if d.debounce != nil || event.Op.Has(fsnotify.Chmod) {
 				continue
 			}
-			if isInDir(event.Name, d.config.ResourceFolder) {
-				d.interruption <- "rp"
-			} else if isInDir(event.Name, d.config.BehaviorFolder) {
-				d.interruption <- "bp"
-			} else if isInDir(event.Name, d.config.DataPath) {
+			matched := false
+			for _, pack := range d.config.Packs.BehaviorPacks {
+				if pack.Source != "" && isInDir(event.Name, pack.Source) {
+					d.interruption <- "bp"
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				for _, pack := range d.config.Packs.ResourcePacks {
+					if pack.Source != "" && isInDir(event.Name, pack.Source) {
+						d.interruption <- "rp"
+						matched = true
+						break
+					}
+				}
+			}
+			if !matched && isInDir(event.Name, d.config.DataPath) {
 				d.interruption <- "data"
-			} else {
+				matched = true
+			}
+			if !matched {
 				for _, path := range d.config.WatchPaths {
 					if isInDir(event.Name, path) {
 						d.interruption <- "extras"

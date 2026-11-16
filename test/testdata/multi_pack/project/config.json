@@ -1,0 +1,25 @@
+{
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/unified.json",
+	"name": "multi_pack_project",
+	"author": "Bedrock-OSS",
+	"packs": {
+		"behaviorPacks": {
+			"BP": "./packs/BP",
+			"BP1": "./packs/BP1"
+		},
+		"resourcePacks": {
+			"RP": "./packs/RP"
+		}
+	},
+	"regolith": {
+		"formatVersion": "1.9.0",
+		"dataPath": "./packs/data",
+		"filterDefinitions": {},
+		"profiles": {
+			"dev": {
+				"filters": [],
+				"export": { "target": "local" }
+			}
+		}
+	}
+}

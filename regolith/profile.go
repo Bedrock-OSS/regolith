@@ -121,6 +121,12 @@ func SetupTmpFiles(context RunContext) error {
 	start := time.Now()
 	useSizeTimeCheck := !context.DisableSizeTimeCheck
 	useSymlinkExport := context.SymlinkExport
+	// Symlink export only works with a single behavior and resource pack.
+	if useSymlinkExport &&
+		(len(config.Packs.BehaviorPacks) != 1 || len(config.Packs.ResourcePacks) != 1) {
+		Logger.Debugf("Symlink export is disabled because the project has multiple packs.")
+		useSymlinkExport = false
+	}
 	absTmpPath, err := GetAbsoluteWorkingDirectory(dotRegolithPath)
 	if err != nil {
 		return burrito.WrapError(err, getAbsoluteWorkingDirectoryError)
@@ -220,8 +226,8 @@ func SetupTmpFiles(context RunContext) error {
 
 	// Copy the contents of the 'regolith' folder to '[dotRegolithPath]/tmp'
 	Logger.Debugf("Copying project files to \"%s\"", absTmpPath)
-	// Avoid repetitive code of preparing ResourceFolder, BehaviorFolder
-	// and DataPath with a closure
+	// Avoid repetitive code of preparing each pack folder and the data
+	// folder with a closure
 	setupTmpDirectory := func(
 		path, shortName, descriptiveName string,
 	) error {
@@ -264,28 +270,35 @@ func SetupTmpFiles(context RunContext) error {
 		return nil
 	}
 
-	// Setup RP, BP and data folders concurrently
+	// Setup every behavior pack, every resource pack, and the data folder
+	// concurrently.
+	type tmpFolder struct {
+		source      string
+		name        string
+		descriptive string
+	}
+	var folders []tmpFolder
+	for _, pack := range config.Packs.BehaviorPacks {
+		folders = append(folders, tmpFolder{pack.Source, pack.Name, "behavior folder"})
+	}
+	for _, pack := range config.Packs.ResourcePacks {
+		folders = append(folders, tmpFolder{pack.Source, pack.Name, "resource folder"})
+	}
+	folders = append(folders, tmpFolder{config.DataPath, "data", "data folder"})
+
 	wg := sync.WaitGroup{}
-	errCh := make(chan error, 3)
-
-	wg.Go(func() {
-		if err := setupTmpDirectory(config.ResourceFolder, "RP", "resource folder"); err != nil {
-			errCh <- burrito.WrapErrorf(err, "Failed to setup RP folder in the temporary directory.")
-		}
-	})
-
-	wg.Go(func() {
-		if err := setupTmpDirectory(config.BehaviorFolder, "BP", "behavior folder"); err != nil {
-			errCh <- burrito.WrapErrorf(err, "Failed to setup BP folder in the temporary directory.")
-		}
-	})
-
-	wg.Go(func() {
-		if err := setupTmpDirectory(config.DataPath, "data", "data folder"); err != nil {
-			errCh <- burrito.WrapErrorf(err, "Failed to setup data folder in the temporary directory.")
-		}
-	})
-
+	errCh := make(chan error, len(folders))
+	for _, folder := range folders {
+		folder := folder
+		wg.Go(func() {
+			if err := setupTmpDirectory(folder.source, folder.name, folder.descriptive); err != nil {
+				errCh <- burrito.WrapErrorf(
+					err,
+					"Failed to setup %s folder in the temporary directory.",
+					folder.name)
+			}
+		})
+	}
 	wg.Wait()
 	close(errCh)
 	for e := range errCh {
