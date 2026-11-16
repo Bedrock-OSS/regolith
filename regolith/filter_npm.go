@@ -447,7 +447,7 @@ func downloadNpmPackage(npmPackage, version, destPath string, preferOnline bool)
 		return burrito.WrapErrorf(err, npmPackError, spec)
 	}
 	MeasureEnd()
-	if _, err := os.Stat(filepath.Join(extractPath, "filter.json")); err != nil {
+	if !hasFilterJsonFile(extractPath) {
 		return burrito.WrappedErrorf(npmFilterMissingFilterJsonError, spec)
 	}
 	// Move the package into place
@@ -460,6 +460,13 @@ func downloadNpmPackage(npmPackage, version, destPath string, preferOnline bool)
 		return burrito.WrapErrorf(err, osRenameError, extractPath, destPath)
 	}
 	return nil
+}
+
+// hasFilterJsonFile reports whether dir has a "filter.json" regular file in
+// its root. A directory or anything else with that name doesn't count.
+func hasFilterJsonFile(dir string) bool {
+	info, err := os.Stat(filepath.Join(dir, "filter.json"))
+	return err == nil && info.Mode().IsRegular()
 }
 
 // npmPackTarballPath returns the path of the tarball created by "npm pack

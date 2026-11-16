@@ -213,6 +213,29 @@ func TestExtractNpmTarball_InvalidFile(t *testing.T) {
 	}
 }
 
+func TestHasFilterJsonFile(t *testing.T) {
+	missing := t.TempDir()
+	if hasFilterJsonFile(missing) {
+		t.Fatal("A package without filter.json should be rejected")
+	}
+
+	asDir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(asDir, "filter.json"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if hasFilterJsonFile(asDir) {
+		t.Fatal("A filter.json directory should be rejected")
+	}
+
+	asFile := t.TempDir()
+	if err := os.WriteFile(filepath.Join(asFile, "filter.json"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if !hasFilterJsonFile(asFile) {
+		t.Fatal("A filter.json file should be accepted")
+	}
+}
+
 func TestNpmFilterDefinitionFromObject(t *testing.T) {
 	cases := []struct {
 		name    string
