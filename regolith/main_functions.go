@@ -519,7 +519,7 @@ func Init(debug, force bool, env string) error {
 			ResourceFolder: "./packs/RP",
 		},
 		RegolithProject: RegolithProject{
-			FormatVersion:     "1.8.0",
+			FormatVersion:     "1.9.0",
 			DataPath:          "./packs/data",
 			FilterDefinitions: map[string]FilterInstaller{},
 			Profiles: map[string]Profile{
