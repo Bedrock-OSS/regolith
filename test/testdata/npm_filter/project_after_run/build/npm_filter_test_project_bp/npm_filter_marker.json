@@ -1,0 +1,5 @@
+{
+	"source": "@regolith-test/npm-filter",
+	"version": "1.0.0",
+	"greeting": "Hello from a filter installed from an npm registry!"
+}

@@ -23,6 +23,10 @@ type parsedInstallFilterArg struct {
 	name string
 	// version is the version string of the filter ("HEAD", semver, etc.)
 	version string
+	// npmPackage is the name of the npm package when the filter is
+	// installed from an npm registry ("npm:<package>" argument); the url is
+	// empty then.
+	npmPackage string
 }
 
 // installFilters installs the filters from the list and their dependencies,
@@ -49,6 +53,12 @@ func installFilters(
 		if remoteFilter, ok := filterDefinition.(*RemoteFilterDefinition); ok {
 			// Download the remote filter, and its dependencies
 			err := remoteFilter.Update(force, dotRegolithPath, dataPath, refreshFilters)
+			if err != nil {
+				return burrito.WrapErrorf(err, remoteFilterDownloadError, name)
+			}
+		} else if npmFilter, ok := filterDefinition.(*NpmFilterDefinition); ok {
+			// Download the npm filter, and its dependencies
+			err := npmFilter.Update(force, dotRegolithPath, dataPath, refreshFilters)
 			if err != nil {
 				return burrito.WrapErrorf(err, remoteFilterDownloadError, name)
 			}
@@ -134,6 +144,28 @@ func parseInstallFilterArgs(
 	parsedArgs := make(map[[2]string]struct{})
 
 	for _, arg := range filters {
+		// Filters from npm registries: "npm:<package>[==<version>]"
+		if strings.HasPrefix(arg, "npm:") {
+			npmPackage, npmVersion, err := parseNpmInstallArg(
+				arg, strings.TrimPrefix(arg, "npm:"))
+			if err != nil {
+				return nil, burrito.PassError(err)
+			}
+			name = npmPackageFilterName(npmPackage)
+			key := [2]string{"npm:" + npmPackage, name}
+			if _, ok := parsedArgs[key]; ok {
+				return nil, burrito.WrappedErrorf(
+					"Duplicate filter:\nPackage: %s\nFilter name: %s",
+					npmPackage, name)
+			}
+			parsedArgs[key] = struct{}{}
+			result = append(result, &parsedInstallFilterArg{
+				npmPackage: npmPackage,
+				name:       name,
+				version:    npmVersion,
+			})
+			continue
+		}
 		if strings.Contains(arg, "==") {
 			splitStr := strings.Split(arg, "==")
 			if len(splitStr) != 2 {
