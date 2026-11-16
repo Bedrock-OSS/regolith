@@ -93,15 +93,15 @@ release:
     - glob: "./CREDITS.csv"
     - glob: "./LICENSE"
 
-#brews:
-#  - tap:
-#      owner: Bedrock-OSS
-#      name: homebrew-regolith
-#
-#    # Your app's homepage.
-#    # Default is empty.
-#    homepage: ""
-#
-#    # Your app's description.
-#    # Default is empty.
-#    description: ""
+brews:
+  - repository:
+      owner: Bedrock-OSS
+      name: homebrew-regolith
+      branch: main
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/Bedrock-OSS/Regolith"
+    description: "Add-on compiler for Minecraft Bedrock Edition."
+    license: "MIT"
+    install: |
+      bin.install "regolith"

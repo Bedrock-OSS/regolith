@@ -1,0 +1,30 @@
+{
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.2.json",
+	"name": "npm_filter_test_project",
+	"author": "Bedrock-OSS",
+	"packs": {
+		"behaviorPack": "./packs/BP",
+		"resourcePack": "./packs/RP"
+	},
+	"regolith": {
+		"dataPath": "./packs/data",
+		"filterDefinitions": {
+			"npm-filter": {
+				"npm": "@regolith-test/npm-filter",
+				"version": "1.0.0"
+			}
+		},
+		"profiles": {
+			"default": {
+				"filters": [
+					{
+						"filter": "npm-filter"
+					}
+				],
+				"export": {
+					"target": "local"
+				}
+			}
+		}
+	}
+}

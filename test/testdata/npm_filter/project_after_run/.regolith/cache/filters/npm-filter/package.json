@@ -1,0 +1,6 @@
+{
+	"description": "A Regolith filter for testing the npm registry filter source",
+	"license": "MIT",
+	"name": "@regolith-test/npm-filter",
+	"version": "1.0.0"
+}

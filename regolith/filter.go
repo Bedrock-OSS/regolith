@@ -332,6 +332,11 @@ var filterInstallerFactories = map[string]filterInstallerFactory{
 	},
 	"": {
 		constructor: func(id string, obj map[string]any) (FilterInstaller, error) {
+			// Remote filters from npm registries have the "npm" property
+			// instead of the "url" property
+			if _, ok := obj["npm"]; ok {
+				return NpmFilterDefinitionFromObject(id, obj)
+			}
 			return RemoteFilterDefinitionFromObject(id, obj)
 		},
 		name: "remote",
