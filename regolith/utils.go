@@ -151,9 +151,9 @@ func CreateEnvironmentVariables(filterDir string) ([]string, error) {
 	return append(os.Environ(), fmt.Sprintf("FILTER_DIR=%s", filterDir), fmt.Sprintf("ROOT_DIR=%s", projectDir), fmt.Sprintf("DEBUG=%t", burrito.PrintStackTrace)), nil
 }
 
-// RunSubProcess runs a sub-process with specified arguments and working
-// directory
-func RunSubProcess(command string, args []string, filterDir string, workingDir string, outputLabel string) error {
+// NewCommand returns a preconfigured exec.Cmd object with some commonly used
+// settings
+func NewCommand(command string, args []string, workingDir, outputLabel string) *exec.Cmd {
 	Logger.Debugf("Exec: %s %s", command, strings.Join(args, " "))
 	cmd := exec.Command(command, args...)
 	cmd.Dir = workingDir
@@ -161,14 +161,20 @@ func RunSubProcess(command string, args []string, filterDir string, workingDir s
 	err, _ := cmd.StderrPipe()
 	go LogStd(out, Logger.Infof, outputLabel)
 	go LogStd(err, Logger.Errorf, outputLabel)
+	return cmd
+}
+
+// RunSubProcess runs RunCommand with environment variables created by
+// CreateEnvironmentVariables
+func RunSubProcess(command string, args []string, filterDir string, workingDir string, outputLabel string) error {
 	env, err1 := CreateEnvironmentVariables(filterDir)
 	if err1 != nil {
 		return burrito.WrapErrorf(
 			err1,
 			"Failed to create FILTER_DIR and ROOT_DIR environment variables.")
 	}
+	cmd := NewCommand(command, args, workingDir, outputLabel)
 	cmd.Env = env
-
 	return cmd.Run()
 }
 
