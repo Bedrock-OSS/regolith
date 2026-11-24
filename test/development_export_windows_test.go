@@ -65,7 +65,6 @@ func _testCustomDevelopmentExportLocation(
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping test on local machine")
 	}
-	regolith.InitLogging(true)
 
 	// Switch to current working directory at the end of the test
 	defer os.Chdir(getWdOrFatal(t))

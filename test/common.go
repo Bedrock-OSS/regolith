@@ -291,7 +291,7 @@ func copyFilesOrFatal(src, dest string, t *testing.T) {
 		src, dest, copy.Options{
 			PreserveTimes:     false,
 			Sync:              false,
-			PermissionControl: copy.DoNothing,
+			PermissionControl: copy.PerservePermission,
 		})
 	if err != nil {
 		t.Fatalf(
