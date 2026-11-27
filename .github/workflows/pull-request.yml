@@ -48,6 +48,9 @@ jobs:
         run: go build ./...
 
       - name: Run Tests
+        env:
+          # Used by GitHub CLI (gh) in the tests of filters downloaded from GitHub releases
+          GH_TOKEN: ${{ github.token }}
         run: |
           $ENV:CI='true'
           go test ./...

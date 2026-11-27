@@ -1,0 +1,30 @@
+{
+	"$schema": "https://raw.githubusercontent.com/Bedrock-OSS/regolith-schemas/main/config/v1.2.json",
+	"name": "regolith_test_project",
+	"author": "Bedrock-OSS",
+	"packs": {
+		"behaviorPack": "./packs/BP",
+		"resourcePack": "./packs/RP"
+	},
+	"regolith": {
+		"dataPath": "./packs/data",
+		"filterDefinitions": {
+			"gh-release-filter": {
+				"url": "github.com/Bedrock-OSS/regolith-test-filters",
+				"version": "1.0.0"
+			}
+		},
+		"profiles": {
+			"default": {
+				"filters": [
+					{
+						"filter": "gh-release-filter"
+					}
+				],
+				"export": {
+					"target": "local"
+				}
+			}
+		}
+	}
+}

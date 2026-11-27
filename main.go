@@ -418,8 +418,8 @@ func main() {
 		&userCache, "user-cache", "u", false, "Clears all caches stored in user data, instead of the cache of "+
 			"the current project")
 	cmdClean.Flags().BoolVar(
-		&filterCache, "filter-cache", false, "Clears filter cache stored in user data, instead of the cache of "+
-			"the current project")
+		&filterCache, "filter-cache", false, "Clears filter cache stored in user data (cloned filter repositories "+
+			"and downloaded GitHub release files), instead of the cache of the current project")
 	subcommands = append(subcommands, cmdClean)
 
 	// regolith update-resolvers

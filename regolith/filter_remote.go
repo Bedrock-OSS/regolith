@@ -2,7 +2,7 @@ package regolith
 
 import (
 	"archive/zip"
-	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -402,15 +403,26 @@ func (f *RemoteFilterDefinition) Download(
 	ghRepoName := f.getGhRepoName()
 	ghDownloadSuccessful := false
 	if ghRepoName != "" && hasGhCli() && isReleaseVersion {
-		err = f.downloadFilterGhRelease(ghRepoName, version, downloadPath, refreshFilters)
+		unavailable, err := f.downloadFilterGhRelease(ghRepoName, version, downloadPath, refreshFilters)
 		if err != nil {
-			Logger.Warn(burrito.WrapErrorf(
+			// Most filters don't publish release files, so a missing
+			// release isn't worth a warning
+			logFunc := Logger.Warn
+			if unavailable {
+				logFunc = Logger.Debug
+			}
+			logFunc(burrito.WrapErrorf(
 				err,
-				"Failed to download filter release using 'gh'.\n"+
+				"Failed to download filter release using 'gh'. Using git instead.\n"+
 					"GH repo name: %s\n"+
 					"Version: %s",
 				ghRepoName, version,
 			).Error())
+			// Don't let a partially extracted release mix with the files
+			// copied by the git fallback
+			if err := os.RemoveAll(downloadPath); err != nil {
+				return burrito.WrapErrorf(err, osRemoveError, downloadPath)
+			}
 		} else {
 			ghDownloadSuccessful = true
 		}
@@ -424,7 +436,7 @@ func (f *RemoteFilterDefinition) Download(
 		err = f.downloadFilterRepository(downloadPath, version, refreshFilters)
 		if err != nil {
 			if downloadPathIsNew { // Remove the path created by getter
-				os.Remove(downloadPath)
+				os.RemoveAll(downloadPath)
 			}
 			return burrito.WrapErrorf(
 				err, "Could not download filter from %s.\n"+
@@ -448,23 +460,23 @@ func (f *RemoteFilterDefinition) Download(
 	return nil
 }
 
+// downloadFilterGhRelease downloads the ZIP file of the filter from the
+// GitHub release (or takes it from the cache) and extracts it to extractDir.
+// The returned bool is true when the error only means that the release or its
+// file isn't available (no release, gh not logged in, no matching file).
 func (f *RemoteFilterDefinition) downloadFilterGhRelease(
 	ghRepoName, versionTag, extractDir string, forceDownload bool,
-) error {
+) (bool, error) {
 	// Get cache path
 	userCache, err := os.UserCacheDir()
 	if err != nil {
-		return burrito.WrappedError(osUserCacheDirError)
+		return false, burrito.WrappedError(osUserCacheDirError)
 	}
 	fullGhReleaseCachePath := filepath.Join(
 		userCache, appDataGhReleaseCachePath, ghRepoName)
 	// Check if matching release file already exists in cache
 	zipPath := ""
-	matchingFileNames := []string{
-		strings.Join([]string{versionTag, runtime.GOOS, runtime.GOARCH}, "-") + ".zip",
-		strings.Join([]string{versionTag, runtime.GOOS}, "-") + ".zip",
-		versionTag + ".zip",
-	}
+	matchingFileNames := ghReleaseFileNames(versionTag, runtime.GOOS, runtime.GOARCH)
 	if !forceDownload {
 		if stat, err := os.Stat(fullGhReleaseCachePath); err == nil && stat.IsDir() {
 			for _, matchingFileName := range matchingFileNames {
@@ -485,22 +497,12 @@ func (f *RemoteFilterDefinition) downloadFilterGhRelease(
 		// Get available downloads
 		downloadsList, err := ghListDownloads(ghRepoName, versionTag)
 		if err != nil {
-			return burrito.WrapError(
+			return true, burrito.WrapError(
 				err, "Failed to get the list of downloadable files from GitHub release.")
 		}
-		foundDownload := ""
-	outer:
-		for _, download := range downloadsList {
-			for _, matchingFileName := range matchingFileNames {
-				if download != matchingFileName {
-					continue
-				}
-				foundDownload = download
-				break outer
-			}
-		}
+		foundDownload := pickGhReleaseFile(downloadsList, matchingFileNames)
 		if foundDownload == "" {
-			return burrito.WrappedErrorf(
+			return true, burrito.WrappedErrorf(
 				"GitHub release of the filter doesn't provide a downloadable file for this system.\n"+
 					"OS: %s\n"+
 					"Architecture: %s\n"+
@@ -511,51 +513,68 @@ func (f *RemoteFilterDefinition) downloadFilterGhRelease(
 				strings.Join(downloadsList, ", "),
 			)
 		}
-		zipPath = path.Join(fullGhReleaseCachePath, foundDownload)
-		// Create dowload folder
-		err = os.MkdirAll(fullGhReleaseCachePath, 0755)
+		zipPath = filepath.Join(fullGhReleaseCachePath, foundDownload)
+		err = ghDownloadRelease(ghRepoName, versionTag, foundDownload, zipPath)
 		if err != nil {
-			return burrito.WrapErrorf(err, osMkdirError, fullGhReleaseCachePath)
-		}
-		// In forceDownload mode, the path could exist at this point (delete it)
-		if forceDownload {
-			stat, err := os.Stat(zipPath)
-			if stat != nil {
-				// Path exists -> remove
-				err = os.RemoveAll(zipPath)
-				if err != nil {
-					return burrito.WrapErrorf(err, osRemoveError, zipPath)
-				}
-			} else if err != nil && !os.IsNotExist(err) {
-				// Some other error than IsNotExists (shouldn't happen)
-				return burrito.WrapErrorf(err, osStatErrorAny, zipPath)
-			}
-		}
-		// Download the file
-		err = NewCommand(
-			"gh",
-			[]string{
-				"release", "download", versionTag, "--repo", ghRepoName, "--pattern",
-				foundDownload},
-			fullGhReleaseCachePath,
-			"gh",
-		).Run()
-		if err != nil {
-			return burrito.WrapError(err, "Failed to run 'gh' command.")
+			return false, burrito.PassError(err)
 		}
 	}
 	// Extract the ZIP
 	err = os.MkdirAll(extractDir, 0755)
 	if err != nil {
-		return burrito.WrapErrorf(err, osMkdirError, extractDir)
+		return false, burrito.WrapErrorf(err, osMkdirError, extractDir)
 	}
 	err = unzip(zipPath, extractDir)
 	if err != nil {
-		return burrito.WrapErrorf(
+		// The cached file may be broken (e.g. an interrupted download).
+		// Remove it, so the next attempt downloads it again.
+		os.Remove(zipPath)
+		return false, burrito.WrapErrorf(
 			err,
 			"Failed unzip file:\nSource: %s\nTarget: %s",
 			zipPath, extractDir,
 		)
+	}
+	filterJsonPath := filepath.Join(extractDir, "filter.json")
+	if _, err := os.Stat(filterJsonPath); err != nil {
+		os.Remove(zipPath)
+		return false, burrito.WrappedErrorf(
+			"The GitHub release file doesn't have \"filter.json\" in its root "+
+				"folder.\nFile: %s", zipPath)
+	}
+	return false, nil
+}
+
+// ghDownloadRelease downloads the file of a GitHub release to targetPath.
+// The file is downloaded to a temporary folder first, so an interrupted
+// download never leaves a broken file in targetPath.
+func ghDownloadRelease(repository, tag, fileName, targetPath string) error {
+	targetDir := filepath.Dir(targetPath)
+	err := os.MkdirAll(targetDir, 0755)
+	if err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, targetDir)
+	}
+	tmpDir, err := os.MkdirTemp(targetDir, ".download-")
+	if err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, targetDir)
+	}
+	defer os.RemoveAll(tmpDir)
+	cmd := exec.Command(
+		"gh", "release", "download", tag, "--repo", repository,
+		"--pattern", fileName, "--dir", tmpDir,
+	)
+	Logger.Debugf("Exec: %s", strings.Join(cmd.Args, " "))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return burrito.WrapErrorf(
+			err, "Failed to download the GitHub release file.\n"+
+				"Command: %s\nOutput: %s",
+			strings.Join(cmd.Args, " "), strings.TrimSpace(string(output)))
+	}
+	downloaded := filepath.Join(tmpDir, fileName)
+	err = os.Rename(downloaded, targetPath)
+	if err != nil {
+		return burrito.WrapErrorf(err, osRenameError, downloaded, targetPath)
 	}
 	return nil
 }
@@ -777,22 +796,43 @@ func ghListDownloads(repository, tag string) ([]string, error) {
 		"gh", "release", "view", tag, "--json", "assets",
 		"--jq", ".assets[].name", "--repo", repository,
 	)
-	stdOut, _ := cmd.StdoutPipe()
-	stdErr, _ := cmd.StderrPipe()
-	completeOutput := make([]string, 0)
-	logFunc := func(in io.ReadCloser) {
-		scanner := bufio.NewScanner(in)
-		for scanner.Scan() {
-			completeOutput = append(completeOutput, scanner.Text())
+	var stdErr bytes.Buffer
+	cmd.Stderr = &stdErr
+	stdOut, err := cmd.Output()
+	if err != nil {
+		return []string{}, burrito.WrapErrorf(
+			err, "Failed to run command.\nCommand: %s\nOutput: %s",
+			strings.Join(cmd.Args, " "), strings.TrimSpace(stdErr.String()))
+	}
+	result := make([]string, 0)
+	for _, line := range strings.Split(string(stdOut), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			result = append(result, line)
 		}
 	}
-	go logFunc(stdOut)
-	go logFunc(stdErr)
-	err := cmd.Run()
-	if err != nil {
-		return []string{}, burrito.WrapError(err, "Failed to run command.")
+	return result, nil
+}
+
+// ghReleaseFileNames returns the names of the ZIP files that can provide
+// a filter for given tag, OS and architecture, from the most to the least
+// specific.
+func ghReleaseFileNames(tag, goos, goarch string) []string {
+	return []string{
+		tag + "-" + goos + "-" + goarch + ".zip",
+		tag + "-" + goos + ".zip",
+		tag + ".zip",
 	}
-	return completeOutput, nil
+}
+
+// pickGhReleaseFile returns the first name from 'wanted' that is present in
+// 'available' or an empty string if there is no match.
+func pickGhReleaseFile(available, wanted []string) string {
+	for _, name := range wanted {
+		if slices.Contains(available, name) {
+			return name
+		}
+	}
+	return ""
 }
 
 // loadFilterConfig loads the remote filter configuration from the given path.
@@ -854,7 +894,7 @@ func unzip(zipPath, targetDir string) error {
 		// Handle folders
 		currTarget := filepath.Join(targetDirAbs, filepath.FromSlash(f.Name))
 		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(currTarget, f.Mode()); err != nil {
+			if err := os.MkdirAll(currTarget, 0755); err != nil {
 				return burrito.WrapErrorf(err, osMkdirError, currTarget)
 			}
 			continue
@@ -876,7 +916,8 @@ func unzip(zipPath, targetDir string) error {
 				currTarget,
 				// create file | write only | fail if file exists
 				os.O_CREATE|os.O_WRONLY|os.O_EXCL,
-				f.Mode(),
+				// Keep the executable bits, but make sure the file is readable
+				f.Mode().Perm()|0600,
 			)
 			if err != nil {
 				return err
@@ -885,10 +926,10 @@ func unzip(zipPath, targetDir string) error {
 			_, err = io.Copy(out, in)
 			if closeErr := out.Close(); closeErr != nil {
 				// Some copy errors can be reported on closing
-				return burrito.WrapErrorf(closeErr, osCopyError, in, out)
+				return burrito.WrapErrorf(closeErr, osCopyError, f.Name, currTarget)
 			}
 			if err != nil {
-				return burrito.WrapErrorf(err, osCopyError, in, out)
+				return burrito.WrapErrorf(err, osCopyError, f.Name, currTarget)
 			}
 			return nil
 		}()
