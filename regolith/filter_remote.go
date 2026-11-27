@@ -402,7 +402,7 @@ func (f *RemoteFilterDefinition) Download(
 	ghRepoName := f.getGhRepoName()
 	ghDownloadSuccessful := false
 	if ghRepoName != "" && hasGhCli() && isReleaseVersion {
-		err = f.downloadFilterGhRelease(ghRepoName, version, downloadPath)
+		err = f.downloadFilterGhRelease(ghRepoName, version, downloadPath, refreshFilters)
 		if err != nil {
 			Logger.Warn(burrito.WrapErrorf(
 				err,
@@ -448,66 +448,107 @@ func (f *RemoteFilterDefinition) Download(
 	return nil
 }
 
-func (f *RemoteFilterDefinition) downloadFilterGhRelease(ghRepoName, version, extractPath string) error {
-	// TODO: First, check if the user cache doesn't have that release file already.
-	// Get available downloads
-	downloadsList, err := ghListDownloads(ghRepoName, version)
+func (f *RemoteFilterDefinition) downloadFilterGhRelease(
+	ghRepoName, versionTag, extractDir string, forceDownload bool,
+) error {
+	// Get cache path
+	userCache, err := os.UserCacheDir()
 	if err != nil {
-		return burrito.WrapError(
-			err, "Failed to get the list of downloadable files from GitHub release.")
+		return burrito.WrappedError(osUserCacheDirError)
 	}
-	foundDownload := ""
-	// Identify matching download
-	expectedDownloads := []string{
-		strings.Join([]string{version, runtime.GOOS, runtime.GOARCH}, "-") + ".zip",
-		strings.Join([]string{version, runtime.GOOS}, "-") + ".zip",
-		version + ".zip",
+	fullGhReleaseCachePath := filepath.Join(
+		userCache, appDataGhReleaseCachePath, ghRepoName)
+	// Check if matching release file already exists in cache
+	zipPath := ""
+	matchingFileNames := []string{
+		strings.Join([]string{versionTag, runtime.GOOS, runtime.GOARCH}, "-") + ".zip",
+		strings.Join([]string{versionTag, runtime.GOOS}, "-") + ".zip",
+		versionTag + ".zip",
 	}
-outer:
-	for _, download := range downloadsList {
-		for _, expectedDownload := range expectedDownloads {
-			if download != expectedDownload {
-				continue
+	if !forceDownload {
+		if stat, err := os.Stat(fullGhReleaseCachePath); err == nil && stat.IsDir() {
+			for _, matchingFileName := range matchingFileNames {
+				p := filepath.Join(fullGhReleaseCachePath, matchingFileName)
+				if stat, err := os.Stat(p); err == nil && !stat.IsDir() {
+					zipPath = p
+					Logger.Infof(
+						"Using GitHub release file from cache: %s",
+						zipPath,
+					)
+					break
+				}
 			}
-			foundDownload = download
-			break outer
 		}
 	}
-	if foundDownload == "" {
-		return burrito.WrappedErrorf(
-			"GitHub release of the filter doesn't provide a downloadable file for this system.\n"+
-				"OS: %s\n"+
-				"Architecture: %s\n"+
-				"Checked: %s\n"+
-				"Found: %s",
-			runtime.GOOS, runtime.GOARCH,
-			strings.Join(expectedDownloads, ", "),
-			strings.Join(downloadsList, ", "),
-		)
-	}
-	// Create dowload folder
-	err = os.MkdirAll(extractPath, 0755)
-	if err != nil {
-		return burrito.WrapErrorf(err, osMkdirError, extractPath)
-	}
-
-	// Download the file
-	// TODO: Download the ZIP file somewhere into user cache folder and unpack
-	// from there
-	err = NewCommand(
-		"gh",
-		[]string{
-			"release", "download", version, "--repo", ghRepoName, "--pattern",
-			foundDownload},
-		extractPath,
-		"gh",
-	).Run()
-	if err != nil {
-		return burrito.WrapError(err, "Failed to run 'gh' command.")
+	// If file not found, try to download it
+	if zipPath == "" {
+		// Get available downloads
+		downloadsList, err := ghListDownloads(ghRepoName, versionTag)
+		if err != nil {
+			return burrito.WrapError(
+				err, "Failed to get the list of downloadable files from GitHub release.")
+		}
+		foundDownload := ""
+	outer:
+		for _, download := range downloadsList {
+			for _, matchingFileName := range matchingFileNames {
+				if download != matchingFileName {
+					continue
+				}
+				foundDownload = download
+				break outer
+			}
+		}
+		if foundDownload == "" {
+			return burrito.WrappedErrorf(
+				"GitHub release of the filter doesn't provide a downloadable file for this system.\n"+
+					"OS: %s\n"+
+					"Architecture: %s\n"+
+					"Checked: %s\n"+
+					"Found: %s",
+				runtime.GOOS, runtime.GOARCH,
+				strings.Join(matchingFileNames, ", "),
+				strings.Join(downloadsList, ", "),
+			)
+		}
+		zipPath = path.Join(fullGhReleaseCachePath, foundDownload)
+		// Create dowload folder
+		err = os.MkdirAll(fullGhReleaseCachePath, 0755)
+		if err != nil {
+			return burrito.WrapErrorf(err, osMkdirError, fullGhReleaseCachePath)
+		}
+		// In forceDownload mode, the path could exist at this point (delete it)
+		if forceDownload {
+			stat, err := os.Stat(zipPath)
+			if stat != nil {
+				// Path exists -> remove
+				err = os.RemoveAll(zipPath)
+				if err != nil {
+					return burrito.WrapErrorf(err, osRemoveError, zipPath)
+				}
+			} else if err != nil && !os.IsNotExist(err) {
+				// Some other error than IsNotExists (shouldn't happen)
+				return burrito.WrapErrorf(err, osStatErrorAny, zipPath)
+			}
+		}
+		// Download the file
+		err = NewCommand(
+			"gh",
+			[]string{
+				"release", "download", versionTag, "--repo", ghRepoName, "--pattern",
+				foundDownload},
+			fullGhReleaseCachePath,
+			"gh",
+		).Run()
+		if err != nil {
+			return burrito.WrapError(err, "Failed to run 'gh' command.")
+		}
 	}
 	// Extract the ZIP
-	zipPath := path.Join(extractPath, foundDownload)
-	extractDir := filepath.Dir(zipPath)
+	err = os.MkdirAll(extractDir, 0755)
+	if err != nil {
+		return burrito.WrapErrorf(err, osMkdirError, extractDir)
+	}
 	err = unzip(zipPath, extractDir)
 	if err != nil {
 		return burrito.WrapErrorf(
@@ -515,12 +556,6 @@ outer:
 			"Failed unzip file:\nSource: %s\nTarget: %s",
 			zipPath, extractDir,
 		)
-	}
-	// Delete the ZIP file
-	// TODO: Remove this once caching releases in user cache is implemented.
-	err = os.Remove(zipPath)
-	if err != nil {
-		Logger.Warnf(osRemoveError, zipPath) // Not important enough to return
 	}
 	return nil
 }

@@ -32,6 +32,8 @@ const appDataResolverCachePath = "regolith/resolver-cache"
 // app data
 const appDataFilterCachePath = "regolith/filter-cache"
 
+const appDataGhReleaseCachePath = "regolith/gh-release-cache"
+
 var Version = "unversioned"
 
 // ComMojangPathType is used to specify the type of the com.mojang path you
