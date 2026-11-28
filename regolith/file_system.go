@@ -918,6 +918,60 @@ func removeJunctionSafe(path string) error {
 	return nil
 }
 
+// ensureEmptyDirectory ensures that dir exists as an empty directory.
+// If dir is a symlink or junction (e.g. from --symlink-export), its target
+// directory is ensured and emptied through the link without removing the link
+// itself.
+func ensureEmptyDirectory(dir string) error {
+	dir = filepath.Clean(dir)
+	if linfo, lerr := os.Lstat(dir); lerr == nil {
+		if linfo.Mode()&(fs.ModeSymlink|fs.ModeIrregular) != 0 {
+			if target, err := os.Readlink(dir); err == nil {
+				if !filepath.IsAbs(target) {
+					target = filepath.Join(filepath.Dir(dir), target)
+				}
+				if _, statErr := os.Stat(target); os.IsNotExist(statErr) {
+					if err := os.MkdirAll(target, 0755); err != nil {
+						return burrito.WrapErrorf(err, osMkdirError, target)
+					}
+				}
+			}
+		}
+	}
+
+	stat, err := os.Stat(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return burrito.WrapErrorf(err, osMkdirError, dir)
+			}
+			return nil
+		}
+		return burrito.WrapErrorf(err, osStatErrorAny, dir)
+	}
+	if !stat.IsDir() {
+		if err := removeJunctionSafe(dir); err != nil {
+			return burrito.PassError(err)
+		}
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return burrito.WrapErrorf(err, osMkdirError, dir)
+		}
+		return nil
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return burrito.WrapErrorf(err, osReadDirError, dir)
+	}
+	for _, entry := range entries {
+		entryPath := filepath.Join(dir, entry.Name())
+		if err := removeJunctionSafe(entryPath); err != nil {
+			return burrito.PassError(err)
+		}
+	}
+	return nil
+}
+
 // syncLink copies a symlink or junction from srcPath to make the dstPath
 // point to the same target. If srcPath is not a symlink or junction,
 // it's skipped without an error. If dstPath already exists, it's removed
