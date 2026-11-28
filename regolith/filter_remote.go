@@ -97,6 +97,7 @@ func (f *RemoteFilter) run(context RunContext) (bool, error) {
 	}
 	for i, filter := range filterCollection.Filters {
 		runContext := RunContext{
+			Initial:          context.Initial,
 			Config:           context.Config,
 			AbsoluteLocation: absolutePath,
 			Profile:          context.Profile,

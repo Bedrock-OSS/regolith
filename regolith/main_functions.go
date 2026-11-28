@@ -439,6 +439,7 @@ func ApplyFilter(filterName string, filterArgs []string, debug bool, env string)
 	// Create run context
 	path, _ := filepath.Abs(".")
 	runContext := RunContext{
+		Initial:          true,
 		Config:           config,
 		Parent:           nil,
 		Profile:          "[dynamic profile]",

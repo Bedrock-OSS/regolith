@@ -170,3 +170,110 @@ func TestUnzipErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestConditionalFilterRemoteSubfilterInitial(t *testing.T) {
+	cases := []struct {
+		name         string
+		initial      bool
+		expectMarker bool
+	}{
+		{name: "initial_true", initial: true, expectMarker: true},
+		{name: "initial_false", initial: false, expectMarker: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			t.Chdir(tmpDir)
+
+			for _, dir := range []string{
+				filepath.Join(tmpDir, "packs", "BP"),
+				filepath.Join(tmpDir, "packs", "RP"),
+				filepath.Join(tmpDir, "packs", "data"),
+			} {
+				if err := os.MkdirAll(dir, 0755); err != nil {
+					t.Fatalf("failed to create %s: %v", dir, err)
+				}
+			}
+
+			dotRegolithPath := filepath.Join(tmpDir, ".regolith")
+			filterDir := filepath.Join(dotRegolithPath, "cache", "filters", "test_remote")
+			if err := os.MkdirAll(filterDir, 0755); err != nil {
+				t.Fatalf("failed to create filter dir: %v", err)
+			}
+			filterJSON := `{
+	"version": "1.0.0",
+	"filters": [
+		{
+			"runWith": "python",
+			"script": "main.py",
+			"when": "initial"
+		}
+	]
+}`
+			if err := os.WriteFile(filepath.Join(filterDir, "filter.json"), []byte(filterJSON), 0644); err != nil {
+				t.Fatalf("failed to write filter.json: %v", err)
+			}
+			mainPy := "from pathlib import Path\n\n(Path(\"BP\") / \"remote_initial.txt\").write_text(\"ran\", encoding=\"utf-8\")\n"
+			if err := os.WriteFile(filepath.Join(filterDir, "main.py"), []byte(mainPy), 0644); err != nil {
+				t.Fatalf("failed to write main.py: %v", err)
+			}
+
+			cfg := &Config{
+				Name:   "test",
+				Author: "test",
+				Packs: Packs{
+					BehaviorFolder: filepath.Join(tmpDir, "packs", "BP"),
+					ResourceFolder: filepath.Join(tmpDir, "packs", "RP"),
+				},
+				RegolithProject: RegolithProject{
+					DataPath: filepath.Join(tmpDir, "packs", "data"),
+				},
+			}
+			ctx := RunContext{
+				Initial:              tc.initial,
+				Config:               cfg,
+				Profile:              "default",
+				AbsoluteLocation:     tmpDir,
+				DotRegolithPath:      dotRegolithPath,
+				DisableSizeTimeCheck: true,
+			}
+			if err := SetupTmpFiles(ctx); err != nil {
+				t.Fatalf("SetupTmpFiles failed: %v", err)
+			}
+
+			rf := &RemoteFilter{
+				Filter: Filter{Id: "test_remote"},
+				Definition: RemoteFilterDefinition{
+					FilterDefinition: FilterDefinition{Id: "test_remote"},
+					Url:              "github.com/example/test",
+					Version:          "1.0.0",
+				},
+			}
+			interrupted, err := rf.Run(ctx)
+			if err != nil {
+				t.Fatalf("RemoteFilter.Run failed: %v", err)
+			}
+			if interrupted {
+				t.Fatal("RemoteFilter.Run unexpectedly reported interruption")
+			}
+
+			absWorkingDir, err := GetAbsoluteWorkingDirectory(dotRegolithPath)
+			if err != nil {
+				t.Fatalf("GetAbsoluteWorkingDirectory failed: %v", err)
+			}
+			markerPath := filepath.Join(absWorkingDir, "BP", "remote_initial.txt")
+			content, err := os.ReadFile(markerPath)
+			if tc.expectMarker {
+				if err != nil {
+					t.Fatalf("expected marker file %s to exist: %v", markerPath, err)
+				}
+				if string(content) != "ran" {
+					t.Fatalf("marker content = %q, want %q", string(content), "ran")
+				}
+			} else if !os.IsNotExist(err) {
+				t.Fatalf("expected marker file %s not to exist, got err=%v content=%q", markerPath, err, string(content))
+			}
+		})
+	}
+}
