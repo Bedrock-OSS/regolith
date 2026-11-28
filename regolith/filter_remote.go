@@ -584,79 +584,147 @@ func (f *RemoteFilterDefinition) downloadFilterRepository(downloadPath, ref stri
 	if err != nil {
 		return burrito.WrapErrorf(err, getUserConfigError)
 	}
-	cooldown, err := time.ParseDuration(*config.ResolverCacheUpdateCooldown)
+	cooldown, err := time.ParseDuration(*config.FilterCacheUpdateCooldown)
+	if err != nil {
+		return burrito.WrapErrorf(
+			err, "Failed to parse filter cache update cooldown.\nCooldown: %s",
+			*config.FilterCacheUpdateCooldown)
+	}
 	url := fmt.Sprintf("https://%s", f.Url)
 	cache, err := getFilterCache(url)
 	if err != nil {
 		return burrito.WrapErrorf(err, "Could not get cache path for %s", url)
 	}
-	// Check if exists in cache
-clone:
-	if _, err := os.Stat(cache); err != nil && os.IsNotExist(err) {
-		err := os.MkdirAll(cache, 0755)
-		if err != nil {
+	return downloadFilterRepositoryFromURL(url, f.Id, downloadPath, ref, forceUpdate, cache, cooldown)
+}
+
+func downloadFilterRepositoryFromURL(
+	url, filterId, downloadPath, ref string, forceUpdate bool, cache string, cooldown time.Duration,
+) error {
+	clonedFresh := false
+	fetched := false
+
+	cloneCache := func() error {
+		if err := os.RemoveAll(cache); err != nil {
+			return burrito.WrapErrorf(err, osRemoveError, cache)
+		}
+		if err := os.MkdirAll(cache, 0755); err != nil {
 			return burrito.WrapErrorf(err, osMkdirError, cache)
 		}
-		// Clone the repository
 		MeasureStart("Clone repository %s", url)
 		output, err := RunGitProcess([]string{"clone", url, "."}, cache)
 		if err != nil {
-			Logger.Error(strings.Join(output, "\n"))
+			gitOutput := strings.TrimSpace(strings.Join(output, "\n"))
+			if gitOutput != "" {
+				Logger.Error(gitOutput)
+			}
+			_ = os.RemoveAll(cache)
+			if gitOutput != "" {
+				return burrito.WrapErrorf(err, "Failed to clone repository.\nURL: %s\nGit output:\n%s", url, gitOutput)
+			}
 			return burrito.WrapErrorf(err, "Failed to clone repository.\nURL: %s", url)
 		}
-		forceUpdate = false
-	} else if err != nil {
-		return burrito.WrapErrorf(err, osStatErrorAny, cache)
+		now := time.Now()
+		if err := os.Chtimes(cache, now, now); err != nil {
+			Logger.Debugf(osChtimesError, cache)
+		}
+		clonedFresh = true
+		fetched = true
+		return nil
 	}
-	info, _ := os.Stat(cache)
-	if forceUpdate || info.ModTime().Before(time.Now().Add(cooldown*-1)) {
-		// Fetch the repository
+
+	fetchCache := func() error {
 		MeasureStart("Fetch repository %s", url)
-		output, err := RunGitProcess([]string{"fetch"}, cache)
+		output, err := RunGitProcess([]string{"fetch", "--force"}, cache)
 		if err != nil {
-			Logger.Error(strings.Join(output, "\n"))
-			Logger.Errorf("Failed to fetch repository.\nURL: %s", url)
-			Logger.Infof("Trying to clone the repository instead...")
-			err := os.RemoveAll(cache)
-			if err != nil {
-				return burrito.WrapErrorf(err, osRemoveError, cache)
+			if gitOutput := strings.TrimSpace(strings.Join(output, "\n")); gitOutput != "" {
+				Logger.Warn(gitOutput)
 			}
-			goto clone
+			Logger.Warnf("Failed to fetch repository %s; re-cloning cache...", url)
+			return cloneCache()
 		}
-		err = os.Chtimes(cache, time.Now(), time.Now())
-		if err != nil {
-			Logger.Debugf(osChtimesError, cache)
-		}
-		// Fetch the repository
 		MeasureStart("Fetch repository tags %s", url)
-		output, err = RunGitProcess([]string{"fetch", "--tags"}, cache)
+		output, err = RunGitProcess([]string{"fetch", "--tags", "--force"}, cache)
 		if err != nil {
-			Logger.Error(strings.Join(output, "\n"))
-			Logger.Errorf("Failed to fetch repository.\nURL: %s", url)
-			Logger.Infof("Trying to clone the repository instead...")
-			err := os.RemoveAll(cache)
-			if err != nil {
-				return burrito.WrapErrorf(err, osRemoveError, cache)
+			if gitOutput := strings.TrimSpace(strings.Join(output, "\n")); gitOutput != "" {
+				Logger.Warn(gitOutput)
 			}
-			goto clone
+			Logger.Warnf("Failed to fetch repository tags for %s; re-cloning cache...", url)
+			return cloneCache()
 		}
-		err = os.Chtimes(cache, time.Now(), time.Now())
-		if err != nil {
+		now := time.Now()
+		if err := os.Chtimes(cache, now, now); err != nil {
 			Logger.Debugf(osChtimesError, cache)
 		}
+		fetched = true
+		return nil
 	}
-	// Checkout the specified ref
+
+	info, err := os.Stat(cache)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err := cloneCache(); err != nil {
+				return err
+			}
+		} else {
+			return burrito.WrapErrorf(err, osStatErrorAny, cache)
+		}
+	} else if !info.IsDir() {
+		Logger.Warnf("Cached repository path %s is not a directory; re-cloning repository...", cache)
+		if err := cloneCache(); err != nil {
+			return err
+		}
+	} else if forceUpdate || info.ModTime().Before(time.Now().Add(-cooldown)) {
+		if err := fetchCache(); err != nil {
+			return err
+		}
+	}
+
 	MeasureStart("Checkout ref %s", ref)
-	output, err := RunGitProcess([]string{"checkout", ref}, cache)
-	if err != nil {
-		Logger.Error(strings.Join(output, "\n"))
-		return burrito.WrapErrorf(err, "Failed to checkout ref.\nURL: %s\nRef: %s", url, ref)
+	output, err := RunGitProcess([]string{"checkout", "--force", ref}, cache)
+	if err != nil && !fetched {
+		Logger.Infof("Ref %q not available in cached repository %s; fetching updates...", ref, url)
+		if fetchErr := fetchCache(); fetchErr != nil {
+			return fetchErr
+		}
+		MeasureStart("Checkout ref %s", ref)
+		output, err = RunGitProcess([]string{"checkout", "--force", ref}, cache)
 	}
-	// Copy to download path
-	MeasureStart("Copy to download path %s", downloadPath)
-	err = copy.Copy(filepath.Join(cache, f.Id), downloadPath)
+	if err != nil && !clonedFresh {
+		Logger.Warnf(
+			"Failed to checkout ref %q from cached repository %s (the cache may have diverged due to force-pushed history or be corrupted); re-cloning repository...",
+			ref, url)
+		if cloneErr := cloneCache(); cloneErr != nil {
+			return cloneErr
+		}
+		MeasureStart("Checkout ref %s", ref)
+		output, err = RunGitProcess([]string{"checkout", "--force", ref}, cache)
+	}
 	if err != nil {
-		return burrito.WrapErrorf(err, osCopyError, filepath.Join(cache, f.Id), downloadPath)
+		gitOutput := strings.TrimSpace(strings.Join(output, "\n"))
+		gitOutputSection := ""
+		if gitOutput != "" {
+			Logger.Error(gitOutput)
+			gitOutputSection = fmt.Sprintf("Git output:\n%s\n", gitOutput)
+		}
+		return burrito.WrapErrorf(
+			err,
+			"Failed to checkout ref.\n"+
+				"URL: %s\n"+
+				"Ref: %s\n"+
+				"%s"+
+				"The requested ref or version may not exist in the remote repository. "+
+				"Check the filter version in config.json, or try clearing the filter cache "+
+				"with \"regolith clean --filter-cache\".",
+			url, ref, gitOutputSection,
+		)
+	}
+
+	MeasureStart("Copy to download path %s", downloadPath)
+	srcPath := filepath.Join(cache, filterId)
+	err = copy.Copy(srcPath, downloadPath)
+	if err != nil {
+		return burrito.WrapErrorf(err, osCopyError, srcPath, downloadPath)
 	}
 	MeasureEnd()
 	return nil
