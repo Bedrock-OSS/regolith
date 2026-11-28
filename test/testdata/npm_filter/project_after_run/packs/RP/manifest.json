@@ -1,0 +1,17 @@
+{
+    "format_version": 2,
+    "header": {
+        "description": "This is test RP",
+        "name": "Regolith Test RP",
+        "uuid": "6f6e3f0b-1627-488d-a9aa-2d1430ba368a",
+        "version": [1, 0, 0],
+        "min_engine_version": [1, 16, 0]
+    },
+    "modules": [
+        {
+            "type": "resources",
+            "uuid": "65b1ba69-462d-4199-aa3b-a0f161ed0bde",
+            "version": [1, 0, 0]
+        }
+    ]
+}

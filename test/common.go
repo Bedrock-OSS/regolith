@@ -51,6 +51,10 @@ const (
 	versionedRemoteFilterProjectAfterRun = "testdata/versioned_remote_filter_project_after_run"
 	exeFilterPath                        = "testdata/exe_filter"
 
+	// ghReleaseFilterPath is a project with a remote filter from
+	// regolith-test-filters that has a GitHub release with a ZIP file.
+	ghReleaseFilterPath = "testdata/gh_release_filter"
+
 	// profileFilterPath is a directory that contains files for testing
 	// ProfileFilter. It contains a project and an expected result. The
 	// projects have both valid and invalid profiles.
@@ -291,7 +295,7 @@ func copyFilesOrFatal(src, dest string, t *testing.T) {
 		src, dest, copy.Options{
 			PreserveTimes:     false,
 			Sync:              false,
-			PermissionControl: copy.DoNothing,
+			PermissionControl: copy.PerservePermission,
 		})
 	if err != nil {
 		t.Fatalf(

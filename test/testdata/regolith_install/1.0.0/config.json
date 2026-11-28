@@ -14,7 +14,7 @@
 				"version": "1.0.0"
 			}
 		},
-		"formatVersion": "1.8.0",
+		"formatVersion": "1.9.0",
 		"profiles": {
 			"default": {
 				"export": {
