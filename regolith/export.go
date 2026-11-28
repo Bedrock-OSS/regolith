@@ -28,10 +28,10 @@ func GetExportPaths(
 
 	if semver.Compare(vFormatVersion, "v1.4.0") < 0 {
 		bpPath, rpPath, err = getExportPathsV1_2_0(
-			exportTarget, bpName, rpName)
+			exportTarget, bpName, rpName, ctx.Config.Packs)
 	} else if semver.Compare(vFormatVersion, "v1.9.0") <= 0 {
 		bpPath, rpPath, err = getExportPathsV1_4_0(
-			exportTarget, bpName, rpName)
+			exportTarget, bpName, rpName, ctx.Config.Packs)
 	} else {
 		err = burrito.WrappedErrorf(
 			incompatibleFormatVersionError,
@@ -62,7 +62,7 @@ func FindMojangDir(build string, pathType ComMojangPathType) (string, error) {
 // getExportPathsV1_2_0 handles GetExportPaths for Regolith format versions
 // below 1.4.0.
 func getExportPathsV1_2_0(
-	exportTarget ExportTarget, bpName string, rpName string,
+	exportTarget ExportTarget, bpName string, rpName string, packs Packs,
 ) (bpPath string, rpPath string, err error) {
 	switch exportTarget.Target {
 	case "development":
@@ -80,7 +80,7 @@ func getExportPathsV1_2_0(
 		}
 		return GetDevelopmentExportPaths(bpName, rpName, comMojang)
 	case "exact":
-		return GetExactExportPaths(exportTarget)
+		return getExactExportPaths(exportTarget, packs)
 	case "world":
 		return GetWorldExportPaths(
 			exportTarget.WorldPath,
@@ -103,7 +103,7 @@ func getExportPathsV1_2_0(
 // getExportPathsV1_4_0 handles GetExportPaths for Regolith format version
 // 1.4.0.
 func getExportPathsV1_4_0(
-	exportTarget ExportTarget, bpName string, rpName string,
+	exportTarget ExportTarget, bpName string, rpName string, packs Packs,
 ) (bpPath string, rpPath string, err error) {
 	switch exportTarget.Target {
 	case "development":
@@ -119,7 +119,7 @@ func getExportPathsV1_4_0(
 			exportTarget.Build,
 			bpName, rpName)
 	case "exact":
-		return GetExactExportPaths(exportTarget)
+		return getExactExportPaths(exportTarget, packs)
 	case "local":
 		bpPath = "build/" + bpName + "/"
 		rpPath = "build/" + rpName + "/"
@@ -139,18 +139,89 @@ func GetDevelopmentExportPaths(bpName, rpName, comMojang string) (bpPath string,
 	return
 }
 
+func resolveExactExportPath(rawPath, propertyName string) (string, error) {
+	if strings.TrimSpace(rawPath) == "" {
+		return "", burrito.WrappedErrorf(
+			"The %q property of the \"exact\" export target must be a non-empty path.",
+			propertyName)
+	}
+	expanded, err := expandPathVars(rawPath)
+	if err != nil {
+		return "", burrito.WrapErrorf(
+			err, "Failed to resolve %q property of the \"exact\" export target.", propertyName)
+	}
+	if strings.TrimSpace(expanded) == "" {
+		return "", burrito.WrappedErrorf(
+			"The %q property of the \"exact\" export target resolved to an empty path (raw value: %q). Provide a non-empty path.",
+			propertyName, rawPath)
+	}
+	return filepath.Clean(expanded), nil
+}
+
 func GetExactExportPaths(exportTarget ExportTarget) (bpPath string, rpPath string, err error) {
-	bpPath, err = ResolvePath(exportTarget.BpPath)
+	bpPath, err = resolveExactExportPath(exportTarget.BpPath, "bpPath")
 	if err != nil {
 		return "", "", burrito.WrapError(
 			err, "Failed to resolve behavior pack path.")
 	}
-	rpPath, err = ResolvePath(exportTarget.RpPath)
+	rpPath, err = resolveExactExportPath(exportTarget.RpPath, "rpPath")
 	if err != nil {
 		return "", "", burrito.WrapError(
 			err, "Failed to resolve resource pack path.")
 	}
 	return
+}
+
+func getExactExportPaths(exportTarget ExportTarget, packs Packs) (bpPath string, rpPath string, err error) {
+	hasBp := strings.TrimSpace(packs.BehaviorFolder) != ""
+	hasRp := strings.TrimSpace(packs.ResourceFolder) != ""
+	rawBpEmpty := strings.TrimSpace(exportTarget.BpPath) == ""
+	rawRpEmpty := strings.TrimSpace(exportTarget.RpPath) == ""
+
+	if rawBpEmpty && rawRpEmpty {
+		switch {
+		case hasBp && hasRp:
+			return "", "", burrito.WrappedError(
+				"The \"exact\" export target requires both \"bpPath\" and \"rpPath\" properties to be non-empty paths. Use the \"none\" export target if you do not want to export any packs.")
+		case hasBp:
+			return "", "", burrito.WrappedError(
+				"The \"exact\" export target requires a non-empty \"bpPath\" property because the project defines a behavior pack. Use the \"none\" export target if you do not want to export any packs.")
+		case hasRp:
+			return "", "", burrito.WrappedError(
+				"The \"exact\" export target requires a non-empty \"rpPath\" property because the project defines a resource pack. Use the \"none\" export target if you do not want to export any packs.")
+		default:
+			return "", "", burrito.WrappedError(
+				"The \"exact\" export target requires at least one non-empty \"bpPath\" or \"rpPath\" property. Use the \"none\" export target if you do not want to export any packs.")
+		}
+	}
+
+	if rawBpEmpty {
+		if hasBp {
+			return "", "", burrito.WrappedError(
+				"The \"exact\" export target requires a non-empty \"bpPath\" property because the project defines a behavior pack.")
+		}
+	} else {
+		bpPath, err = resolveExactExportPath(exportTarget.BpPath, "bpPath")
+		if err != nil {
+			return "", "", burrito.WrapError(
+				err, "Failed to resolve behavior pack path.")
+		}
+	}
+
+	if rawRpEmpty {
+		if hasRp {
+			return "", "", burrito.WrappedError(
+				"The \"exact\" export target requires a non-empty \"rpPath\" property because the project defines a resource pack.")
+		}
+	} else {
+		rpPath, err = resolveExactExportPath(exportTarget.RpPath, "rpPath")
+		if err != nil {
+			return "", "", burrito.WrapError(
+				err, "Failed to resolve resource pack path.")
+		}
+	}
+
+	return bpPath, rpPath, nil
 }
 
 func GetWorldExportPaths(
@@ -297,11 +368,15 @@ func ExportProject(ctx RunContext) error {
 			return burrito.WrapError(err, getExportPathsError)
 		}
 		targetLabel := fmt.Sprintf("export target %d (%s)", i+1, exportTarget.Target)
-		if err := checkExportPathCollision(seenExportPaths, bpPath, targetLabel+" behavior pack: "+bpPath); err != nil {
-			return burrito.PassError(err)
+		if bpPath != "" {
+			if err := checkExportPathCollision(seenExportPaths, bpPath, targetLabel+" behavior pack: "+bpPath); err != nil {
+				return burrito.PassError(err)
+			}
 		}
-		if err := checkExportPathCollision(seenExportPaths, rpPath, targetLabel+" resource pack: "+rpPath); err != nil {
-			return burrito.PassError(err)
+		if rpPath != "" {
+			if err := checkExportPathCollision(seenExportPaths, rpPath, targetLabel+" resource pack: "+rpPath); err != nil {
+				return burrito.PassError(err)
+			}
 		}
 		activeTargets = append(activeTargets, resolvedExportTarget{
 			target: exportTarget,
@@ -369,6 +444,9 @@ func ExportProject(ctx RunContext) error {
 			continue
 		}
 		for _, packPath := range []string{exportTarget.rpPath, exportTarget.bpPath} {
+			if packPath == "" {
+				continue
+			}
 			pathEmpty, _ := IsDirEmpty(packPath)
 			if pathEmpty {
 				if err := os.Remove(packPath); err != nil {
@@ -394,15 +472,19 @@ func exportProjectRpAndBp(exportTarget ExportTarget, rpPath, bpPath string, ctx 
 	var err error
 	if ctx.DisableSizeTimeCheck {
 		MeasureStart("Export - Clean")
-		if err := removeJunctionSafe(bpPath); err != nil {
-			return burrito.WrapErrorf(
-				err, "Failed to clear behavior pack from build path %q.\n"+
-					"Are user permissions correct?", bpPath)
+		if bpPath != "" {
+			if err := removeJunctionSafe(bpPath); err != nil {
+				return burrito.WrapErrorf(
+					err, "Failed to clear behavior pack from build path %q.\n"+
+						"Are user permissions correct?", bpPath)
+			}
 		}
-		if err := removeJunctionSafe(rpPath); err != nil {
-			return burrito.WrapErrorf(
-				err, "Failed to clear resource pack from build path %q.\n"+
-					"Are user permissions correct?", rpPath)
+		if rpPath != "" {
+			if err := removeJunctionSafe(rpPath); err != nil {
+				return burrito.WrapErrorf(
+					err, "Failed to clear resource pack from build path %q.\n"+
+						"Are user permissions correct?", rpPath)
+			}
 		}
 	}
 	MeasureStart("Export - MoveOrCopy")
@@ -421,6 +503,9 @@ func exportProjectRpAndBp(exportTarget ExportTarget, rpPath, bpPath string, ctx 
 	}
 	errChan := make(chan error, len(packsData))
 	for _, packData := range packsData {
+		if packData.packPath == "" {
+			continue
+		}
 		packPath, subpathInTmp, packType := packData.packPath, packData.subpathInTmp, packData.packType
 		wg.Go(func() {
 			Logger.Infof("Exporting %s pack to \"%s\".", packType, packPath)

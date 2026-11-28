@@ -303,7 +303,7 @@ func acquireSessionLock(dotRegolithPath string) (func() error, error) {
 	return unlockFunc, nil
 }
 
-func ResolvePath(path string) (string, error) {
+func expandPathVars(path string) (string, error) {
 	// Expand %VAR% style markers
 	parts := make([]string, 0)
 	parsed := 0
@@ -355,7 +355,15 @@ func ResolvePath(path string) (string, error) {
 		return val
 	})
 
-	return filepath.Clean(path), nil
+	return path, nil
+}
+
+func ResolvePath(path string) (string, error) {
+	expanded, err := expandPathVars(path)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(expanded), nil
 }
 
 type measure struct {

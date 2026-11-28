@@ -60,23 +60,27 @@ func (f *EditedFiles) Dump(dotRegolithPath string) error {
 // CheckDeletionSafety checks whether it's safe to delete files from rpPath and
 // bpPath based on the lists of removable files from EditedFiles object.
 func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
-	files, ok := f.Rp[rpPath]
-	if !ok {
-		files = make([]string, 0)
+	if rpPath != "" {
+		files, ok := f.Rp[rpPath]
+		if !ok {
+			files = make([]string, 0)
+		}
+		err := checkDeletionSafety(rpPath, files)
+		if err != nil {
+			return burrito.WrapError(
+				err, "Deletion safety check for resource pack failed.")
+		}
 	}
-	err := checkDeletionSafety(rpPath, files)
-	if err != nil {
-		return burrito.WrapError(
-			err, "Deletion safety check for resource pack failed.")
-	}
-	files, ok = f.Bp[bpPath]
-	if !ok {
-		files = make([]string, 0)
-	}
-	err = checkDeletionSafety(bpPath, files)
-	if err != nil {
-		return burrito.WrapError(
-			err, "Deletion safety check for behavior pack failed.")
+	if bpPath != "" {
+		files, ok := f.Bp[bpPath]
+		if !ok {
+			files = make([]string, 0)
+		}
+		err := checkDeletionSafety(bpPath, files)
+		if err != nil {
+			return burrito.WrapError(
+				err, "Deletion safety check for behavior pack failed.")
+		}
 	}
 	return nil
 }
@@ -84,16 +88,20 @@ func (f *EditedFiles) CheckDeletionSafety(rpPath string, bpPath string) error {
 // UpdateFromPaths updates the edited files data based on the paths to the
 // resource pack and behavior pack.
 func (f *EditedFiles) UpdateFromPaths(rpPath string, bpPath string) error {
-	rpFiles, err := listFiles(rpPath)
-	if err != nil {
-		return burrito.WrapError(err, "Failed to list resource pack files.")
+	if rpPath != "" {
+		rpFiles, err := listFiles(rpPath)
+		if err != nil {
+			return burrito.WrapError(err, "Failed to list resource pack files.")
+		}
+		f.Rp[rpPath] = rpFiles
 	}
-	bpFiles, err := listFiles(bpPath)
-	if err != nil {
-		return burrito.WrapError(err, "Failed to list behavior pack files.")
+	if bpPath != "" {
+		bpFiles, err := listFiles(bpPath)
+		if err != nil {
+			return burrito.WrapError(err, "Failed to list behavior pack files.")
+		}
+		f.Bp[bpPath] = bpFiles
 	}
-	f.Rp[rpPath] = rpFiles
-	f.Bp[bpPath] = bpFiles
 	return nil
 }
 
