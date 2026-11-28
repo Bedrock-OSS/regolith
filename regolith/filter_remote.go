@@ -367,10 +367,35 @@ func FilterDefinitionFromTheInternet(
 	}, nil
 }
 
-// Download
+// Download downloads the remote filter into the project cache and saves its
+// resolved version to filter.json.
 func (f *RemoteFilterDefinition) Download(
 	isForced bool, dotRegolithPath string, refreshFilters bool,
 ) error {
+	trimmedVersion, err := f.download(isForced, dotRegolithPath, refreshFilters)
+	if err != nil {
+		return burrito.PassError(err)
+	}
+	if trimmedVersion == "" {
+		return nil
+	}
+	// Save the version of the filter we downloaded
+	MeasureStart("Save version info")
+	err = f.SaveVersionInfo(trimmedVersion, dotRegolithPath)
+	MeasureEnd()
+	if err != nil {
+		return burrito.PassError(err)
+	}
+	return nil
+}
+
+// download fetches the remote filter into the project cache without saving its
+// version into filter.json. It returns the resolved version string, or an empty
+// string if the download was skipped because the filter is already cached and
+// isForced is false.
+func (f *RemoteFilterDefinition) download(
+	isForced bool, dotRegolithPath string, refreshFilters bool,
+) (string, error) {
 	if _, err := os.Stat(f.GetDownloadPath(dotRegolithPath)); err == nil {
 		if !isForced {
 			Logger.Warnf(
@@ -378,7 +403,7 @@ func (f *RemoteFilterDefinition) Download(
 					"be the case only if the filter is installed.\n"+
 					"    Skipped the download. You can force the it by "+
 					"passing the \"-force\" flag.", f.Id)
-			return nil
+			return "", nil
 		} else {
 			f.Uninstall(dotRegolithPath)
 		}
@@ -393,7 +418,7 @@ func (f *RemoteFilterDefinition) Download(
 	MeasureStart("Get remote filter download ref")
 	version, err := GetRemoteFilterDownloadRef(f.Url, f.Id, f.Version)
 	if err != nil {
-		return burrito.WrapErrorf(
+		return "", burrito.WrapErrorf(
 			err, getRemoteFilterDownloadRefError, f.Url, f.Id, f.Version)
 	}
 	trimmedVersion := trimFilterPrefix(version, f.Id)
@@ -421,7 +446,7 @@ func (f *RemoteFilterDefinition) Download(
 			// Don't let a partially extracted release mix with the files
 			// copied by the git fallback
 			if err := os.RemoveAll(downloadPath); err != nil {
-				return burrito.WrapErrorf(err, osRemoveError, downloadPath)
+				return "", burrito.WrapErrorf(err, osRemoveError, downloadPath)
 			}
 		} else {
 			ghDownloadSuccessful = true
@@ -431,23 +456,17 @@ func (f *RemoteFilterDefinition) Download(
 	if !ghDownloadSuccessful {
 		MeasureStart("Try download with git")
 		if !hasGit() {
-			return burrito.WrappedError(gitNotInstalledWarning)
+			return "", burrito.WrappedError(gitNotInstalledWarning)
 		}
 		err = f.downloadFilterRepository(downloadPath, version, refreshFilters)
 		if err != nil {
 			if downloadPathIsNew { // Remove the path created by getter
 				os.RemoveAll(downloadPath)
 			}
-			return burrito.WrapErrorf(
+			return "", burrito.WrapErrorf(
 				err, "Could not download filter from %s.\n"+
 					"Does that filter exist?", f.Url)
 		}
-	}
-	// Save the version of the filter we downloaded
-	MeasureStart("Save version info")
-	err = f.SaveVersionInfo(trimmedVersion, dotRegolithPath)
-	if err != nil {
-		return burrito.PassError(err)
 	}
 	MeasureEnd()
 	// Remove 'test' folder, which we never want to use (saves space on disk)
@@ -457,7 +476,7 @@ func (f *RemoteFilterDefinition) Download(
 	}
 
 	Logger.Infof("Filter \"%s\" downloaded successfully.", f.Id)
-	return nil
+	return trimmedVersion, nil
 }
 
 // downloadFilterGhRelease downloads the ZIP file of the filter from the
@@ -729,14 +748,22 @@ func (f *RemoteFilterDefinition) Update(force bool, dotRegolithPath, dataPath st
 		Logger.Infof(
 			"Updating filter %q to new version: %q->%q.",
 			f.Id, installedVersion, version)
-		err = f.Download(true, dotRegolithPath, refreshFilters)
+		downloadedVersion, err := f.download(true, dotRegolithPath, refreshFilters)
 		if err != nil {
+			return burrito.PassError(err)
+		}
+		err = f.InstallDependencies(f, dotRegolithPath)
+		if err != nil {
+			f.Uninstall(dotRegolithPath)
 			return burrito.PassError(err)
 		}
 		// Copy the data of the remote filter to the data path
 		f.CopyFilterData(dataPath, dotRegolithPath)
-		err = f.InstallDependencies(f, dotRegolithPath)
+		MeasureStart("Save version info")
+		err = f.SaveVersionInfo(downloadedVersion, dotRegolithPath)
+		MeasureEnd()
 		if err != nil {
+			f.Uninstall(dotRegolithPath)
 			return burrito.PassError(err)
 		}
 		Logger.Infof("Filter %q updated successfully.", f.Id)

@@ -153,19 +153,24 @@ func (f *PythonFilterDefinition) InstallDependencies(
 		}
 	}
 	if needsVenv(requirementsFile) {
-		venvPath, err := f.resolveVenvPath(dotRegolithPath)
-		if err != nil {
-			return burrito.WrapError(err, "Failed to resolve venv path.")
-		}
-		Logger.Info("Creating venv...")
 		pythonCommand, err := findPython()
 		if err != nil {
 			return burrito.PassError(err)
 		}
+		venvPath, err := f.resolveVenvPath(dotRegolithPath)
+		if err != nil {
+			return burrito.WrapError(err, "Failed to resolve venv path.")
+		}
+		_, statErr := os.Stat(venvPath)
+		venvExisted := statErr == nil
+		Logger.Info("Creating venv...")
 		// Create the "venv"
 		err = RunSubProcess(
 			pythonCommand, []string{"-m", "venv", venvPath}, filterPath, "", ShortFilterName(f.Id))
 		if err != nil {
+			if !venvExisted {
+				os.RemoveAll(venvPath)
+			}
 			return burrito.WrapError(err, "Failed to create venv.")
 		}
 		// Update pip of the venv
@@ -186,6 +191,9 @@ func (f *PythonFilterDefinition) InstallDependencies(
 			[]string{"-m", "pip", "install", "-r", filepath.Base(requirementsFile)},
 			requirementsFolder, requirementsFolder, ShortFilterName(f.Id))
 		if err != nil {
+			if !venvExisted {
+				os.RemoveAll(venvPath)
+			}
 			return burrito.WrapErrorf(
 				err, "Couldn't run Pip to install dependencies of %s",
 				f.Id,
