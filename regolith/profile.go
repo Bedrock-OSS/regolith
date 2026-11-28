@@ -130,7 +130,8 @@ func SetupTmpFiles(context RunContext) error {
 
 	// Check if should create symlinks, if yes load bp and rp paths
 	var bpExportPath, rpExportPath string
-	shouldCreateSymlinks := false
+	shouldCreateBpSymlink := false
+	shouldCreateRpSymlink := false
 	if useSymlinkExport {
 		profile, err := context.GetProfile()
 		if err != nil {
@@ -148,19 +149,27 @@ func SetupTmpFiles(context RunContext) error {
 			if err != nil {
 				return burrito.WrapError(err, getExportPathsError)
 			}
-			bpLink := isSymlinkTo(bpTmpPath, bpExportPath)
-			rpLink := isSymlinkTo(rpTmpPath, rpExportPath)
-			shouldCreateSymlinks = !bpLink || !rpLink
+			if bpExportPath != "" {
+				shouldCreateBpSymlink = !isSymlinkTo(bpTmpPath, bpExportPath)
+			}
+			if rpExportPath != "" {
+				shouldCreateRpSymlink = !isSymlinkTo(rpTmpPath, rpExportPath)
+			}
 		}
 	}
-	// If we're not using symlink export make sure there is no symlinks
-	if !useSymlinkExport {
+	shouldCreateSymlinks := shouldCreateBpSymlink || shouldCreateRpSymlink
+
+	// Remove symlinks when symlink export is disabled, or stale symlinks for
+	// packs whose export path is empty.
+	if !useSymlinkExport || bpExportPath == "" {
 		if isSymlink(bpTmpPath) {
 			err := os.Remove(bpTmpPath)
 			if err != nil {
 				return burrito.WrapErrorf(err, osRemoveError, bpTmpPath)
 			}
 		}
+	}
+	if !useSymlinkExport || rpExportPath == "" {
 		if isSymlink(rpTmpPath) {
 			err := os.Remove(rpTmpPath)
 			if err != nil {
@@ -178,8 +187,13 @@ func SetupTmpFiles(context RunContext) error {
 			return burrito.WrapErrorf(err, osRemoveError, absTmpPath)
 		}
 	} else if shouldCreateSymlinks {
-		for _, tmpPath := range []string{bpTmpPath, rpTmpPath} {
-			if err := removeJunctionSafe(tmpPath); err != nil {
+		if shouldCreateBpSymlink {
+			if err := removeJunctionSafe(bpTmpPath); err != nil {
+				return burrito.PassError(err)
+			}
+		}
+		if shouldCreateRpSymlink {
+			if err := removeJunctionSafe(rpTmpPath); err != nil {
 				return burrito.PassError(err)
 			}
 		}
@@ -203,18 +217,21 @@ func SetupTmpFiles(context RunContext) error {
 					rpExportPath, bpExportPath)
 			}
 		}
-		if err := os.MkdirAll(bpExportPath, 0755); err != nil {
-			return burrito.WrapErrorf(err, osMkdirError, bpExportPath)
+		if shouldCreateBpSymlink {
+			if err := os.MkdirAll(bpExportPath, 0755); err != nil {
+				return burrito.WrapErrorf(err, osMkdirError, bpExportPath)
+			}
+			if err := createDirLink(bpTmpPath, bpExportPath); err != nil {
+				return burrito.WrapErrorf(err, createDirLinkError, bpTmpPath, bpExportPath)
+			}
 		}
-		if err := os.MkdirAll(rpExportPath, 0755); err != nil {
-			return burrito.WrapErrorf(err, osMkdirError, rpExportPath)
-		}
-
-		if err := createDirLink(filepath.Join(absTmpPath, "BP"), bpExportPath); err != nil {
-			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(absTmpPath, "BP"), bpExportPath)
-		}
-		if err := createDirLink(filepath.Join(absTmpPath, "RP"), rpExportPath); err != nil {
-			return burrito.WrapErrorf(err, createDirLinkError, filepath.Join(absTmpPath, "RP"), rpExportPath)
+		if shouldCreateRpSymlink {
+			if err := os.MkdirAll(rpExportPath, 0755); err != nil {
+				return burrito.WrapErrorf(err, osMkdirError, rpExportPath)
+			}
+			if err := createDirLink(rpTmpPath, rpExportPath); err != nil {
+				return burrito.WrapErrorf(err, createDirLinkError, rpTmpPath, rpExportPath)
+			}
 		}
 	}
 
