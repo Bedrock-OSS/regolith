@@ -2,9 +2,11 @@ package regolith
 
 import (
 	"archive/zip"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -169,4 +171,167 @@ func TestUnzipErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+// pythonWriteFileScript returns a cross-platform Python snippet that writes
+// content to BP/<filename> relative to the filter working directory.
+func pythonWriteFileScript(filename, content string) string {
+	return fmt.Sprintf(
+		"from pathlib import Path\nPath(\"BP\", %q).write_text(%q, encoding=\"utf-8\")\n",
+		filename, content,
+	)
+}
+
+func setupRemoteFilterTest(t *testing.T, filterJSON string, scripts map[string]string) (*RemoteFilter, string, string) {
+	t.Helper()
+	// Create TempDir before Chdir so LIFO cleanup restores cwd before removing it.
+	projectDir := t.TempDir()
+	t.Chdir(projectDir)
+
+	dotRegolithPath := filepath.Join(projectDir, ".regolith")
+	workDir, err := GetAbsoluteWorkingDirectory(dotRegolithPath)
+	if err != nil {
+		t.Fatalf("GetAbsoluteWorkingDirectory failed: %v", err)
+	}
+	if rel, relErr := filepath.Rel(projectDir, workDir); relErr != nil || strings.HasPrefix(rel, "..") {
+		t.Cleanup(func() {
+			_ = os.RemoveAll(workDir)
+		})
+	}
+	if err := os.MkdirAll(filepath.Join(workDir, "BP"), 0755); err != nil {
+		t.Fatalf("Failed to create working BP directory: %v", err)
+	}
+
+	filterDir := filepath.Join(dotRegolithPath, "cache", "filters", "test_remote")
+	if err := os.MkdirAll(filterDir, 0755); err != nil {
+		t.Fatalf("Failed to create remote filter directory: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(filterDir, "filter.json"), []byte(filterJSON), 0644); err != nil {
+		t.Fatalf("Failed to write filter.json: %v", err)
+	}
+	for name, content := range scripts {
+		scriptPath := filepath.Join(filterDir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(scriptPath), 0755); err != nil {
+			t.Fatalf("Failed to create script parent dir: %v", err)
+		}
+		if err := os.WriteFile(scriptPath, []byte(content), 0644); err != nil {
+			t.Fatalf("Failed to write script %s: %v", name, err)
+		}
+	}
+
+	def := RemoteFilterDefinition{
+		FilterDefinition: FilterDefinition{Id: "test_remote"},
+		Url:              "example.com/test/filters",
+		Version:          "1.0.0",
+	}
+	runner, err := def.CreateFilterRunner(map[string]any{}, "test_remote")
+	if err != nil {
+		t.Fatalf("CreateFilterRunner failed: %v", err)
+	}
+	rf, ok := runner.(*RemoteFilter)
+	if !ok {
+		t.Fatalf("Expected *RemoteFilter, got %T", runner)
+	}
+	return rf, dotRegolithPath, workDir
+}
+
+func assertFileExists(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("Expected file %s to exist: %v", path, err)
+	}
+}
+
+func assertFileNotExists(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); err == nil {
+		t.Fatalf("Expected file %s not to exist", path)
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("Unexpected stat error for %s: %v", path, err)
+	}
+}
+
+func TestRemoteFilterSubfilterModeCondition(t *testing.T) {
+	const filterJSON = `{
+		"version": "1.0.0",
+		"filters": [
+			{"runWith": "python", "script": "watch.py", "when": "mode == 'watch'"},
+			{"runWith": "python", "script": "run.py", "when": "mode == 'run'"}
+		]
+	}`
+	scripts := map[string]string{
+		"watch.py": pythonWriteFileScript("watch.txt", "watch"),
+		"run.py":   pythonWriteFileScript("run.txt", "run"),
+	}
+
+	t.Run("run mode", func(t *testing.T) {
+		rf, dotRegolithPath, workDir := setupRemoteFilterTest(t, filterJSON, scripts)
+		ctx := RunContext{
+			Config:          &Config{Name: "test", Author: "test"},
+			Profile:         "default",
+			DotRegolithPath: dotRegolithPath,
+		}
+		interrupted, err := rf.Run(ctx)
+		if err != nil {
+			t.Fatalf("rf.Run failed: %v", err)
+		}
+		if interrupted {
+			t.Fatal("Expected interrupted == false in run mode")
+		}
+		assertFileExists(t, filepath.Join(workDir, "BP", "run.txt"))
+		assertFileNotExists(t, filepath.Join(workDir, "BP", "watch.txt"))
+	})
+
+	t.Run("watch mode", func(t *testing.T) {
+		rf, dotRegolithPath, workDir := setupRemoteFilterTest(t, filterJSON, scripts)
+		ctx := RunContext{
+			Config:          &Config{Name: "test", Author: "test"},
+			Profile:         "default",
+			DotRegolithPath: dotRegolithPath,
+			interruption:    make(chan string, 1),
+		}
+		interrupted, err := rf.Run(ctx)
+		if err != nil {
+			t.Fatalf("rf.Run failed: %v", err)
+		}
+		if interrupted {
+			t.Fatal("Expected interrupted == false when no interruption was sent")
+		}
+		assertFileExists(t, filepath.Join(workDir, "BP", "watch.txt"))
+		assertFileNotExists(t, filepath.Join(workDir, "BP", "run.txt"))
+	})
+}
+
+func TestRemoteFilterSubfilterInterruptionPropagation(t *testing.T) {
+	const filterJSON = `{
+		"version": "1.0.0",
+		"filters": [
+			{"runWith": "python", "script": "first.py"},
+			{"runWith": "python", "script": "second.py"}
+		]
+	}`
+	scripts := map[string]string{
+		"first.py":  pythonWriteFileScript("first.txt", "first"),
+		"second.py": pythonWriteFileScript("second.txt", "second"),
+	}
+
+	rf, dotRegolithPath, workDir := setupRemoteFilterTest(t, filterJSON, scripts)
+	interruption := make(chan string, 1)
+	interruption <- "bp"
+	ctx := RunContext{
+		Config:          &Config{Name: "test", Author: "test"},
+		Profile:         "default",
+		DotRegolithPath: dotRegolithPath,
+		interruption:    interruption,
+	}
+
+	interrupted, err := rf.Run(ctx)
+	if err != nil {
+		t.Fatalf("rf.Run failed: %v", err)
+	}
+	if !interrupted {
+		t.Fatal("Expected interrupted == true when interruption channel was populated")
+	}
+	assertFileExists(t, filepath.Join(workDir, "BP", "first.txt"))
+	assertFileNotExists(t, filepath.Join(workDir, "BP", "second.txt"))
 }
