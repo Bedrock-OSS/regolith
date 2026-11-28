@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Bedrock-OSS/go-burrito/burrito"
@@ -186,16 +187,40 @@ func RunGitProcess(args []string, workingDir string) ([]string, error) {
 	Logger.Debugf("Exec: git %s", strings.Join(args, " "))
 	cmd := exec.Command("git", args...)
 	cmd.Dir = workingDir
-	out, _ := cmd.StdoutPipe()
-	err, _ := cmd.StderrPipe()
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+
+	var mu sync.Mutex
 	completeOutput := make([]string, 0)
 	logFunc := func(template string, args ...any) {
+		mu.Lock()
 		completeOutput = append(completeOutput, fmt.Sprintf(template, args...))
+		mu.Unlock()
 	}
-	go LogStd(out, logFunc, "git")
-	go LogStd(err, logFunc, "git")
 
-	return completeOutput, cmd.Run()
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		LogStd(stdout, logFunc, "git")
+	}()
+	go func() {
+		defer wg.Done()
+		LogStd(stderr, logFunc, "git")
+	}()
+
+	wg.Wait()
+	cmdErr := cmd.Wait()
+	return completeOutput, cmdErr
 }
 
 // LogStd logs the output of a sub-process

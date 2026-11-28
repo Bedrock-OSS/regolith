@@ -3,9 +3,12 @@ package regolith
 import (
 	"archive/zip"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 )
 
 // createTestZip creates a .zip file at path with the given entries. Keys are
@@ -168,5 +171,260 @@ func TestUnzipErrors(t *testing.T) {
 				t.Error("file was written outside of the target directory")
 			}
 		})
+	}
+}
+
+func runTestGit(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	baseArgs := []string{
+		"-c", "user.name=test",
+		"-c", "user.email=test@example.com",
+		"-c", "commit.gpgsign=false",
+		"-c", "tag.gpgsign=false",
+		"-c", "core.autocrlf=false",
+	}
+	cmd := exec.Command("git", append(baseArgs, args...)...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %s failed in %s: %v\n%s", strings.Join(args, " "), dir, err, string(out))
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func initTestFilterRepo(t *testing.T, filterId, filterJsonContent string) (bareRepo, workRepo, headSha string) {
+	t.Helper()
+	if !hasGit() {
+		t.Skip("git is not installed")
+	}
+	root := t.TempDir()
+	bareRepo = filepath.Join(root, "remote.git")
+	workRepo = filepath.Join(root, "work")
+	if err := os.MkdirAll(bareRepo, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(workRepo, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	runTestGit(t, bareRepo, "init", "--bare")
+	runTestGit(t, bareRepo, "symbolic-ref", "HEAD", "refs/heads/main")
+
+	runTestGit(t, workRepo, "init")
+	runTestGit(t, workRepo, "checkout", "-b", "main")
+	runTestGit(t, workRepo, "remote", "add", "origin", bareRepo)
+
+	filterDir := filepath.Join(workRepo, filterId)
+	if err := os.MkdirAll(filterDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(filterDir, "filter.json"), []byte(filterJsonContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	runTestGit(t, workRepo, "add", ".")
+	runTestGit(t, workRepo, "commit", "-m", "initial commit")
+	runTestGit(t, workRepo, "push", "-u", "origin", "main")
+	headSha = runTestGit(t, workRepo, "rev-parse", "HEAD")
+	return bareRepo, workRepo, headSha
+}
+
+func TestDownloadFilterRepository_ForcePushedCommitWithinCooldown(t *testing.T) {
+	v1 := `{"filters":[],"version":"v1"}`
+	bareRepo, workRepo, sha1 := initTestFilterRepo(t, "myfilter", v1)
+
+	cache := filepath.Join(t.TempDir(), "cache")
+	dst1 := filepath.Join(t.TempDir(), "dst1")
+	if err := downloadFilterRepositoryFromURL(bareRepo, "myfilter", dst1, sha1, false, cache, time.Hour); err != nil {
+		t.Fatalf("initial download failed: %v", err)
+	}
+	got1, err := os.ReadFile(filepath.Join(dst1, "filter.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got1) != v1 {
+		t.Fatalf("got %q, want %q", string(got1), v1)
+	}
+
+	// Force-push an amended commit to remote within cooldown window.
+	v2 := `{"filters":[],"version":"v2"}`
+	if err := os.WriteFile(filepath.Join(workRepo, "myfilter", "filter.json"), []byte(v2), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runTestGit(t, workRepo, "add", ".")
+	runTestGit(t, workRepo, "commit", "--amend", "-m", "amended commit")
+	runTestGit(t, workRepo, "push", "--force", "origin", "main")
+	sha2 := runTestGit(t, workRepo, "rev-parse", "HEAD")
+	if sha2 == sha1 {
+		t.Fatalf("expected amended commit SHA to differ from %s", sha1)
+	}
+
+	dst2 := filepath.Join(t.TempDir(), "dst2")
+	if err := downloadFilterRepositoryFromURL(bareRepo, "myfilter", dst2, sha2, false, cache, time.Hour); err != nil {
+		t.Fatalf("recovery after force push failed: %v", err)
+	}
+	got2, err := os.ReadFile(filepath.Join(dst2, "filter.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got2) != v2 {
+		t.Fatalf("got %q, want %q", string(got2), v2)
+	}
+}
+
+func TestDownloadFilterRepository_MovedTag(t *testing.T) {
+	v1 := `{"filters":[],"version":"tag-v1"}`
+	bareRepo, workRepo, _ := initTestFilterRepo(t, "myfilter", v1)
+	runTestGit(t, workRepo, "tag", "myfilter-1.0.0")
+	runTestGit(t, workRepo, "push", "origin", "refs/tags/myfilter-1.0.0")
+
+	cache := filepath.Join(t.TempDir(), "cache")
+	dst1 := filepath.Join(t.TempDir(), "dst1")
+	if err := downloadFilterRepositoryFromURL(bareRepo, "myfilter", dst1, "myfilter-1.0.0", false, cache, time.Hour); err != nil {
+		t.Fatalf("initial tag download failed: %v", err)
+	}
+	got1, err := os.ReadFile(filepath.Join(dst1, "filter.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got1) != v1 {
+		t.Fatalf("got %q, want %q", string(got1), v1)
+	}
+
+	// Move tag myfilter-1.0.0 to a new commit and force-push it.
+	v2 := `{"filters":[],"version":"tag-v2"}`
+	if err := os.WriteFile(filepath.Join(workRepo, "myfilter", "filter.json"), []byte(v2), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runTestGit(t, workRepo, "add", ".")
+	runTestGit(t, workRepo, "commit", "-m", "move tag commit")
+	runTestGit(t, workRepo, "tag", "-f", "myfilter-1.0.0")
+	runTestGit(t, workRepo, "push", "origin", "main")
+	runTestGit(t, workRepo, "push", "--force", "origin", "refs/tags/myfilter-1.0.0")
+
+	dst2 := filepath.Join(t.TempDir(), "dst2")
+	if err := downloadFilterRepositoryFromURL(bareRepo, "myfilter", dst2, "myfilter-1.0.0", true, cache, time.Hour); err != nil {
+		t.Fatalf("moved tag download failed: %v", err)
+	}
+	got2, err := os.ReadFile(filepath.Join(dst2, "filter.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got2) != v2 {
+		t.Fatalf("got %q, want %q", string(got2), v2)
+	}
+}
+
+func TestDownloadFilterRepository_CorruptedCache(t *testing.T) {
+	v1 := `{"filters":[],"version":"healthy"}`
+	bareRepo, _, sha1 := initTestFilterRepo(t, "myfilter", v1)
+
+	cache := filepath.Join(t.TempDir(), "cache")
+	dst1 := filepath.Join(t.TempDir(), "dst1")
+	if err := downloadFilterRepositoryFromURL(bareRepo, "myfilter", dst1, sha1, false, cache, time.Hour); err != nil {
+		t.Fatalf("initial download failed: %v", err)
+	}
+
+	// Corrupt the cached git directory.
+	if err := os.WriteFile(filepath.Join(cache, ".git", "HEAD"), []byte("corrupted-head\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(cache, ".git", "config")); err != nil {
+		t.Fatal(err)
+	}
+
+	dst2 := filepath.Join(t.TempDir(), "dst2")
+	if err := downloadFilterRepositoryFromURL(bareRepo, "myfilter", dst2, sha1, false, cache, time.Hour); err != nil {
+		t.Fatalf("recovery from corrupted cache failed: %v", err)
+	}
+	got2, err := os.ReadFile(filepath.Join(dst2, "filter.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got2) != v1 {
+		t.Fatalf("got %q, want %q", string(got2), v1)
+	}
+}
+
+func TestDownloadFilterRepository_NonexistentRef(t *testing.T) {
+	v1 := `{"filters":[],"version":"1.0.0"}`
+	bareRepo, _, sha1 := initTestFilterRepo(t, "myfilter", v1)
+	const missingRef = "nonexistent-ref-12345"
+
+	assertDescriptiveError := func(t *testing.T, err error) {
+		t.Helper()
+		if err == nil {
+			t.Fatal("expected error for nonexistent ref, got nil")
+		}
+		msg := err.Error()
+		for _, want := range []string{bareRepo, missingRef, "[git]", "regolith clean --filter-cache"} {
+			if !strings.Contains(msg, want) {
+				t.Errorf("error message %q does not contain %q", msg, want)
+			}
+		}
+	}
+
+	t.Run("fresh cache", func(t *testing.T) {
+		cache := filepath.Join(t.TempDir(), "cache")
+		dst := filepath.Join(t.TempDir(), "dst")
+		err := downloadFilterRepositoryFromURL(bareRepo, "myfilter", dst, missingRef, false, cache, time.Hour)
+		assertDescriptiveError(t, err)
+	})
+
+	t.Run("populated cache within cooldown", func(t *testing.T) {
+		cache := filepath.Join(t.TempDir(), "cache")
+		dst1 := filepath.Join(t.TempDir(), "dst1")
+		if err := downloadFilterRepositoryFromURL(bareRepo, "myfilter", dst1, sha1, false, cache, time.Hour); err != nil {
+			t.Fatalf("initial download failed: %v", err)
+		}
+		dst2 := filepath.Join(t.TempDir(), "dst2")
+		err := downloadFilterRepositoryFromURL(bareRepo, "myfilter", dst2, missingRef, false, cache, time.Hour)
+		assertDescriptiveError(t, err)
+	})
+}
+
+func TestDownloadFilterRepository_FailedCloneCleansUpCache(t *testing.T) {
+	if !hasGit() {
+		t.Skip("git is not installed")
+	}
+	invalidRepo := filepath.Join(t.TempDir(), "does-not-exist.git")
+	cache := filepath.Join(t.TempDir(), "cache")
+	dst := filepath.Join(t.TempDir(), "dst")
+
+	err := downloadFilterRepositoryFromURL(invalidRepo, "myfilter", dst, "main", false, cache, time.Hour)
+	if err == nil {
+		t.Fatal("expected clone error for invalid repository path")
+	}
+	msg := err.Error()
+	for _, want := range []string{invalidRepo, "[git]"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("error message %q does not contain %q", msg, want)
+		}
+	}
+	if _, statErr := os.Stat(cache); !os.IsNotExist(statErr) {
+		t.Fatalf("expected failed clone cache directory %s to be removed, stat err = %v", cache, statErr)
+	}
+}
+
+func TestRunGitProcess_CapturesOutput(t *testing.T) {
+	if !hasGit() {
+		t.Skip("git is not installed")
+	}
+	out, err := RunGitProcess([]string{"--version"}, t.TempDir())
+	if err != nil {
+		t.Fatalf("git --version failed: %v", err)
+	}
+	joined := strings.Join(out, "\n")
+	if !strings.Contains(joined, "[git]") || !strings.Contains(joined, "git version") {
+		t.Fatalf("unexpected git --version output: %q", joined)
+	}
+
+	out, err = RunGitProcess([]string{"rev-parse", "--verify", "nonexistent"}, t.TempDir())
+	if err == nil {
+		t.Fatal("expected error from failing git command")
+	}
+	joined = strings.Join(out, "\n")
+	if len(out) == 0 || !strings.Contains(joined, "[git]") {
+		t.Fatalf("expected captured [git] error output, got %v", out)
 	}
 }
