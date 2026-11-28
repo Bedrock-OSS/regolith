@@ -232,16 +232,17 @@ func SetupTmpFiles(context RunContext) error {
 				if os.IsNotExist(err) {
 					Logger.Warnf(
 						"%s %q does not exist", descriptiveName, path)
-					err = os.MkdirAll(p, 0755)
-					if err != nil {
-						return burrito.WrapErrorf(err, osMkdirError, p)
+					if err := ensureEmptyDirectory(p); err != nil {
+						return burrito.PassError(err)
 					}
+				} else {
+					return burrito.WrapErrorf(err, osStatErrorAny, path)
 				}
 			} else if stats.IsDir() {
 				if useSizeTimeCheck {
 					err = SyncDirectories(path, p, false)
 					if err != nil {
-						return burrito.WrapError(err, "Failed to export behavior pack.")
+						return burrito.WrapErrorf(err, "Failed to sync %s.", descriptiveName)
 					}
 				} else {
 					err = copy.Copy(
@@ -256,9 +257,8 @@ func SetupTmpFiles(context RunContext) error {
 				return burrito.WrappedErrorf(isDirNotADirError, path)
 			}
 		} else {
-			err := os.MkdirAll(p, 0755)
-			if err != nil {
-				return burrito.WrapErrorf(err, osMkdirError, p)
+			if err := ensureEmptyDirectory(p); err != nil {
+				return burrito.PassError(err)
 			}
 		}
 		return nil
