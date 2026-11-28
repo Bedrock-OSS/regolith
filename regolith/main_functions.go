@@ -630,13 +630,15 @@ func CleanFilterCache() error {
 	if err != nil {
 		return burrito.WrappedError(osUserCacheDirError)
 	}
-	regolithCacheFiles := filepath.Join(userCache, appDataFilterCachePath)
-	Logger.Infof("Regolith cache files are located in: %s", regolithCacheFiles)
-	err = os.RemoveAll(regolithCacheFiles)
-	if err != nil {
-		return burrito.WrapErrorf(err, "failed to remove %q folder", regolithCacheFiles)
+	for _, cachePath := range []string{appDataFilterCachePath, appDataGhReleaseCachePath} {
+		regolithCacheFiles := filepath.Join(userCache, cachePath)
+		Logger.Infof("Regolith cache files are located in: %s", regolithCacheFiles)
+		err = os.RemoveAll(regolithCacheFiles)
+		if err != nil {
+			return burrito.WrapErrorf(err, "failed to remove %q folder", regolithCacheFiles)
+		}
+		os.MkdirAll(regolithCacheFiles, 0755)
 	}
-	os.MkdirAll(regolithCacheFiles, 0755)
 	Logger.Infof("Regolith filter files cached in user app data cleaned.")
 	return nil
 }
