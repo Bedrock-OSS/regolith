@@ -104,6 +104,7 @@ func (f *RemoteFilter) run(context RunContext) (bool, error) {
 			DotRegolithPath:  context.DotRegolithPath,
 			Settings:         filter.GetSettings(),
 			UnsafeMode:       context.UnsafeMode,
+			interruption:     context.interruption,
 		}
 		// Disabled filters are skipped
 		disabled, err := filter.IsDisabled(runContext)
@@ -117,15 +118,13 @@ func (f *RemoteFilter) run(context RunContext) (bool, error) {
 			continue
 		}
 		// Overwrite the venvSlot with the parent value
-		// TODO - remote filters can contain multiple filters, the interruption
-		// check should be performed after every subfilter
-		_, err = filter.Run(runContext)
+		interrupted, err := filter.Run(runContext)
 		if err != nil {
 			return false, burrito.WrapErrorf(
 				err, filterRunnerRunError,
 				NiceSubfilterName(f.Id, i))
 		}
-		if context.IsInterrupted() {
+		if interrupted || context.IsInterrupted() {
 			return true, nil
 		}
 	}
