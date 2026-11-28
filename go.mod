@@ -5,8 +5,8 @@ go 1.27.4
 require (
 	github.com/Bedrock-OSS/go-burrito v1.0.3
 	github.com/alessio/shellescape v1.4.1
-	github.com/arexon/fsnotify v0.0.0-20240929211932-1ebdc44d4bc2
 	github.com/fatih/color v1.14.1
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/google/go-github/v39 v39.2.0
 	github.com/muhammadmuzzammil1998/jsonc v1.0.0
 	github.com/nightlyone/lockfile v1.0.0
@@ -16,6 +16,7 @@ require (
 	github.com/stirante/go-simple-eval v0.0.0-20230131075324-9ed520afbec1
 	go.uber.org/zap v1.23.0
 	golang.org/x/mod v0.6.0
+	golang.org/x/sync v0.20.0
 	golang.org/x/sys v0.24.0
 )
 
@@ -37,6 +38,5 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/exp v0.0.0-20230131013936-aae9b4e6329d // indirect
-	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 )

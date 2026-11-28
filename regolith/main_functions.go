@@ -356,6 +356,7 @@ func Watch(profileName string, extraFilterArgs []string, debug bool, env string,
 	if err != nil {
 		return burrito.PassError(err)
 	}
+	defer context.StopWatchingSourceFiles()
 	for { // Loop until program termination (CTRL+C)
 		err = RunProfile(*context)
 		if err != nil {

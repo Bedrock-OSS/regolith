@@ -46,6 +46,8 @@ type RunContext struct {
 	fileWatchingError chan error
 
 	fileWatchingStage chan string
+
+	dirWatcher *DirWatcher
 }
 
 // GetProfile returns the Profile structure from the context.
@@ -64,17 +66,47 @@ func (c *RunContext) IsInWatchMode() bool {
 	return c.interruption != nil
 }
 
-// StartWatchingSourceFiles causes the Context to start goroutines that watch
-// for changes in the source files and report that to the
+// StartWatchingSourceFiles causes the Context to start watching
+// for changes in the source files and report them via interruption.
 func (c *RunContext) StartWatchingSourceFiles() error {
 	c.interruption = make(chan string)
 	c.fileWatchingError = make(chan error)
 	c.fileWatchingStage = make(chan string)
-	err := NewDirWatcher(c.Config, c.interruption, c.fileWatchingError, c.fileWatchingStage)
+	watcher, err := newDirWatcher(c.Config, c.interruption, c.fileWatchingError, c.fileWatchingStage)
 	if err != nil {
 		return err
 	}
+	c.dirWatcher = watcher
 	return nil
+}
+
+// PauseWatching pauses file watching and waits until OS handles are released.
+func (c *RunContext) PauseWatching() {
+	if c.dirWatcher != nil {
+		_ = c.dirWatcher.Pause()
+		return
+	}
+	if c.fileWatchingStage != nil {
+		c.fileWatchingStage <- "pause"
+	}
+}
+
+// RestartWatching resumes file watching after a pause.
+func (c *RunContext) RestartWatching() {
+	if c.dirWatcher != nil {
+		_ = c.dirWatcher.Restart()
+		return
+	}
+	if c.fileWatchingStage != nil {
+		c.fileWatchingStage <- "restart"
+	}
+}
+
+// StopWatchingSourceFiles stops file watching and releases all OS handles.
+func (c *RunContext) StopWatchingSourceFiles() {
+	if c.dirWatcher != nil {
+		_ = c.dirWatcher.Close()
+	}
 }
 
 // IsInterrupted returns true if there is a message on the interruptionChannel
