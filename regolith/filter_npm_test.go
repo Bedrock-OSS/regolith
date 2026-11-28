@@ -3,10 +3,19 @@ package regolith
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha1"
+	"crypto/sha512"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -559,5 +568,172 @@ func TestNpmCreateFilterRunner(t *testing.T) {
 		if runner.(*RemoteFilter).Definition.Version != "latest" {
 			t.Fatalf("The runner of the %q version should skip the version check", version)
 		}
+	}
+}
+
+func startSinglePackageNpmServer(t *testing.T, pkgName, version string, tarballBytes []byte) *httptest.Server {
+	t.Helper()
+	baseName := npmPackageFilterName(pkgName)
+	tarballName := fmt.Sprintf("%s-%s.tgz", baseName, version)
+	sha1Sum := sha1.Sum(tarballBytes)
+	sha512Sum := sha512.Sum512(tarballBytes)
+
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/" + pkgName:
+			packument := map[string]any{
+				"name":      pkgName,
+				"dist-tags": map[string]string{"latest": version},
+				"versions": map[string]any{
+					version: map[string]any{
+						"name":    pkgName,
+						"version": version,
+						"dist": map[string]any{
+							"tarball":   srv.URL + "/" + pkgName + "/-/" + tarballName,
+							"shasum":    hex.EncodeToString(sha1Sum[:]),
+							"integrity": "sha512-" + base64.StdEncoding.EncodeToString(sha512Sum[:]),
+						},
+					},
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(packument)
+		case "/" + pkgName + "/-/" + tarballName:
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Write(tarballBytes)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func TestNpmFilterUpdate_CleansUpOnInstallDependenciesFailure(t *testing.T) {
+	if _, err := exec.LookPath("npm"); err != nil {
+		t.Skip("npm is not installed; skipping npm filter test")
+	}
+
+	isolateTestCache(t)
+	setOfflinePipEnv(t)
+
+	const pkgName = "@test/py-npm-filter"
+	const filterId = "py-npm-filter"
+	tarballPath := packageTarball(t, t.TempDir(), map[string]string{
+		"package.json":     `{"name": "` + pkgName + `", "version": "1.0.0"}`,
+		"filter.json":      `{"filters": [{"runWith": "python", "script": "main.py"}]}`,
+		"main.py":          "print('hello')\n",
+		"requirements.txt": "",
+		"data/default.txt": "default data\n",
+	})
+	tarballBytes, err := os.ReadFile(tarballPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	srv := startSinglePackageNpmServer(t, pkgName, "1.0.0", tarballBytes)
+
+	tmpDir := t.TempDir()
+	t.Setenv("npm_config_registry", srv.URL)
+	t.Setenv("npm_config_cache", filepath.Join(tmpDir, "npm-cache"))
+	t.Setenv("npm_config_userconfig", filepath.Join(tmpDir, "npmrc"))
+	t.Setenv("npm_config_globalconfig", filepath.Join(tmpDir, "npmrc-global"))
+	t.Setenv("npm_config_update_notifier", "false")
+	t.Setenv("npm_config_fund", "false")
+	t.Setenv("npm_config_audit", "false")
+
+	projectDir := filepath.Join(tmpDir, "project")
+	if err := os.MkdirAll(projectDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(projectDir)
+
+	dotRegolithPath := filepath.Join(projectDir, ".regolith")
+	dataPath := filepath.Join(projectDir, "packs", "data")
+	def := &NpmFilterDefinition{
+		FilterDefinition: FilterDefinition{Id: filterId},
+		Package:          pkgName,
+		Version:          "1.0.0",
+	}
+
+	missingPython := filepath.Join(t.TempDir(), "nonexistent-python"+exeSuffix)
+	badCfg := NewUserConfig()
+	badCfg.fillDefaults()
+	badCfg.PythonRunner = &missingPython
+	setTestUserConfig(t, badCfg)
+
+	err = def.Update(false, dotRegolithPath, dataPath, false)
+	if err == nil {
+		t.Fatal("expected Update to fail when Python is missing")
+	}
+	if !strings.Contains(err.Error(), "Python not found") {
+		t.Fatalf("expected Python not found error, got: %v", err)
+	}
+	if _, statErr := os.Stat(def.GetDownloadPath(dotRegolithPath)); !os.IsNotExist(statErr) {
+		t.Fatalf("expected failed install to remove cached filter dir %s, statErr=%v", def.GetDownloadPath(dotRegolithPath), statErr)
+	}
+	if _, verErr := def.InstalledVersion(dotRegolithPath); verErr == nil {
+		t.Fatal("expected InstalledVersion to fail after failed install cleanup")
+	}
+	venvPath := filepath.Join(dotRegolithPath, "cache", "venvs", "0")
+	if _, venvErr := os.Stat(venvPath); !os.IsNotExist(venvErr) {
+		t.Fatalf("expected no broken venv at %s, statErr=%v", venvPath, venvErr)
+	}
+	if _, dataErr := os.Stat(filepath.Join(dataPath, filterId)); !os.IsNotExist(dataErr) {
+		t.Fatalf("expected filter data not to be copied on failed install, statErr=%v", dataErr)
+	}
+
+	// Restore valid Python and retry without force: should install cleanly.
+	goodCfg := NewUserConfig()
+	goodCfg.fillDefaults()
+	cachedCombinedUserConfig = goodCfg
+	if _, err := findPython(); err != nil {
+		t.Skipf("python not available for recovery check: %v", err)
+	}
+
+	if err := def.Update(false, dotRegolithPath, dataPath, false); err != nil {
+		t.Fatalf("expected recovery Update(false) to succeed, got: %v", err)
+	}
+	gotVer, err := def.InstalledVersion(dotRegolithPath)
+	if err != nil {
+		t.Fatalf("InstalledVersion failed after recovery: %v", err)
+	}
+	if gotVer != "1.0.0" {
+		t.Fatalf("expected installed version %q, got %q", "1.0.0", gotVer)
+	}
+	venvPython := filepath.Join(venvPath, venvScriptsPath, "python"+exeSuffix)
+	if _, err := os.Stat(venvPython); err != nil {
+		t.Fatalf("expected venv python at %s: %v", venvPython, err)
+	}
+	if _, err := os.Stat(filepath.Join(dataPath, filterId, "default.txt")); err != nil {
+		t.Fatalf("expected filter data to be copied after recovery: %v", err)
+	}
+}
+
+func TestNpmFilterDownload_SkipsWhenAlreadyCached(t *testing.T) {
+	dotRegolithPath := filepath.Join(t.TempDir(), ".regolith")
+	def := &NpmFilterDefinition{
+		FilterDefinition: FilterDefinition{Id: "cached-npm-filter"},
+		Package:          "@test/cached-npm-filter",
+		Version:          "1.0.0",
+	}
+	downloadPath := def.GetDownloadPath(dotRegolithPath)
+	if err := os.MkdirAll(downloadPath, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(downloadPath, "filter.json"), []byte(`{"filters": [], "version": "0.9.0"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := def.Download(false, dotRegolithPath, false); err != nil {
+		t.Fatalf("Download(false) returned unexpected error: %v", err)
+	}
+	gotVer, err := def.InstalledVersion(dotRegolithPath)
+	if err != nil {
+		t.Fatalf("InstalledVersion failed: %v", err)
+	}
+	if gotVer != "0.9.0" {
+		t.Fatalf("expected cached version %q to stay untouched, got %q", "0.9.0", gotVer)
 	}
 }

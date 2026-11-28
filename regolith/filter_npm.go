@@ -196,6 +196,30 @@ func (f *NpmFilterDefinition) ResolveVersion() (string, error) {
 func (f *NpmFilterDefinition) Download(
 	isForced bool, dotRegolithPath string, refreshFilters bool,
 ) error {
+	version, err := f.download(isForced, dotRegolithPath, refreshFilters)
+	if err != nil {
+		return burrito.PassError(err)
+	}
+	if version == "" {
+		return nil
+	}
+	// Save the version of the filter we downloaded
+	MeasureStart("Save version info")
+	err = f.SaveVersionInfo(version, dotRegolithPath)
+	MeasureEnd()
+	if err != nil {
+		return burrito.PassError(err)
+	}
+	return nil
+}
+
+// download fetches the npm package into the project cache without saving its
+// version into filter.json. It returns the resolved version string, or an empty
+// string if the download was skipped because the filter is already cached and
+// isForced is false.
+func (f *NpmFilterDefinition) download(
+	isForced bool, dotRegolithPath string, refreshFilters bool,
+) (string, error) {
 	downloadPath := f.GetDownloadPath(dotRegolithPath)
 	if _, err := os.Stat(downloadPath); err == nil {
 		if !isForced {
@@ -204,7 +228,7 @@ func (f *NpmFilterDefinition) Download(
 					"be the case only if the filter is installed.\n"+
 					"    Skipped the download. You can force the it by "+
 					"passing the \"-force\" flag.", f.Id)
-			return nil
+			return "", nil
 		} else {
 			f.Uninstall(dotRegolithPath)
 		}
@@ -215,27 +239,20 @@ func (f *NpmFilterDefinition) Download(
 	MeasureStart("Resolve npm package version")
 	version, err := f.ResolveVersion()
 	if err != nil {
-		return burrito.PassError(err)
+		return "", burrito.PassError(err)
 	}
 	MeasureEnd()
 	err = downloadNpmPackage(f.Package, version, downloadPath, refreshFilters)
 	if err != nil {
-		return burrito.PassError(err)
+		return "", burrito.PassError(err)
 	}
-	// Save the version of the filter we downloaded
-	MeasureStart("Save version info")
-	err = f.SaveVersionInfo(version, dotRegolithPath)
-	if err != nil {
-		return burrito.PassError(err)
-	}
-	MeasureEnd()
 	// Remove 'test' folder, which we never want to use (saves space on disk)
 	testFolder := path.Join(downloadPath, "test")
 	if _, err := os.Stat(testFolder); err == nil {
 		os.RemoveAll(testFolder)
 	}
 	Logger.Infof("Filter \"%s\" downloaded successfully.", f.Id)
-	return nil
+	return version, nil
 }
 
 func (f *NpmFilterDefinition) Update(force bool, dotRegolithPath, dataPath string, refreshFilters bool) error {
@@ -253,14 +270,22 @@ func (f *NpmFilterDefinition) Update(force bool, dotRegolithPath, dataPath strin
 		Logger.Infof(
 			"Updating filter %q to new version: %q->%q.",
 			f.Id, installedVersion, version)
-		err = f.Download(true, dotRegolithPath, refreshFilters)
+		downloadedVersion, err := f.download(true, dotRegolithPath, refreshFilters)
 		if err != nil {
+			return burrito.PassError(err)
+		}
+		err = f.InstallDependencies(nil, dotRegolithPath)
+		if err != nil {
+			f.Uninstall(dotRegolithPath)
 			return burrito.PassError(err)
 		}
 		// Copy the data of the remote filter to the data path
 		f.CopyFilterData(dataPath, dotRegolithPath)
-		err = f.InstallDependencies(nil, dotRegolithPath)
+		MeasureStart("Save version info")
+		err = f.SaveVersionInfo(downloadedVersion, dotRegolithPath)
+		MeasureEnd()
 		if err != nil {
+			f.Uninstall(dotRegolithPath)
 			return burrito.PassError(err)
 		}
 		Logger.Infof("Filter %q updated successfully.", f.Id)
