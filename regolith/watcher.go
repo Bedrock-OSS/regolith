@@ -3,164 +3,310 @@ package regolith
 import (
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
-
-	"github.com/Bedrock-OSS/go-burrito/burrito"
-	"github.com/arexon/fsnotify"
 )
 
-// DirWatcher handles watching for changes in a multiple root directories.
-//
-// fsnotify doesn't *officially* support recursive file watching yet. Windows
-// and and Linux are supported, but not macOS. For now, this implementation uses
-// a custom fork with patches to manually enable it.
-//
-// Fork patch: https://github.com/arexon/fsnotify/blob/main/fsnotify.go#L481
-type DirWatcher struct {
-	// watcher is the underlying fsnotify watcher that notifies about the
-	// changes in the files.
-	watcher *fsnotify.Watcher
+const watchDebounceDuration = 100 * time.Millisecond
 
-	// roots is a list of directories to watch.
-	// TODO: Currently, all of the information needed to determine the roots
-	// is already stored in the config. Having this as separate field is
-	// redundant and should be removed to have a single source of truth.
-	roots []string
-
-	// config is a reference to the configuration of the project.
-	config *Config
-
-	debounce *time.Timer
-	// interruption channel is used to notify the main thread about the kind of
-	// interruption that was detected by 'watcher', it can be 'rp', 'bp' or 'data'.
-	interruption chan string
-
-	// errors is a channel used by DirWatcher to inform the main thread about
-	// errors related to watching files.
-	errors chan error
-
-	// stage is a channel used for receiving commands from the main thread, to
-	// pause or restart the watcher.
-	stage <-chan string
+type watchRoot struct {
+	path   string
+	source string
 }
 
+type watchBackend interface {
+	Close() error
+}
+
+type stageRequest struct {
+	action string
+	done   chan error
+}
+
+// DirWatcher handles watching for changes in multiple root directories.
+//
+// On Windows, a dedicated native backend watches each root with a single
+// subtree notification handle so Regolith never holds open handles on
+// subdirectories. On Unix systems (Linux/macOS), the official fsnotify package
+// is used with recursive directory traversal and dynamic subdirectory watching.
+type DirWatcher struct {
+	roots       []watchRoot
+	backend     watchBackend
+	events      chan string
+	backendErrs chan error
+	debounce    *time.Timer
+
+	// interruption notifies the main thread about which watch root changed:
+	// "rp", "bp", "data", or "extras".
+	interruption chan string
+
+	// errors passes watcher errors to the main thread.
+	errors chan error
+
+	// stage receives legacy "pause" / "restart" commands if used directly.
+	stage <-chan string
+
+	control   chan stageRequest
+	done      chan struct{}
+	closeOnce sync.Once
+}
+
+func collectWatchRoots(config *Config) []watchRoot {
+	if config == nil {
+		return nil
+	}
+	var roots []watchRoot
+	if config.ResourceFolder != "" {
+		roots = append(roots, watchRoot{path: config.ResourceFolder, source: "rp"})
+	}
+	if config.BehaviorFolder != "" {
+		roots = append(roots, watchRoot{path: config.BehaviorFolder, source: "bp"})
+	}
+	if config.DataPath != "" {
+		roots = append(roots, watchRoot{path: config.DataPath, source: "data"})
+	}
+	for _, path := range config.WatchPaths {
+		if path != "" {
+			roots = append(roots, watchRoot{path: path, source: "extras"})
+		}
+	}
+	return roots
+}
+
+// NewDirWatcher starts watching the configured project directories and sends
+// change sources to interruption and fatal watcher errors to errors.
 func NewDirWatcher(
 	config *Config,
 	interruption chan string,
 	errors chan error,
 	stage <-chan string,
 ) error {
-	var roots []string
-	if config.ResourceFolder != "" {
-		roots = append(roots, config.ResourceFolder)
-	}
-	if config.BehaviorFolder != "" {
-		roots = append(roots, config.BehaviorFolder)
-	}
-	if config.DataPath != "" {
-		roots = append(roots, config.DataPath)
-	}
-	if config.WatchPaths != nil {
-		roots = append(roots, config.WatchPaths...)
-	}
+	_, err := newDirWatcher(config, interruption, errors, stage)
+	return err
+}
+
+func newDirWatcher(
+	config *Config,
+	interruption chan string,
+	errors chan error,
+	stage <-chan string,
+) (*DirWatcher, error) {
 	d := &DirWatcher{
-		roots:        roots,
-		config:       config,
+		roots:        collectWatchRoots(config),
+		events:       make(chan string, 64),
+		backendErrs:  make(chan error, 16),
 		interruption: interruption,
 		errors:       errors,
 		stage:        stage,
+		control:      make(chan stageRequest),
+		done:         make(chan struct{}),
 	}
-	err := d.watch()
+	backend, err := startWatchBackend(d.roots, d.events, d.backendErrs)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	d.backend = backend
 	go d.start()
-	return nil
+	return d, nil
 }
 
-func (d *DirWatcher) watch() error {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return burrito.WrapError(err, "Could not initialize directory watching")
+// Pause stops the underlying OS watcher and waits until all OS handles are
+// closed and queued internal events are drained.
+func (d *DirWatcher) Pause() error {
+	return d.sendControl("pause")
+}
+
+// Restart recreates the underlying OS watcher after a pause.
+func (d *DirWatcher) Restart() error {
+	return d.sendControl("restart")
+}
+
+// Close permanently stops the DirWatcher and releases all OS handles.
+func (d *DirWatcher) Close() error {
+	var err error
+	d.closeOnce.Do(func() {
+		err = d.sendControl("close")
+		<-d.done
+	})
+	return err
+}
+
+func (d *DirWatcher) sendControl(action string) error {
+	doneCh := make(chan error, 1)
+	req := stageRequest{action: action, done: doneCh}
+	select {
+	case d.control <- req:
+	case <-d.done:
+		return nil
 	}
-	d.watcher = watcher
-	for _, root := range d.roots {
-		// We have to manually signal to fsnotify that it should recursively watch this
-		// path by using "/..." or "\...".
-		recursiveRoot := filepath.Join(root, "...")
-		if err := d.watcher.Add(recursiveRoot); err != nil {
-			return burrito.WrapErrorf(err, "Could not start watching `%s`", root)
-		}
+	select {
+	case err := <-doneCh:
+		return err
+	case <-d.done:
+		return nil
 	}
-	return nil
 }
 
 func (d *DirWatcher) start() {
+	defer close(d.done)
+
 	paused := false
+	pendingSource := ""
+	var pendingErr error
+
 	for {
-		var debounce <-chan time.Time
-		if d.debounce != nil {
-			debounce = d.debounce.C
+		var outCh chan string
+		if !paused && pendingSource != "" {
+			outCh = d.interruption
 		}
+		var errOutCh chan error
+		if pendingErr != nil {
+			errOutCh = d.errors
+		}
+		var debounceCh <-chan time.Time
+		if d.debounce != nil {
+			debounceCh = d.debounce.C
+		}
+
 		select {
-		case err, ok := <-d.watcher.Errors:
-			if !ok {
-				if paused {
-					continue
-				}
-				return
-			}
-			d.errors <- err
+		case outCh <- pendingSource:
+			pendingSource = ""
+
+		case errOutCh <- pendingErr:
+			_ = d.handleClose()
 			return
-		case event, ok := <-d.watcher.Events:
-			if !ok {
-				if paused {
-					continue
-				}
-				return
+
+		case err := <-d.backendErrs:
+			if !paused && pendingErr == nil {
+				pendingErr = err
 			}
-			if d.debounce != nil || event.Op.Has(fsnotify.Chmod) {
+
+		case source := <-d.events:
+			if paused || d.debounce != nil {
 				continue
 			}
-			if isInDir(event.Name, d.config.ResourceFolder) {
-				d.interruption <- "rp"
-			} else if isInDir(event.Name, d.config.BehaviorFolder) {
-				d.interruption <- "bp"
-			} else if isInDir(event.Name, d.config.DataPath) {
-				d.interruption <- "data"
-			} else {
-				for _, path := range d.config.WatchPaths {
-					if isInDir(event.Name, path) {
-						d.interruption <- "extras"
-					}
-				}
+			// Preserve an unread user-pack interruption over a "data" change so
+			// pausing for export doesn't discard a pending BP/RP/extras edit.
+			if pendingSource == "" || pendingSource == "data" {
+				pendingSource = source
 			}
-			if d.debounce == nil {
-				d.debounce = time.NewTimer(100 * time.Millisecond)
-			} else {
-				d.debounce.Reset(100 * time.Millisecond)
-			}
-		case <-debounce:
-			if d.debounce != nil {
-				d.debounce.Stop()
-				d.debounce = nil
-			}
-		case stage := <-d.stage:
-			switch stage {
+			d.debounce = time.NewTimer(watchDebounceDuration)
+
+		case <-debounceCh:
+			d.debounce = nil
+
+		case req := <-d.control:
+			switch req.action {
 			case "pause":
-				d.watcher.Close()
-				paused = true
+				req.done <- d.handlePause(&paused, &pendingSource)
 			case "restart":
-				if err := d.watch(); err != nil {
-					d.errors <- err
+				err := d.handleRestart(&paused)
+				if err != nil && pendingErr == nil {
+					pendingErr = err
 				}
-				paused = false
+				req.done <- err
+			case "close":
+				req.done <- d.handleClose()
+				return
+			default:
+				req.done <- nil
 			}
+
+		case action, ok := <-d.stage:
+			if !ok {
+				_ = d.handleClose()
+				return
+			}
+			switch action {
+			case "pause":
+				_ = d.handlePause(&paused, &pendingSource)
+			case "restart":
+				if err := d.handleRestart(&paused); err != nil && pendingErr == nil {
+					pendingErr = err
+				}
+			}
+		}
+	}
+}
+
+func (d *DirWatcher) handlePause(paused *bool, pendingSource *string) error {
+	var closeErr error
+	if d.backend != nil {
+		closeErr = d.backend.Close()
+		d.backend = nil
+	}
+	*paused = true
+	d.stopDebounce()
+	d.drainBackendQueues()
+	// Data exports can modify packs/data right as export begins; clear any
+	// pending "data" interruption so exportData filters don't self-trigger.
+	if *pendingSource == "data" {
+		*pendingSource = ""
+	}
+	return closeErr
+}
+
+func (d *DirWatcher) handleRestart(paused *bool) error {
+	if !*paused && d.backend != nil {
+		return nil
+	}
+	d.drainBackendQueues()
+	backend, err := startWatchBackend(d.roots, d.events, d.backendErrs)
+	if err != nil {
+		*paused = true
+		return err
+	}
+	d.backend = backend
+	*paused = false
+	return nil
+}
+
+func (d *DirWatcher) handleClose() error {
+	d.stopDebounce()
+	var closeErr error
+	if d.backend != nil {
+		closeErr = d.backend.Close()
+		d.backend = nil
+	}
+	d.drainBackendQueues()
+	return closeErr
+}
+
+func (d *DirWatcher) stopDebounce() {
+	if d.debounce != nil {
+		d.debounce.Stop()
+		d.debounce = nil
+	}
+}
+
+func (d *DirWatcher) drainBackendQueues() {
+	for {
+		select {
+		case <-d.events:
+		case <-d.backendErrs:
+		default:
+			return
 		}
 	}
 }
 
 func isInDir(path, root string) bool {
-	rel, err := filepath.Rel(root, path)
-	return err == nil && !strings.HasPrefix(rel, "..")
+	if root == "" {
+		return false
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		absRoot = filepath.Clean(root)
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		absPath = filepath.Clean(path)
+	}
+	rel, err := filepath.Rel(absRoot, absPath)
+	if err != nil {
+		return false
+	}
+	return rel != ".." &&
+		!strings.HasPrefix(rel, ".."+string(filepath.Separator)) &&
+		!filepath.IsAbs(rel)
 }
